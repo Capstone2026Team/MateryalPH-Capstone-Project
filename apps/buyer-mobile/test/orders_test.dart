@@ -410,6 +410,86 @@ void main() {
     },
   );
 
+  for (final scale in [1.0, 2.0]) {
+    testWidgets('payment breakdown is concise and readable at ${scale}x text', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(320, 1000));
+      tester.platformDispatcher.textScaleFactorTestValue = scale;
+      addTearDown(() {
+        tester.platformDispatcher.clearTextScaleFactorTestValue();
+        return tester.binding.setSurfaceSize(null);
+      });
+      await tester.pumpWidget(
+        _app(
+          const Scaffold(
+            body: SingleChildScrollView(
+              padding: EdgeInsets.all(16),
+              child: MoneyBreakdownCard(
+                money: MoneyView(
+                  status: 'ACCEPTED',
+                  materialsGrossCentavos: 28550,
+                  vendorDiscountCentavos: 0,
+                  materialsSubtotalCentavos: 28550,
+                  includedVatCentavos: 3059,
+                  pricesIncludeVat: true,
+                  deliveryStatus: 'NOT_APPLICABLE',
+                  deliveryCentavos: 0,
+                  deliveryEstimateMin: null,
+                  deliveryEstimateMax: null,
+                  nrpcCentavos: 0,
+                  processingFeeStatus: 'QUOTED',
+                  processingFeeCentavos: 755,
+                  commercialTotalCentavos: 28550,
+                  amountDueOnlineCentavos: 29305,
+                  physicalBalanceCentavos: 0,
+                  paymentPurpose: 'FULL_ORDER_PAYMENT',
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      expect(find.text('Materials'), findsOneWidget);
+      expect(find.text('Materials subtotal'), findsNothing);
+      expect(find.text('Includes ₱30.59 VAT'), findsOneWidget);
+      expect(find.text('Self-Pickup'), findsOneWidget);
+      expect(find.text('₱7.55'), findsOneWidget);
+      expect(find.text('Excludes processing fee'), findsOneWidget);
+      expect(find.text('₱285.50'), findsNWidgets(2));
+      final materialsRight = tester.getRect(find.text('₱285.50').first).right;
+      final feeRight = tester.getRect(find.text('₱7.55')).right;
+      final totalRight = tester.getRect(find.text('₱285.50').last).right;
+      expect(materialsRight, closeTo(feeRight, 0.1));
+      expect(totalRight, closeTo(feeRight, 0.1));
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets(
+    'payment breakdown retains the materials discount and net amount',
+    (tester) async {
+      await tester.pumpWidget(
+        _app(
+          Scaffold(
+            body: SingleChildScrollView(
+              child: MoneyBreakdownCard(
+                money: money(materials: 16200, discount: 1800),
+              ),
+            ),
+          ),
+        ),
+      );
+      expect(find.text('Materials'), findsOneWidget);
+      expect(find.text('₱180.00'), findsOneWidget);
+      expect(find.text('− ₱18.00'), findsOneWidget);
+      expect(find.text('Materials after discount'), findsOneWidget);
+      expect(find.text('₱162.00'), findsNWidgets(2));
+      expect(find.text('No VAT included'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets(
     'My Orders filters by Item or Project and status chip and shows the card facts',
     (tester) async {

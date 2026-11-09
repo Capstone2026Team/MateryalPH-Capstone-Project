@@ -17,7 +17,9 @@ part 'vendor_dashboard_series_point.g.dart';
 /// * [orderRequests]
 /// * [ordersAverage]
 /// * [grossSalesCentavos]
-/// * [netSalesCentavos]
+/// * [netSalesCentavos] - Displayed as Earnings. Gross sales less completed online refund principal, confirmed physical reimbursements and cancelled-order value not already refunded. Before commission, other charges and business costs; not profit. Null without finance.view.
+/// * [refundsCentavos] - Completed online refund principal and confirmed physical reimbursements deducted from this store's orders first confirmed on this Asia/Manila day, including cancellation refunds, capped at each confirmed sale value. Excludes Buyer processing fees, late-capture compensation and pending or failed refunds. Null without finance.view. Not grouped by refund payout date.
+/// * [cancellationDeductionsCentavos] - Cancelled confirmed order value not already included in refunds_centavos, grouped by first confirmation day. Gross sales minus refunds minus these other cancellation deductions equals net sales (displayed as Earnings). Null without finance.view.
 /// * [salesAverageCentavos]
 @BuiltValue()
 abstract class VendorDashboardSeriesPoint implements Built<VendorDashboardSeriesPoint, VendorDashboardSeriesPointBuilder> {
@@ -36,8 +38,17 @@ abstract class VendorDashboardSeriesPoint implements Built<VendorDashboardSeries
   @BuiltValueField(wireName: r'gross_sales_centavos')
   int? get grossSalesCentavos;
 
+  /// Displayed as Earnings. Gross sales less completed online refund principal, confirmed physical reimbursements and cancelled-order value not already refunded. Before commission, other charges and business costs; not profit. Null without finance.view.
   @BuiltValueField(wireName: r'net_sales_centavos')
   int? get netSalesCentavos;
+
+  /// Completed online refund principal and confirmed physical reimbursements deducted from this store's orders first confirmed on this Asia/Manila day, including cancellation refunds, capped at each confirmed sale value. Excludes Buyer processing fees, late-capture compensation and pending or failed refunds. Null without finance.view. Not grouped by refund payout date.
+  @BuiltValueField(wireName: r'refunds_centavos')
+  int? get refundsCentavos;
+
+  /// Cancelled confirmed order value not already included in refunds_centavos, grouped by first confirmation day. Gross sales minus refunds minus these other cancellation deductions equals net sales (displayed as Earnings). Null without finance.view.
+  @BuiltValueField(wireName: r'cancellation_deductions_centavos')
+  int? get cancellationDeductionsCentavos;
 
   @BuiltValueField(wireName: r'sales_average_centavos')
   int? get salesAverageCentavos;
@@ -98,6 +109,20 @@ class _$VendorDashboardSeriesPointSerializer implements PrimitiveSerializer<Vend
       yield r'net_sales_centavos';
       yield serializers.serialize(
         object.netSalesCentavos,
+        specifiedType: const FullType.nullable(int),
+      );
+    }
+    if (object.refundsCentavos != null) {
+      yield r'refunds_centavos';
+      yield serializers.serialize(
+        object.refundsCentavos,
+        specifiedType: const FullType.nullable(int),
+      );
+    }
+    if (object.cancellationDeductionsCentavos != null) {
+      yield r'cancellation_deductions_centavos';
+      yield serializers.serialize(
+        object.cancellationDeductionsCentavos,
         specifiedType: const FullType.nullable(int),
       );
     }
@@ -175,6 +200,22 @@ class _$VendorDashboardSeriesPointSerializer implements PrimitiveSerializer<Vend
           ) as int?;
           if (valueDes == null) continue;
           result.netSalesCentavos = valueDes;
+          break;
+        case r'refunds_centavos':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.refundsCentavos = valueDes;
+          break;
+        case r'cancellation_deductions_centavos':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.cancellationDeductionsCentavos = valueDes;
           break;
         case r'sales_average_centavos':
           final valueDes = serializers.deserialize(

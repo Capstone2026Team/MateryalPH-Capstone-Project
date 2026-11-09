@@ -484,7 +484,7 @@ class _EditableAvatar extends StatelessWidget {
                           child: Center(
                             child: SizedBox.square(
                               dimension: 32,
-                              child: CircularProgressIndicator(
+                              child: BuyerLoadingIndicator(
                                 strokeWidth: 3,
                                 color: Colors.white,
                               ),

@@ -39,6 +39,18 @@ export interface PlatformDocumentRef {
      *
      */
     availability: string;
+    /**
+     * UTC generation time of the stored document.
+     */
+    generatedAt?: string;
+    /**
+     *
+     */
+    checksum?: string;
+    /**
+     * Authenticated API download route; null until ready or when files are not available to this role.
+     */
+    downloadUrl?: string;
 }
 
 
@@ -47,7 +59,6 @@ export interface PlatformDocumentRef {
  */
 export const PlatformDocumentRefKindEnum = {
     PurchaseOrder: 'PURCHASE_ORDER',
-    PaymentConfirmation: 'PAYMENT_CONFIRMATION',
 } as const;
 export type PlatformDocumentRefKindEnum = typeof PlatformDocumentRefKindEnum[keyof typeof PlatformDocumentRefKindEnum];
 
@@ -65,6 +76,8 @@ export type PlatformDocumentRefLabelEnum = typeof PlatformDocumentRefLabelEnum[k
  */
 export function instanceOfPlatformDocumentRef(value: object): value is PlatformDocumentRef {
     if (!('kind' in value) || value['kind'] === undefined) return false;
+    if (value['kind'] !== 'PURCHASE_ORDER') return false;
+
     if (!('title' in value) || value['title'] === undefined) return false;
     if ((!('notTaxInvoice' in (value as Record<string, any>)) && !('not_tax_invoice' in (value as Record<string, any>))) || ((value as Record<string, any>)['notTaxInvoice'] === undefined && (value as Record<string, any>)['not_tax_invoice'] === undefined)) return false;
     if (!('label' in value) || value['label'] === undefined) return false;
@@ -89,6 +102,9 @@ export function PlatformDocumentRefFromJSONTyped(json: any, ignoreDiscriminator:
         'notTaxInvoice': json['not_tax_invoice'],
         'label': json['label'],
         'availability': json['availability'],
+        'generatedAt': json['generated_at'] == null ? undefined : json['generated_at'],
+        'checksum': json['checksum'] == null ? undefined : json['checksum'],
+        'downloadUrl': json['download_url'] == null ? undefined : json['download_url'],
     };
 }
 
@@ -108,6 +124,9 @@ export function PlatformDocumentRefToJSONTyped(value?: PlatformDocumentRef | nul
         'not_tax_invoice': value['notTaxInvoice'],
         'label': value['label'],
         'availability': value['availability'],
+        'generated_at': value['generatedAt'],
+        'checksum': value['checksum'],
+        'download_url': value['downloadUrl'],
     };
 }
 

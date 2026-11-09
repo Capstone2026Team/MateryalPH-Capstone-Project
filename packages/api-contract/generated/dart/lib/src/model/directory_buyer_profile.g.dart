@@ -163,6 +163,8 @@ class _$DirectoryBuyerProfile extends DirectoryBuyerProfile {
   final BuiltList<DirectorySanction> sanctions;
   @override
   final bool canViewEnforcement;
+  @override
+  final BuyerRatingSummary rating;
 
   factory _$DirectoryBuyerProfile(
           [void Function(DirectoryBuyerProfileBuilder)? updates]) =>
@@ -178,7 +180,8 @@ class _$DirectoryBuyerProfile extends DirectoryBuyerProfile {
       required this.activity,
       required this.recentOrders,
       required this.sanctions,
-      required this.canViewEnforcement})
+      required this.canViewEnforcement,
+      required this.rating})
       : super._();
   @override
   DirectoryBuyerProfile rebuild(
@@ -202,7 +205,8 @@ class _$DirectoryBuyerProfile extends DirectoryBuyerProfile {
         activity == other.activity &&
         recentOrders == other.recentOrders &&
         sanctions == other.sanctions &&
-        canViewEnforcement == other.canViewEnforcement;
+        canViewEnforcement == other.canViewEnforcement &&
+        rating == other.rating;
   }
 
   @override
@@ -218,6 +222,7 @@ class _$DirectoryBuyerProfile extends DirectoryBuyerProfile {
     _$hash = $jc(_$hash, recentOrders.hashCode);
     _$hash = $jc(_$hash, sanctions.hashCode);
     _$hash = $jc(_$hash, canViewEnforcement.hashCode);
+    _$hash = $jc(_$hash, rating.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -234,7 +239,8 @@ class _$DirectoryBuyerProfile extends DirectoryBuyerProfile {
           ..add('activity', activity)
           ..add('recentOrders', recentOrders)
           ..add('sanctions', sanctions)
-          ..add('canViewEnforcement', canViewEnforcement))
+          ..add('canViewEnforcement', canViewEnforcement)
+          ..add('rating', rating))
         .toString();
   }
 }
@@ -298,6 +304,11 @@ class DirectoryBuyerProfileBuilder
   set canViewEnforcement(bool? canViewEnforcement) =>
       _$this._canViewEnforcement = canViewEnforcement;
 
+  BuyerRatingSummaryBuilder? _rating;
+  BuyerRatingSummaryBuilder get rating =>
+      _$this._rating ??= BuyerRatingSummaryBuilder();
+  set rating(BuyerRatingSummaryBuilder? rating) => _$this._rating = rating;
+
   DirectoryBuyerProfileBuilder() {
     DirectoryBuyerProfile._defaults(this);
   }
@@ -315,6 +326,7 @@ class DirectoryBuyerProfileBuilder
       _recentOrders = $v.recentOrders.toBuilder();
       _sanctions = $v.sanctions.toBuilder();
       _canViewEnforcement = $v.canViewEnforcement;
+      _rating = $v.rating.toBuilder();
       _$v = null;
     }
     return this;
@@ -355,6 +367,7 @@ class DirectoryBuyerProfileBuilder
                 canViewEnforcement,
                 r'DirectoryBuyerProfile',
                 'canViewEnforcement'),
+            rating: rating.build(),
           );
     } catch (_) {
       late String _$failedField;
@@ -369,6 +382,9 @@ class DirectoryBuyerProfileBuilder
         recentOrders.build();
         _$failedField = 'sanctions';
         sanctions.build();
+
+        _$failedField = 'rating';
+        rating.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
             r'DirectoryBuyerProfile', _$failedField, e.toString());

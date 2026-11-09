@@ -19,6 +19,7 @@ Method | HTTP request | Description
 [**confirmAccountFactorReplacement**](AccountsApi.md#confirmaccountfactorreplacement) | **POST** /{accountPortal}/account/factor/confirm |
 [**confirmBuyerTwoFactor**](AccountsApi.md#confirmbuyertwofactor) | **POST** /buyers/account/two-factor/confirm |
 [**deleteBuyerAccount**](AccountsApi.md#deletebuyeraccount) | **POST** /buyers/account/deletion |
+[**deleteVendorAccount**](AccountsApi.md#deletevendoraccount) | **POST** /vendors/account/deletion |
 [**deleteVendorTeamInvitation**](AccountsApi.md#deletevendorteaminvitation) | **DELETE** /vendors/account/invitations/{invitationId} |
 [**deleteVendorTeamMember**](AccountsApi.md#deletevendorteammember) | **DELETE** /vendors/account/memberships/{membershipId} |
 [**disableBuyerTwoFactor**](AccountsApi.md#disablebuyertwofactor) | **POST** /buyers/account/two-factor/disable |
@@ -27,6 +28,7 @@ Method | HTTP request | Description
 [**getAccountSecurity**](AccountsApi.md#getaccountsecurity) | **GET** /{accountPortal}/account/security |
 [**getBuyerAccountDeletionPreview**](AccountsApi.md#getbuyeraccountdeletionpreview) | **GET** /buyers/account/deletion |
 [**getBuyerAccountPhoto**](AccountsApi.md#getbuyeraccountphoto) | **GET** /buyers/account/photo |
+[**getVendorAccountDeletionPreview**](AccountsApi.md#getvendoraccountdeletionpreview) | **GET** /vendors/account/deletion |
 [**inviteAccountAdmin**](AccountsApi.md#inviteaccountadmin) | **POST** /{accountPortal}/account/invitations |
 [**listAccountAdminRoles**](AccountsApi.md#listaccountadminroles) | **GET** /{accountPortal}/account/roles |
 [**listAccountAdministrators**](AccountsApi.md#listaccountadministrators) | **GET** /{accountPortal}/account/administrators |
@@ -557,6 +559,59 @@ Name | Type | Description  | Notes
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **deleteVendorAccount**
+> VendorAccountDeletionResultEnvelope deleteVendorAccount(idempotencyKey, vendorAccountDeletionRequest)
+
+
+
+Requires Vendor Owner authority, recent authenticator verification and typed DELETE confirmation. Rechecks eligibility under the organization lock. Returns ACCOUNT_DELETION_BLOCKED with details.blockers if orders, payments, refunds (including failed refunds), disputes or financial obligations remain unresolved. Atomically closes the organization with final DELETED status, anonymizes the Owner login and personal profile, removes external sign-in links and revokes all Owner and current team sessions and unused invitations. Personal avatar cleanup and a security notice use the post-commit outbox. Staff identities and immutable commercial, financial, compliance, dispute, agreement and audit records are retained for their stated purposes under the approved retention schedule. Clears access and refresh cookies. Revoked sessions cannot replay the deletion or restore the account; subsequent authenticated requests require sign-in.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getAccountsApi();
+final String idempotencyKey = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final VendorAccountDeletionRequest vendorAccountDeletionRequest = ; // VendorAccountDeletionRequest |
+
+try {
+    final response = api.deleteVendorAccount(idempotencyKey, vendorAccountDeletionRequest);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AccountsApi->deleteVendorAccount: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **idempotencyKey** | **String**|  |
+ **vendorAccountDeletionRequest** | [**VendorAccountDeletionRequest**](VendorAccountDeletionRequest.md)|  |
+
+### Return type
+
+[**VendorAccountDeletionResultEnvelope**](VendorAccountDeletionResultEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **deleteVendorTeamInvitation**
 > AccountMutationResultEnvelope deleteVendorTeamInvitation(invitationId, vendorTeamDeletion)
 
@@ -940,6 +995,53 @@ Name | Type | Description  | Notes
 
  - **Content-Type**: Not defined
  - **Accept**: image/png, application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **getVendorAccountDeletionPreview**
+> VendorAccountDeletionPreviewEnvelope getVendorAccountDeletionPreview()
+
+
+
+Owner-only eligibility review and retained-record disclosure for permanent store account deletion. Counts include all recorded environments and financial obligations, including earned unbilled commission.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getAccountsApi();
+
+try {
+    final response = api.getVendorAccountDeletionPreview();
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AccountsApi->getVendorAccountDeletionPreview: $e\n');
+}
+```
+
+### Parameters
+This endpoint does not need any parameter.
+
+### Return type
+
+[**VendorAccountDeletionPreviewEnvelope**](VendorAccountDeletionPreviewEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 

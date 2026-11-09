@@ -36,7 +36,6 @@ import 'chat_drafts.dart';
 import 'chat_product_picker.dart';
 import 'conversation_quotation_dialog.dart';
 import 'conversation_timeline.dart';
-import 'project_inquiries_screen.dart';
 import '../orders/orders_repository.dart';
 import '../orders/order_details_screen.dart';
 import 'site_inspection_card.dart';
@@ -147,6 +146,7 @@ class _MessagingScreenState extends State<MessagingScreen>
   String? _notice;
 
   String? _channel;
+  void Function()? _storeStop;
 
   String? _lastRead;
 
@@ -243,6 +243,7 @@ class _MessagingScreenState extends State<MessagingScreen>
     _scroll.dispose();
     _timer?.cancel();
     _stop?.call();
+    _storeStop?.call();
     _typingExpiry?.cancel();
     _typingDebounce?.cancel();
     _draftTimer?.cancel();
@@ -284,6 +285,8 @@ class _MessagingScreenState extends State<MessagingScreen>
       _subscriptionGeneration++;
       _stop?.call();
       _stop = null;
+      _storeStop?.call();
+      _storeStop = null;
       _channel = null;
       _live = false;
     } else if (_foreground) {
@@ -299,6 +302,8 @@ class _MessagingScreenState extends State<MessagingScreen>
       _subscriptionGeneration++;
       _stop?.call();
       _stop = null;
+      _storeStop?.call();
+      _storeStop = null;
       _channel = null;
       _live = false;
     } else {
@@ -458,8 +463,20 @@ class _MessagingScreenState extends State<MessagingScreen>
           _lastRead = latest.id;
 
           unawaited(
-            widget.repository.read(id, latest.id).catchError((Object _) {
+            Future.wait(
+              (value.threadAuthority == null
+                      ? {id: latest.id}
+                      : {
+                          for (final message in value.messages.items)
+                            message.conversationId ?? id: message.id,
+                        })
+                  .entries
+                  .map(
+                    (entry) => widget.repository.read(entry.key, entry.value),
+                  ),
+            ).catchError((Object _) {
               _lastRead = null;
+              return <void>[];
             }),
           );
         }
@@ -470,13 +487,27 @@ class _MessagingScreenState extends State<MessagingScreen>
             current.actions.contains('view') &&
             !current.viewed) {
           await widget.repository.decide(
-            id,
+            current.conversationId ?? id,
             'view',
             current,
             newIdempotencyKey(),
           );
         }
 
+        if (value.threadAuthority != null && _storeStop == null) {
+          final generation = _subscriptionGeneration;
+          final stop = await widget.repository.watchInbox(() {
+            if (generation == _subscriptionGeneration) unawaited(_load());
+          });
+          if (!mounted ||
+              !widget.active ||
+              !_foreground ||
+              generation != _subscriptionGeneration) {
+            stop();
+          } else {
+            _storeStop = stop;
+          }
+        }
         if (_channel != value.conversation.channel) {
           _channel = value.conversation.channel;
 
@@ -576,7 +607,10 @@ class _MessagingScreenState extends State<MessagingScreen>
         const Duration(milliseconds: 200),
         () => unawaited(
           widget.repository
-              .typing(widget.conversationId!, _text.text.trim().isNotEmpty)
+              .typing(
+                _detail?.conversation.id ?? widget.conversationId!,
+                _text.text.trim().isNotEmpty,
+              )
               .catchError((Object _) {}),
         ),
       );
@@ -625,12 +659,12 @@ class _MessagingScreenState extends State<MessagingScreen>
     _typingDebounce?.cancel();
     unawaited(
       widget.repository
-          .typing(widget.conversationId!, false)
+          .typing(_detail?.conversation.id ?? widget.conversationId!, false)
           .catchError((Object _) {}),
     );
     try {
       await widget.repository.send(
-        widget.conversationId!,
+        _detail?.conversation.id ?? widget.conversationId!,
         message.body,
         key,
         productId: message.product?.productId,
@@ -719,6 +753,13 @@ class _MessagingScreenState extends State<MessagingScreen>
                   Text(
                     'Version ${version.version} · ${chatMoney(version.content.commercial.commercialTotalCentavos)}',
                   ),
+                  if (version.replacesOrderId != null)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 12),
+                      child: Text(
+                        'Accepting replaces your pending order with these quotation terms. The original request remains in order history.',
+                      ),
+                    ),
                   if (action == 'counter') const SizedBox(height: 16),
 
                   if (action == 'accept') ...[
@@ -843,7 +884,7 @@ class _MessagingScreenState extends State<MessagingScreen>
     _notice = null;
     await _mutate(() async {
       final order = await widget.repository.decide(
-        widget.conversationId!,
+        version.conversationId ?? widget.conversationId!,
         action,
         version,
         newIdempotencyKey(),
@@ -951,7 +992,7 @@ class _MessagingScreenState extends State<MessagingScreen>
     final key = newIdempotencyKey();
     try {
       await widget.repository.upload(
-        widget.conversationId!,
+        _detail?.conversation.id ?? widget.conversationId!,
         bytes,
         file.name,
         key,
@@ -973,10 +1014,18 @@ class _MessagingScreenState extends State<MessagingScreen>
   /// Buyer taps the image or Download, which starts one new attempt.
   final Map<String, Future<Uint8List>> _images = {};
   final Set<String> _failedImages = {};
+  String _fileConversation(api.ChatAttachment file) =>
+      _detail?.messages.items
+          .where(
+            (message) => message.attachments.any((item) => item.id == file.id),
+          )
+          .firstOrNull
+          ?.conversationId ??
+      widget.conversationId!;
 
   Future<Uint8List> _imageBytes(api.ChatAttachment file) =>
       _images[file.id] ??= widget.repository
-          .attachment(widget.conversationId!, file.id)
+          .attachment(_fileConversation(file), file.id)
           .catchError((Object error) {
             _failedImages.add(file.id);
             throw error;
@@ -1004,7 +1053,7 @@ class _MessagingScreenState extends State<MessagingScreen>
   Future<void> _openFile(api.ChatAttachment file) => _mutate(() async {
     final bytes = file.mediaType.startsWith('image/')
         ? await _retryableImageBytes(file)
-        : await widget.repository.attachment(widget.conversationId!, file.id);
+        : await widget.repository.attachment(_fileConversation(file), file.id);
 
     if (!mounted) return;
 
@@ -1046,7 +1095,7 @@ class _MessagingScreenState extends State<MessagingScreen>
           ),
 
     body: _loading
-        ? const Center(child: CircularProgressIndicator())
+        ? const BuyerLoadingState(label: 'Loading messages…')
         : Column(
             children: [
               if (_error != null)
@@ -1103,64 +1152,36 @@ class _MessagingScreenState extends State<MessagingScreen>
         )
       else if (widget.onOpenCart != null)
         BuyerCartButton(onPressed: widget.onOpenCart),
-      ..._trailingHeaderActions(sales),
+      ..._trailingHeaderActions(),
     ];
   }
 
-  List<Widget> _trailingHeaderActions(bool sales) => [
-    if (sales)
-      BuyerHeaderIconButton(
-        icon: LucideIcons.folderOpen,
-        tooltip: (_detail?.conversation.projectUnreadCount ?? 0) > 0
-            ? 'Project inquiries, ${_detail!.conversation.projectUnreadCount} unread'
-            : 'Project inquiries',
-        badgeCount: _detail?.conversation.projectUnreadCount ?? 0,
-        onPressed: _busy || _detail == null ? null : _openProjectInquiries,
-      )
-    else
-      BuyerNotificationButton(
-        onPressed:
-            widget.onOpenNotifications ??
-            () => Navigator.of(context).push<void>(
-              MaterialPageRoute(
-                builder: (_) => const BuyerUnavailableScreen(
-                  title: 'Notifications',
-                  artwork: StateArtwork.notifications,
-                ),
+  List<Widget> _trailingHeaderActions() => [
+    BuyerNotificationButton(
+      onPressed:
+          widget.onOpenNotifications ??
+          () => Navigator.of(context).push<void>(
+            MaterialPageRoute(
+              builder: (_) => const BuyerUnavailableScreen(
+                title: 'Notifications',
+                artwork: StateArtwork.notifications,
               ),
             ),
-      ),
+          ),
+    ),
   ];
 
-  Future<void> _openInquiry(String id) async {
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute(
-        builder: (_) => MessagingScreen(
-          repository: widget.repository,
-          orders: widget.orders,
-          conversationId: id,
-          onOpenCart: widget.onOpenCart,
-          onOpenNotifications: widget.onOpenNotifications,
-          onOpenProduct: widget.onOpenProduct,
-          onSetDelivery: widget.onSetDelivery,
-        ),
-      ),
-    );
-    if (mounted) await _load();
-  }
-
-  Future<void> _openProjectInquiries() async {
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute(
-        builder: (_) => ProjectInquiriesScreen(
-          repository: widget.repository,
-          inquiryId: widget.conversationId!,
-          onOpen: _openInquiry,
-        ),
-      ),
-    );
-    if (mounted) await _load();
-  }
+  final _automatedChoiceKeys = <String, String>{};
+  Future<void> _chooseAutomatedOption(api.ChatMessage message, int index) =>
+      _mutate(() async {
+        final choice = '${message.id}:$index';
+        await widget.repository.chooseAutomatedResponse(
+          message.conversationId ?? widget.conversationId!,
+          message.id,
+          index,
+          _automatedChoiceKeys.putIfAbsent(choice, newIdempotencyKey),
+        );
+      });
 
   Future<void> _toggleArchived() async {
     setState(() {
@@ -1532,6 +1553,8 @@ class _MessagingScreenState extends State<MessagingScreen>
                   ConversationMessageBubble(
                     key: ValueKey(timeline[index].id),
                     message: message,
+                    onAutomatedOption: (index) =>
+                        unawaited(_chooseAutomatedOption(message, index)),
                     busy: _busy,
                     onOpenFile: (file) => unawaited(_openFile(file)),
                     loadImage: _imageBytes,

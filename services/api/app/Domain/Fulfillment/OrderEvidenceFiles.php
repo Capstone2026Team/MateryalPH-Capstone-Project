@@ -6,6 +6,7 @@ namespace App\Domain\Fulfillment;
 
 use App\Domain\Catalog\CatalogFileStore;
 use App\Domain\Identity\AuthenticationException;
+use App\Domain\Orders\OrderVehicleImages;
 use App\Domain\Vendors\EvidenceContentValidator;
 use App\Domain\Vendors\VendorFileScanner;
 use Illuminate\Http\UploadedFile;
@@ -30,7 +31,7 @@ final class OrderEvidenceFiles
 
     public const REIMBURSEMENT = 'REIMBURSEMENT_EVIDENCE';
 
-    public function __construct(private readonly EvidenceContentValidator $validator, private readonly VendorFileScanner $scanner, private readonly CatalogFileStore $store) {}
+    public function __construct(private readonly EvidenceContentValidator $validator, private readonly VendorFileScanner $scanner, private readonly CatalogFileStore $store, private readonly OrderVehicleImages $vehicleImages) {}
 
     /** Validates, scans and stores one file before the caller's transaction; returns the file id. */
     public function store(UploadedFile $file, string $orderId, string $purpose, int $uploaderId, bool $photoOnly): string
@@ -79,6 +80,7 @@ final class OrderEvidenceFiles
             // NRPC preparation evidence is a Vendor commercial record; the Buyer sees its status, not the file.
             || (! $forBuyer && DB::table('cancellation_decisions')->where('order_id', $orderId)->where('evidence_file_id', $fileId)->exists());
         $file = $referenced ? DB::table('files')->where('id', $fileId)->where('owner_type', 'ORDER')->where('owner_id', $orderId)->where('visibility', 'PRIVATE')->where('scan_state', 'CLEAN')->first() : null;
+        $file ??= $this->vehicleImages->file($orderId, $fileId);
         if ($file === null) {
             throw new AuthenticationException('FILE_NOT_FOUND', 'This file is unavailable.', 404);
         }

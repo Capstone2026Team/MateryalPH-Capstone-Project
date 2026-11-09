@@ -450,7 +450,7 @@ class _BuyerAccountScreenState extends State<BuyerAccountScreen> {
                         ? const Padding(
                             padding: EdgeInsets.only(top: 120),
                             child: Center(
-                              child: CircularProgressIndicator(
+                              child: BuyerLoadingIndicator(
                                 semanticsLabel: 'Loading your account',
                               ),
                             ),
@@ -468,7 +468,7 @@ class _BuyerAccountScreenState extends State<BuyerAccountScreen> {
                     SizedBox(
                       height: 4,
                       child: _busy
-                          ? const LinearProgressIndicator(
+                          ? const BuyerLoadingProgress(
                               semanticsLabel: 'Loading',
                             )
                           : null,

@@ -17,6 +17,7 @@ Name | Type | Description | Notes
 **restorationCondition** | **String** |  | [optional]
 **continuationPlan** | **String** |  | [optional]
 **continuationNote** | **String** |  | [optional]
+**evidenceFileIds** | **BuiltSet&lt;String&gt;** | Clean private proof files uploaded by this Admin for the same subject. Immutable once recorded. | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

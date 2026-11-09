@@ -89,6 +89,10 @@ for (const request of ['DiscoverySearchRequest', 'RouteEstimateRequest']) {
 assert.ok(schemas.SupplierResult.properties.distance_meters.description.includes('straight-line'), 'Result distance is geodesic, not route distance')
 assert.ok(schemas.RadiusExpansion.required.includes('requires_confirmation'), 'Expansion is a confirmed suggestion')
 assert.ok(schemas.RouteEstimate.required.includes('request_version') && schemas.RouteEstimate.required.includes('origin_version'), 'Routes echo stale-response guards')
+for (const name of ['VerifiedVendorSummary', 'ProjectCandidate']) {
+  assert.equal(schemas[name].properties.badges.items.$ref, '#/components/schemas/PublicBadge', `${name} uses the existing public badge contract`)
+}
+assert.equal(schemas.DirectorySupplierSummary.properties.badges, undefined, 'Directory Suppliers cannot receive MateryalPH performance awards')
 for (const publicSchema of ['PublicStoreProfile', 'PublicStoreSummary', 'SupplierResult', 'VerifiedVendorSummary', 'FavoriteSupplier']) {
   for (const privateField of ['legal_name', 'registered_name', 'legal_business_name', 'store_email', 'tin', 'taxpayer_key_hash', 'identity_id_number_last4', 'provider_account_id', 'site_instructions']) {
     assert.equal(schemas[publicSchema].properties[privateField], undefined, `${publicSchema} must not expose ${privateField}`)

@@ -19,6 +19,7 @@ use App\Domain\Payments\PaymentPresenter;
 use App\Domain\Payments\PhysicalPaymentService;
 use App\Domain\Procurement\ListingPublicFacts;
 use App\Domain\Projects\ProjectBudget;
+use App\Domain\Vendors\DeliveryVehicleProfile;
 use App\Support\PortalDateRange;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Query\Builder;
@@ -29,8 +30,9 @@ use Illuminate\Support\Facades\DB;
 /**
  * Read models for the Buyer order hub and the Vendor order workspace. Order, payment, fulfillment, refund and
  * dispute are always separate fields. Amounts come from the current commercial version; payment amounts from
- * the FIN-02 matrix, with the processing fee pending until a payment channel exists. Buyer coordinates, exact
- * inventory (outside authorized Vendor roles), private files and commission/withholding never appear.
+ * the FIN-02 matrix, with the processing fee pending until a payment channel exists. Order map points are only
+ * projected for authorized Vendor detail viewers, never lists or analytics. Exact inventory (outside authorized
+ * Vendor roles), private files and commission/withholding never appear.
  */
 final class OrderQueries
 {
@@ -283,7 +285,7 @@ final class OrderQueries
     }
 
     /** @return array<string, mixed> */
-    public function vendorDetail(Request $request, string $orderId): array
+    public function vendorDetail(Request $request, string $orderId, bool $includeLocation = true): array
     {
         $scope = $this->access->vendorScope($request);
         $order = $this->access->vendorOrder($scope, $orderId);
@@ -303,7 +305,11 @@ final class OrderQueries
         }
         $pending = $order->order_state === OrderStates::AWAITING_VENDOR_CONFIRMATION;
         $terms = $this->terms->current();
-        $detail['buyer'] = ['display_name' => $this->buyerName((string) $order->buyer_profile_id)]
+        if ($includeLocation) {
+            $detail['location_map'] = app(OrderLocationMap::class)->present($order);
+        }
+        $detail['buyer'] = ['display_name' => $this->buyerName((string) $order->buyer_profile_id),
+            'profile_photo_path' => app(DeliveryBuyerContact::class)->orderPhotoPath($order)]
             + app(DeliveryBuyerContact::class)->present($request, $order, $scope);
         $detail['auto_accept'] = json_decode((string) ($order->auto_accept_outcome ?? 'null'), true);
         $detail['reservations'] = DB::table('inventory_holds as h')->join('order_lines as l', 'l.id', '=', 'h.order_line_id')->where('h.source_type', 'ORDER')->where('h.source_id', $order->id)
@@ -375,6 +381,70 @@ final class OrderQueries
 
         return ['status' => $goods ? 'ISSUED' : ($sale ? 'NOT_YET_UPLOADED' : 'NOT_DUE'), 'records' => DB::table('invoice_records')->where('order_id', $order->id)->count(),
             'open_requests' => DB::table('invoice_requests')->where('order_id', $order->id)->where('state', '<>', 'CLOSED')->count()];
+    }
+
+    /** @return array<string, mixed> */
+    public function auditDetail(Request $request, object $order, ?string $caseId): array
+    {
+        // Reuse immutable commercial terms without Vendor inventory, private staff contacts or Buyer budgets.
+        $detail = $this->detail($order, true);
+        $prefix = '/admin/order-operations/orders/'.$order->id.'/files/';
+        $detail['buyer'] = ['display_name' => $this->buyerName((string) $order->buyer_profile_id)];
+        $detail['available_actions'] = [];
+        $detail['payment'] = $this->payment($order, true);
+        $detail['payment']['available'] = false;
+        foreach (['latest_attempt', 'verified_payment'] as $key) {
+            if ($detail['payment'][$key] !== null) {
+                $detail['payment'][$key]['can_check_status'] = false;
+            }
+        }
+        $detail['payment']['notice'] = 'Read-only payment records. No payment or reconciliation action is available here.';
+        $detail['payment']['attempts'] = DB::table('payments')->where('order_id', $order->id)->orderBy('created_at')->orderBy('id')->get()
+            ->map(static fn (object $payment): array => array_replace(app(PaymentPresenter::class)->attempt($payment, false), ['can_check_status' => false]))->all();
+        $detail['fulfillment'] = app(FulfillmentView::class)->present($order, false, $prefix, $request->user());
+        $detail['fulfillment']['next_action'] = 'NONE';
+        $detail['fulfillment']['thread'] = ['available' => false, 'conversation_id' => null, 'read_only' => true, 'unread_count' => 0, 'read_only_reason' => 'AUDIT_VIEW', 'notice' => null];
+        $detail['refund_timeline'] = app(OrderRefundTimeline::class)->present($order, true, $prefix);
+        $openRequest = DB::table('cancellation_requests')->where('order_id', $order->id)->where('state', 'REQUESTED')->first();
+        $detail['cancellation'] = ['mode' => 'UNAVAILABLE', 'available' => false, 'explanation' => 'Read-only cancellation record.', 'can_withdraw_request' => false,
+            'open_request' => $openRequest === null ? null : ['reason_code' => $openRequest->reason_code, 'reason' => $openRequest->reason,
+                'requested_at' => self::iso($openRequest->created_at), 'response_due_at' => self::iso($openRequest->response_due_at), 'order_state_at_request' => $openRequest->order_state_at_request]];
+        $detail['dispute'] = self::disputeSummary($order);
+        $detail['invoice'] = self::invoiceSummary($order);
+        if ($caseId !== null) {
+            // Every evidence request carries and rechecks the same case-to-order relationship.
+            array_walk_recursive($detail, static function (&$value) use ($prefix, $caseId): void {
+                if (is_string($value) && str_starts_with($value, $prefix)) {
+                    $value .= '?case_id='.rawurlencode($caseId);
+                }
+            });
+        }
+
+        return $detail;
+    }
+
+    /** @param array<string, mixed> $filters
+     * @return array{items: list<array<string, mixed>>, meta: array<string, mixed>}
+     */
+    public function auditList(array $filters): array
+    {
+        $query = DB::table('orders as o');
+        PortalDateRange::apply($query, 'o.submitted_at', $filters);
+        foreach (['order_state', 'payment_state', 'refund_state', 'payment_method'] as $field) {
+            if (isset($filters[$field])) {
+                $query->where('o.'.$field, $filters[$field]);
+            }
+        }
+        $term = trim((string) ($filters['q'] ?? ''));
+        if ($term !== '') {
+            $like = '%'.str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], mb_strtolower($term)).'%';
+            $query->where(fn (Builder $match) => $match->whereRaw('lower(o.reference) like ?', [$like])
+                ->orWhereExists(fn (Builder $buyer) => $buyer->selectRaw('1')->from('buyer_profiles as b')->join('user_profiles as p', 'p.user_id', '=', 'b.user_id')
+                    ->whereColumn('b.id', 'o.buyer_profile_id')->whereRaw('lower(p.full_name) like ?', [$like]))
+                ->orWhereExists(fn (Builder $vendor) => $vendor->selectRaw('1')->from('store_profiles as s')->whereColumn('s.vendor_organization_id', 'o.vendor_organization_id')->whereRaw('lower(s.public_store_name) like ?', [$like])));
+        }
+
+        return $this->page($query, (int) ($filters['page'] ?? 1), fn (object $order): array => $this->summary($order) + ['buyer' => ['display_name' => $this->buyerName((string) $order->buyer_profile_id)]], ['group' => 'ALL', 'counts' => new \stdClass]);
     }
 
     /** @return array<string, mixed> */
@@ -637,6 +707,7 @@ final class OrderQueries
                 'recommendation_changed' => (bool) ($snapshot['recommendation_changed'] ?? false),
                 'change_reason' => $snapshot['change_reason'] ?? $snapshot['manual_review_note'] ?? null,
                 'vehicles' => array_map(static fn (array $vehicle): array => [
+                    'vehicle_details' => DeliveryVehicleProfile::from($vehicle['configuration'] ?? []),
                     'name' => $vehicle['configuration']['name'] ?? null, 'vehicle_category' => $vehicle['configuration']['vehicle_category'] ?? null,
                     'vehicle_type' => $vehicle['configuration']['vehicle_type'] ?? null, 'custom_type_name' => $vehicle['configuration']['custom_type_name'] ?? null,
                     'brand' => $vehicle['configuration']['brand'] ?? null, 'capacity_kg' => isset($vehicle['configuration']['capacity_kg']) ? (string) $vehicle['configuration']['capacity_kg'] : null,

@@ -27,6 +27,13 @@ import {
     ApiErrorToJSON,
     ApiErrorToJSONTyped,
 } from './ApiError';
+import type { EnforcementListEnvelopeMeta } from './EnforcementListEnvelopeMeta';
+import {
+    EnforcementListEnvelopeMetaFromJSON,
+    EnforcementListEnvelopeMetaFromJSONTyped,
+    EnforcementListEnvelopeMetaToJSON,
+    EnforcementListEnvelopeMetaToJSONTyped,
+} from './EnforcementListEnvelopeMeta';
 
 /**
  *
@@ -41,7 +48,7 @@ export interface EnforcementListEnvelope {
     /**
      *
      */
-    meta: { [key: string]: any; };
+    meta: EnforcementListEnvelopeMeta;
     /**
      *
      */
@@ -69,7 +76,7 @@ export function EnforcementListEnvelopeFromJSONTyped(json: any, ignoreDiscrimina
     return {
 
         'data': ((json['data'] as Array<any>).map(EnforcementSummaryFromJSON)),
-        'meta': json['meta'],
+        'meta': EnforcementListEnvelopeMetaFromJSON(json['meta']),
         'errors': ((json['errors'] as Array<any>).map(ApiErrorFromJSON)),
     };
 }
@@ -86,7 +93,7 @@ export function EnforcementListEnvelopeToJSONTyped(value?: EnforcementListEnvelo
     return {
 
         'data': ((value['data'] as Array<any>).map(EnforcementSummaryToJSON)),
-        'meta': value['meta'],
+        'meta': EnforcementListEnvelopeMetaToJSON(value['meta']),
         'errors': ((value['errors'] as Array<any>).map(ApiErrorToJSON)),
     };
 }

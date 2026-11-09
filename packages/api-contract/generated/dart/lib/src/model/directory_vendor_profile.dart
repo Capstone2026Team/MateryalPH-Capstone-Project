@@ -28,6 +28,7 @@ part 'directory_vendor_profile.g.dart';
 /// * [sanctions] - Empty unless the caller also holds enforcement.view.
 /// * [canViewEnforcement]
 /// * [canViewVerification]
+/// * [canViewScores]
 @BuiltValue()
 abstract class DirectoryVendorProfile implements Built<DirectoryVendorProfile, DirectoryVendorProfileBuilder> {
   @BuiltValueField(wireName: r'id')
@@ -64,6 +65,9 @@ abstract class DirectoryVendorProfile implements Built<DirectoryVendorProfile, D
 
   @BuiltValueField(wireName: r'can_view_verification')
   bool get canViewVerification;
+
+  @BuiltValueField(wireName: r'can_view_scores')
+  bool get canViewScores;
 
   DirectoryVendorProfile._();
 
@@ -141,6 +145,11 @@ class _$DirectoryVendorProfileSerializer implements PrimitiveSerializer<Director
     yield r'can_view_verification';
     yield serializers.serialize(
       object.canViewVerification,
+      specifiedType: const FullType(bool),
+    );
+    yield r'can_view_scores';
+    yield serializers.serialize(
+      object.canViewScores,
       specifiedType: const FullType(bool),
     );
   }
@@ -243,6 +252,13 @@ class _$DirectoryVendorProfileSerializer implements PrimitiveSerializer<Director
             specifiedType: const FullType(bool),
           ) as bool;
           result.canViewVerification = valueDes;
+          break;
+        case r'can_view_scores':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(bool),
+          ) as bool;
+          result.canViewScores = valueDes;
           break;
         default:
           unhandled.add(key);

@@ -38,12 +38,22 @@ for (const route of routes.filter(r => /^api\/v1\/vendor\/product-analytics/.tes
   assert.ok(spec.paths[`/${route.uri.replace(/^api\/v1\//, '')}`], `Undocumented product analytics route ${route.uri}`)
 }
 const schemas = spec.components.schemas
+assert.match(schemas.VendorProductAnalytics.description, /same latest financial snapshot lines/)
+assert.match(schemas.VendorProductAnalytics.description, /before partial refunds/)
 const isNullable = schema => schema.oneOf?.some(s => s.type === 'null') || (Array.isArray(schema.type) && schema.type.includes('null'))
 assert.ok(isNullable(schemas.VendorProductAnalytics.properties.kpis.properties.value_centavos), 'Overview value is null without finance.view')
 assert.ok(isNullable(schemas.VendorProductAnalyticsDetail.properties.kpis.properties.value_centavos), 'Detail value is null without finance.view')
 assert.ok(isNullable(schemas.ProductAnalyticsRow.properties.value_centavos), 'Row value is null without finance.view')
 assert.ok(isNullable(schemas.ProductAnalyticsSeriesPoint.properties.value_centavos), 'Series value is null without finance.view')
 assert.deepEqual(schemas.VendorProductAnalytics.properties.products.properties.meta.properties.sort.enum, ['views', 'orders', 'conversion', 'value'])
+const topRated = schemas.VendorProductAnalytics.properties.top_rated
+assert.ok(isNullable(topRated), 'Top-rated products are null without reviews.view')
+assert.equal(topRated.maxItems, 5, 'Top-rated products are bounded')
+assert.match(topRated.description, /all-time/)
+assert.match(topRated.description, /reviews.view/)
+assert.equal(topRated.items.$ref, '#/components/schemas/ProductAnalyticsRatedProduct')
+assert.deepEqual(schemas.ProductAnalyticsRatedProduct.required, ['listing_id', 'name', 'category', 'average', 'count'])
+assert.equal(schemas.ProductAnalyticsRatedProduct.properties.count.minimum, 1)
 const text = JSON.stringify(Object.fromEntries(Object.entries(schemas).filter(([name]) => /^(ProductAnalytics|VendorProductAnalytics)/.test(name))))
 assert.ok(!/latitude|longitude|"location"|buyer_key|buyer_profile_id|email|phone|"tin"|tax_evidence/i.test(text), 'Product analytics schemas expose no coordinates, Buyer identity, contact data, TIN or tax evidence')
 console.log('Product analytics contract checks passed (3 operations).')

@@ -51,6 +51,10 @@ for (const route of routes.filter(route => /^api\/v1\/(webhooks\/xendit$|payment
   }
 }
 const schemas = spec.components.schemas
+for (const field of ['assessment_id', 'assessment_collected_centavos', 'assessment_refunds_centavos', 'assessment_delivery_centavos', 'assessment_vat_centavos', 'assessment_rate_basis_points', 'provider_charge_centavos', 'gross_basis_centavos', 'withheld_centavos', 'expected_cash_centavos', 'calculation_state', 'assessment_at', 'order_after_refunds_centavos', 'net_remittance_centavos']) {
+  assert.ok(schemas.FinanceTransactionListEnvelope.description.includes(field), `Unified Payments documents ${field}`)
+  assert.ok(readFileSync(new URL('../../../services/api/app/Domain/Finance/VendorFinanceService.php', import.meta.url), 'utf8').includes(`'${field}'`), `Unified Payments implements ${field}`)
+}
 const statuses = ['RELIEF_ACTIVE', 'SUBJECT_STANDARD', 'SUBJECT_THRESHOLD_BREACHED', 'SUBJECT_PRIOR_YEAR', 'UNDER_REVIEW']
 assert.deepEqual(schemas.WithholdingAccumulatorView.properties.status.enum, statuses)
 const enumValues = []

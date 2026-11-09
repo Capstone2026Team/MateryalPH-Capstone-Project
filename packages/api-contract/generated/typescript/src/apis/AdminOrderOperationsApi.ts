@@ -48,6 +48,26 @@ import {
     ErrorEnvelopeFromJSON,
     ErrorEnvelopeToJSON,
 } from '../models/ErrorEnvelope';
+import {
+    type OrderDetailEnvelope,
+    OrderDetailEnvelopeFromJSON,
+    OrderDetailEnvelopeToJSON,
+} from '../models/OrderDetailEnvelope';
+import {
+    type OrderListEnvelope,
+    OrderListEnvelopeFromJSON,
+    OrderListEnvelopeToJSON,
+} from '../models/OrderListEnvelope';
+import {
+    type OrderPaymentState,
+    OrderPaymentStateFromJSON,
+    OrderPaymentStateToJSON,
+} from '../models/OrderPaymentState';
+import {
+    type OrderState,
+    OrderStateFromJSON,
+    OrderStateToJSON,
+} from '../models/OrderState';
 
 export interface ConfirmAdminReimbursementRequest {
     /**
@@ -58,6 +78,67 @@ export interface ConfirmAdminReimbursementRequest {
      *
      */
     adminReimbursementDecision: AdminReimbursementDecision;
+}
+
+export interface GetAdminAuditOrderRequest {
+    /**
+     *
+     */
+    orderId: string;
+    /**
+     *
+     */
+    caseId?: string;
+}
+
+export interface GetAdminAuditOrderFileRequest {
+    /**
+     *
+     */
+    orderId: string;
+    /**
+     *
+     */
+    fileId: string;
+    /**
+     *
+     */
+    caseId?: string;
+}
+
+export interface ListAdminAuditOrdersRequest {
+    /**
+     * Order reference or Buyer or public store name.
+     */
+    q?: string;
+    /**
+     *
+     */
+    page?: number;
+    /**
+     *
+     */
+    orderState?: OrderState;
+    /**
+     *
+     */
+    paymentState?: OrderPaymentState;
+    /**
+     *
+     */
+    refundState?: ListAdminAuditOrdersRefundStateEnum;
+    /**
+     *
+     */
+    paymentMethod?: ListAdminAuditOrdersPaymentMethodEnum;
+    /**
+     * Inclusive submitted date in Asia/Manila; omit for all history.
+     */
+    from?: Date;
+    /**
+     * Inclusive submitted date in Asia/Manila; omit for all history.
+     */
+    to?: Date;
 }
 
 export interface ListAdminCancellationRequestsRequest {
@@ -96,11 +177,15 @@ export interface ListAdminRefundsRequest {
 
 export interface ListAdminReimbursementsRequest {
     /**
-     * Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Reimbursement instruction created_at; existing 100-record bound retained.
+     *
+     */
+    page?: number;
+    /**
+     * Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Reimbursement instruction created_at.
      */
     from?: Date;
     /**
-     * Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Reimbursement instruction created_at; existing 100-record bound retained.
+     * Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Reimbursement instruction created_at.
      */
     to?: Date;
 }
@@ -181,6 +266,120 @@ export class AdminOrderOperationsApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates request options for getAdminAuditOrder without sending the request
+     */
+    async getAdminAuditOrderRequestOpts(requestParameters: GetAdminAuditOrderRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['orderId'] == null) {
+            throw new runtime.RequiredError(
+                'orderId',
+                'Required parameter "orderId" was null or undefined when calling getAdminAuditOrder().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['caseId'] != null) {
+            queryParameters['case_id'] = requestParameters['caseId'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/admin/order-operations/orders/{orderId}`;
+        urlPath = urlPath.replace('{orderId}', encodeURIComponent(String(requestParameters['orderId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Audited read-only order detail with immutable commercial terms, all recorded payment attempts, cash records, fulfillment evidence, cancellation decision, refunds and state history. Requires orders.operations.view; when case_id is provided requires disputes.view and an existing matching case/order relationship. No inventory, Buyer budget, staff contacts, provider identifiers or checkout URLs. No actions or transitions.
+     */
+    async getAdminAuditOrderRaw(requestParameters: GetAdminAuditOrderRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<OrderDetailEnvelope>> {
+        const requestOptions = await this.getAdminAuditOrderRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => OrderDetailEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * Audited read-only order detail with immutable commercial terms, all recorded payment attempts, cash records, fulfillment evidence, cancellation decision, refunds and state history. Requires orders.operations.view; when case_id is provided requires disputes.view and an existing matching case/order relationship. No inventory, Buyer budget, staff contacts, provider identifiers or checkout URLs. No actions or transitions.
+     */
+    async getAdminAuditOrder(requestParameters: GetAdminAuditOrderRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<OrderDetailEnvelope> {
+        const response = await this.getAdminAuditOrderRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for getAdminAuditOrderFile without sending the request
+     */
+    async getAdminAuditOrderFileRequestOpts(requestParameters: GetAdminAuditOrderFileRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['orderId'] == null) {
+            throw new runtime.RequiredError(
+                'orderId',
+                'Required parameter "orderId" was null or undefined when calling getAdminAuditOrderFile().'
+            );
+        }
+
+        if (requestParameters['fileId'] == null) {
+            throw new runtime.RequiredError(
+                'fileId',
+                'Required parameter "fileId" was null or undefined when calling getAdminAuditOrderFile().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['caseId'] != null) {
+            queryParameters['case_id'] = requestParameters['caseId'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/admin/order-operations/orders/{orderId}/files/{fileId}`;
+        urlPath = urlPath.replace('{orderId}', encodeURIComponent(String(requestParameters['orderId'])));
+        urlPath = urlPath.replace('{fileId}', encodeURIComponent(String(requestParameters['fileId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Audited private evidence read. Reauthorizes orders.operations.view or disputes.view plus matching case_id on every request. Only CLEAN private files referenced by this order are available; no public storage URL is returned.
+     */
+    async getAdminAuditOrderFileRaw(requestParameters: GetAdminAuditOrderFileRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Blob>> {
+        const requestOptions = await this.getAdminAuditOrderFileRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.BlobApiResponse(response);
+    }
+
+    /**
+     * Audited private evidence read. Reauthorizes orders.operations.view or disputes.view plus matching case_id on every request. Only CLEAN private files referenced by this order are available; no public storage URL is returned.
+     */
+    async getAdminAuditOrderFile(requestParameters: GetAdminAuditOrderFileRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Blob> {
+        const response = await this.getAdminAuditOrderFileRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Creates request options for getAdminOrderOperationsSummary without sending the request
      */
     async getAdminOrderOperationsSummaryRequestOpts(): Promise<runtime.RequestOpts> {
@@ -218,6 +417,79 @@ export class AdminOrderOperationsApi extends runtime.BaseAPI {
      */
     async getAdminOrderOperationsSummary(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AdminOrderOperationsSummaryEnvelope> {
         const response = await this.getAdminOrderOperationsSummaryRaw(initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for listAdminAuditOrders without sending the request
+     */
+    async listAdminAuditOrdersRequestOpts(requestParameters: ListAdminAuditOrdersRequest): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        if (requestParameters['q'] != null) {
+            queryParameters['q'] = requestParameters['q'];
+        }
+
+        if (requestParameters['page'] != null) {
+            queryParameters['page'] = requestParameters['page'];
+        }
+
+        if (requestParameters['orderState'] != null) {
+            queryParameters['order_state'] = requestParameters['orderState'];
+        }
+
+        if (requestParameters['paymentState'] != null) {
+            queryParameters['payment_state'] = requestParameters['paymentState'];
+        }
+
+        if (requestParameters['refundState'] != null) {
+            queryParameters['refund_state'] = requestParameters['refundState'];
+        }
+
+        if (requestParameters['paymentMethod'] != null) {
+            queryParameters['payment_method'] = requestParameters['paymentMethod'];
+        }
+
+        if (requestParameters['from'] != null) {
+            queryParameters['from'] = runtime.serializeDate(requestParameters['from'] as any);
+        }
+
+        if (requestParameters['to'] != null) {
+            queryParameters['to'] = runtime.serializeDate(requestParameters['to'] as any);
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/admin/order-operations/orders`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Read-only platform order history; requires orders.operations.view. No expiry, reconciliation or commercial mutation runs on a read. Buyer names and public store names only in the paginated list.
+     */
+    async listAdminAuditOrdersRaw(requestParameters: ListAdminAuditOrdersRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<OrderListEnvelope>> {
+        const requestOptions = await this.listAdminAuditOrdersRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => OrderListEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * Read-only platform order history; requires orders.operations.view. No expiry, reconciliation or commercial mutation runs on a read. Buyer names and public store names only in the paginated list.
+     */
+    async listAdminAuditOrders(requestParameters: ListAdminAuditOrdersRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<OrderListEnvelope> {
+        const response = await this.listAdminAuditOrdersRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -337,6 +609,10 @@ export class AdminOrderOperationsApi extends runtime.BaseAPI {
     async listAdminReimbursementsRequestOpts(requestParameters: ListAdminReimbursementsRequest): Promise<runtime.RequestOpts> {
         const queryParameters: any = {};
 
+        if (requestParameters['page'] != null) {
+            queryParameters['page'] = requestParameters['page'];
+        }
+
         if (requestParameters['from'] != null) {
             queryParameters['from'] = runtime.serializeDate(requestParameters['from'] as any);
         }
@@ -363,7 +639,7 @@ export class AdminOrderOperationsApi extends runtime.BaseAPI {
     }
 
     /**
-     * orders.operations.view. Vendor cash reimbursements of cancelled orders.
+     * orders.operations.view. Paginated Vendor cash reimbursement instructions and confirmed records, including cancellation and dispute remedies.
      */
     async listAdminReimbursementsRaw(requestParameters: ListAdminReimbursementsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AdminReimbursementListEnvelope>> {
         const requestOptions = await this.listAdminReimbursementsRequestOpts(requestParameters);
@@ -373,7 +649,7 @@ export class AdminOrderOperationsApi extends runtime.BaseAPI {
     }
 
     /**
-     * orders.operations.view. Vendor cash reimbursements of cancelled orders.
+     * orders.operations.view. Paginated Vendor cash reimbursement instructions and confirmed records, including cancellation and dispute remedies.
      */
     async listAdminReimbursements(requestParameters: ListAdminReimbursementsRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AdminReimbursementListEnvelope> {
         const response = await this.listAdminReimbursementsRaw(requestParameters, initOverrides);
@@ -442,6 +718,26 @@ export class AdminOrderOperationsApi extends runtime.BaseAPI {
 
 }
 
+/**
+ * @export
+ */
+export const ListAdminAuditOrdersRefundStateEnum = {
+    NotRequested: 'NOT_REQUESTED',
+    RefundPending: 'REFUND_PENDING',
+    PartiallyRefunded: 'PARTIALLY_REFUNDED',
+    Refunded: 'REFUNDED',
+    RefundFailed: 'REFUND_FAILED',
+} as const;
+export type ListAdminAuditOrdersRefundStateEnum = typeof ListAdminAuditOrdersRefundStateEnum[keyof typeof ListAdminAuditOrdersRefundStateEnum];
+/**
+ * @export
+ */
+export const ListAdminAuditOrdersPaymentMethodEnum = {
+    Online: 'ONLINE',
+    CashOnDelivery: 'CASH_ON_DELIVERY',
+    InStore: 'IN_STORE',
+} as const;
+export type ListAdminAuditOrdersPaymentMethodEnum = typeof ListAdminAuditOrdersPaymentMethodEnum[keyof typeof ListAdminAuditOrdersPaymentMethodEnum];
 /**
  * @export
  */

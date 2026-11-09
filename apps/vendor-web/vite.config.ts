@@ -3,6 +3,21 @@ import { defineConfig, type Plugin, type ProxyOptions } from 'vite'
 import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import { watchGeneratedApiClient } from '../../packages/shared-config/vite-api-client.mjs'
+
+function refreshGeneratedApiClient(): Plugin {
+  const directory = fileURLToPath(new URL('../../packages/api-contract/generated/typescript/dist/esm', import.meta.url))
+  return {
+    name: 'materyalph-refresh-generated-api-client',
+    apply: 'serve',
+    configureServer(server) {
+      const stop = watchGeneratedApiClient(server.watcher, directory, () => {
+        void server.restart(true).catch(error => server.config.logger.error(String(error)))
+      })
+      server.httpServer?.once('close', stop)
+    },
+  }
+}
 
 function buyerDemoApkPreviewRoute(): Plugin {
   const apkPath = fileURLToPath(new URL('./public/buyer-demo.apk', import.meta.url))
@@ -62,7 +77,9 @@ const publicTunnelHosts = ['.trycloudflare.com']
 
 export default defineConfig({
   resolve: { dedupe: ['react', 'react-dom'] },
-  plugins: [react(), tailwindcss(), buyerDemoApkPreviewRoute()],
+  plugins: [react(), tailwindcss(), buyerDemoApkPreviewRoute(), refreshGeneratedApiClient()],
+  // The linked generated client contains thousands of modules; serve one optimized dependency.
+  optimizeDeps: { include: ['@materyalph/api-client-ts'], force: true },
   server: {
     port: 5173,
     allowedHosts: publicTunnelHosts,
@@ -70,7 +87,8 @@ export default defineConfig({
       '/api/v1': apiProxy,
     },
     fs: {
-      allow: ['.', '../../packages/web-ui', '../../packages/design-tokens', '../../packages/api-contract/generated/typescript'].map(path => fileURLToPath(new URL(path, import.meta.url))),
+      strict: true,
+      allow: ['.', '../../packages/web-ui/src', '../../packages/design-tokens', '../../packages/api-contract/generated/typescript'].map(path => fileURLToPath(new URL(path, import.meta.url))),
     },
   },
   preview: {

@@ -24,10 +24,25 @@ import {
     FinanceKpiEnvelopeToJSON,
 } from '../models/FinanceKpiEnvelope';
 import {
+    type FinanceReviewItemListEnvelope,
+    FinanceReviewItemListEnvelopeFromJSON,
+    FinanceReviewItemListEnvelopeToJSON,
+} from '../models/FinanceReviewItemListEnvelope';
+import {
     type RemittanceQueueEnvelope,
     RemittanceQueueEnvelopeFromJSON,
     RemittanceQueueEnvelopeToJSON,
 } from '../models/RemittanceQueueEnvelope';
+import {
+    type RemittanceReconciliationApproval,
+    RemittanceReconciliationApprovalFromJSON,
+    RemittanceReconciliationApprovalToJSON,
+} from '../models/RemittanceReconciliationApproval';
+import {
+    type RemittanceReconciliationDecisionEnvelope,
+    RemittanceReconciliationDecisionEnvelopeFromJSON,
+    RemittanceReconciliationDecisionEnvelopeToJSON,
+} from '../models/RemittanceReconciliationDecisionEnvelope';
 import {
     type TaxAdjustmentEnvelope,
     TaxAdjustmentEnvelopeFromJSON,
@@ -53,6 +68,31 @@ import {
     TaxEvidenceQueueEnvelopeFromJSON,
     TaxEvidenceQueueEnvelopeToJSON,
 } from '../models/TaxEvidenceQueueEnvelope';
+import {
+    type WithholdingRegisterEnvelope,
+    WithholdingRegisterEnvelopeFromJSON,
+    WithholdingRegisterEnvelopeToJSON,
+} from '../models/WithholdingRegisterEnvelope';
+import {
+    type WithholdingVendorDetailEnvelope,
+    WithholdingVendorDetailEnvelopeFromJSON,
+    WithholdingVendorDetailEnvelopeToJSON,
+} from '../models/WithholdingVendorDetailEnvelope';
+
+export interface ApproveRemittanceReconciliationRequest {
+    /**
+     *
+     */
+    assessmentId: string;
+    /**
+     *
+     */
+    idempotencyKey: string;
+    /**
+     *
+     */
+    remittanceReconciliationApproval: RemittanceReconciliationApproval;
+}
 
 export interface GetFinanceKpisRequest {
     /**
@@ -63,6 +103,36 @@ export interface GetFinanceKpisRequest {
      *
      */
     to?: Date;
+}
+
+export interface GetWithholdingRegisterRequest {
+    /**
+     *
+     */
+    month?: string;
+    /**
+     *
+     */
+    page?: number;
+}
+
+export interface GetWithholdingVendorRequest {
+    /**
+     *
+     */
+    vendorId: string;
+    /**
+     *
+     */
+    month: string;
+    /**
+     *
+     */
+    withholdingEntity: GetWithholdingVendorWithholdingEntityEnum;
+    /**
+     *
+     */
+    page?: number;
 }
 
 export interface ListRemittanceQueueRequest {
@@ -130,6 +200,13 @@ export interface ListTaxEvidenceQueueRequest {
     to?: Date;
 }
 
+export interface ListTaxIssuesRequest {
+    /**
+     *
+     */
+    page?: number;
+}
+
 export interface PostTaxAdjustmentRequest {
     /**
      *
@@ -163,6 +240,76 @@ export interface ReviewTaxAdjustmentRequest {
  *
  */
 export class AdminFinanceOperationsApi extends runtime.BaseAPI {
+
+    /**
+     * Creates request options for approveRemittanceReconciliation without sending the request
+     */
+    async approveRemittanceReconciliationRequestOpts(requestParameters: ApproveRemittanceReconciliationRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['assessmentId'] == null) {
+            throw new runtime.RequiredError(
+                'assessmentId',
+                'Required parameter "assessmentId" was null or undefined when calling approveRemittanceReconciliation().'
+            );
+        }
+
+        if (requestParameters['idempotencyKey'] == null) {
+            throw new runtime.RequiredError(
+                'idempotencyKey',
+                'Required parameter "idempotencyKey" was null or undefined when calling approveRemittanceReconciliation().'
+            );
+        }
+
+        if (requestParameters['remittanceReconciliationApproval'] == null) {
+            throw new runtime.RequiredError(
+                'remittanceReconciliationApproval',
+                'Required parameter "remittanceReconciliationApproval" was null or undefined when calling approveRemittanceReconciliation().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (requestParameters['idempotencyKey'] != null) {
+            headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
+        }
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/admin/finance/remittances/{assessmentId}/approve-reconciliation`;
+        urlPath = urlPath.replace('{assessmentId}', encodeURIComponent(String(requestParameters['assessmentId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: RemittanceReconciliationApprovalToJSON(requestParameters['remittanceReconciliationApproval']),
+        };
+    }
+
+    /**
+     * Backup approval of a recorded TEST platform remittance. Requires active ADMIN_SUPERADMIN or ADMIN_FINANCE membership, finance.view, finance.approve_remittance_reconciliation and recent authentication. The supplied source version must match the locked assessment. Collection, calculation and ledger checks must all pass; an approval cannot override a mismatch, open tax adjustment, fully refunded or voided collection. An immutable SIMULATED decision and audit event are recorded once. This never confirms a live settlement, BIR filing or BIR payment.
+     */
+    async approveRemittanceReconciliationRaw(requestParameters: ApproveRemittanceReconciliationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RemittanceReconciliationDecisionEnvelope>> {
+        const requestOptions = await this.approveRemittanceReconciliationRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => RemittanceReconciliationDecisionEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * Backup approval of a recorded TEST platform remittance. Requires active ADMIN_SUPERADMIN or ADMIN_FINANCE membership, finance.view, finance.approve_remittance_reconciliation and recent authentication. The supplied source version must match the locked assessment. Collection, calculation and ledger checks must all pass; an approval cannot override a mismatch, open tax adjustment, fully refunded or voided collection. An immutable SIMULATED decision and audit event are recorded once. This never confirms a live settlement, BIR filing or BIR payment.
+     */
+    async approveRemittanceReconciliation(requestParameters: ApproveRemittanceReconciliationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RemittanceReconciliationDecisionEnvelope> {
+        const response = await this.approveRemittanceReconciliationRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
 
     /**
      * Creates request options for getFinanceKpis without sending the request
@@ -210,6 +357,130 @@ export class AdminFinanceOperationsApi extends runtime.BaseAPI {
      */
     async getFinanceKpis(requestParameters: GetFinanceKpisRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<FinanceKpiEnvelope> {
         const response = await this.getFinanceKpisRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for getWithholdingRegister without sending the request
+     */
+    async getWithholdingRegisterRequestOpts(requestParameters: GetWithholdingRegisterRequest): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        if (requestParameters['month'] != null) {
+            queryParameters['month'] = requestParameters['month'];
+        }
+
+        if (requestParameters['page'] != null) {
+            queryParameters['page'] = requestParameters['page'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/admin/finance/withholding-register`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * finance.view. TEST withholding assessments across Vendors for one collection calendar month in Asia/Manila. Platform and provider obligations stay separate. When month is omitted, use the latest month with a non-voided TEST assessment and linked collection, or the current Manila month if none exist. An explicit month is always respected, including months without assessments. Totals cover all pages, exclude VOIDED assessments and include only POSTED tax. Original assessment amounts precede linked corrections; reviewed packages apply posted corrections. These amounts are not cash held, a BIR payable balance or evidence of deduction, filing or payment. Production assignment stays UNCONFIRMED.
+     */
+    async getWithholdingRegisterRaw(requestParameters: GetWithholdingRegisterRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WithholdingRegisterEnvelope>> {
+        const requestOptions = await this.getWithholdingRegisterRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => WithholdingRegisterEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * finance.view. TEST withholding assessments across Vendors for one collection calendar month in Asia/Manila. Platform and provider obligations stay separate. When month is omitted, use the latest month with a non-voided TEST assessment and linked collection, or the current Manila month if none exist. An explicit month is always respected, including months without assessments. Totals cover all pages, exclude VOIDED assessments and include only POSTED tax. Original assessment amounts precede linked corrections; reviewed packages apply posted corrections. These amounts are not cash held, a BIR payable balance or evidence of deduction, filing or payment. Production assignment stays UNCONFIRMED.
+     */
+    async getWithholdingRegister(requestParameters: GetWithholdingRegisterRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WithholdingRegisterEnvelope> {
+        const response = await this.getWithholdingRegisterRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for getWithholdingVendor without sending the request
+     */
+    async getWithholdingVendorRequestOpts(requestParameters: GetWithholdingVendorRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['vendorId'] == null) {
+            throw new runtime.RequiredError(
+                'vendorId',
+                'Required parameter "vendorId" was null or undefined when calling getWithholdingVendor().'
+            );
+        }
+
+        if (requestParameters['month'] == null) {
+            throw new runtime.RequiredError(
+                'month',
+                'Required parameter "month" was null or undefined when calling getWithholdingVendor().'
+            );
+        }
+
+        if (requestParameters['withholdingEntity'] == null) {
+            throw new runtime.RequiredError(
+                'withholdingEntity',
+                'Required parameter "withholdingEntity" was null or undefined when calling getWithholdingVendor().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['month'] != null) {
+            queryParameters['month'] = requestParameters['month'];
+        }
+
+        if (requestParameters['withholdingEntity'] != null) {
+            queryParameters['withholding_entity'] = requestParameters['withholdingEntity'];
+        }
+
+        if (requestParameters['page'] != null) {
+            queryParameters['page'] = requestParameters['page'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/admin/finance/withholding-register/{vendorId}`;
+        urlPath = urlPath.replace('{vendorId}', encodeURIComponent(String(requestParameters['vendorId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Read-only finance.view projection of saved TEST payment assessments for one Vendor, withholding entity and Manila collection month. Paginated payments retain original per-payment rounding and nullable unposted amounts. Declaration status is evaluated at month end or now, whichever is earlier. The yearly meter is returned only for approved in-period evidence and uses the saved full-taxpayer-year accumulator across stores and declared external remittances. No raw taxpayer identity, private evidence or provider payload is returned. No tax is recalculated.
+     */
+    async getWithholdingVendorRaw(requestParameters: GetWithholdingVendorRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WithholdingVendorDetailEnvelope>> {
+        const requestOptions = await this.getWithholdingVendorRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => WithholdingVendorDetailEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * Read-only finance.view projection of saved TEST payment assessments for one Vendor, withholding entity and Manila collection month. Paginated payments retain original per-payment rounding and nullable unposted amounts. Declaration status is evaluated at month end or now, whichever is earlier. The yearly meter is returned only for approved in-period evidence and uses the saved full-taxpayer-year accumulator across stores and declared external remittances. No raw taxpayer identity, private evidence or provider payload is returned. No tax is recalculated.
+     */
+    async getWithholdingVendor(requestParameters: GetWithholdingVendorRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WithholdingVendorDetailEnvelope> {
+        const response = await this.getWithholdingVendorRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -393,6 +664,51 @@ export class AdminFinanceOperationsApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates request options for listTaxIssues without sending the request
+     */
+    async listTaxIssuesRequestOpts(requestParameters: ListTaxIssuesRequest): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        if (requestParameters['page'] != null) {
+            queryParameters['page'] = requestParameters['page'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/admin/finance/tax-issues`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Read-only finance.view action queue across all periods. Combines OPEN finance work with non-voided TEST withholding source blockers that have no OPEN work item for the same assessment. WITHHOLDING_SOURCE rows link to source correction and cannot be resolved through the work-item mutation. This projection does not create, resolve or change any financial record.
+     */
+    async listTaxIssuesRaw(requestParameters: ListTaxIssuesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<FinanceReviewItemListEnvelope>> {
+        const requestOptions = await this.listTaxIssuesRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => FinanceReviewItemListEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * Read-only finance.view action queue across all periods. Combines OPEN finance work with non-voided TEST withholding source blockers that have no OPEN work item for the same assessment. WITHHOLDING_SOURCE rows link to source correction and cannot be resolved through the work-item mutation. This projection does not create, resolve or change any financial record.
+     */
+    async listTaxIssues(requestParameters: ListTaxIssuesRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<FinanceReviewItemListEnvelope> {
+        const response = await this.listTaxIssuesRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Creates request options for postTaxAdjustment without sending the request
      */
     async postTaxAdjustmentRequestOpts(requestParameters: PostTaxAdjustmentRequest): Promise<runtime.RequestOpts> {
@@ -561,6 +877,14 @@ export class AdminFinanceOperationsApi extends runtime.BaseAPI {
 
 }
 
+/**
+ * @export
+ */
+export const GetWithholdingVendorWithholdingEntityEnum = {
+    DemoPlatformWithholder: 'DEMO_PLATFORM_WITHHOLDER',
+    DemoProviderWithholder: 'DEMO_PROVIDER_WITHHOLDER',
+} as const;
+export type GetWithholdingVendorWithholdingEntityEnum = typeof GetWithholdingVendorWithholdingEntityEnum[keyof typeof GetWithholdingVendorWithholdingEntityEnum];
 /**
  * @export
  */

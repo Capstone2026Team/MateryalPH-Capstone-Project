@@ -6,6 +6,8 @@
 
 Name | Type
 ------------ | -------------
+`invoiceHeading` | string
+`invoiceMessage` | string
 `id` | string
 `reference` | string
 `state` | string
@@ -29,6 +31,8 @@ import type { FeeStatement } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "invoiceHeading": null,
+  "invoiceMessage": null,
   "id": null,
   "reference": null,
   "state": null,

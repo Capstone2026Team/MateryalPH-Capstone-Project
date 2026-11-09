@@ -4,6 +4,9 @@ import { chartLeftInset, chartMinimumWidth, chartTicks } from './chart-layout'
 import { useMeasuredWidth } from './geo-analytics-patterns'
 import { StatusBadge } from './portal-shell'
 import { MaterialThumbnail } from './material-thumbnail'
+import { ChartEmptyFrame } from './chart-empty-frame'
+import { ScoreOverview } from './score-overview'
+import { AnalyticsDetails } from './insight-patterns'
 
 /** One graph/table day. A null value is a gap (missing day, suppressed or no local observation) — never zero. */
 export type PricePoint = {
@@ -58,24 +61,24 @@ export function formatPhpDecimal(value: string | null | undefined): string {
 /**
  * MAT-06 price graph: one line with breaks at every missing or suppressed day (no line is drawn across a gap), exact
  * values on focus, a participant-change flag and a keyboard-operable focus that stays synchronized with the table.
- * When no day has a displayable value the chart is replaced by an explicit null state carrying the reason.
+ * When no day has a displayable value a grey chart frame retains the reason without inventing observations.
  */
 export function PriceTrendChart({ title, unit, points, focusedDate, onFocusDate, emptyReason }: {
   title: string; unit: string; points: PricePoint[]; focusedDate: string | null; onFocusDate: (date: string | null) => void; emptyReason: string
 }) {
   const summaryId = useId()
-  const [frame, measured] = useMeasuredWidth(720)
+  const [frame, measured] = useMeasuredWidth(600, 240)
   const values = points.map(point => (point.value === null ? null : Number(point.value)))
   const numeric = values.filter((value): value is number => value !== null && Number.isFinite(value))
-  if (numeric.length === 0) return <AnalyticsNullState title="No graph for this period" reason={emptyReason} />
+  if (numeric.length === 0) return <ChartEmptyFrame title={title} reason={emptyReason} plotHeight={176} />
   const min = Math.min(...numeric), max = Math.max(...numeric)
   const pad = max === min ? Math.max(1, max * 0.05) : (max - min) * 0.12
   const low = Math.max(0, min - pad), high = max + pad
   const ticks = [low, (low + high) / 2, high]
   const tickLabels = ticks.map(tick => formatPhpDecimal(tick.toFixed(2)))
   const dateLabels = points.map(point => formatAnalyticsDate(point.date))
-  const height = 240, left = chartLeftInset(tickLabels, 64), right = 24, top = 16, bottom = 40
-  const minimumWidth = chartMinimumWidth(dateLabels, left, right)
+  const height = 176, left = chartLeftInset(tickLabels, 64), right = 24, top = 16, bottom = 40
+  const minimumWidth = chartMinimumWidth(dateLabels, left, right, 240, 120)
   const width = Math.max(measured, minimumWidth)
   const dateTicks = chartTicks(dateLabels, left, width - right)
   const x = (index: number) => left + (points.length === 1 ? (width - left - right) / 2 : index * (width - left - right) / (points.length - 1))
@@ -98,7 +101,7 @@ export function PriceTrendChart({ title, unit, points, focusedDate, onFocusDate,
     const next = step === -Infinity ? 0 : step === Infinity ? points.length - 1 : Math.min(points.length - 1, Math.max(0, (focusIndex < 0 ? 0 : focusIndex) + step))
     onFocusDate(points[next]?.date ?? null)
   }
-  return <figure className="m-0 min-w-0">
+  return <figure className="mp-viz relative m-0 min-w-0">
     <figcaption className="sr-only" id={summaryId}>{title}. {numeric.length} days with an average and {gaps} days without one, in {unit}. Use the arrow keys to move between days; the table below lists every value.</figcaption>
     <div ref={frame} className="overflow-x-auto">
       <svg viewBox={`0 0 ${width} ${height}`} style={{ minWidth: minimumWidth }} className="h-auto w-full rounded-control focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring" role="img" aria-labelledby={summaryId}
@@ -108,9 +111,9 @@ export function PriceTrendChart({ title, unit, points, focusedDate, onFocusDate,
           <text x={left - 8} y={y(tick) + 4} textAnchor="end" fontSize={11} fill="var(--mp-color-text-secondary)">{tickLabels[index]}</text>
         </g>)}
         {points.map((point, index) => point.value === null && <g key={`gap-${point.date}`}>
-          <rect x={x(index) - 5} y={top} width={10} height={height - top - bottom} fill="url(#analytics-gap)" opacity={0.6} />
+          <rect x={x(index) - 5} y={top} width={10} height={height - top - bottom} fill={`url(#${summaryId}-gap)`} opacity={0.6} />
         </g>)}
-        <defs><pattern id="analytics-gap" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="var(--mp-color-border-default)" strokeWidth="2" /></pattern></defs>
+        <defs><pattern id={`${summaryId}-gap`} width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="var(--mp-color-border-default)" strokeWidth="2" /></pattern></defs>
         {segments.map(path => <path key={path} d={path} fill="none" stroke="var(--mp-color-action-primary)" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />)}
         {points.map((point, index) => point.value !== null && <g key={point.date}>
           <circle cx={x(index)} cy={y(Number(point.value))} r={index === focusIndex ? 6 : 4} fill="var(--mp-color-surface-primary)" stroke="var(--mp-color-action-primary)" strokeWidth={2} />
@@ -119,10 +122,10 @@ export function PriceTrendChart({ title, unit, points, focusedDate, onFocusDate,
         {dateTicks.map(tick => <text key={tick.index} x={tick.x} y={height - 16} textAnchor={tick.textAnchor} fontSize={11} fill="var(--mp-color-text-secondary)">{tick.label}</text>)}
         {focus && <line x1={x(focusIndex)} x2={x(focusIndex)} y1={top} y2={height - bottom} stroke="var(--mp-color-text-secondary)" strokeDasharray="3 3" strokeWidth={1} />}
         {points.map((point, index) => <rect key={`hit-${point.date}`} x={x(index) - (width - left - right) / Math.max(1, points.length - 1) / 2} y={top} width={Math.max(12, (width - left - right) / Math.max(1, points.length - 1))} height={height - top - bottom}
-          fill="transparent" onMouseEnter={() => onFocusDate(point.date)} />)}
+          fill="transparent" onMouseEnter={() => onFocusDate(point.date)} onPointerDown={() => onFocusDate(point.date)} />)}
       </svg>
     </div>
-    <p className="mt-2 min-h-11 text-sm text-text-strong" aria-live="polite">
+    <p className={focus ? "pointer-events-none absolute right-2 top-2 max-w-[min(100%,18rem)] rounded-control border border-border-default bg-surface-primary px-3 py-2 text-xs leading-5 text-text-strong shadow-sm" : "sr-only"} aria-live="polite">
       {focus ? <><strong>{formatAnalyticsDate(focus.date, true)}</strong>{' · '}{focus.value === null ? (focus.label ?? 'No value for this date') : `${formatPhpDecimal(focus.value)} per ${unit}`}
         {focus.count !== null && focus.count !== undefined && focus.value !== null ? ` · ${focus.count} Vendor${focus.count === 1 ? '' : 's'}` : ''}{focus.participantsChanged ? ' · Participating Vendors changed from the previous day' : ''}</>
         : <span className="text-text-secondary">Hover, tap or use the arrow keys on the graph to read exact values. Hatched bands are days without a value; ▲ marks a change in participating Vendors.</span>}
@@ -163,7 +166,7 @@ export function PriceTrendPanel({ title, unit, points, emptyReason, countLabel }
   const [focusedDate, setFocusedDate] = useState<string | null>(null)
   return <div className="grid min-w-0 gap-4">
     <PriceTrendChart title={title} unit={unit} points={points} focusedDate={focusedDate} onFocusDate={setFocusedDate} emptyReason={emptyReason} />
-    <PriceTrendTable caption={`${title} — daily values`} unit={unit} points={points} focusedDate={focusedDate} onFocusDate={setFocusedDate} countLabel={countLabel} />
+    <AnalyticsDetails title="View price history"><PriceTrendTable caption={`${title} — daily values`} unit={unit} points={points} focusedDate={focusedDate} onFocusDate={setFocusedDate} countLabel={countLabel} /></AnalyticsDetails>
   </div>
 }
 
@@ -287,26 +290,17 @@ export function StarRatingInput({ legend, name, value, onChange, error, disabled
 
 /** Published score or its sample-gate status — the neutral internal ranking value is never shown. */
 export function ScoreTile({ name, value, published, sample, minimum, window: windowText, status }: { name: string; value: string | null; published: boolean; sample?: number; minimum?: number; window: string; status: string }) {
-  return <div className="grid min-w-0 gap-1 border-l-2 border-border-default pl-4">
-    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary">{name}</p>
-    <p className="text-2xl font-semibold text-text-strong tabular-nums">{published && value ? value : <span className="inline-flex items-center gap-1.5 text-base"><AlertTriangle size={16} aria-hidden="true" />Not published</span>}</p>
-    <p className="text-xs text-text-secondary">{windowText}{minimum ? ` · ${sample ?? 0} of ${minimum} needed` : ''}</p>
+  return <div className="mp-metric-card">
+    <p className="mp-kpi-label">{name}</p>
+    <p className="mp-kpi-value">{published && value ? value : <span className="inline-flex items-center gap-1.5 text-base"><AlertTriangle size={16} aria-hidden="true" />Not published</span>}</p>
+    <p className="mp-kpi-hint">{windowText}{minimum ? ` · ${sample ?? 0} of ${minimum} needed` : ''}</p>
     {!published && <p className="text-xs text-text-secondary">{status}</p>}
   </div>
 }
 
-const SCORE_NAMES: Record<string, string> = { VPS: 'Vendor Performance Score', VCS: 'Vendor Community Score', MQS: 'Material Quality Score', OHS: 'Operational Health Score' }
-
 /** Snapshot values and eligibility come from the API; this component never calculates a score. */
 export function ScoreSummaryGrid({ scores }: { scores: { key: string; value?: string | null; published: boolean; sampleCount: number; minimumSample: number; window: string; statusText: string }[] }) {
-  return <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{scores.map(score => <li key={score.key} className="flex min-w-0 flex-col gap-3 rounded-surface border border-border-default bg-surface-primary p-5">
-    <div className="flex flex-wrap items-center justify-between gap-2"><span className="text-sm font-semibold text-text-strong">{score.key}</span><StatusBadge label={score.published ? 'Published' : 'Building track record'} tone={score.published ? 'success' : 'neutral'} /></div>
-    <p className="text-xs text-text-secondary">{SCORE_NAMES[score.key] ?? score.key}</p>
-    <p className="text-3xl font-semibold tabular-nums text-text-strong">{score.published && score.value != null ? <>{score.value}<span className="ml-1 text-sm font-normal text-text-secondary">/ 5</span></> : <span className="text-xl">Not published</span>}</p>
-    {score.minimumSample > 0 && <p className="text-sm text-text-secondary"><span className="font-semibold tabular-nums text-text-strong">{score.sampleCount}</span> eligible samples · {score.minimumSample} minimum</p>}
-    <p className="mt-auto text-xs leading-5 text-text-secondary">{score.window}</p>
-    {!score.published && <p className="border-t border-border-default pt-3 text-xs leading-5 text-text-secondary">{score.statusText}</p>}
-  </li>)}</ul>
+  return <ScoreOverview scores={scores} />
 }
 
 /** Eligibility descriptions and scope are kept visible, including for unearned badges. */

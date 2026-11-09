@@ -68,6 +68,8 @@ class _$AdminReimbursementRowStateEnumSerializer
 
 class _$AdminReimbursementRow extends AdminReimbursementRow {
   @override
+  final String? orderId;
+  @override
   final String id;
   @override
   final String orderReference;
@@ -95,7 +97,8 @@ class _$AdminReimbursementRow extends AdminReimbursementRow {
       (AdminReimbursementRowBuilder()..update(updates))._build();
 
   _$AdminReimbursementRow._(
-      {required this.id,
+      {this.orderId,
+      required this.id,
       required this.orderReference,
       this.vendorName,
       required this.state,
@@ -120,6 +123,7 @@ class _$AdminReimbursementRow extends AdminReimbursementRow {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is AdminReimbursementRow &&
+        orderId == other.orderId &&
         id == other.id &&
         orderReference == other.orderReference &&
         vendorName == other.vendorName &&
@@ -136,6 +140,7 @@ class _$AdminReimbursementRow extends AdminReimbursementRow {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, orderId.hashCode);
     _$hash = $jc(_$hash, id.hashCode);
     _$hash = $jc(_$hash, orderReference.hashCode);
     _$hash = $jc(_$hash, vendorName.hashCode);
@@ -154,6 +159,7 @@ class _$AdminReimbursementRow extends AdminReimbursementRow {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'AdminReimbursementRow')
+          ..add('orderId', orderId)
           ..add('id', id)
           ..add('orderReference', orderReference)
           ..add('vendorName', vendorName)
@@ -172,6 +178,10 @@ class _$AdminReimbursementRow extends AdminReimbursementRow {
 class AdminReimbursementRowBuilder
     implements Builder<AdminReimbursementRow, AdminReimbursementRowBuilder> {
   _$AdminReimbursementRow? _$v;
+
+  String? _orderId;
+  String? get orderId => _$this._orderId;
+  set orderId(String? orderId) => _$this._orderId = orderId;
 
   String? _id;
   String? get id => _$this._id;
@@ -229,6 +239,7 @@ class AdminReimbursementRowBuilder
   AdminReimbursementRowBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _orderId = $v.orderId;
       _id = $v.id;
       _orderReference = $v.orderReference;
       _vendorName = $v.vendorName;
@@ -261,6 +272,7 @@ class AdminReimbursementRowBuilder
   _$AdminReimbursementRow _build() {
     final _$result = _$v ??
         _$AdminReimbursementRow._(
+          orderId: orderId,
           id: BuiltValueNullFieldError.checkNotNull(
               id, r'AdminReimbursementRow', 'id'),
           orderReference: BuiltValueNullFieldError.checkNotNull(

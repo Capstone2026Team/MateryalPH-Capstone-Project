@@ -1,6 +1,7 @@
 
 # VendorProductAnalytics
 
+Product values use the same latest financial snapshot lines and first-confirmation dates as Finance and Dashboard product reports. Cancelled and fully refunded sales contribute zero. Materials include discounts and VAT, exclude delivery, and are before partial refunds; Finance shows the completed partial-refund deduction separately when reconciling to Net sales.
 
 ## Properties
 
@@ -17,6 +18,7 @@ Name | Type
 `topSelling` | [Array&lt;ProductAnalyticsRow&gt;](ProductAnalyticsRow.md)
 `topPerforming` | [Array&lt;ProductAnalyticsRow&gt;](ProductAnalyticsRow.md)
 `mostViewed` | [Array&lt;ProductAnalyticsRow&gt;](ProductAnalyticsRow.md)
+`topRated` | [Array&lt;ProductAnalyticsRatedProduct&gt;](ProductAnalyticsRatedProduct.md)
 `categories` | [Array&lt;VendorProductAnalyticsCategoriesInner&gt;](VendorProductAnalyticsCategoriesInner.md)
 `segments` | [ProductAnalyticsSegments](ProductAnalyticsSegments.md)
 `basketRules` | [VendorProductAnalyticsBasketRules](VendorProductAnalyticsBasketRules.md)
@@ -41,6 +43,7 @@ const example = {
   "topSelling": null,
   "topPerforming": null,
   "mostViewed": null,
+  "topRated": null,
   "categories": null,
   "segments": null,
   "basketRules": null,

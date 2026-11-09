@@ -3,6 +3,7 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:built_collection/built_collection.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -11,10 +12,15 @@ part 'support_page_meta.g.dart';
 /// SupportPageMeta
 ///
 /// Properties:
+/// * [counts] - Admin ticket lists only. Full totals for all five support statuses after search, category, user type and date filters but before status selection and cursor pagination. Includes zeroes for empty statuses; absent from Buyer, Vendor, history and handler lists.
 /// * [nextCursor]
 /// * [correlationId]
 @BuiltValue()
 abstract class SupportPageMeta implements Built<SupportPageMeta, SupportPageMetaBuilder> {
+  /// Admin ticket lists only. Full totals for all five support statuses after search, category, user type and date filters but before status selection and cursor pagination. Includes zeroes for empty statuses; absent from Buyer, Vendor, history and handler lists.
+  @BuiltValueField(wireName: r'counts')
+  BuiltMap<String, int>? get counts;
+
   @BuiltValueField(wireName: r'next_cursor')
   String? get nextCursor;
 
@@ -44,6 +50,13 @@ class _$SupportPageMetaSerializer implements PrimitiveSerializer<SupportPageMeta
     SupportPageMeta object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.counts != null) {
+      yield r'counts';
+      yield serializers.serialize(
+        object.counts,
+        specifiedType: const FullType(BuiltMap, [FullType(String), FullType(int)]),
+      );
+    }
     yield r'next_cursor';
     yield object.nextCursor == null ? null : serializers.serialize(
       object.nextCursor,
@@ -79,6 +92,14 @@ class _$SupportPageMetaSerializer implements PrimitiveSerializer<SupportPageMeta
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'counts':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltMap, [FullType(String), FullType(int)]),
+          ) as BuiltMap<String, int>?;
+          if (valueDes == null) continue;
+          result.counts.replace(valueDes);
+          break;
         case r'next_cursor':
           final valueDes = serializers.deserialize(
             value,

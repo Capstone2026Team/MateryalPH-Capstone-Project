@@ -4,6 +4,7 @@
 
 // ignore_for_file: unused_element
 import 'package:built_collection/built_collection.dart';
+import 'package:materyalph_api_client/src/model/commission_email_summary.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -20,6 +21,13 @@ part 'commission_policy.g.dart';
 /// * [agreementVersionId]
 /// * [reason]
 /// * [status]
+/// * [termsVersion]
+/// * [termsContent]
+/// * [vendorMessage]
+/// * [noticeHours]
+/// * [noticeOverrideReason] - Admin only.
+/// * [publishedBy] - Admin audit identity; omitted in public and Vendor projections.
+/// * [delivery]
 @BuiltValue()
 abstract class CommissionPolicy implements Built<CommissionPolicy, CommissionPolicyBuilder> {
   @BuiltValueField(wireName: r'id')
@@ -46,7 +54,30 @@ abstract class CommissionPolicy implements Built<CommissionPolicy, CommissionPol
 
   @BuiltValueField(wireName: r'status')
   CommissionPolicyStatusEnum get status;
-  // enum statusEnum {  CURRENT,  SCHEDULED,  PREVIOUS,  };
+  // enum statusEnum {  CURRENT,  SCHEDULED,  PREVIOUS,  SUPERSEDED,  CANCELLED,  };
+
+  @BuiltValueField(wireName: r'terms_version')
+  int? get termsVersion;
+
+  @BuiltValueField(wireName: r'terms_content')
+  String? get termsContent;
+
+  @BuiltValueField(wireName: r'vendor_message')
+  String? get vendorMessage;
+
+  @BuiltValueField(wireName: r'notice_hours')
+  int? get noticeHours;
+
+  /// Admin only.
+  @BuiltValueField(wireName: r'notice_override_reason')
+  String? get noticeOverrideReason;
+
+  /// Admin audit identity; omitted in public and Vendor projections.
+  @BuiltValueField(wireName: r'published_by')
+  String? get publishedBy;
+
+  @BuiltValueField(wireName: r'delivery')
+  CommissionEmailSummary? get delivery;
 
   CommissionPolicy._();
 
@@ -115,6 +146,55 @@ class _$CommissionPolicySerializer implements PrimitiveSerializer<CommissionPoli
       object.status,
       specifiedType: const FullType(CommissionPolicyStatusEnum),
     );
+    if (object.termsVersion != null) {
+      yield r'terms_version';
+      yield serializers.serialize(
+        object.termsVersion,
+        specifiedType: const FullType.nullable(int),
+      );
+    }
+    if (object.termsContent != null) {
+      yield r'terms_content';
+      yield serializers.serialize(
+        object.termsContent,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
+    if (object.vendorMessage != null) {
+      yield r'vendor_message';
+      yield serializers.serialize(
+        object.vendorMessage,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
+    if (object.noticeHours != null) {
+      yield r'notice_hours';
+      yield serializers.serialize(
+        object.noticeHours,
+        specifiedType: const FullType.nullable(int),
+      );
+    }
+    if (object.noticeOverrideReason != null) {
+      yield r'notice_override_reason';
+      yield serializers.serialize(
+        object.noticeOverrideReason,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
+    if (object.publishedBy != null) {
+      yield r'published_by';
+      yield serializers.serialize(
+        object.publishedBy,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.delivery != null) {
+      yield r'delivery';
+      yield serializers.serialize(
+        object.delivery,
+        specifiedType: const FullType(CommissionEmailSummary),
+      );
+    }
   }
 
   @override
@@ -196,6 +276,62 @@ class _$CommissionPolicySerializer implements PrimitiveSerializer<CommissionPoli
           ) as CommissionPolicyStatusEnum;
           result.status = valueDes;
           break;
+        case r'terms_version':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.termsVersion = valueDes;
+          break;
+        case r'terms_content':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.termsContent = valueDes;
+          break;
+        case r'vendor_message':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.vendorMessage = valueDes;
+          break;
+        case r'notice_hours':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.noticeHours = valueDes;
+          break;
+        case r'notice_override_reason':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.noticeOverrideReason = valueDes;
+          break;
+        case r'published_by':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.publishedBy = valueDes;
+          break;
+        case r'delivery':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(CommissionEmailSummary),
+          ) as CommissionEmailSummary?;
+          if (valueDes == null) continue;
+          result.delivery.replace(valueDes);
+          break;
         default:
           unhandled.add(key);
           unhandled.add(value);
@@ -234,6 +370,10 @@ class CommissionPolicyStatusEnum extends EnumClass {
   static const CommissionPolicyStatusEnum SCHEDULED = _$commissionPolicyStatusEnum_SCHEDULED;
   @BuiltValueEnumConst(wireName: r'PREVIOUS')
   static const CommissionPolicyStatusEnum PREVIOUS = _$commissionPolicyStatusEnum_PREVIOUS;
+  @BuiltValueEnumConst(wireName: r'SUPERSEDED')
+  static const CommissionPolicyStatusEnum SUPERSEDED = _$commissionPolicyStatusEnum_SUPERSEDED;
+  @BuiltValueEnumConst(wireName: r'CANCELLED')
+  static const CommissionPolicyStatusEnum CANCELLED = _$commissionPolicyStatusEnum_CANCELLED;
 
   static Serializer<CommissionPolicyStatusEnum> get serializer => _$commissionPolicyStatusEnumSerializer;
 

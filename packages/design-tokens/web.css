@@ -21,6 +21,10 @@
   --mp-color-status-success: #16A34A;
   --mp-color-status-error: #DC2626;
   --mp-color-status-info: #2563EB;
+  --mp-color-payment-online: #1E3A8A;
+  --mp-color-payment-online-surface: #EFF6FF;
+  --mp-color-payment-physical: #78350F;
+  --mp-color-payment-physical-surface: #FBF5EF;
   --mp-color-focus-ring: #2563EB;
   --mp-color-ranking-distance: #2563EB;
   --mp-color-ranking-price-budget: #C2410C;
@@ -86,6 +90,10 @@
   --color-status-success: var(--mp-color-status-success);
   --color-status-error: var(--mp-color-status-error);
   --color-status-info: var(--mp-color-status-info);
+  --color-payment-online: var(--mp-color-payment-online);
+  --color-payment-online-surface: var(--mp-color-payment-online-surface);
+  --color-payment-physical: var(--mp-color-payment-physical);
+  --color-payment-physical-surface: var(--mp-color-payment-physical-surface);
   --color-focus-ring: var(--mp-color-focus-ring);
   --color-ranking-distance: var(--mp-color-ranking-distance);
   --color-ranking-price-budget: var(--mp-color-ranking-price-budget);

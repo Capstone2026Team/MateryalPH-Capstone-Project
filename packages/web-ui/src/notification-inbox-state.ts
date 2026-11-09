@@ -1,4 +1,5 @@
 import type { NotificationItem, NotificationsApi } from '@materyalph/api-client-ts'
+import { dateFilterPreset, dateRangeFromParams } from './date-filter'
 
 export type NotificationFilters = { type: string; from?: string; to?: string; dateLabel?: string }
 
@@ -19,14 +20,16 @@ export function notificationTypeLabel(category: string): string {
 
 export function notificationFilters(search: string): NotificationFilters {
   const params = new URLSearchParams(search)
-  return { type: params.get('type') ?? '', ...(params.get('from') ? { from: params.get('from')! } : {}), ...(params.get('to') ? { to: params.get('to')! } : {}), ...(params.get('date_label') ? { dateLabel: params.get('date_label')! } : {}) }
+  const range = dateRangeFromParams(params)
+  return { type: params.get('type') ?? '', ...(range.from ? { from: range.from } : {}), ...(range.to ? { to: range.to } : {}), dateLabel: range.label }
 }
 
 export function notificationFilterSearch(search: string, filters: NotificationFilters): string {
   const params = new URLSearchParams(search)
+  const dates = filters.from || filters.to || filters.dateLabel ? filters : { ...dateFilterPreset(30), dateLabel: 'Last 30 days' }
   params.delete('status') // Saved links from the removed Status filter are dropped.
   if (filters.type) params.set('type', filters.type); else params.delete('type')
-  for (const [key, value] of [['from', filters.from], ['to', filters.to], ['date_label', filters.dateLabel]]) {
+  for (const [key, value] of [['from', dates.from], ['to', dates.to], ['date_label', dates.dateLabel]]) {
     if (value) params.set(key!, value); else params.delete(key!)
   }
   return params.toString()

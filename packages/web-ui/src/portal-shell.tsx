@@ -1,6 +1,7 @@
 import { CountBadge } from './count-badge'
 import { RateLimitNotice } from './rate-limit-notice'
 import { PortalAccountMenu } from './portal-account-menu'
+import { ConnectionNotice } from './async-state'
 import { useEffect, useState, type MouseEvent, type ReactNode } from 'react'
 import { Bell, Circle, Menu, PanelLeftClose, PanelLeftOpen, Star, X } from 'lucide-react'
 import type { PortalIdentity } from './portal-identity'
@@ -24,6 +25,7 @@ export function PortalShell({
   accountScore,
   children,
   headerActions,
+  headerNotice,
   notificationUnreadCount = 0,
   homeHref = '/dashboard',
   contentLayout = 'standard',
@@ -44,6 +46,7 @@ export function PortalShell({
   accountScore?: PortalAccountScore | null
   children: ReactNode
   headerActions?: ReactNode
+  headerNotice?: ReactNode
   notificationUnreadCount?: number
   contentLayout?: 'standard' | 'full'
   homeHref?: string
@@ -164,7 +167,8 @@ export function PortalShell({
             {apiBasePath ? <PortalAccountMenu onProfileChange={setProfile} portal={portalLabel.startsWith('ADMIN') ? 'admin' : 'vendors'} basePath={apiBasePath} onNavigate={onNavigate} onSignOut={onSignOut} /> : headerActions}
           </div>
         </header>
-        <main id="main-content" tabIndex={-1} className={contentLayout === 'full' ? 'portal-page min-w-0 w-full' : 'portal-page mx-auto w-full max-w-[90rem] px-4 py-6 sm:px-6 lg:px-8 lg:py-8'}><RateLimitNotice />{children}</main>
+        {headerNotice && <div className="border-b border-border-default bg-surface-primary px-4 py-2 sm:px-6 lg:px-8">{headerNotice}</div>}
+        <main id="main-content" tabIndex={-1} className={contentLayout === 'full' ? 'portal-page min-w-0 w-full' : 'portal-page mx-auto w-full max-w-[90rem] px-4 py-6 sm:px-6 lg:px-8 lg:py-8'}><ConnectionNotice /><RateLimitNotice />{children}</main>
       </div>
     </div>
   )

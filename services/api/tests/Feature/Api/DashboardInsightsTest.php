@@ -153,6 +153,13 @@ final class DashboardInsightsTest extends TestCase
         $ids = DB::table('orders')->where('vendor_organization_id', $store->id)->pluck('id')->all();
         DB::table('orders')->where('id', $ids[0])->update(['refund_state' => 'REFUNDED']);
         DB::table('orders')->where('id', $ids[1])->update(['order_state' => 'CANCELLED']);
+        foreach ([$ids[0] => 'REFUNDED', $ids[2] => 'REFUND_PENDING', $ids[3] => 'REFUND_FAILED'] as $id => $state) {
+            $payment = DB::table('payments')->where('order_id', $id)->where('state', 'PAID')->first();
+            DB::table('refunds')->insert(['id' => (string) Str::uuid7(), 'target_type' => 'ORDER', 'order_id' => $id,
+                'source_payment_id' => $payment->id, 'trigger' => 'TECHNICAL_COMPENSATION', 'amount_centavos' => 5200,
+                'principal_centavos' => 5000, 'processing_fee_centavos' => 200, 'source_captured_centavos' => $payment->total_centavos,
+                'state' => $state, 'idempotency_key' => (string) Str::uuid7(), 'created_at' => now(), 'updated_at' => now()]);
+        }
 
         $this->signInStoreMember($owner);
         $data = $this->getJson('/api/v1/vendor/dashboard/insights?days=30')->assertOk()->json('data');
@@ -160,10 +167,37 @@ final class DashboardInsightsTest extends TestCase
         self::assertSame(4, $kpis['order_volume']['value'], 'Every confirmed order still counts as an order.');
         $all = array_sum($totals);
         self::assertSame($all, $kpis['gross_sales_centavos']['value'], 'Gross sales is every confirmed order, before returns, refunds and cancellations.');
-        self::assertSame($all - $totals[1], $kpis['net_sales_centavos']['value'], 'Net sales removes the cancelled order; a refund only reduces it once the refund record is paid.');
+        self::assertSame($all - $totals[1] - 5000, $kpis['net_sales_centavos']['value'], 'Net sales removes cancelled value and only completed refund principal.');
         self::assertSame(intdiv($all, 4), $kpis['average_order_value_centavos']['value']);
         self::assertSame($all, array_sum(array_column($data['orders']['series'], 'gross_sales_centavos')));
-        self::assertSame($all - $totals[1], array_sum(array_column($data['orders']['series'], 'net_sales_centavos')));
+        self::assertSame($all - $totals[1] - 5000, array_sum(array_column($data['orders']['series'], 'net_sales_centavos')));
+        self::assertSame(5000, array_sum(array_column($data['orders']['series'], 'refunds_centavos')), 'Refunds exclude Buyer fees, pending/failed refunds and unpaid cancellation value.');
+        self::assertSame($totals[1], array_sum(array_column($data['orders']['series'], 'cancellation_deductions_centavos')));
+        foreach ($data['orders']['series'] as $point) {
+            self::assertSame($point['gross_sales_centavos'], $point['net_sales_centavos'] + $point['refunds_centavos'] + $point['cancellation_deductions_centavos']);
+        }
+    }
+
+    public function test_category_share_includes_smaller_categories_in_its_total(): void
+    {
+        [$store, $owner, $first] = $this->pickupStore('All-category totals', [['price' => 2000, 'qty' => '100']], 1000);
+        $categories = DB::table('material_categories')->orderBy('id')->limit(7)->pluck('id')->all();
+        self::assertCount(7, $categories);
+        foreach ($categories as $index => $category) {
+            $this->signInStoreMember($owner);
+            $listing = $index === 0 ? $first : $this->orderListing('CATEGORY-'.$index, [['price' => 2000, 'qty' => '100']]);
+            DB::table('vendor_listings')->where('id', $listing)->update(['material_category_id' => $category]);
+            $this->confirmedOrder($store, $owner, $listing);
+        }
+        $this->signInStoreMember($owner);
+        $products = $this->getJson('/api/v1/vendor/dashboard/insights?days=30')->assertOk()->json('data.orders.products');
+        self::assertCount(6, $products['categories']);
+        $other = collect($products['categories'])->firstWhere('category', 'Other categories');
+        self::assertNotNull($other);
+        self::assertSame(2, $other['orders']);
+        self::assertSame(8000, $other['value_centavos']);
+        self::assertSame(28000, array_sum(array_column($products['categories'], 'value_centavos')));
+        self::assertSame(28000, $products['sales_breakdown']['product_sales_centavos']);
     }
 
     public function test_role_matrix_limits_each_section_and_never_returns_a_redacted_copy(): void
@@ -193,8 +227,11 @@ final class DashboardInsightsTest extends TestCase
                 self::assertNull($data['orders']['kpis']['average_order_value_centavos']);
                 self::assertNull($data['orders']['forecast']['sales']);
                 self::assertNull($data['orders']['series'][0]['gross_sales_centavos']);
+                self::assertNull($data['orders']['series'][0]['refunds_centavos']);
+                self::assertNull($data['orders']['series'][0]['cancellation_deductions_centavos']);
                 self::assertNull($data['orders']['products']['top'][0]['value_centavos']);
                 self::assertNull($data['orders']['products']['categories'][0]['value_centavos']);
+                self::assertNull($data['orders']['products']['sales_breakdown']);
                 self::assertNull($data['orders']['unusual_days']['days'][0]['gross_sales_centavos'] ?? null);
             }
         }

@@ -1,14 +1,15 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { beforeEach, expect, test, vi } from 'vitest'
-import type { FulfillmentStep, OrderFulfillment, OrderRefundTimeline } from '@materyalph/api-client-ts'
-import { RefundTimeline } from '@materyalph/web-ui'
+import { afterEach, beforeEach, expect, test, vi } from 'vitest'
+import type { FulfillmentProof, FulfillmentStep, OrderFulfillment, OrderRefundTimeline } from '@materyalph/api-client-ts'
+import { readOrderEvidenceFile, RefundTimeline } from '@materyalph/web-ui'
 import * as orders from '../lib/orders-api'
 import type { OrderDetail } from '../lib/orders-api'
 import { CancellationPanel, FulfillmentWorkspace, RefundsPanel } from './OrderFulfillmentPanels'
 
 vi.mock('../lib/orders-api', async original => ({ ...await original<typeof import('../lib/orders-api')>(), recordMilestone: vi.fn(), listAssignees: vi.fn(), listDeliveryVehicles: vi.fn(), assignFulfillment: vi.fn(),
   recordTrip: vi.fn(), cancelOrder: vi.fn(), getCancellationPreview: vi.fn(), finalizeCancellationRequest: vi.fn(), retryRefund: vi.fn() }))
+vi.mock('@materyalph/web-ui', async original => ({ ...await original<typeof import('@materyalph/web-ui')>(), readOrderEvidenceFile: vi.fn() }))
 
 const step = (key: string, label: string, status: FulfillmentStep['status'], proofRequired = false): FulfillmentStep => ({ key, label, status, proofRequired, proofRequirements: proofRequired ? ['DELIVERY_PHOTO', 'RECEIVER_NAME', 'SIGNATURE_OPTIONAL'] : [] })
 
@@ -41,6 +42,61 @@ beforeEach(() => {
   vi.clearAllMocks()
   vi.mocked(orders.listAssignees).mockResolvedValue([])
   vi.mocked(orders.listDeliveryVehicles).mockResolvedValue([])
+})
+
+afterEach(() => vi.unstubAllGlobals())
+
+test.each(['PICKUP', 'DELIVERY'] as const)('%s shows private proof thumbnails and opens a modal without changing the order', async method => {
+  const create = vi.fn(() => 'blob:proof-preview')
+  const revoke = vi.fn()
+  vi.stubGlobal('URL', class extends URL { static override createObjectURL = create; static override revokeObjectURL = revoke })
+  vi.stubGlobal('open', vi.fn())
+  vi.mocked(readOrderEvidenceFile).mockResolvedValue(new Blob(['sample image'], { type: 'image/jpeg' }))
+  const milestone = method === 'PICKUP' ? 'PICKED_UP' : 'DELIVERED'
+  const photoPath = '/vendor/orders/019a4b41-0000-7000-8000-000000000001/files/019a4b41-0000-7000-8000-000000000002'
+  const proof: FulfillmentProof = { milestone, receiverName: 'Sample Receiver', receiverKind: 'BUYER', handoverConfirmed: true, recordedBy: 'Sample Staff', photoPath,
+    signaturePath: `${photoPath.slice(0, -1)}3`, additionalPhotoPaths: [`${photoPath.slice(0, -1)}4`], note: 'Materials received in good condition.' }
+  const changed = vi.fn()
+  const { unmount } = wrap(<FulfillmentWorkspace order={order({ fulfillmentMethod: method, fulfillment: fulfillment({ method, state: milestone, expectedDate: '2026-10-13', nextAction: 'NONE', acceptedArrangement: null,
+    steps: [{ ...step(milestone, method === 'PICKUP' ? 'Picked up' : 'Delivered', 'COMPLETE'), proof }] }) }, { canRecordMilestone: false })} onChanged={changed} onReload={vi.fn()} />)
+  const summary = screen.getByRole('region', { name: method === 'PICKUP' ? 'Handover proof' : 'Delivery proof' })
+  expect(within(summary).getByText('Sample Receiver')).toBeVisible()
+  expect(within(summary).getByText('Sample Staff')).toBeVisible()
+  expect(within(summary).getByText('Materials received in good condition.')).toBeVisible()
+  await screen.findByRole('img', { name: 'Proof photo' })
+  const trigger = screen.getByRole('button', { name: 'View proof photo' })
+  expect(trigger).toBeEnabled()
+  expect(within(summary).getByRole('img', { name: 'Proof photo' })).toHaveAttribute('src', 'blob:proof-preview')
+  expect(within(summary).getByRole('img', { name: 'Additional photo 1' })).toBeVisible()
+  expect(within(summary).getByRole('img', { name: 'Signature' })).toBeVisible()
+  expect(readOrderEvidenceFile).toHaveBeenCalledWith(orders.apiBasePath, photoPath)
+  trigger.focus()
+  fireEvent.click(trigger)
+  const viewer = screen.getByRole('dialog', { name: 'Proof photo full preview' })
+  expect(within(viewer).getByRole('img', { name: 'Proof photo' })).toBeVisible()
+  fireEvent.click(within(viewer).getByRole('button', { name: 'Close preview' }))
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  expect(trigger).toHaveFocus()
+  fireEvent.click(within(summary).getByRole('button', { name: 'View signature' }))
+  expect(screen.getByRole('dialog', { name: 'Signature full preview' })).toBeVisible()
+  expect(window.open).not.toHaveBeenCalled()
+  expect(orders.recordMilestone).not.toHaveBeenCalled()
+  expect(changed).not.toHaveBeenCalled()
+  unmount()
+  expect(revoke).toHaveBeenCalledTimes(3)
+})
+
+test('a failed proof preview can be retried without opening a window or replaying a milestone', async () => {
+  vi.stubGlobal('URL', class extends URL { static override createObjectURL = vi.fn(() => 'blob:retried-proof'); static override revokeObjectURL = vi.fn() })
+  vi.mocked(readOrderEvidenceFile).mockRejectedValueOnce(new Error('Access denied')).mockResolvedValue(new Blob(['sample image'], { type: 'image/png' }))
+  const proof = { milestone: 'DELIVERED' as const, handoverConfirmed: true, photoPath: '/vendor/orders/order-1/files/proof-photo' }
+  wrap(<FulfillmentWorkspace order={order({ fulfillment: fulfillment({ nextAction: 'NONE', steps: [{ ...step('DELIVERED', 'Delivered', 'COMPLETE'), proof }] }) })} onChanged={vi.fn()} onReload={vi.fn()} />)
+  expect(await screen.findByRole('alert')).toHaveTextContent('Preview could not be loaded. Try again.')
+  expect(screen.queryByRole('img', { name: 'Proof photo' })).not.toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: 'Retry preview' }))
+  expect(await screen.findByRole('img', { name: 'Proof photo' })).toHaveAttribute('src', 'blob:retried-proof')
+  expect(readOrderEvidenceFile).toHaveBeenCalledTimes(2)
+  expect(orders.recordMilestone).not.toHaveBeenCalled()
 })
 
 test('Owner sees the required staff selector directly in Out for Delivery and confirms dispatch atomically', async () => {

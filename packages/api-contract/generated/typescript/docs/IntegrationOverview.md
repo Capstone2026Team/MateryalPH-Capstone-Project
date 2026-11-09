@@ -1,7 +1,7 @@
 
 # IntegrationOverview
 
-Configuration presence and masked labels only; credentials, payloads, recipients and exception messages never appear.
+Configuration presence and masked labels only; credentials, payloads, recipients and exception messages never appear. Hostinger VPS responses also include Backblaze B2, Cloudinary, Bouncer and reCAPTCHA checks, with Brevo SMTP and Firebase FCM configuration checked explicitly. Local or Render responses are not VPS provider health.
 
 ## Properties
 
@@ -11,6 +11,7 @@ Name | Type
 `environment` | { [key: string]: any; }
 `integrations` | [Array&lt;IntegrationStatus&gt;](IntegrationStatus.md)
 `queues` | { [key: string]: any; }
+`automaticRecovery` | [AutomaticRecoveryHealth](AutomaticRecoveryHealth.md)
 `scheduledTasks` | [Array&lt;ScheduledTaskHealth&gt;](ScheduledTaskHealth.md)
 `analytics` | { [key: string]: any; }
 `canRetry` | boolean
@@ -26,6 +27,7 @@ const example = {
   "environment": null,
   "integrations": null,
   "queues": null,
+  "automaticRecovery": null,
   "scheduledTasks": null,
   "analytics": null,
   "canRetry": null,

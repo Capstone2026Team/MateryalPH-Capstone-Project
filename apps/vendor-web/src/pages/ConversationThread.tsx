@@ -1,11 +1,11 @@
-import { Toolbar } from '@materyalph/web-ui'
+import { BackNavigation, Toolbar } from '@materyalph/web-ui'
 import { WorkPackageAttachment } from '../components/WorkPackageAttachment'
 import { SiteInspectionPanel } from '../components/SiteInspectionPanel'
 import { Fragment, useCallback, useEffect, useId, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ChatDraftContentFromJSON, ChatDraftContentToJSON, ChatQuotationContentToJSON, type ChatDraftContent, type ChatMessage, type ChatProduct, type ChatHandler, type ChatQuotation, type ChatQuotationVersion, type ConversationDetail, type DeliveryPlan } from '@materyalph/api-client-ts'
+import { ChatDraftContentFromJSON, ChatDraftContentToJSON, ChatQuotationContentToJSON, type ChatDraftContent, type ChatMessage, type ChatProduct, type ChatHandler, type ChatQuotation, type ChatQuotationVersion, type ChatWorkPackageAttachment, type ConversationDetail, type DeliveryPlan } from '@materyalph/api-client-ts'
 import { Button, CatalogProductPicker, CountBadge, FormDialog, ChatMessageBubble, ChatTypingIndicator, ConversationHeader, quotationSelectedVehicles, quotationVehicleChoice, quotationDeliveryFee, quotationDeliveryChanged, QuotationDestinationFields, QuotationDeliveryArrangement, QuotationDraftSummary, QuotationEditorSection, QuotationMaterialsEditor, QuotationThreadCard, QuotationVersionCard, StatusMessage, useNavigationRefresh, chatRoleLabel, conversationLabel, conversationTimeline, formatPesoCentavos, quotationDiscountPreview } from '@materyalph/web-ui'
-import { ArrowLeft, FileText, MessageSquare, Paperclip, Send, UsersRound } from 'lucide-react'
+import { FileText, MessageSquare, Paperclip, Send, UsersRound } from 'lucide-react'
 import { chatApi, loadChatAvatar, readableChatError, watchConversation } from '../lib/messaging-api'
 import { getListing, listListings, readableCatalogError } from '../lib/catalog-api'
 import { newIdempotencyKey } from '../lib/onboarding-api'
@@ -16,12 +16,13 @@ const control = 'min-h-12 w-full min-w-0 rounded-control border border-border-de
 
 const loadQuotationProducts = (query: string, page: number) => listListings({ ...(query ? { q: query } : {}), status: 'ACTIVE', page })
 const messageDate = (at: string) => new Date(at).toLocaleDateString('en-PH', { timeZone: 'Asia/Manila', dateStyle: 'medium' })
+const mergeThreadContexts = (left: ConversationDetail, right: ConversationDetail) => [...new Map([...(left.threadContexts ?? []), ...(right.threadContexts ?? [])].map(context => [context.id, context])).values()]
 
-export function ConversationThread({ selected, role, onBack, onRead, onMessage, onFulfillmentList, onProjectList, onOpenMain, obscured = false, onBusyChange }: {
-  selected: string | null; role: string; onBack?: () => void; onRead?: (id: string) => void; onMessage?: () => void; onFulfillmentList?: () => void; onProjectList?: () => void; onOpenMain?: (id: string) => void; obscured?: boolean; onBusyChange?: (busy: boolean) => void
+export function ConversationThread({ selected, role, combined = false, onBuyerThread, onBack, onRead, onMessage, onFulfillmentList, onOpenQuotationInquiry, obscured = false, onBusyChange }: {
+  selected: string | null; role: string; combined?: boolean; onBuyerThread?: (id: string | undefined) => void; onBack?: () => void; onRead?: (id: string) => void; onMessage?: () => void; onFulfillmentList?: () => void; onOpenQuotationInquiry?: (id: string) => void; obscured?: boolean; onBusyChange?: (busy: boolean) => void
 }) {
   const navigate = useNavigate()
-  const callbacks = useRef({ onRead, onMessage, obscured })
+  const callbacks = useRef({ onRead, onMessage, onBuyerThread, obscured })
   const [reload, setReload] = useState(0)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [quotationId, setQuotationId] = useState<string | null>(null)
@@ -33,6 +34,16 @@ export function ConversationThread({ selected, role, onBack, onRead, onMessage, 
   useEffect(() => { onBusyChange?.(busy) }, [busy, onBusyChange])
   const [text, setText] = useState('')
   const [product, setProduct] = useState<ChatProduct | null>(null)
+  const drafts = useRef(new Map<string, { text: string; product: ChatProduct | null }>())
+  const sessionClosed = useRef(false)
+  const draftConversation = useRef<string | null>(null)
+  const composer = useRef({ text, product })
+  useEffect(() => { composer.current = { text, product } }, [text, product])
+  useEffect(() => {
+    const clear = () => { sessionClosed.current = true; generation.current++; currentDetail.current = null; drafts.current.clear(); composer.current = { text: '', product: null }; setText(''); setProduct(null); setDetail(null); setPending([]); setError(null); setLoading(false) }
+    window.addEventListener('materyalph:session-cleared', clear)
+    return () => window.removeEventListener('materyalph:session-cleared', clear)
+  }, [])
   const [picker, setPicker] = useState(false)
   const [productQuery, setProductQuery] = useState('')
   const [products, setProducts] = useState<ChatProduct[]>([])
@@ -45,8 +56,9 @@ export function ConversationThread({ selected, role, onBack, onRead, onMessage, 
   const typingSendTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const lastTypingSent = useRef(0)
   const [editor, setEditor] = useState(false)
+  const [quotationContext, setQuotationContext] = useState<ConversationDetail | null>(null)
   const [handlers, setHandlers] = useState<ChatHandler[] | null>(null)
-  useEffect(() => { callbacks.current = { onRead, onMessage, obscured: obscured || historyOpen || Boolean(quotationId) || editor || handlers !== null } }, [onRead, onMessage, obscured, historyOpen, quotationId, editor, handlers])
+  useEffect(() => { callbacks.current = { onRead, onMessage, onBuyerThread, obscured: obscured || historyOpen || Boolean(quotationId) || editor || handlers !== null } }, [onRead, onMessage, onBuyerThread, obscured, historyOpen, quotationId, editor, handlers])
   const [handlerPage, setHandlerPage] = useState(1)
   const [moreHandlers, setMoreHandlers] = useState(false)
   const [target, setTarget] = useState('')
@@ -63,65 +75,86 @@ export function ConversationThread({ selected, role, onBack, onRead, onMessage, 
   const threadBody = useRef<HTMLDivElement>(null)
   const followLatest = useRef(true)
   const fileInput = useRef<HTMLInputElement>(null)
+  const getDetail = useCallback((id: string, before?: string, page = 1) => combined ? chatApi.buyerThread(id, before, page) : chatApi.get(id, before, page), [combined])
 
   const load = useCallback(async () => {
+    if (sessionClosed.current) return
     if (running.current) { reloadPending.current = true; return }
     running.current = true
     const g = generation.current
     try {
       if (selected) {
-        let value = await chatApi.get(selected)
-        const quotationPages = currentDetail.current?.quotations.page ?? 1
+        let value = await getDetail(selected)
+        const sameAuthority = !combined || value.threadAuthority === currentDetail.current?.threadAuthority
+        const quotationPages = sameAuthority ? currentDetail.current?.quotations.page ?? 1 : 1
         for (let page = 2; page <= quotationPages && value.quotations.hasMore; page++) {
-          const older = await chatApi.get(selected, undefined, page)
+          const older = await getDetail(selected, undefined, page)
           if (g !== generation.current) return
-          value = { ...value, quotations: { ...older.quotations, ...(value.quotations.quotation ? { quotation: value.quotations.quotation } : {}), versions: [...new Map([...value.quotations.versions, ...older.quotations.versions].map(version => [version.id, version])).values()] } }
+          if (combined && older.threadAuthority !== value.threadAuthority) { currentDetail.current = null; setDetail(null); reloadPending.current = true; return }
+          value = { ...value, threadContexts: mergeThreadContexts(value, older), quotations: { ...older.quotations, ...(value.quotations.quotation ? { quotation: value.quotations.quotation } : {}), versions: [...new Map([...value.quotations.versions, ...older.quotations.versions].map(version => [version.id, version])).values()] } }
         }
-        const previous = currentDetail.current?.messages
+        const previous = sameAuthority ? currentDetail.current?.messages : undefined
         const anchor = previous?.items.at(-1)?.id
         if (anchor && value.messages.items.length) {
           const incoming = [...value.messages.items]
           let cursor = value.messages
           while (!incoming.some(message => message.id === anchor) && cursor.hasMore && cursor.nextBefore && cursor.items[0] && cursor.items[0].id > anchor) {
-            const older = await chatApi.get(selected, cursor.nextBefore)
+            const older = await getDetail(selected, cursor.nextBefore)
             if (g !== generation.current) return
+            if (combined && older.threadAuthority !== value.threadAuthority) { currentDetail.current = null; setDetail(null); reloadPending.current = true; return }
             cursor = older.messages
+            value = { ...value, threadContexts: mergeThreadContexts(value, older) }
             incoming.unshift(...cursor.items)
           }
           const merged = new Map([...previous!.items, ...incoming].map(message => [message.id, message]))
           value = { ...value, messages: { ...previous!, items: [...merged.values()].sort((a, b) => a.id.localeCompare(b.id)) } }
         }
+        if (sameAuthority && currentDetail.current) value = { ...value, threadContexts: mergeThreadContexts(currentDetail.current, value) }
         if (g !== generation.current) return
         currentDetail.current = value
         setDetail(value)
+        callbacks.current.onBuyerThread?.(value.conversation.buyerThreadId)
         setError(null)
         setPending(current => current.filter(message => !value.messages.items.some(saved => saved.clientMessageId === message.clientMessageId)))
         const newest = value.messages.items.at(-1)
-        if (!callbacks.current.obscured && newest && lastRead.current !== newest.id && value.conversation.unreadCount > 0) {
+        if (!callbacks.current.obscured && newest && lastRead.current !== newest.id && (combined ? (value.threadContexts ?? [value.conversation]).some(context => context.unreadCount > 0) : value.conversation.unreadCount > 0)) {
           lastRead.current = newest.id
-          void chatApi.read(selected, newest.id).then(() => {
+          const through = combined ? new Map(value.messages.items.map(message => [message.conversationId ?? selected, message.id])) : new Map([[selected, newest.id]])
+          void Promise.all([...through].map(([id, message]) => chatApi.read(id, message))).then(() => {
             if (g === generation.current) callbacks.current.onRead?.(selected)
           }).catch(() => { if (g === generation.current) lastRead.current = '' })
         }
       }
     } catch (e) { const message = await readableChatError(e); if (g === generation.current) { setError(message); setDetail(null); currentDetail.current = null } }
     finally { if (g === generation.current) { running.current = false; setLoading(false); if (reloadPending.current) { reloadPending.current = false; setReload(value => value + 1) } } }
-  }, [selected])
+  }, [selected, combined, getDetail])
 
   // Sibling-thread activity refreshes the aggregate badges without replacing composer state.
   useNavigationRefresh(() => {
-    if (selected && (onProjectList || (onFulfillmentList && currentDetail.current?.conversation.canListFulfillmentConversations))) void load()
+    if (selected && (onFulfillmentList && currentDetail.current?.conversation.canListFulfillmentConversations)) void load()
   })
 
   useEffect(() => {
-    generation.current++; currentDetail.current = null; reloadPending.current = false; running.current = false; lastRead.current = ''; setLoading(true); setDetail(null); setError(null); setText(''); setProduct(null); setPicker(false); setPending([]); setTyping(false); typingAt.current = 0; clearTimeout(typingTimer.current); clearTimeout(typingSendTimer.current); setEditor(false); setHandlers(null); setHistoryOpen(false)
+    if (draftConversation.current) drafts.current.set(draftConversation.current, composer.current)
+    const savedDraft = selected ? drafts.current.get(selected) : undefined
+    draftConversation.current = selected
+    composer.current = savedDraft ?? { text: '', product: null }
+    generation.current++; currentDetail.current = null; reloadPending.current = false; running.current = false; lastRead.current = ''; setLoading(true); setDetail(null); setError(null); setText(savedDraft?.text ?? ''); setProduct(savedDraft?.product ?? null); setPicker(false); setPending([]); setTyping(false); typingAt.current = 0; clearTimeout(typingTimer.current); clearTimeout(typingSendTimer.current); setEditor(false); setQuotationContext(null); setHandlers(null); setHistoryOpen(false)
     setQuotationId(null); followLatest.current = true
     void load()
     const timer = window.setInterval(() => { threadQuiet.current += 1; if (document.visibilityState === 'visible' && (!threadLive.current || threadQuiet.current >= 11)) { threadQuiet.current = 0; void load() } }, 4000)
     const requests = generation
     return () => { requests.current++; window.clearInterval(timer); clearTimeout(typingTimer.current); clearTimeout(typingSendTimer.current) }
-  }, [load])
+  }, [load, selected])
   useEffect(() => { if (reload > 0) void load() }, [reload, load])
+  useEffect(() => {
+    if (!combined || !selected) return
+    let active = true; let close: (() => void) | undefined
+    void watchConversation(null, () => void load()).then(stop => { if (active) close = stop; else stop() })
+    const clear = () => { active = false; close?.() }
+    window.addEventListener('materyalph:session-cleared', clear)
+    return () => { clear(); window.removeEventListener('materyalph:session-cleared', clear) }
+  }, [combined, selected, load])
   const channel = detail?.conversation.channel
   useEffect(() => {
     if (!channel) return
@@ -156,13 +189,13 @@ export function ConversationThread({ selected, role, onBack, onRead, onMessage, 
   async function sendMessage(retry?: ChatMessage) {
     if (!selected || (!retry && !text.trim() && !product)) return
     const g = generation.current
-    const message: ChatMessage = retry ?? { id: sendKey.current, clientMessageId: sendKey.current, body: text.trim(), kind: product ? (text.trim() ? 'TEXT_WITH_PRODUCT' : 'PRODUCT') : 'TEXT', ...(product ? { product } : {}), sender: { displayName: 'You', role: 'VENDOR' }, sentAt: new Date().toISOString(), mine: true, attachments: [], readByRecipient: false }
+    const message: ChatMessage = retry ?? { conversationId: detail?.conversation.id ?? selected, id: sendKey.current, clientMessageId: sendKey.current, body: text.trim(), kind: product ? (text.trim() ? 'TEXT_WITH_PRODUCT' : 'PRODUCT') : 'TEXT', ...(product ? { product } : {}), sender: { displayName: 'You', role: 'VENDOR' }, sentAt: new Date().toISOString(), mine: true, attachments: [], readByRecipient: false }
     setPending(current => [...current.filter(item => item.id !== message.id), { ...message, deliveryState: 'pending' }])
     if (!retry) { setText(''); setProduct(null); sendKey.current = newIdempotencyKey() }
     clearTimeout(typingSendTimer.current)
-    void chatApi.typing(selected, false).catch(() => undefined)
+    void chatApi.typing(message.conversationId ?? selected, false).catch(() => undefined)
     try {
-      await chatApi.send(selected, message.body, message.clientMessageId, message.product?.productId)
+      await chatApi.send(message.conversationId ?? detail?.conversation.id ?? selected, message.body, message.clientMessageId, message.product?.productId)
       if (g === generation.current) { await load(); callbacks.current.onMessage?.() }
     } catch {
       if (g === generation.current) setPending(current => current.map(item => item.id === message.id ? { ...item, deliveryState: 'failed' } : item))
@@ -173,32 +206,61 @@ export function ConversationThread({ selected, role, onBack, onRead, onMessage, 
     if (selected && Date.now() - lastTypingSent.current > 1200) {
       lastTypingSent.current = Date.now()
       clearTimeout(typingSendTimer.current)
-      typingSendTimer.current = setTimeout(() => { void chatApi.typing(selected, Boolean(value.trim())).catch(() => undefined) }, 200)
+      typingSendTimer.current = setTimeout(() => { void chatApi.typing(currentDetail.current?.conversation.id ?? selected, Boolean(value.trim())).catch(() => undefined) }, 200)
     }
   }
   async function findProducts(page = 1) {
     if (!selected) return
     const g = generation.current
-    await mutate(async () => { const result = await chatApi.products(selected, productQuery, page); if (g !== generation.current) return; setProducts(result.items); setProductPage(page); setMoreProducts(result.hasMore); setPicker(true) }, false)
+    await mutate(async () => { const result = await chatApi.products(currentDetail.current?.conversation.id ?? selected, productQuery, page); if (g !== generation.current) return; setProducts(result.items); setProductPage(page); setMoreProducts(result.hasMore); setPicker(true) }, false)
   }
-  async function openFile(id: string, name?: string) {
-    if (!selected) return
-    try { const blob = await chatApi.download(selected, id); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = name ?? 'attachment'; a.click(); window.setTimeout(() => URL.revokeObjectURL(url), 1000) }
+  async function openFile(id: string, name?: string, contextId = selected) {
+    if (!contextId) return
+    try { const blob = await chatApi.download(contextId, id); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = name ?? 'attachment'; a.click(); window.setTimeout(() => URL.revokeObjectURL(url), 1000) }
     catch (e) { setError(await readableChatError(e)) }
   }
   // Stable per conversation so polling re-renders never re-download a previewed image.
-  const loadAttachment = useCallback((id: string) => selected ? chatApi.download(selected, id) : Promise.reject(new Error('No conversation selected')), [selected])
+  const attachmentLoaders = useRef(new Map<string, (id: string) => Promise<Blob>>())
+  function attachmentLoader(contextId: string) {
+    let loader = attachmentLoaders.current.get(contextId)
+    if (!loader) { loader = id => chatApi.download(contextId, id); attachmentLoaders.current.set(contextId, loader) }
+    return loader
+  }
   const c = detail?.conversation
   const fulfillmentUnreadCount = c?.fulfillmentUnreadCount ?? 0
   const canStartQuotation = c?.purpose === 'SALES' && c.contextType === 'ITEM_BASED' && !c.canonicalConversationId && role !== 'FULFILLMENT' && detail?.quotations.quotation?.state === 'ACCEPTED'
   const canPrepare = c?.purpose === 'SALES' && !c.canonicalConversationId && !c.readOnly && role !== 'FULFILLMENT' && (!detail?.quotations.quotation || detail.quotations.quotation.canDraft)
   const changeRequested = detail?.quotations.quotation?.state === 'COUNTERED'
   const timeline = detail ? conversationTimeline(detail.messages.items, detail.quotations.versions) : []
+  const contexts = new Map(detail?.threadContexts?.map(context => [context.id, context]) ?? [])
+  const currentVersions = detail?.quotations.versions.filter(version => !combined || version.conversationId === c?.id) ?? []
+  function canRevise(version: ChatQuotationVersion) {
+    if (!version.latest || version.state !== 'COUNTERED' || role === 'FULFILLMENT') return false
+    if (!version.conversationId || version.conversationId === c?.id) return canPrepare
+    return detail?.messages.items.some(message => message.workPackageAttachment?.inquiryId === version.conversationId && message.workPackageAttachment?.canPrepareQuotation) ?? false
+  }
+  async function reviseQuotation(version: ChatQuotationVersion) {
+    if (version.conversationId && version.conversationId !== c?.id) {
+      await openPackageQuotation({ inquiryId: version.conversationId, reference: {}, canPrepareQuotation: true })
+    } else { setQuotationContext(null); setEditor(true) }
+    setQuotationId(null); setHistoryOpen(false)
+  }
+  async function openPackageQuotation(attachment: ChatWorkPackageAttachment) {
+    await mutate(async () => {
+      const inquiry = attachment.orderId ? await chatApi.pendingOrderQuotation(attachment.orderId, attachment.orderLockVersion!, actionKey.current) : attachment.inquiryId
+      if (!inquiry) return
+      const value = await chatApi.get(inquiry)
+      if (!value.quotations.quotation?.canDraft) throw new Error('This quotation is no longer available to edit. Its history is preserved.')
+      setQuotationContext(value); setEditor(true)
+    }, false)
+  }
+  const editorDetail = quotationContext ?? detail
+  const editorConversation = editorDetail?.conversation
   const selectedQuotation = detail?.quotations.versions.find(version => version.id === quotationId)
   function quotationDetails(version: ChatQuotationVersion) {
-    return <div className="grid gap-3"><QuotationVersionCard version={version} busy={busy} onAction={(action, v) => { if (action === 'withdraw' && window.confirm('Withdraw this quotation? Its history will remain available.')) void mutate(() => chatApi.withdraw(c!.id, v.id, actionKey.current)) }} />
+    return <div className="grid gap-3">{combined && version.conversationId && contexts.get(version.conversationId)?.contextType === 'PROJECT_BASED' && <p className="text-sm font-semibold">{contexts.get(version.conversationId)?.inquiryLabel}</p>}<QuotationVersionCard version={version} busy={busy} onAction={(action, v) => { if (action === 'withdraw' && window.confirm('Withdraw this quotation? Its history will remain available.')) void mutate(() => chatApi.withdraw(v.conversationId ?? c!.id, v.id, actionKey.current)) }} />
       {version.acceptedOrderId && <Link className="inline-flex min-h-11 items-center font-semibold underline" to={`/orders/${version.acceptedOrderId}`}>Open accepted order</Link>}
-      {version.latest && version.state === 'COUNTERED' && canPrepare && <Button disabled={busy} onClick={() => { setQuotationId(null); setHistoryOpen(false); setEditor(true) }}>Revise quotation</Button>}
+      {canRevise(version) && <Button disabled={busy} onClick={() => void reviseQuotation(version)}>Revise quotation</Button>}
     </div>
   }
   async function olderQuotations() {
@@ -206,27 +268,31 @@ export function ConversationThread({ selected, role, onBack, onRead, onMessage, 
     if (!current || !selected) return
     const g = generation.current
     await mutate(async () => {
-      const older = await chatApi.get(selected, undefined, (current.quotations.page ?? 1) + 1)
+      const older = await getDetail(selected, undefined, (current.quotations.page ?? 1) + 1)
       if (g !== generation.current || !currentDetail.current) return
+      if (combined && older.threadAuthority !== currentDetail.current.threadAuthority) { currentDetail.current = older; setDetail(older); return }
       const latest = currentDetail.current
-      currentDetail.current = { ...latest, quotations: { ...older.quotations, ...(latest.quotations.quotation ? { quotation: latest.quotations.quotation } : {}), versions: [...new Map([...latest.quotations.versions, ...older.quotations.versions].map(version => [version.id, version])).values()] } }
+      currentDetail.current = { ...latest, threadContexts: mergeThreadContexts(latest, older), quotations: { ...older.quotations, ...(latest.quotations.quotation ? { quotation: latest.quotations.quotation } : {}), versions: [...new Map([...latest.quotations.versions, ...older.quotations.versions].map(version => [version.id, version])).values()] } }
       setDetail(currentDetail.current)
     }, false)
   }
   return (
       <section className="chat-thread flex-1" aria-label="Selected conversation">
         {error && <StatusMessage tone="error">{error} <Button variant="quiet" onClick={() => void load()}>Retry conversation</Button></StatusMessage>}
-        {!selected ? <div className="chat-empty-thread"><MessageSquare size={36} aria-hidden="true" /><h2>Your conversations, in one place</h2><p>{role === 'FULFILLMENT' ? 'Choose an assigned order conversation to coordinate fulfillment.' : 'Choose an inquiry from the inbox to reply or prepare a quotation.'}</p></div> : <>
-          <div className="chat-toolbar">{onBack && <Button className="chat-back" aria-label="Back to inbox" variant="quiet" disabled={busy} onClick={onBack}><ArrowLeft size={16} aria-hidden="true" /><span className="chat-action-label">Back to inbox</span></Button>}{c?.contextType === 'PROJECT_BASED' && c.mainConversationId && onOpenMain && <Button variant="quiet" disabled={busy} onClick={() => onOpenMain(c.mainConversationId!)}>Inquiry</Button>}<span className="chat-toolbar-label">{c ? conversationLabel(c) : 'Conversation'}</span>{c?.purpose === 'SALES' && onProjectList && <Button variant="quiet" disabled={busy} onClick={onProjectList} aria-haspopup="dialog"><MessageSquare size={16} aria-hidden="true" /><span>Project inquiries</span><CountBadge count={c.projectUnreadCount ?? 0} /><span className="sr-only">{c.projectUnreadCount ?? 0} unread project messages</span></Button>}{c && <>{c.canListFulfillmentConversations && onFulfillmentList && <><Button variant="quiet" onClick={onFulfillmentList} aria-haspopup="dialog" aria-describedby={fulfillmentCountId}><MessageSquare size={16} aria-hidden="true" /><span>Fulfillment conversations</span><CountBadge count={fulfillmentUnreadCount} /></Button><span id={fulfillmentCountId} className="sr-only" role="status">{fulfillmentUnreadCount > 0 ? `${fulfillmentUnreadCount} unread fulfillment messages` : 'No unread fulfillment messages'}</span></>}{c.purpose === 'SALES' && <Button variant="quiet" aria-label="Quotation history" aria-haspopup="dialog" onClick={() => setHistoryOpen(true)}><FileText size={16} aria-hidden="true" /><span className="chat-action-label">Quotation history</span></Button>}{c.canTransfer && <Button variant="quiet" aria-label="Transfer handler" aria-haspopup="dialog" disabled={busy} onClick={() => void mutate(async () => { const result = await chatApi.handlers(c.id); setTarget(''); setReason(''); setHandlers(result.data); setHandlerPage(1); setMoreHandlers(Boolean(result.meta.has_more)) }, false)}><UsersRound size={16} aria-hidden="true" /><span className="chat-action-label">Transfer handler</span></Button>}</>}</div>
+        {!selected ? <div className="chat-empty-thread"><MessageSquare size={36} aria-hidden="true" /><h2>Your conversations, in one place</h2><p>{role === 'FULFILLMENT' ? 'Choose an assigned order conversation to coordinate fulfillment.' : combined ? 'Choose a Buyer to view all messages, reply or prepare a quotation.' : 'Choose an inquiry from the inbox to reply or prepare a quotation.'}</p></div> : <>
+          <div className="chat-toolbar">{onBack && <BackNavigation><button type="button" className="chat-back" aria-label="Back to inbox" disabled={busy} onClick={onBack}>Back to inbox</button></BackNavigation>}<span className="chat-toolbar-label">{combined ? 'Buyer conversation' : c ? conversationLabel(c) : 'Conversation'}</span>{c && <>{c.canListFulfillmentConversations && onFulfillmentList && <><Button variant="quiet" onClick={onFulfillmentList} aria-haspopup="dialog" aria-describedby={fulfillmentCountId}><MessageSquare size={16} aria-hidden="true" /><span>Fulfillment conversations</span><CountBadge count={fulfillmentUnreadCount} /></Button><span id={fulfillmentCountId} className="sr-only" role="status">{fulfillmentUnreadCount > 0 ? `${fulfillmentUnreadCount} unread fulfillment messages` : 'No unread fulfillment messages'}</span></>}{(combined || c.purpose === 'SALES') && <Button variant="quiet" aria-label="Quotation history" aria-haspopup="dialog" onClick={() => setHistoryOpen(true)}><FileText size={16} aria-hidden="true" /><span className="chat-action-label">Quotation history</span></Button>}{c.canTransfer && <Button variant="quiet" aria-label="Transfer handler" aria-haspopup="dialog" disabled={busy} onClick={() => void mutate(async () => { const result = await chatApi.handlers(c.id); setTarget(''); setReason(''); setHandlers(result.data); setHandlerPage(1); setMoreHandlers(Boolean(result.meta.has_more)) }, false)}><UsersRound size={16} aria-hidden="true" /><span className="chat-action-label">Transfer handler</span></Button>}</>}</div>
           {loading ? <LoadingState label="Loading conversation…" /> : detail && c ? <>
-            {canPrepare && <QuotationDraftEditor key={c.id} open={editor} onClose={() => setEditor(false)} reference={c.lockedReference} conversationId={c.id} quotation={detail.quotations.quotation ?? null} sourceNames={Object.fromEntries(detail.quotations.versions.find(version => version.latest)?.content.lines.map(line => [line.variantId, line.description]) ?? [])} role={role} onSaved={load} onPendingChange={setBusy} />}
-            {historyOpen && <FormDialog open title="Quotation history" description="Review published quotations, changes and accepted orders for this inquiry." busy={busy} onClose={() => setHistoryOpen(false)} footer={null}><div className="grid gap-4">
+            {editorConversation && (canPrepare || quotationContext?.quotations.quotation?.canDraft) && <QuotationDraftEditor key={editorConversation.id} open={editor} onClose={() => { setEditor(false); setQuotationContext(null) }} reference={editorConversation.lockedReference} conversationId={editorConversation.id} quotation={editorDetail?.quotations.quotation ?? null} sourceNames={Object.fromEntries(editorDetail?.quotations.versions.find(version => version.latest && (!version.conversationId || version.conversationId === editorConversation.id))?.content.lines.map(line => [line.variantId, line.description]) ?? [])} role={role} onSaved={load} onPendingChange={setBusy} />}
+            {historyOpen && <FormDialog open title="Quotation history" description={combined ? "Review published quotations, changes and accepted orders for this Buyer." : "Review published quotations, changes and accepted orders for this inquiry."} busy={busy} onClose={() => setHistoryOpen(false)} footer={null}><div className="grid gap-4">
               {error && <StatusMessage tone="error">{error}</StatusMessage>}
               {detail.quotations.versions.length === 0 ? <p className="py-6 text-sm text-text-secondary">Published quotations and their changes appear here.</p> : detail.quotations.versions.map(version => <Fragment key={version.id}>{quotationDetails(version)}</Fragment>)}
               {detail.quotations.hasMore && <Button variant="secondary" disabled={busy} onClick={() => void olderQuotations()}>Older quotations</Button>}
             </div></FormDialog>}
             {selectedQuotation && <FormDialog open title={`Quotation v${selectedQuotation.version}`} description="Published terms and the Buyer's response for this version." busy={busy} onClose={() => setQuotationId(null)} footer={null}>{quotationDetails(selectedQuotation)}</FormDialog>}
-            <ConversationHeader store={c.store} buyer={c.buyer} handler={c.handler} purpose={c.purpose} loadAvatar={loadChatAvatar} />
+            <ConversationHeader combined={combined} store={c.store} buyer={c.buyer} handler={c.handler} purpose={c.purpose} loadAvatar={loadChatAvatar} />
+            {!combined && <WorkPackageAttachment compact reference={c.lockedReference} proposal={currentVersions[0] ? ChatQuotationContentToJSON(currentVersions[0].content) : undefined} />}
+            {c.needsHumanResponse && <p role="status" className="border-b border-border-default px-5 py-2 text-sm font-semibold">Awaiting your team's reply</p>}
+            {c.purpose === 'FULFILLMENT' && c.canPrepareOrderQuotation && c.orderId && <div className="border-b border-border-default px-5 py-3"><Button variant="secondary" disabled={busy} onClick={() => void mutate(async () => { const inquiry = await chatApi.pendingOrderQuotation(c.orderId!, c.orderLockVersion!, actionKey.current); if (onOpenQuotationInquiry) onOpenQuotationInquiry(inquiry); else navigate(`/messages?conversation=${inquiry}`) }, false)}>Prepare replacement quotation</Button><p className="mt-1 text-xs text-text-secondary">The pending order stays linked until the Buyer accepts the quotation.</p></div>}
             <div className="chat-thread-body" ref={threadBody} onScroll={event => { const body = event.currentTarget; followLatest.current = body.scrollHeight - body.scrollTop - body.clientHeight < 160 }}>
         {handlers && <FormDialog open size="compact" title="Transfer handler" description="Choose an active team member and record why this inquiry is changing hands." busy={busy} onClose={() => setHandlers(null)} footer={<div className="flex justify-end gap-3"><Button variant="secondary" disabled={busy} onClick={() => setHandlers(null)}>Cancel</Button><Button form="transfer-handler-form" disabled={busy || !target || !reason.trim()} type="submit">Confirm transfer</Button></div>}>
           {error && <StatusMessage tone="error">{error}</StatusMessage>}
@@ -238,18 +304,17 @@ export function ConversationThread({ selected, role, onBack, onRead, onMessage, 
             <p className="text-sm text-text-secondary">Their fixed role continues to determine what they may do. Earlier messages keep their original attribution.</p>
           </form>
         </FormDialog>}
-              <WorkPackageAttachment reference={c.lockedReference} proposal={detail.quotations.versions[0] ? ChatQuotationContentToJSON(detail.quotations.versions[0].content) : undefined} />
               <SiteInspectionPanel inspections={detail.siteInspections ?? []} busy={busy} onPrepareQuotation={canPrepare ? () => setEditor(true) : undefined} onDecide={async (inspection, action, decision) => {
                 try { await chatApi.siteInspection(c.id, inspection.id, action, decision) } catch (cause) { throw new Error(await readableChatError(cause)) }
                 await load()
               }} />
 
               <div className="chat-timeline">
-                {detail.messages.hasMore && <div className="mb-5 text-center"><Button variant="secondary" disabled={busy} onClick={() => void mutate(async () => { const older = await chatApi.get(c.id, detail.messages.nextBefore ?? undefined); currentDetail.current = { ...detail, messages: { ...older.messages, items: [...older.messages.items, ...detail.messages.items] } }; setDetail(currentDetail.current) }, false)}>Earlier messages</Button></div>}
+                {detail.messages.hasMore && <div className="mb-5 text-center"><Button variant="secondary" disabled={busy} onClick={() => void mutate(async () => { const older = await getDetail(c.id, detail.messages.nextBefore ?? undefined); currentDetail.current = combined && older.threadAuthority !== detail.threadAuthority ? older : { ...detail, threadContexts: mergeThreadContexts(detail, older), messages: { ...older.messages, items: [...older.messages.items, ...detail.messages.items] } }; lastRead.current = ''; setDetail(currentDetail.current) }, false)}>Earlier messages</Button></div>}
                 {detail.quotations.hasMore && <div className="mb-5 text-center"><Button variant="secondary" disabled={busy} onClick={() => void olderQuotations()}>Earlier quotations</Button></div>}
                 <ol aria-label="Conversation messages">{timeline.map((entry, index) => <Fragment key={entry.id}>
                   {(index === 0 || messageDate(timeline[index - 1]!.timestamp) !== messageDate(entry.timestamp)) && <li className="text-center text-xs font-semibold text-text-secondary"><time dateTime={entry.timestamp}>{messageDate(entry.timestamp)} · Manila</time></li>}
-                  {entry.kind === 'message' ? <ChatMessageBubble message={entry.message} onOpenAttachment={(id, file) => void openFile(id, file?.displayName)} loadAttachment={loadAttachment} onOpenProduct={id => navigate(`/products/${id}`)} /> : <li className="flex justify-end"><QuotationThreadCard version={entry.quotation} busy={busy} onOpen={() => setQuotationId(entry.quotation.id)} {...(canPrepare ? { onRevise: () => setEditor(true) } : {})} /></li>}
+                  {entry.kind === 'message' ? <ChatMessageBubble message={entry.message} onPrepareWorkPackage={attachment => void openPackageQuotation(attachment)} onOpenAttachment={(id, file) => void openFile(id, file?.displayName, entry.message.conversationId ?? c.id)} loadAttachment={attachmentLoader(entry.message.conversationId ?? c.id)} onOpenProduct={id => navigate(`/products/${id}`)} /> : <li className="flex justify-end"><QuotationThreadCard version={entry.quotation} busy={busy} onOpen={() => setQuotationId(entry.quotation.id)} {...(canRevise(entry.quotation) ? { onRevise: () => void reviseQuotation(entry.quotation) } : {})} /></li>}
                 </Fragment>)}{pending.map(message => <ChatMessageBubble key={message.id} message={message} deliveryState={message.deliveryState} onRetry={() => void sendMessage(message)} onOpenAttachment={() => undefined} onOpenProduct={id => navigate(`/products/${id}`)} />)}</ol>
                 {timeline.length === 0 && <p className="py-10 text-center text-sm text-text-secondary">Start with a helpful reply about products or fulfillment.</p>}
                 <ChatTypingIndicator active={typing} />
@@ -264,7 +329,10 @@ export function ConversationThread({ selected, role, onBack, onRead, onMessage, 
               {product && <div className="flex items-center justify-between"><p>{product.name} · {formatPesoCentavos(product.priceCentavos)}</p><Button variant="quiet" onClick={() => setProduct(null)}>Remove product</Button></div>}
               {c.purpose === 'SALES' && <Button variant="quiet" onClick={() => void findProducts()}>Attach product</Button>}
               {canStartQuotation && <Button variant="secondary" disabled={busy} onClick={() => void mutate(async () => { await chatApi.startQuotation(c.id, detail.quotations.quotation!.lockVersion, actionKey.current); setEditor(true) })}>New quotation</Button>}
-              {canPrepare && <div className="chat-composer-hint"><FileText size={15} aria-hidden="true" /><span>{changeRequested ? 'The Buyer requested changes to the latest quotation.' : 'Turn a product inquiry into a quotation.'}</span><button type="button" disabled={busy} aria-haspopup="dialog" onClick={() => setEditor(true)}>{changeRequested ? 'Revise quotation' : 'Prepare quotation'}</button></div>}
+              {canPrepare && <div className="chat-composer-hint"><FileText size={15} aria-hidden="true" /><span>{changeRequested ? 'The Buyer requested changes to the latest quotation.' : c.contextType === 'PROJECT_BASED' ? 'Prepare a quotation for this Work Package.' : 'Turn a product inquiry into a quotation.'}</span><button type="button" disabled={busy} aria-haspopup="dialog" onClick={() => {
+                  if (c.canPrepareOrderQuotation && c.pendingOrderId) void mutate(async () => { await chatApi.pendingOrderQuotation(c.pendingOrderId!, c.orderLockVersion!, actionKey.current); await load(); setEditor(true) }, false)
+                  else setEditor(true)
+                }}>{changeRequested ? 'Revise quotation' : 'Prepare quotation'}</button></div>}
               <div className="chat-composer-controls">
                 <input ref={fileInput} type="file" hidden accept={c.purpose === 'FULFILLMENT' ? 'image/png,image/jpeg' : 'image/png,image/jpeg,application/pdf'} disabled={busy} onChange={event => { const file = event.target.files?.[0]; if (file) void mutate(() => chatApi.upload(c.id, file, newIdempotencyKey())); event.target.value = '' }} />
                 <button type="button" className="chat-icon-button" aria-label="Attach file" title="Attach file" disabled={busy} onClick={() => fileInput.current?.click()}><Paperclip size={18} aria-hidden="true" /></button>
@@ -370,7 +438,7 @@ export function QuotationDraftEditor({ open, onClose, conversationId, quotation,
   const deliveryReady = draft.fulfillmentMethod !== 'DELIVERY' || (role !== 'STORE_STAFF' && !deliveryPending && delivery.access_confirmed === true && Boolean(String(delivery.arrangement ?? '').trim()) && (!quotationDeliveryChanged(plan, delivery) || String(delivery.change_reason ?? '').trim().length >= 10))
   async function act(action: () => Promise<void>) { if (busy) return; setBusy(true); setError(null); try { await action() } catch (e) { setError(await readableChatError(e)) } finally { if (mounted.current) setBusy(false) } }
   const close = () => { void act(async () => { await saveDraft(); await onSaved(); onClose() }) }
-  return <FormDialog open={open} onClose={close} busy={busy || locationBusy} title="Prepare quotation" bodyClassName="min-h-0 overflow-y-auto overscroll-contain bg-surface-canvas px-4 py-4 sm:px-6 sm:py-5" description={role === 'CUSTOMER_SERVICE' ? 'Prepare the details for an authorized publisher to review. Changes save automatically.' : 'Review your offer before publishing.'} footer={<div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-2"><div className="min-w-0 basis-full sm:mr-auto sm:basis-auto"><p className="text-sm font-semibold tabular-nums">Quotation order total: {amounts.valid && !deliveryPending ? formatPesoCentavos(amounts.total) : draft.fulfillmentMethod === 'DELIVERY' ? 'Awaiting delivery fee' : 'Complete materials'}</p><p className="text-xs text-text-secondary">Before payment processing fees.</p><p role="status" className="mt-1 text-xs text-text-secondary">{busy ? 'Finishing quotation…' : saving ? 'Saving changes…' : error ? dirty ? 'Changes could not be saved. Retry before leaving.' : 'Review the issue above before publishing.' : dirty ? 'Waiting to save…' : saved ? 'All changes saved' : 'Changes save automatically.'}</p></div><Button variant="quiet" disabled={busy || locationBusy} onClick={close}>Close</Button>{role !== 'CUSTOMER_SERVICE' && <Button disabled={busy || !moneyValid || !deliveryReady || !draft.lines.length || !draft.fulfillmentDate} onClick={() => { if (window.confirm('Publish these terms? This starts a new Buyer deadline and supersedes the previous version.')) void act(async () => { await saveDraft(); await chatApi.publish(conversationId, lock.current, key.current); key.current = newIdempotencyKey(); lock.current++; onClose(); await onSaved() }) }}>Publish quotation</Button>}</div>}>
+  return <FormDialog open={open} onClose={close} busy={busy || locationBusy} title="Prepare quotation" bodyClassName="min-h-0 overflow-y-auto overscroll-contain bg-surface-canvas px-4 py-4 sm:px-6 sm:py-5" description={role === 'CUSTOMER_SERVICE' ? 'Prepare the details for an authorized publisher to review. Changes save automatically.' : 'Review your offer before publishing.'} footer={<div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-2"><div className="min-w-0 basis-full sm:mr-auto sm:basis-auto"><p className="text-sm font-semibold tabular-nums">Quotation order total: {amounts.valid && !deliveryPending ? formatPesoCentavos(amounts.total) : draft.fulfillmentMethod === 'DELIVERY' ? 'Awaiting delivery fee' : 'Complete materials'}</p><p className="text-xs text-text-secondary">Before e-wallet transaction fees.</p><p role="status" className="mt-1 text-xs text-text-secondary">{busy ? 'Finishing quotation…' : saving ? 'Saving changes…' : error ? dirty ? 'Changes could not be saved. Retry before leaving.' : 'Review the issue above before publishing.' : dirty ? 'Waiting to save…' : saved ? 'All changes saved' : 'Changes save automatically.'}</p></div><Button variant="quiet" disabled={busy || locationBusy} onClick={close}>Close</Button>{role !== 'CUSTOMER_SERVICE' && <Button disabled={busy || !moneyValid || !deliveryReady || !draft.lines.length || !draft.fulfillmentDate} onClick={() => { if (window.confirm('Publish these terms? This starts a new Buyer deadline and supersedes the previous version.')) void act(async () => { await saveDraft(); await chatApi.publish(conversationId, lock.current, key.current); key.current = newIdempotencyKey(); lock.current++; onClose(); await onSaved() }) }}>Publish quotation</Button>}</div>}>
     <section aria-label="Quotation draft" className="space-y-5">
     {error && <StatusMessage tone="error">{error} {dirty && <Button variant="quiet" disabled={busy || saving} onClick={() => void act(saveDraft)}>Retry saving</Button>}</StatusMessage>}{quotation?.draft?.nrpc != null && <StatusMessage tone="info">NRPC is now set only on eligible orders awaiting Vendor confirmation. An Owner, Store Manager or Store Staff must save this draft to remove its previous NRPC before publishing.</StatusMessage>}
     <WorkPackageAttachment reference={reference} proposal={ChatDraftContentToJSON(draft)} />
@@ -405,7 +473,7 @@ export function QuotationDraftEditor({ open, onClose, conversationId, quotation,
         }} onPickerOpenChange={setLocationBusy} mapBrowserKey={import.meta.env.VITE_GOOGLE_MAPS_BROWSER_KEY} search={selection => chatApi.quotationLocation(conversationId, selection)} readableError={readableChatError} />
         <QuotationDeliveryArrangement value={delivery} onChange={deliveryEdit} plan={plan} loading={planBusy} error={planError} disabled={busy} onRetry={() => setPlanRetry(value => value + 1)} />
       </>}
-    <p className="rounded-control bg-surface-canvas p-3 text-xs leading-relaxed text-text-secondary"><span className="font-semibold text-text-strong">Buyer payment choice</span><br />The Buyer chooses {draft.fulfillmentMethod === 'DELIVERY' ? 'Cash on Delivery or Online payment' : 'In-Store Payment or Online payment'} before accepting, subject to your enabled payment methods. Online processing fees are shown when they select a payment channel.</p>
+    <p className="rounded-control bg-surface-canvas p-3 text-xs leading-relaxed text-text-secondary"><span className="font-semibold text-text-strong">Buyer payment choice</span><br />The Buyer chooses {draft.fulfillmentMethod === 'DELIVERY' ? 'Cash on Delivery or Online payment' : 'In-Store Payment or Online payment'} before accepting, subject to your enabled payment methods. Online e-wallet transaction fees are shown when they select a payment channel.</p>
     </QuotationEditorSection>
     <QuotationEditorSection number={3} title="Message to Buyer" description="Add a personal note or explain the offer. This is included in the published quotation.">
       <label className="grid gap-2 text-sm font-semibold">Message to Buyer (optional)<textarea className={`${control} font-normal`} rows={3} maxLength={5000} disabled={busy} value={draft.message ?? ''} placeholder="Explain your offer or add a note for the Buyer…" onChange={e => edit({ ...draft, message: e.target.value })} /></label>

@@ -12,8 +12,10 @@ use App\Domain\Disputes\DisputeAccess;
 use App\Domain\Disputes\DisputeChannel;
 use App\Domain\Disputes\DisputeExportService;
 use App\Domain\Finance\RemittanceAssessmentService;
+use App\Domain\Finance\RemittanceReconciliationService;
 use App\Domain\Finance\WithholdingThresholdService;
 use App\Domain\Identity\AuthenticationException;
+use App\Domain\Identity\DeletedAccountPhotoCleanup;
 use App\Domain\Identity\EmailOtpService;
 use App\Domain\Messaging\ConversationBroadcast;
 use App\Domain\Notifications\MailDeliveryPolicy;
@@ -22,12 +24,15 @@ use App\Domain\Notifications\NavigationBroadcast;
 use App\Domain\Notifications\NotificationBroadcast;
 use App\Domain\Notifications\NotificationDelivery;
 use App\Domain\Notifications\NotificationService;
+use App\Domain\Orders\OrderActor;
 use App\Domain\Payments\PaymentGateway;
 use App\Domain\Payments\PaymentProviderException;
 use App\Domain\Payments\PaymentReconciliationService;
 use App\Domain\Payments\RefundService;
 use App\Domain\Payments\XenditWebhookProcessor;
+use App\Domain\Projects\WorkPackageOrderRecovery;
 use App\Domain\Reporting\DocumentExportService;
+use App\Domain\Reporting\OrderDocumentService;
 use App\Domain\Support\SupportGuestAccess;
 use App\Domain\Vendors\FleetBroadcast;
 use App\Mail\AccountSecurityMail;
@@ -102,6 +107,9 @@ final class OutboxProcessor
                 if ($attempt >= self::MAX_ATTEMPTS && $event->event_type === 'DOCUMENT_EXPORT_REQUESTED') {
                     DB::table('data_exports')->where('id', $event->aggregate_id)->where('state', 'QUEUED')->update(['state' => 'FAILED', 'failure_code' => 'GENERATION_FAILED', 'updated_at' => now()]);
                 }
+                if ($attempt >= self::MAX_ATTEMPTS && $event->event_type === OrderDocumentService::EVENT) {
+                    DB::table('order_documents')->where('id', $event->aggregate_id)->where('state', 'QUEUED')->update(['state' => 'FAILED', 'updated_at' => now()]);
+                }
 
                 if ($attempt >= self::MAX_ATTEMPTS && $event->event_type !== 'NAVIGATION_CHANGED') {
                     // A failed invalidation cannot recursively create further invalidation jobs.
@@ -158,12 +166,34 @@ final class OutboxProcessor
     private const RECORDED_DOMAIN_EVENTS = ['ORDER_STATE_CHANGED', 'ORDER_SUBMITTED', 'ORDER_VENDOR_CONFIRMED', 'ORDER_AUTO_ACCEPT_EVALUATED', 'ORDER_ACCEPTED', 'NRPC_PROPOSED', 'NRPC_DECIDED', 'NRPC_FLAGGED',
         'FEE_ASSESSMENT_ESTIMATED', 'FEE_ASSESSMENT_EARNED', 'FEE_ASSESSMENT_CANCELLED', 'INVENTORY_RESERVATION_RELEASED', 'ORDER_COMPLETED', 'ORDER_CANCELLED',
         'PROJECT_ARRANGEMENT_CREATED', 'PROJECT_ARRANGEMENT_UPDATED', 'PROJECT_ARRANGEMENT_SUBMITTED', 'PROJECT_ARRANGEMENT_INQUIRY_CREATED', 'PROJECT_PROCUREMENT_DRAFT', 'PROJECT_CREATED', 'PROJECT_UPDATED', 'PROJECT_DELETED', 'PROJECT_DRAFT_AUTOMATIC_ITEMS_SAVED', 'PROJECT_DRAFT_ITEM_ADDED', 'PROJECT_DRAFT_ITEM_REMOVED', 'PROJECT_SUPPLEMENT_REQUESTED', 'WORK_PACKAGE_DRAFT_SAVED', 'WORK_PACKAGE_VERSION_CREATED', 'WORK_PACKAGE_UPDATED', 'WORK_PACKAGE_REACTIVATED', 'WORK_PACKAGE_ACTIVATED',
-        'WORK_PACKAGE_CANCELLED', 'WORK_PACKAGE_DELETED', 'WORK_PACKAGE_MISSING_LINE_RESOLVED', 'PROJECT_ESTIMATE_COMPILED', 'PROJECT_VENDOR_INQUIRY_CREATED',
+        'WORK_PACKAGE_REOPENED', 'WORK_PACKAGE_CANCELLED', 'WORK_PACKAGE_DELETED', 'WORK_PACKAGE_MISSING_LINE_RESOLVED', 'PROJECT_ESTIMATE_COMPILED', 'PROJECT_VENDOR_INQUIRY_CREATED',
         'PROJECT_VENDOR_SELECTED', 'PROJECT_BUDGET_OVERRIDE_RECORDED', 'PROJECT_RANKING_PREFERENCES_UPDATED', 'WORK_PACKAGE_DRAFT_DELETED'];
 
     /** @param array<string, mixed> $payload */
     private function deliver(string $eventType, #[SensitiveParameter] array $payload, string $requestedAt): void
     {
+        if ($eventType === 'REMITTANCE_RECONCILIATION_REQUESTED') {
+            app(RemittanceReconciliationService::class)->reconcile($this->requiredString($payload, 'assessment_id'));
+
+            return;
+        }
+        if ($eventType === 'DELETED_ACCOUNT_PHOTO_CLEANUP') {
+            app(DeletedAccountPhotoCleanup::class)->delete($this->requiredInteger($payload, 'user_id'),
+                $this->requiredString($payload, 'disk'), $this->requiredString($payload, 'key'));
+
+            return;
+        }
+        if ($eventType === 'WORK_PACKAGE_REOPEN_REQUESTED') {
+            DB::transaction(function () use ($payload): void {
+                $order = DB::table('orders')->where('id', $this->requiredString($payload, 'order_id'))->first();
+                if ($order !== null) {
+                    app(WorkPackageOrderRecovery::class)->reopen($order,
+                        OrderActor::system($this->requiredString($payload, 'correlation_id')));
+                }
+            }, attempts: 3);
+
+            return;
+        }
         if ($eventType === 'SUPPORT_GUEST_EMAIL') {
             app(SupportGuestAccess::class)->deliver($this->requiredString($payload, 'credential_id'), $this->requiredString($payload, 'token'), $requestedAt);
 
@@ -187,12 +217,17 @@ final class OutboxProcessor
 
             return;
         }
+        if ($eventType === OrderDocumentService::EVENT) {
+            app(OrderDocumentService::class)->process($this->requiredString($payload, 'document_id'));
+
+            return;
+        }
         if ($eventType === 'NOTIFICATIONS_CHANGED') {
             app(NotificationBroadcast::class)->deliver($this->requiredInteger($payload, 'user_id'));
 
             return;
         }
-        if (in_array($eventType, ['NOTIFICATION_READY', 'FINANCE_NOTICE', 'ORDER_NOTICE', 'DISPUTE_NOTICE', 'VENDOR_ONBOARDING_NOTICE', 'PRODUCT_COMPLIANCE_NOTICE', 'VENDOR_INVENTORY_NOTICE', 'ACCOUNT_SECURITY_NOTICE'], true) && is_string($payload['notification_id'] ?? null)) {
+        if (in_array($eventType, ['NOTIFICATION_READY', 'COMMISSION_POLICY', 'FINANCE_NOTICE', 'PLATFORM_FEE_INVOICE', 'ORDER_NOTICE', 'DISPUTE_NOTICE', 'VENDOR_ONBOARDING_NOTICE', 'PRODUCT_COMPLIANCE_NOTICE', 'VENDOR_INVENTORY_NOTICE', 'ACCOUNT_SECURITY_NOTICE'], true) && is_string($payload['notification_id'] ?? null)) {
             app(NotificationService::class)->enqueue($payload['notification_id'], $eventType,
                 $eventType === 'ACCOUNT_SECURITY_NOTICE' && is_string($payload['recipient'] ?? null) ? $payload['recipient'] : null);
             app(NotificationBroadcast::class)->created($payload['notification_id']);

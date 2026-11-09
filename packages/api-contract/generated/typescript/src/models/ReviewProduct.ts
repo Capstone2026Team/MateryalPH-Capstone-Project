@@ -31,6 +31,10 @@ export interface ReviewProduct {
      *
      */
     variantLabel: string | null;
+    /**
+     * Current listing photo included in Vendor review details. Uses existing catalog media delivery; null when no ready, clean photo is available. Purchased name and variant remain the order snapshot.
+     */
+    imageUrl?: string | null;
 }
 
 /**
@@ -56,6 +60,7 @@ export function ReviewProductFromJSONTyped(json: any, ignoreDiscriminator: boole
         'listingId': json['listing_id'],
         'name': json['name'],
         'variantLabel': json['variant_label'],
+        'imageUrl': json['image_url'] === undefined ? undefined : json['image_url'] === null ? null : json['image_url'],
     };
 }
 
@@ -73,6 +78,7 @@ export function ReviewProductToJSONTyped(value?: ReviewProduct | null, ignoreDis
         'listing_id': value['listingId'],
         'name': value['name'],
         'variant_label': value['variantLabel'],
+        'image_url': value['imageUrl'],
     };
 }
 

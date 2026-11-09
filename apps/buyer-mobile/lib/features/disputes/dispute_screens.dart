@@ -135,11 +135,17 @@ class _Section extends StatelessWidget {
 }
 
 class _PromptField {
-  const _PromptField(this.label, {this.maxLines = 1, this.maxLength});
+  const _PromptField(
+    this.label, {
+    this.maxLines = 1,
+    this.maxLength,
+    this.minLength = 0,
+  });
 
   final String label;
   final int maxLines;
   final int? maxLength;
+  final int minLength;
 }
 
 /// A short text prompt that owns its controllers, so they outlive the closing animation and are
@@ -182,6 +188,7 @@ class _PromptDialog extends StatefulWidget {
 }
 
 class _PromptDialogState extends State<_PromptDialog> {
+  final Map<int, String> _errors = {};
   late final _controllers = [
     for (var index = 0; index < widget.fields.length; index++)
       TextEditingController(),
@@ -210,8 +217,14 @@ class _PromptDialogState extends State<_PromptDialog> {
               minLines: widget.fields[index].maxLines > 1 ? 2 : 1,
               maxLines: widget.fields[index].maxLines,
               maxLength: widget.fields[index].maxLength,
+              onChanged: (_) {
+                if (_errors.containsKey(index)) {
+                  setState(() => _errors.remove(index));
+                }
+              },
               decoration: InputDecoration(
                 labelText: widget.fields[index].label,
+                errorText: _errors[index],
               ),
             ),
         ],
@@ -223,9 +236,25 @@ class _PromptDialogState extends State<_PromptDialog> {
         child: Text(widget.cancelLabel),
       ),
       FilledButton(
-        onPressed: () => Navigator.pop(context, [
-          for (final controller in _controllers) controller.text.trim(),
-        ]),
+        onPressed: () {
+          final values = [
+            for (final controller in _controllers) controller.text.trim(),
+          ];
+          final errors = {
+            for (var index = 0; index < values.length; index++)
+              if (values[index].length < widget.fields[index].minLength)
+                index:
+                    'Enter at least ${widget.fields[index].minLength} characters.',
+          };
+          if (errors.isNotEmpty) {
+            setState(() {
+              _errors.clear();
+              _errors.addAll(errors);
+            });
+            return;
+          }
+          Navigator.pop(context, values);
+        },
         child: Text(widget.confirmLabel),
       ),
     ],
@@ -1860,6 +1889,7 @@ class _OrderInvoicesScreenState extends State<OrderInvoicesScreen> {
   String? _notice;
   bool _busy = false;
   String? _key;
+  String? _answerScope;
 
   @override
   void initState() {
@@ -1960,19 +1990,66 @@ class _OrderInvoicesScreenState extends State<OrderInvoicesScreen> {
   }
 
   Future<void> _open(InvoiceRecordItem record) async {
+    if (_busy || record.downloadUrl == null) return;
+    setState(() => _busy = true);
     try {
       final bytes = await widget.repository.invoiceFile(record.downloadUrl!);
       if (!mounted) return;
       await widget.openFile(
         context,
         bytes,
-        'invoice-${record.invoiceNumber}.pdf',
-        'application/pdf',
+        record.fileName ?? 'invoice-${record.invoiceNumber}',
+        record.contentType ?? 'application/octet-stream',
       );
     } on DiscoveryFailure catch (error) {
       if (mounted) setState(() => _notice = error.message);
       await _load();
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
+  }
+
+  Future<void> _answerInvoice(InvoiceRequestItem request, bool close) async {
+    if (_busy) return;
+    String? reason;
+    if (!close) {
+      final values = await _PromptDialog.show(
+        context,
+        title: 'Return invoice for correction',
+        intro:
+            'Describe what the store needs to correct. The sent copy stays in your invoice history.',
+        fields: const [
+          _PromptField(
+            'Correction needed',
+            maxLines: 4,
+            maxLength: 1000,
+            minLength: 10,
+          ),
+        ],
+        confirmLabel: 'Return invoice',
+      );
+      if (values == null || !mounted) return;
+      reason = values.first;
+      if (reason.length < 10) {
+        setState(
+          () => _notice = 'Describe the correction in at least 10 characters.',
+        );
+        return;
+      }
+    }
+    final scope = '${request.id}:$close:$reason';
+    if (_answerScope != scope) _key = null;
+    _answerScope = scope;
+    await _run(
+      (key) => widget.repository.answerInvoiceRequest(
+        widget.orderId,
+        requestId: request.id,
+        close: close,
+        reason: reason,
+        idempotencyKey: key,
+      ),
+      close ? 'Request closed.' : 'Returned to the store for correction.',
+    );
   }
 
   @override
@@ -2007,47 +2084,79 @@ class _OrderInvoicesScreenState extends State<OrderInvoicesScreen> {
                       ),
                       const SizedBox(height: 10),
                     ],
-                    _Section(
-                      title: 'Store invoice',
-                      icon: LucideIcons.receiptText,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                    if (_failure != null) ...[
+                      StatusBand(
+                        tone: BandTone.warning,
+                        title: _failure!.message,
+                      ),
+                      TextButton(
+                        onPressed: _load,
+                        child: const Text('Retry refresh'),
+                      ),
+                    ],
+                    if (data.records.isEmpty)
+                      const _Section(
+                        title: 'Store invoice',
+                        icon: LucideIcons.receiptText,
+                        child: Text('No invoice copy uploaded yet.'),
+                      ),
+                    for (final record in data.records.reversed)
+                      InvoiceRecordTile(
+                        key: ValueKey(record.id),
+                        record: record,
+                        loadFile: record.downloadUrl == null
+                            ? null
+                            : () => widget.repository.invoiceFile(
+                                record.downloadUrl!,
+                              ),
+                        onRefresh: _load,
+                        onOpen: record.downloadUrl == null || _busy
+                            ? null
+                            : () => _open(record),
+                      ),
+                    if (data.canRequestCopy &&
+                        !data.records.any(
+                          (record) =>
+                              record.invoiceType == 'VENDOR_GOODS_INVOICE',
+                        ))
+                      OutlinedButton.icon(
+                        onPressed: _busy ? null : () => _request('COPY'),
+                        icon: const Icon(LucideIcons.filePlus, size: 16),
+                        label: const Text('Request a copy'),
+                      ),
+                    if (data.canRequestCorrection && data.records.isNotEmpty)
+                      OutlinedButton.icon(
+                        onPressed: _busy
+                            ? null
+                            : () => _request(
+                                'CORRECTION',
+                                recordId: data.records.last.id,
+                              ),
+                        icon: const Icon(LucideIcons.filePen, size: 16),
+                        label: const Text('Request a correction'),
+                      ),
+                    const SizedBox(height: 12),
+                    Card(
+                      child: ExpansionTile(
+                        title: const Text(
+                          'About store invoices',
+                          style: TextStyle(fontSize: 13),
+                        ),
+                        childrenPadding: const EdgeInsets.fromLTRB(
+                          16,
+                          0,
+                          16,
+                          16,
+                        ),
                         children: [
                           Text(
                             data.issuanceNotice,
-                            style: const TextStyle(fontSize: 13),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              height: 1.5,
+                              color: BuyerTheme.muted,
+                            ),
                           ),
-                          const SizedBox(height: 10),
-                          if (data.records.isEmpty)
-                            const Text(
-                              'No invoice copy uploaded yet.',
-                              style: TextStyle(fontWeight: FontWeight.w600),
-                            ),
-                          for (final record in data.records)
-                            InvoiceRecordTile(
-                              record: record,
-                              onOpen: record.downloadUrl == null || _busy
-                                  ? null
-                                  : () => _open(record),
-                            ),
-                          if (data.canRequestCopy)
-                            OutlinedButton.icon(
-                              onPressed: _busy ? null : () => _request('COPY'),
-                              icon: const Icon(LucideIcons.filePlus, size: 16),
-                              label: const Text('Request a copy'),
-                            ),
-                          if (data.canRequestCorrection &&
-                              data.records.isNotEmpty)
-                            OutlinedButton.icon(
-                              onPressed: _busy
-                                  ? null
-                                  : () => _request(
-                                      'CORRECTION',
-                                      recordId: data.records.last.id,
-                                    ),
-                              icon: const Icon(LucideIcons.filePen, size: 16),
-                              label: const Text('Request a correction'),
-                            ),
                         ],
                       ),
                     ),
@@ -2062,21 +2171,8 @@ class _OrderInvoicesScreenState extends State<OrderInvoicesScreen> {
                               _RequestTile(
                                 request: request,
                                 busy: _busy,
-                                onAnswer: (close) {
-                                  _key = null;
-                                  return _run(
-                                    (key) =>
-                                        widget.repository.answerInvoiceRequest(
-                                          widget.orderId,
-                                          requestId: request.id,
-                                          close: close,
-                                          idempotencyKey: key,
-                                        ),
-                                    close
-                                        ? 'Request closed.'
-                                        : 'Returned to the store for correction.',
-                                  );
-                                },
+                                onAnswer: (close) =>
+                                    _answerInvoice(request, close),
                               ),
                           ],
                         ),

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
+use App\Domain\Enforcement\EnforcementFiles;
 use App\Domain\Enforcement\EnforcementService;
 use App\Domain\Operations\AdminAccess;
 use App\Domain\Operations\AuditSearchService;
@@ -78,11 +79,29 @@ final class AdminOperationsController extends Controller
         $input = $request->validate(['subject_type' => ['required', Rule::in(['BUYER', 'VENDOR_ORGANIZATION'])], 'subject_id' => ['required', 'uuid'], 'action' => ['required', Rule::in(EnforcementService::ACTIONS)],
             'reason' => ['required', 'string', 'min:10', 'max:2000'], 'scope' => ['sometimes', 'string', 'max:160'], 'duration_days' => ['sometimes', 'nullable', 'integer', 'between:1,365'],
             'restoration_condition' => ['sometimes', 'nullable', 'string', 'max:2000'], 'continuation_plan' => ['sometimes', 'nullable', Rule::in(EnforcementService::PLANS)],
-            'continuation_note' => ['sometimes', 'nullable', 'string', 'max:2000']]);
+            'continuation_note' => ['sometimes', 'nullable', 'string', 'max:2000'],
+            'evidence_file_ids' => ['sometimes', 'array', 'max:5'], 'evidence_file_ids.*' => ['required', 'uuid', 'distinct']]);
 
         $outcome = $access->idempotent($request, 'ADMIN_ENFORCEMENT_RECORD', fn (): array => $enforcement->record($request, $input));
 
         return ApiResponse::success($outcome['result'], status: $outcome['replayed'] ? 200 : 201);
+    }
+
+    public function uploadEnforcementEvidence(Request $request, string $type, string $subjectId, EnforcementFiles $files): JsonResponse
+    {
+        $request->validate(['file' => ['required', 'file', 'max:25600']]);
+
+        return ApiResponse::success($files->upload($request, $type, $subjectId, $request->file('file')), status: 201);
+    }
+
+    public function enforcementEvidenceLink(Request $request, string $actionId, string $fileId, EnforcementFiles $files): JsonResponse
+    {
+        return ApiResponse::success($files->link($request, $actionId, $fileId));
+    }
+
+    public function enforcementEvidenceContent(Request $request, string $actionId, string $fileId, EnforcementFiles $files): mixed
+    {
+        return $files->stream($request, $actionId, $fileId);
     }
 
     public function applyEnforcement(Request $request, string $actionId, EnforcementService $enforcement): JsonResponse

@@ -14,7 +14,13 @@
     @media (max-width: 620px) {
         .mp-shell { padding: 20px 12px !important; }
         .mp-body { padding: 28px 20px !important; }
-        .mp-heading { font-size: 22px !important; line-height: 30px !important; }
+        .mp-heading { font-size: 25px !important; line-height: 33px !important; }
+        .mp-column { display: block !important; width: 100% !important; padding: 0 0 18px !important; }
+    }
+    @media (max-width: 420px) {
+        .mp-total-label { display: block !important; width: 100% !important; }
+        .mp-total-value { display: block !important; width: 100% !important; padding-top: 6px !important; text-align: left !important; font-size: 20px !important; white-space: normal !important; overflow-wrap: anywhere; }
+        .mp-total-long { font-size: 18px !important; }
     }
 </style>
 </head>
@@ -28,7 +34,7 @@
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width: 100%; max-width: 600px;">
 
 <tr>
-<td style="padding: 0 4px 20px;">
+<td style="padding: 0 4px 24px;">
 <table role="presentation" cellpadding="0" cellspacing="0" border="0">
 <tr>
 <td width="32" height="32" align="center" valign="middle" style="width: 32px; height: 32px; background-color: #C2410C; border-radius: 8px; font-family: Inter, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 17px; font-weight: 700; line-height: 32px; color: #FFFFFF;" aria-hidden="true">M</td>
@@ -41,22 +47,21 @@
 <tr>
 <td style="background-color: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 12px; overflow: hidden;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-<tr><td height="4" style="height: 4px; line-height: 4px; font-size: 4px; background-color: #F97316; border-radius: 12px 12px 0 0;">&nbsp;</td></tr>
+<tr><td height="3" style="height: 3px; line-height: 3px; font-size: 3px; background-color: #C2410C; border-radius: 12px 12px 0 0;">&nbsp;</td></tr>
 <tr>
-<td class="mp-body" style="padding: 36px 40px; font-family: Inter, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; line-height: 24px; color: #1F2937;">
+<td class="mp-body" style="padding: 36px; font-family: Inter, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; line-height: 24px; color: #1E293B; overflow-wrap: break-word;">
 @hasSection('eyebrow')
 <p style="margin: 0 0 8px; font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #C2410C;">@yield('eyebrow')</p>
 @endif
-<h1 class="mp-heading" style="margin: 0 0 16px; font-size: 24px; line-height: 32px; font-weight: 700; color: #1F2937;">@yield('heading')</h1>
+<h1 class="mp-heading" style="margin: 0 0 18px; font-size: 28px; line-height: 36px; font-weight: 700; letter-spacing: -0.02em; color: #1E293B;">@yield('heading')</h1>
 
 @yield('content')
 
 @hasSection('next')
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 24px 0 0;">
 <tr>
-<td style="padding: 16px 20px; background-color: #FFF7ED; border-left: 4px solid #F97316; border-radius: 0 8px 8px 0;">
-<p style="margin: 0 0 4px; font-size: 13px; line-height: 20px; font-weight: 700; color: #9A3412;">Next step</p>
-<p style="margin: 0; font-size: 15px; line-height: 24px; color: #1F2937;">@yield('next')</p>
+<td style="padding: 18px 0 0; border-top: 1px solid #E2E8F0;">
+<p style="margin: 0; font-size: 14px; line-height: 23px; color: #475569;">@yield('next')</p>
 </td>
 </tr>
 </table>

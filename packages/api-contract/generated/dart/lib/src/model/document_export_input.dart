@@ -22,7 +22,7 @@ part 'document_export_input.g.dart';
 abstract class DocumentExportInput implements Built<DocumentExportInput, DocumentExportInputBuilder> {
   @BuiltValueField(wireName: r'type')
   DocumentExportInputTypeEnum get type;
-  // enum typeEnum {  PURCHASE_ORDER,  PAYMENT_CONFIRMATION,  PROJECT_SUMMARY,  BUDGET_REPORT,  OPERATIONAL_ORDER,  FEE_STATEMENT,  MATERIALS_ANALYTICS,  TAX_PACKAGE,  AUDIT_LOG,  GEO_ANALYTICS,  TRANSACTION_HISTORY,  EARNINGS,  };
+  // enum typeEnum {  PURCHASE_ORDER,  PROJECT_SUMMARY,  BUDGET_REPORT,  OPERATIONAL_ORDER,  FEE_STATEMENT,  MATERIALS_ANALYTICS,  TAX_PACKAGE,  AUDIT_LOG,  GEO_ANALYTICS,  TRANSACTION_HISTORY,  EARNINGS,  };
 
   @BuiltValueField(wireName: r'format')
   DocumentExportInputFormatEnum get format;
@@ -183,8 +183,6 @@ class DocumentExportInputTypeEnum extends EnumClass {
 
   @BuiltValueEnumConst(wireName: r'PURCHASE_ORDER')
   static const DocumentExportInputTypeEnum PURCHASE_ORDER = _$documentExportInputTypeEnum_PURCHASE_ORDER;
-  @BuiltValueEnumConst(wireName: r'PAYMENT_CONFIRMATION')
-  static const DocumentExportInputTypeEnum PAYMENT_CONFIRMATION = _$documentExportInputTypeEnum_PAYMENT_CONFIRMATION;
   @BuiltValueEnumConst(wireName: r'PROJECT_SUMMARY')
   static const DocumentExportInputTypeEnum PROJECT_SUMMARY = _$documentExportInputTypeEnum_PROJECT_SUMMARY;
   @BuiltValueEnumConst(wireName: r'BUDGET_REPORT')

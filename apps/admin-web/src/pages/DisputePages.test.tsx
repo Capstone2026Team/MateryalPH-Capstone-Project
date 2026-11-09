@@ -1,3 +1,4 @@
+import { dateFilterPreset } from '@materyalph/web-ui'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, expect, test, vi } from 'vitest'
@@ -36,8 +37,17 @@ beforeEach(() => { vi.clearAllMocks(); window.scrollTo = vi.fn() as unknown as t
 test('the queue opens on cases needing an Admin and links each case', async () => {
   vi.mocked(api.listQueue).mockResolvedValue({ items: [{ ...detail(), decisions: 0 }], meta: { counts: { NEEDS_ADMIN: 1 } } })
   at('/disputes')
-  expect(await screen.findByRole('link', { name: 'CASE-261004-ABC123' })).toHaveAttribute('href', '/disputes/case-1')
-  expect(api.listQueue).toHaveBeenCalledWith('NEEDS_ADMIN', 1, { label: 'All dates', from: '', to: '' })
+  for (const link of await screen.findAllByRole('link', { name: 'CASE-261004-ABC123' })) expect(link).toHaveAttribute('href', '/disputes/case-1')
+  expect(screen.getByRole('table', { name: 'Admin dispute and appeal cases' })).toHaveTextContent('Assigned to Admin')
+  expect(api.listQueue).toHaveBeenCalledWith('NEEDS_ADMIN', 1, dateFilterPreset(30))
+})
+
+test('case tabs keep server filtering and show an intentional empty state', async () => {
+  vi.mocked(api.listQueue).mockResolvedValue({ items: [], meta: { counts: { NEEDS_ADMIN: 0, CONCLUDED: 0 } } })
+  at('/disputes')
+  expect(await screen.findByText('No cases in this queue.')).toBeVisible()
+  fireEvent.click(screen.getByRole('tab', { name: /Concluded/ }))
+  await waitFor(() => expect(api.listQueue).toHaveBeenLastCalledWith('CONCLUDED', 1, dateFilterPreset(30)))
 })
 
 test.each(['BUYER', 'VENDOR'] as const)('original complaint clearly attributes the saved description to %s', async filedByParty => {
@@ -63,6 +73,13 @@ test('an absent original description has an explicit empty state', async () => {
   at('/disputes/case-1')
   const complaint = await screen.findByRole('region', { name: 'Original complaint' })
   expect(within(complaint).getByText('No problem description was recorded.')).toBeInTheDocument()
+})
+
+test('a case links its own order in read-only audit mode and keeps the queue context', async () => {
+  vi.mocked(api.getCase).mockResolvedValue(detail())
+  at('/disputes/case-1?status=CONCLUDED&page=2')
+  const link = await screen.findByRole('link', { name: 'View full order · read only' })
+  expect(link).toHaveAttribute('href', '/audit/orders/order-1?status=CONCLUDED&page=2&caseId=case-1')
 })
 
 test('a decision requires the reason, partial amount and conflict check before it is sent once', async () => {

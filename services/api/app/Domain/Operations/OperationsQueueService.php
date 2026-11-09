@@ -81,7 +81,7 @@ final class OperationsQueueService
         }
         if ($has('integrations.view')) {
             $counts = JobHealthService::counts();
-            $add('jobs', 'Failed jobs and dead letters', 'Platform', $counts['failed_jobs'] + $counts['dead_letters'], null, '/integrations', 'Allowlisted idempotent work can be retried with a reason.');
+            $add('jobs', 'Failed jobs and dead letters', 'Platform', $counts['failed_jobs'] + $counts['dead_letters'], null, '/integrations', 'Eligible work recovers automatically; retry limits and protected work remain visible.');
         }
 
         return $queues;

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { ConnectionNotice } from './async-state'
 import './auth-layout.css'
 
 /** Shared presentation for account verification, recovery and invitation forms. */
@@ -19,6 +20,7 @@ export function AuthLayout({ story, brand, title, description, notice, children,
         <div className="auth-layout__card">
           <header className="auth-layout__heading"><h1>{title}</h1><p>{description}</p></header>
           <div className="auth-layout__body">
+            <ConnectionNotice />
             {notice && <div className="auth-layout__notice">{notice}</div>}
             {children}
           </div>

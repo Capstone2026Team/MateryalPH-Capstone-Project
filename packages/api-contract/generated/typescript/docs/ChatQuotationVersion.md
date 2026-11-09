@@ -6,6 +6,7 @@
 
 Name | Type
 ------------ | -------------
+`conversationId` | string
 `requestedChanges` | string
 `changeRequestedAt` | string
 `vendorResponseDueAt` | string
@@ -23,6 +24,7 @@ Name | Type
 `actions` | Array&lt;string&gt;
 `quotationId` | string
 `acceptedOrderId` | string
+`replacesOrderId` | string
 
 ## Example
 
@@ -31,6 +33,7 @@ import type { ChatQuotationVersion } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "conversationId": null,
   "requestedChanges": null,
   "changeRequestedAt": null,
   "vendorResponseDueAt": null,
@@ -48,6 +51,7 @@ const example = {
   "actions": null,
   "quotationId": null,
   "acceptedOrderId": null,
+  "replacesOrderId": null,
 } satisfies ChatQuotationVersion
 
 console.log(example)

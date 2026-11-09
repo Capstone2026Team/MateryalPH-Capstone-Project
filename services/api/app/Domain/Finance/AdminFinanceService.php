@@ -6,6 +6,7 @@ namespace App\Domain\Finance;
 
 use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
+use App\Domain\Operations\AdminAccess;
 use App\Domain\Payments\PaymentChannelCatalog;
 use App\Domain\Payments\PaymentPresenter;
 use App\Domain\Payments\PaymentReconciliationService;
@@ -28,6 +29,8 @@ final class AdminFinanceService
 {
     public const PER_PAGE = 25;
 
+    public const COMMISSION_PAYMENT_STATUSES = ['PAID', 'PAID_PARTIALLY_REFUNDED', 'PAID_REFUND_PENDING', 'PAID_REFUNDED', 'PAID_REFUND_FAILED'];
+
     public function __construct(
         private readonly FinanceAccess $access,
         private readonly WithholdingThresholdService $threshold,
@@ -45,16 +48,53 @@ final class AdminFinanceService
     public function payments(Request $request, array $filters): array
     {
         $this->access->admin($request, 'finance.view');
+        $commissionOnly = ! empty($filters['commission_only']);
         $query = DB::table('payments as p')->leftJoin('orders as o', 'o.id', '=', 'p.order_id')->leftJoin('fee_statements as s', 's.id', '=', 'p.fee_statement_id')
             ->leftJoin('vendor_organizations as v', 'v.id', '=', 'p.vendor_organization_id')
             ->leftJoinSub(RefundService::paymentTotals(), 'refund_totals', 'refund_totals.source_payment_id', '=', 'p.id')
+            ->when($commissionOnly, fn (Builder $q) => $q->where('p.state', 'PAID')->where('p.purpose', 'PLATFORM_FEE_PAYMENT')->where('p.account_scope', 'PLATFORM_ACCOUNT')->where('p.late_capture', false))
+            ->when($commissionOnly && isset($filters['status']), function (Builder $q) use ($filters): void {
+                $refunded = 'COALESCE(refund_totals.refunded_centavos, 0)';
+                $pending = 'COALESCE(refund_totals.pending_count, 0)';
+                $failed = 'COALESCE(refund_totals.failed_count, 0)';
+                $q->whereRaw(match ($filters['status']) {
+                    'PAID_REFUNDED' => "$refunded >= p.total_centavos",
+                    'PAID_REFUND_PENDING' => "$refunded < p.total_centavos AND $pending > 0",
+                    'PAID_REFUND_FAILED' => "$refunded < p.total_centavos AND $pending = 0 AND $failed > 0",
+                    'PAID_PARTIALLY_REFUNDED' => "$refunded > 0 AND $refunded < p.total_centavos AND $pending = 0 AND $failed = 0",
+                    default => "$refunded = 0 AND $pending = 0 AND $failed = 0",
+                });
+            })
             ->when($filters['state'] ?? null, fn (Builder $q, string $state) => $q->where('p.state', $state))
             ->when($filters['purpose'] ?? null, fn (Builder $q, string $purpose) => $q->where('p.purpose', $purpose))
             ->when($filters['evidence_origin'] ?? null, fn (Builder $q, string $origin) => $q->where('p.evidence_origin', $origin))
             ->when($filters['reconciliation_state'] ?? null, fn (Builder $q, string $state) => $q->where('p.reconciliation_state', $state))
-            ->orderByDesc('p.created_at')->select(['p.*', 'o.reference as order_reference', 's.statement_reference', 'v.store_name', 'refund_totals.refunded_centavos', 'refund_totals.pending_count', 'refund_totals.failed_count']);
+            ->orderByDesc($commissionOnly ? 'p.paid_at' : 'p.created_at')->orderByDesc('p.id')->select(['p.*', 'o.reference as order_reference', 's.statement_reference', 'v.store_name', 'refund_totals.refunded_centavos', 'refund_totals.pending_count', 'refund_totals.failed_count']);
 
-        PortalDateRange::apply($query, 'p.created_at', $filters);
+        PortalDateRange::apply($query, $commissionOnly ? 'p.paid_at' : 'p.created_at', $filters);
+        if (isset($filters['search'])) {
+            $query->where(fn (Builder $search) => $search->where('v.store_name', 'ilike', '%'.$filters['search'].'%')->orWhere('s.statement_reference', 'ilike', '%'.$filters['search'].'%'));
+        }
+        if ($commissionOnly && isset($filters['statuses'])) {
+            $statuses = explode(',', (string) $filters['statuses']);
+            if (array_diff($statuses, self::COMMISSION_PAYMENT_STATUSES) !== []) {
+                throw new AuthenticationException('VALIDATION_FAILED', 'Choose valid payment statuses.', 422);
+            }
+            $query->where(function (Builder $q) use ($statuses): void {
+                foreach ($statuses as $status) {
+                    $refunded = 'COALESCE(refund_totals.refunded_centavos, 0)';
+                    $pending = 'COALESCE(refund_totals.pending_count, 0)';
+                    $failed = 'COALESCE(refund_totals.failed_count, 0)';
+                    $q->orWhereRaw(match ($status) {
+                        'PAID_REFUNDED' => "$refunded >= p.total_centavos",
+                        'PAID_REFUND_PENDING' => "$refunded < p.total_centavos AND $pending > 0",
+                        'PAID_REFUND_FAILED' => "$refunded < p.total_centavos AND $pending = 0 AND $failed > 0",
+                        'PAID_PARTIALLY_REFUNDED' => "$refunded > 0 AND $refunded < p.total_centavos AND $pending = 0 AND $failed = 0",
+                        default => "$refunded = 0 AND $pending = 0 AND $failed = 0",
+                    });
+                }
+            });
+        }
 
         return $this->page($query, (int) ($filters['page'] ?? 1), fn (object $row): array => $this->presenter->attempt($row, false) + [
             'reference' => (string) ($row->order_reference ?? $row->statement_reference ?? ''), 'vendor_name' => (string) ($row->store_name ?? ''),
@@ -175,9 +215,76 @@ final class AdminFinanceService
             ->when(! empty($filters['overdue']), fn (Builder $q) => $q->whereIn('s.state', ['ISSUED', 'PARTIALLY_PAID'])->where('s.outstanding_centavos', '>', 0)->where('s.due_on', '<', CarbonImmutable::now('Asia/Manila')->toDateString()))->orderByDesc('s.period_start')->orderByDesc('s.created_at')->select(['s.*', 'v.store_name']);
 
         PortalDateRange::apply($query, 's.issued_on', $filters, true);
+        if (isset($filters['search'])) {
+            $query->where(fn (Builder $search) => $search->where('v.store_name', 'ilike', '%'.$filters['search'].'%')->orWhere('s.statement_reference', 'ilike', '%'.$filters['search'].'%'));
+        }
+        if (isset($filters['states'])) {
+            $states = explode(',', (string) $filters['states']);
+            if (array_diff($states, ['DRAFT', 'ISSUED', 'PARTIALLY_PAID', 'PAID', 'VOIDED']) !== []) {
+                throw new AuthenticationException('VALIDATION_FAILED', 'Choose valid statement statuses.', 422);
+            }
+            $query->whereIn('s.state', $states);
+        }
+        $totals = (clone $query)->reorder()->select([])->selectRaw('COALESCE(SUM(s.charges_centavos), 0) AS charges_centavos, COALESCE(SUM(s.credits_centavos), 0) AS credits_centavos, COALESCE(SUM(GREATEST(0, s.charges_centavos - s.credits_centavos)), 0) AS after_credits_centavos, COALESCE(SUM(s.outstanding_centavos), 0) AS outstanding_centavos')->first();
 
-        return $this->page($query, (int) ($filters['page'] ?? 1), static fn (object $row): array => VendorFinanceService::statementView($row) + ['vendor_name' => (string) $row->store_name,
-            'line_count' => DB::table('fee_statement_lines')->where('fee_statement_id', $row->id)->count(), 'approved_at' => self::iso($row->approved_at)]);
+        $result = $this->page($query, (int) ($filters['page'] ?? 1), static fn (object $row): array => VendorFinanceService::statementView($row) + ['vendor_name' => (string) $row->store_name,
+            'email' => app(CommissionEmails::class)->summary('STATEMENT', (string) $row->id),
+            'line_count' => DB::table('fee_statement_lines')->where('fee_statement_id', $row->id)->count(), 'approved_at' => self::iso($row->approved_at),
+            'invoice_heading' => (string) $row->invoice_heading, 'invoice_message' => (string) $row->invoice_message]);
+        $result['meta']['totals'] = array_map('intval', (array) $totals);
+
+        return $result;
+    }
+
+    /**
+     * @param  array<string, mixed>  $input
+     * @return array<string, mixed>
+     */
+    public function statement(Request $request, string $id, array $input): array
+    {
+        $this->access->admin($request, 'finance.view');
+        $statement = DB::table('fee_statements as s')->join('vendor_organizations as v', 'v.id', '=', 's.vendor_organization_id')->where('s.id', $id)->first(['s.*', 'v.store_name']);
+        if ($statement === null) {
+            throw new AuthenticationException('STATEMENT_NOT_FOUND', 'This statement is unavailable.', 404);
+        }
+        $lines = DB::table('fee_statement_lines as l')->leftJoin('fee_assessments as f', 'f.id', '=', 'l.fee_assessment_id')->leftJoin('orders as o', 'o.id', '=', 'f.order_id')
+            ->where('l.fee_statement_id', $id)->orderBy('l.created_at')->orderBy('l.id');
+        $rates = (clone $lines)->reorder()->where('l.line_type', 'EARNED_COMMISSION')->groupBy('f.commission_basis_points')
+            ->selectRaw('f.commission_basis_points, SUM(f.commission_basis_centavos) AS basis_centavos, SUM(l.amount_centavos) AS commission_centavos')->get()
+            ->map(fn (object $row): array => ['rate_label' => CommissionPolicyService::percent((int) $row->commission_basis_points), 'basis_centavos' => (int) $row->basis_centavos, 'commission_centavos' => (int) $row->commission_centavos])->all();
+
+        return VendorFinanceService::statementView($statement) + ['vendor_name' => $statement->store_name, 'issued_at' => self::iso($statement->issued_at), 'issuance_origin' => $statement->issuance_origin,
+            'can_resend' => app(AdminAccess::class)->allows($request, 'finance.approve_statements'), 'can_export' => app(AdminAccess::class)->allows($request, 'finance.export'),
+            'rate_breakdown' => $rates, 'emails' => app(CommissionEmails::class)->activity('STATEMENT', $id),
+            'lines' => $this->page($lines->select(['l.*', 'o.reference', 'f.commission_basis_points']), (int) ($input['page'] ?? 1), fn (object $line): array => ['id' => $line->id, 'type' => $line->line_type, 'description' => $line->description, 'amount_centavos' => (int) $line->amount_centavos, 'order_reference' => $line->reference]),
+            'payments' => $this->page(DB::table('payments')->where('fee_statement_id', $id)->orderByDesc('created_at')->orderByDesc('id'), (int) ($input['payments_page'] ?? 1), fn (object $payment): array => $this->presenter->attempt($payment, false))];
+    }
+
+    /** @param array{lock_version: int, invoice_heading: string, invoice_message: ?string} $input
+     * @return array<string, mixed> */
+    public function updateStatementInvoice(Request $request, string $statementId, array $input): array
+    {
+        $this->access->admin($request, 'finance.approve_statements');
+
+        return app(AdminAccess::class)->idempotent($request, 'STATEMENT_INVOICE_UPDATE:'.$statementId, function () use ($request, $statementId, $input): array {
+            $statement = DB::table('fee_statements')->where('id', $statementId)->lockForUpdate()->first();
+            if ($statement === null) {
+                throw new AuthenticationException('STATEMENT_NOT_FOUND', 'This statement is unavailable.', 404);
+            }
+            if ($statement->state !== 'DRAFT' || $statement->issued_invoice_snapshot !== null) {
+                throw new AuthenticationException('STATEMENT_NOT_DRAFT', 'Issued invoice copies are fixed. Only a draft invoice can be edited.', 409);
+            }
+            if ((int) $statement->lock_version !== (int) $input['lock_version']) {
+                throw new AuthenticationException('VERSION_CONFLICT', 'This statement changed. Refresh before editing its invoice.', 409);
+            }
+            $copy = ['invoice_heading' => trim($input['invoice_heading']), 'invoice_message' => trim($input['invoice_message'] ?? '')];
+            DB::table('fee_statements')->where('id', $statementId)->update($copy + ['lock_version' => (int) $statement->lock_version + 1, 'updated_at' => now()]);
+            $this->audit->account($request, 'FEE_STATEMENT_INVOICE_EDITED', 'FEE_STATEMENT', $statementId,
+                before: ['lock_version' => (int) $statement->lock_version], after: ['lock_version' => (int) $statement->lock_version + 1]);
+            $updated = DB::table('fee_statements')->where('id', $statementId)->first();
+
+            return VendorFinanceService::statementView($updated) + $copy;
+        })['result'];
     }
 
     public function draftStatements(Request $request): int
@@ -232,6 +339,9 @@ final class AdminFinanceService
     {
         $this->access->admin($request, 'finance.view');
         $counts = app(PaymentReconciliationService::class)->sweep();
+        $remittances = app(RemittanceReconciliationService::class)->sweep();
+        $counts['remittances_reconciled'] = $remittances['reconciled'];
+        $counts['remittance_exceptions'] = $remittances['exceptions'];
         $this->audit->account($request, 'PAYMENT_RECONCILIATION_RUN', 'PAYMENT', null, after: $counts);
 
         return $counts;

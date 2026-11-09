@@ -2,6 +2,7 @@ import { useId, useRef, useState, type ReactNode } from 'react'
 import { AlertCircle, ImagePlus, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import { Button } from './button'
 import { StatusBadge } from './portal-shell'
+import './compact-page-patterns.css'
 
 export type RecordColumn<T> = { key: string; header: string; cell: (row: T) => ReactNode; className?: string }
 
@@ -10,20 +11,20 @@ export type RecordColumn<T> = { key: string; header: string; cell: (row: T) => R
  * cards below, rendered from one column definition so both views stay in sync.
  * Wide tables scroll inside their own container, never the page.
  */
-export function ResponsiveRecordList<T>({ caption, rows, columns, rowKey, cardTitle, cardAction, tableClassName = '' }: {
+export function ResponsiveRecordList<T>({ caption, rows, columns, rowKey, cardTitle, cardAction, tableClassName = '', compact = false }: {
   caption: string; rows: T[]; columns: RecordColumn<T>[]; rowKey: (row: T) => string
-  cardTitle: (row: T) => ReactNode; cardAction?: (row: T) => ReactNode; tableClassName?: string
+  cardTitle: (row: T) => ReactNode; cardAction?: (row: T) => ReactNode; tableClassName?: string; compact?: boolean
 }) {
   return <>
-    <div role="region" aria-label={`${caption} table`} tabIndex={0} className="hidden min-w-0 max-w-full overflow-x-auto rounded-surface border border-border-default bg-surface-primary lg:block">
-      <table className={`w-full min-w-[960px] table-auto text-left text-sm ${tableClassName}`}>
+    <div role="region" aria-label={`${caption} table`} tabIndex={0} className="hidden min-w-0 max-w-full overflow-x-auto mp-card lg:block">
+      <table className={`w-full min-w-[960px] table-auto text-left text-sm ${compact ? 'mp-record-list-compact' : ''} ${tableClassName}`}>
         <caption className="sr-only">{caption}</caption>
         <thead className="border-b border-border-default bg-surface-canvas"><tr>{columns.map(column => <th key={column.key} scope="col" className="px-4 py-3 font-semibold text-text-strong">{column.header}</th>)}</tr></thead>
         <tbody>{rows.map(row => <tr key={rowKey(row)} className="border-t border-border-default align-top">{columns.map(column => <td key={column.key} className={`px-4 py-3 ${column.className ?? ''}`}>{column.cell(row)}</td>)}</tr>)}</tbody>
       </table>
     </div>
-    <ul className="grid gap-3 lg:hidden" aria-label={caption}>
-      {rows.map(row => <li key={rowKey(row)} className="min-w-0 rounded-surface border border-border-default bg-surface-primary p-4">
+    <ul className={`grid gap-3 lg:hidden ${compact ? 'mp-record-list-mobile-compact' : ''}`} aria-label={caption}>
+      {rows.map(row => <li key={rowKey(row)} className="min-w-0 mp-card mp-card-padded">
         <div className="min-w-0 break-words font-semibold">{cardTitle(row)}</div>
         <dl className="mt-3 grid gap-x-4 gap-y-2 text-sm min-[420px]:grid-cols-2">{columns.slice(1).map(column => <div key={column.key} className="min-w-0"><dt className="text-xs text-text-secondary">{column.header}</dt><dd className="mt-0.5 break-words">{column.cell(row)}</dd></div>)}</dl>
         {cardAction && <div className="mt-3 border-t border-border-default pt-3">{cardAction(row)}</div>}
@@ -101,7 +102,7 @@ export function MediaUploadField({ label, accept, acceptedLabel, maxBytes, items
     </div>
     {shownError && <p id={`${inputId}-error`} className="text-sm text-status-error" role="alert">{shownError}</p>}
     <ul className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-5" aria-label={`${label}: ${ready.length} of ${maxItems}`}>
-      {ready.map((item, index) => <li key={item.id} className="min-w-0 overflow-hidden rounded-surface border border-border-default bg-surface-primary">
+      {ready.map((item, index) => <li key={item.id} className="min-w-0 overflow-hidden mp-card">
         <div className="relative grid aspect-square place-items-center bg-surface-canvas">
           {item.previewUrl ? <img src={item.previewUrl} alt={item.label} className="h-full w-full object-cover" /> : <ImagePlus className="text-text-secondary" aria-hidden="true" />}
           {index === 0 && <span className="absolute left-2 top-2 rounded-pill bg-action-primary px-2 py-0.5 text-xs font-semibold text-white">Main photo</span>}
@@ -124,15 +125,13 @@ export function MediaUploadField({ label, accept, acceptedLabel, maxBytes, items
 
 export type SummaryTile = { key: string; label: string; value: number | string; hint: string; tone?: 'neutral' | 'success' | 'warning' | 'error' | 'info' }
 
-const tileAccent = { neutral: 'border-t-border-default', success: 'border-t-status-success', warning: 'border-t-status-warning', error: 'border-t-status-error', info: 'border-t-status-info' }
-
 /** Compact counts above a record list. Tone is an accent only; each tile names its meaning in text. */
 export function SummaryTiles({ label, tiles }: { label: string; tiles: SummaryTile[] }) {
-  return <dl aria-label={label} className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-    {tiles.map(tile => <div key={tile.key} className={`min-w-0 rounded-surface border border-t-4 border-border-default bg-surface-primary px-4 py-3 ${tileAccent[tile.tone ?? 'neutral']}`}>
-      <dt className="text-xs font-semibold uppercase tracking-wide text-text-secondary">{tile.label}</dt>
-      <dd className="mt-1 text-2xl font-semibold tabular-nums text-text-strong">{tile.value}</dd>
-      <dd className="text-xs text-text-secondary">{tile.hint}</dd>
+  return <dl aria-label={label} className="mp-card-group grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+    {tiles.map(tile => <div key={tile.key} className="mp-metric-card" data-tone={tile.tone ?? 'neutral'}>
+      <dt className="mp-kpi-label">{tile.label}</dt>
+      <dd className="mp-kpi-value">{tile.value}</dd>
+      <dd className="mp-kpi-hint">{tile.hint}</dd>
     </div>)}
   </dl>
 }
@@ -158,7 +157,7 @@ export function RowErrorTable({ caption, rows }: { caption: string; rows: RowErr
   return <section aria-labelledby="row-error-heading" className="grid min-w-0 gap-3">
     <h3 id="row-error-heading" className="text-lg font-semibold">{caption}</h3>
     <nav aria-label="Jump to a rejected row"><ul className="flex flex-wrap gap-2">{rows.map(row => <li key={row.rowNumber}><a className="inline-flex min-h-11 items-center rounded-control border border-border-default px-3 text-sm font-semibold text-action-primary underline" href={`#import-row-${row.rowNumber}`}>Row {row.rowNumber}</a></li>)}</ul></nav>
-    <div className="overflow-x-auto rounded-surface border border-border-default">
+    <div className="overflow-x-auto mp-card">
       <table className="w-full min-w-[640px] text-left text-sm">
         <caption className="sr-only">{caption}</caption>
         <thead className="bg-surface-canvas"><tr><th scope="col" className="px-4 py-3">Row</th><th scope="col" className="px-4 py-3">Listing / variant</th><th scope="col" className="px-4 py-3">Problems</th></tr></thead>
@@ -177,8 +176,8 @@ export function RowErrorTable({ caption, rows }: { caption: string; rows: RowErr
  * its evidence, and the decision area. Three regions at wide desktop, two at
  * tablet width and a single reading-order stack on narrow screens.
  */
-export function ReviewWorkspace({ navigator, information, decision }: { navigator: ReactNode; information: ReactNode; decision: ReactNode }) {
-  return <div className="grid min-w-0 items-start gap-5 md:grid-cols-[minmax(13rem,16rem)_minmax(0,1fr)] 2xl:grid-cols-[minmax(13rem,16rem)_minmax(0,1fr)_minmax(20rem,26rem)]">
+export function ReviewWorkspace({ navigator, information, decision, compact = false }: { navigator: ReactNode; information: ReactNode; decision: ReactNode; compact?: boolean }) {
+  return <div className={`grid min-w-0 items-start ${compact ? 'gap-3 mp-review-workspace-compact' : 'gap-5'} md:grid-cols-[minmax(13rem,16rem)_minmax(0,1fr)] 2xl:grid-cols-[minmax(13rem,16rem)_minmax(0,1fr)_minmax(20rem,26rem)]`}>
     <nav aria-label="Review sections" className="min-w-0 md:sticky md:top-4">{navigator}</nav>
     <div className="min-w-0">{information}</div>
     <div className="min-w-0 md:col-start-2 2xl:col-start-auto">{decision}</div>

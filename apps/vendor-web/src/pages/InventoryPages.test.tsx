@@ -1,3 +1,4 @@
+import { dateFilterPreset } from '@materyalph/web-ui'
 import * as catalog from '../lib/catalog-api'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -7,6 +8,8 @@ import * as inventory from '../lib/inventory-api'
 import type { AutoAcceptPolicyDetail, InventoryLedgerMeta, InventoryRow } from '../lib/inventory-api'
 import * as onboarding from '../lib/onboarding-api'
 import { VendorInventoryPage } from './InventoryPages'
+
+const defaultDates = () => ({ from: dateFilterPreset(30).from, to: dateFilterPreset(30).to })
 
 vi.mock('../lib/onboarding-api', async original => ({ ...await original<typeof import('../lib/onboarding-api')>(), getVendorOnboarding: vi.fn(), getVendorPrivateFileUrl: vi.fn() }))
 vi.mock('../lib/catalog-api', async original => ({ ...await original<typeof import('../lib/catalog-api')>(), getCatalogTaxonomy: vi.fn(), getListing: vi.fn(), getCatalogFileUrl: vi.fn() }))
@@ -77,8 +80,11 @@ test('the ledger shows private quantities beside the public label and a stale-st
   const ledger = await screen.findByRole('table', { name: 'Inventory ledger' })
   expect(screen.getByRole('region', { name: 'Inventory ledger' })).toHaveAttribute('tabindex', '0')
   const header = within(ledger).getAllByRole('columnheader').map(cell => cell.textContent)
-  expect(header).toEqual(expect.arrayContaining(['Product / variant', 'SKU', 'Stock status', 'Confirmation', 'Reorder level', 'Auto-accept']))
+  expect(header).toEqual(['Product / variant', 'Stock status', 'Confirmation', 'Reorder level', 'Auto-accept'])
   const cells = within(ledger).getAllByRole('row')[1]!
+  expect(within(cells).getByRole('rowheader')).toHaveTextContent('CEM-40-1')
+  expect(within(cells).getByRole('button', { name: 'View inventory details for Portland cement — 40 kg' })).toHaveAccessibleDescription('SKU CEM-40-1')
+  expect(within(screen.getByRole('region', { name: 'Stock ledger' })).getByRole('button', { name: 'Confirm counts on this page' })).toBeInTheDocument()
   fireEvent.click(screen.getByLabelText('View inventory details for Portland cement — 40 kg'))
   const popup = screen.getByRole('dialog', { name: 'Portland cement — 40 kg' })
   expect(within(popup).getByText('On hand').parentElement).toHaveTextContent('120 BAG')
@@ -106,8 +112,8 @@ test('history date changes filter movement and price timestamps together and res
   fireEvent.click(await screen.findByLabelText('View inventory details for Portland cement — 40 kg'))
   fireEvent.click(await screen.findByRole('button', { name: 'History of Portland cement — 40 kg' }))
   fireEvent.click(await screen.findByRole('button', { name: 'Next' }))
-  await waitFor(() => expect(inventory.listMovements).toHaveBeenLastCalledWith(row().listingVariantId, 2, {}))
-  fireEvent.click(await screen.findByRole('button', { name: 'All dates' }))
+  await waitFor(() => expect(inventory.listMovements).toHaveBeenLastCalledWith(row().listingVariantId, 2, defaultDates()))
+  fireEvent.click(await screen.findByRole('button', { name: 'Last 30 days' }))
   fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-10-01' } })
   fireEvent.change(screen.getByLabelText('To'), { target: { value: '2026-10-09' } })
   fireEvent.click(screen.getByRole('button', { name: 'Apply' }))
@@ -155,6 +161,7 @@ test('the Customer Service sales stock view is read-only', async () => {
   expect(await screen.findByRole('table', { name: 'Inventory ledger' })).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Edit Portland cement — 40 kg' })).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Confirm counts on this page' })).not.toBeInTheDocument()
+  expect(screen.getByRole('switch', { name: 'Auto-accept for Portland cement — 40 kg' })).toBeDisabled()
   fireEvent.click(screen.getByLabelText('View inventory details for Portland cement — 40 kg'))
   expect(screen.getByRole('button', { name: 'Auto-accept settings for Portland cement — 40 kg' })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'History of Portland cement — 40 kg' })).toBeInTheDocument()
@@ -211,7 +218,7 @@ test('a delayed policy load preserves an allotment typed immediately after loadi
   open()
   fireEvent.click(await screen.findByLabelText('View inventory details for Portland cement — 40 kg'))
   fireEvent.click(screen.getByRole('button', { name: 'Auto-accept settings for Portland cement — 40 kg' }))
-  expect(screen.getByText('Loading auto-accept…')).toHaveAttribute('role', 'status')
+  expect(screen.getByText('Loading auto-accept…').closest('[role="status"]')).toBeVisible()
   await act(async () => resolvePolicy(detail({ status: 'PAUSED', enabled: true, paused: true, pauseReason: 'ALLOTMENT_EXHAUSTED', lockVersion: 2 }, false)))
   const panel = screen.getByRole('region', { name: 'Item-Based auto-accept' })
   const allotment = within(panel).getByLabelText('Allotment (BAG)')

@@ -20,9 +20,9 @@ function complianceApi(): AdminProductComplianceApi {
   return new AdminProductComplianceApi(createWebApiConfiguration(basePath, { refreshSession: true }))
 }
 
-export async function listComplianceQueue(filters: { status?: ListProductComplianceQueueStatusEnum; path?: CompliancePath; referenceResult?: ComplianceReferenceResult; sort?: 'oldest' | 'newest'; page?: number; from?: Date; to?: Date }) {
+export async function listComplianceQueue(filters: { status?: ListProductComplianceQueueStatusEnum; path?: CompliancePath; referenceResult?: ComplianceReferenceResult; sort?: 'oldest' | 'newest'; page?: number; from?: Date; to?: Date }): Promise<{ items: ProductComplianceQueueItem[]; meta: { current_page?: number; last_page?: number; total?: number; counts?: Record<string, number> } }> {
   const response = await complianceApi().listProductComplianceQueue(filters)
-  return { items: response.data, meta: response.meta as { current_page?: number; last_page?: number; total?: number } }
+  return { items: response.data, meta: { current_page: response.meta.currentPage, last_page: response.meta.lastPage, total: response.meta.total, counts: response.meta.counts } }
 }
 
 export async function getComplianceCase(submissionId: string): Promise<ProductComplianceCase> {

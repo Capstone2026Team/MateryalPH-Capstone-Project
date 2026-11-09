@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Vendors;
 
+use App\Domain\Finance\CommissionPolicyService;
 use Illuminate\Support\Facades\DB;
 
 final class StoreActivationGate
@@ -52,7 +53,7 @@ final class StoreActivationGate
         if (! $submitted || $organization === null || ! in_array($organization->store_verification_status, ['PENDING_VERIFICATION', 'APPROVED', 'CHANGES_REQUIRED', 'REJECTED', 'EXPIRED'], true)) {
             $block(2, 'verification_submission', 'Submit Store Verification.');
         }
-        $requirements = DB::table('vendor_onboarding_requirements')->where('vendor_organization_id', $organizationId)->where('is_current', true)->get();
+        $requirements = DB::table('vendor_onboarding_requirements')->where('vendor_organization_id', $organizationId)->where('is_current', true)->orderBy('section')->orderBy('requirement_key')->orderBy('id')->get();
         $verification = $requirements->where('section', 'STORE_VERIFICATION')->where('level', '!=', 'OPTIONAL');
         $setup = $requirements->where('section', 'STORE_SETUP')->where('level', '!=', 'OPTIONAL');
         if ($verification->isEmpty() || $organization?->store_verification_status !== 'APPROVED') {
@@ -145,9 +146,14 @@ final class StoreActivationGate
 
     private function accepted(string $organizationId, int $ownerId, string $code, bool $organizationRequired = false): bool
     {
-        $version = DB::table('agreement_versions as v')->join('agreement_documents as d', 'd.id', '=', 'v.agreement_document_id')->where('d.code', $code)->whereNull('v.retired_at')->where('v.effective_at', '<=', now())->orderByDesc('v.version')->value('v.id');
+        $version = $code === 'VENDOR_COMMISSION_TEST' ? CommissionPolicyService::current()?->agreement_version_id
+            : DB::table('agreement_versions as v')->join('agreement_documents as d', 'd.id', '=', 'v.agreement_document_id')->where('d.code', $code)->whereNull('v.retired_at')->where('v.effective_at', '<=', now())->orderByDesc('v.version')->value('v.id');
 
-        $query = DB::table('agreement_acceptances')->where('user_id', $ownerId)->where('agreement_version_id', $version)->where(fn ($query) => $organizationRequired ? $query->where('vendor_organization_id', $organizationId) : $query->where('vendor_organization_id', $organizationId)->orWhereNull('vendor_organization_id'));
+        $versions = [$version];
+        if ($code === 'VENDOR_COMMISSION_TEST') {
+            $versions[] = CommissionPolicyService::current()?->legacy_agreement_version_id;
+        }
+        $query = DB::table('agreement_acceptances')->where('user_id', $ownerId)->whereIn('agreement_version_id', array_filter($versions))->where(fn ($query) => $organizationRequired ? $query->where('vendor_organization_id', $organizationId) : $query->where('vendor_organization_id', $organizationId)->orWhereNull('vendor_organization_id'));
 
         return $version !== null && $query->exists();
     }

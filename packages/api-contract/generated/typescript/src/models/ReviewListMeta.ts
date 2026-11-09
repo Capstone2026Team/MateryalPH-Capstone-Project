@@ -28,6 +28,10 @@ import {
  */
 export interface ReviewListMeta {
     /**
+     * Admin moderation only. Full totals by moderation state, including ALL and NEEDS_ACTION, after submission date filters but before state selection and pagination. NEEDS_ACTION counts each review once using the queue's existing open-report or flagged/hidden criteria.
+     */
+    counts?: { [key: string]: number; };
+    /**
      *
      */
     page?: number;
@@ -74,6 +78,7 @@ export function ReviewListMetaFromJSONTyped(json: any, ignoreDiscriminator: bool
     }
     return {
 
+        'counts': json['counts'] == null ? undefined : json['counts'],
         'page': json['page'] == null ? undefined : json['page'],
         'perPage': json['per_page'] == null ? undefined : json['per_page'],
         'total': json['total'] == null ? undefined : json['total'],
@@ -95,6 +100,7 @@ export function ReviewListMetaToJSONTyped(value?: ReviewListMeta | null, ignoreD
 
     return {
 
+        'counts': value['counts'],
         'page': value['page'],
         'per_page': value['perPage'],
         'total': value['total'],

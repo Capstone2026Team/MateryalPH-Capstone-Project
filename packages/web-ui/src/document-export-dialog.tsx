@@ -1,8 +1,8 @@
+import { AsyncLoading } from './async-state'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Download } from 'lucide-react'
-import { AccountsApi, ReportingApi, type DocumentExport, type DocumentExportInput } from '@materyalph/api-client-ts'
+import { AccountsApi, ReportingApi, type DocumentExport, type DocumentExportInput, type PlatformDocumentRef } from '@materyalph/api-client-ts'
 import { Button } from './button'
-import { FormDialog } from './form-dialog'
 import { StatusMessage } from './status-message'
 import { createWebApiConfiguration } from './web-api-session'
 import { notificationError } from './notification-error'
@@ -36,25 +36,78 @@ export function saveDocumentBlob(blob: Blob, filename: string): void {
 }
 
 export function DocumentExportButton(props: DocumentExportContext) {
-  const [open, setOpen] = useState(false)
   const format = props.format ?? 'PDF'
-  return <>
-    <Button variant="secondary" disabled={props.disabled} onClick={() => setOpen(true)}><Download size={16} aria-hidden="true" />Export {format}</Button>
-    {open && <FormDialog open size="compact" title="Documents & exports" description={props.title ?? `Generate a ${format} for this section.`} onClose={() => setOpen(false)} footer={null}>
-      <DocumentExportWorkspace {...props} />
-    </FormDialog>}
-  </>
+  return <div className="flex min-w-0 flex-wrap items-start gap-2">{props.types.map(type => <DocumentExportWorkspace
+    {...props} key={type} types={[type]} compact
+    buttonLabel={props.types.length === 1 && type !== 'PURCHASE_ORDER' ? `Export ${format}` : `${label(type)} ${format}`}
+  />)}</div>
 }
 
-export function DocumentExportWorkspace({ basePath, audience, types, resourceId, filters = {}, title, format = 'PDF' }: DocumentExportContext) {
+class ExportDownloadError extends Error {
+  constructor(message: string, readonly resume = false) { super(message) }
+}
+
+type OrderDocumentKind = 'PURCHASE_ORDER'
+
+async function pauseForDocument(signal: AbortSignal): Promise<void> {
+  if (signal.aborted) return
+  await new Promise<void>(resolve => {
+    const done = () => { window.clearTimeout(timer); signal.removeEventListener('abort', done); resolve() }
+    const timer = window.setTimeout(done, 5000)
+    signal.addEventListener('abort', done, { once: true })
+  })
+}
+
+async function waitForOrderDocument(api: ReportingApi, audience: 'admin' | 'vendor', orderId: string, kind: OrderDocumentKind, isCurrent: () => boolean, signal: AbortSignal): Promise<PlatformDocumentRef | null> {
+  for (let attempt = 0; attempt < 60 && isCurrent(); attempt++) {
+    const result = await api.listOrderDocuments({ audience, orderId })
+    if (!isCurrent()) return null
+    const document = result.data.find(item => item.kind === kind)
+    if (document?.availability === 'READY' && document.downloadUrl) return document
+    if (document?.availability !== 'QUEUED') throw new ExportDownloadError(document?.availability === 'AFTER_ACCEPTANCE' ? 'The Purchase Order will be available after the final order is accepted.'
+      : 'This document is currently unavailable. Refresh its status or contact support.')
+    await pauseForDocument(signal)
+  }
+  if (!isCurrent()) return null
+  throw new ExportDownloadError('The document is still being prepared. Try downloading it again shortly.', true)
+}
+
+async function waitForExport(api: ReportingApi, audience: 'admin' | 'vendor', requested: DocumentExport, type: ExportType, format: 'PDF' | 'CSV', isCurrent: () => boolean, signal: AbortSignal): Promise<DocumentExport | null> {
+  let item = requested
+  for (let attempt = 0; attempt <= 60 && isCurrent(); attempt++) {
+    if (item.state === 'READY') {
+      if (item.expiresAt && new Date(item.expiresAt).getTime() <= Date.now()) throw new ExportDownloadError('This export has expired. Try exporting a new copy.')
+      return item
+    }
+    if (item.state !== 'QUEUED') throw new ExportDownloadError(item.state === 'REVOKED' ? 'Access to this export has been revoked.' : 'This export could not be generated. Try exporting a new copy.')
+    if (attempt === 60) break
+    if (attempt > 0) await pauseForDocument(signal)
+    if (!isCurrent()) return null
+    let page = 1
+    let found = false
+    do {
+      const result = await api.listDocumentExports({ audience, page, type, format, ...(requested.resourceId ? { resourceId: requested.resourceId } : {}) })
+      if (!isCurrent()) return null
+      const current = result.data.find(candidate => candidate.id === requested.id)
+      if (current) { item = current; found = true; break }
+      if (result.meta.has_more !== true) break
+      page++
+    } while (isCurrent())
+    if (!found) throw new ExportDownloadError('This export is no longer available to your account.')
+  }
+  if (!isCurrent()) return null
+  throw new ExportDownloadError('The export is still generating. Click Export again to continue the download.', true)
+}
+
+export function DocumentExportWorkspace({ basePath, audience, types, resourceId, filters = {}, title, format = 'PDF', disabled, compact = false, buttonLabel }: DocumentExportContext & { compact?: boolean; buttonLabel?: string }) {
   const api = useMemo(() => new ReportingApi(createWebApiConfiguration(basePath, { refreshSession: true })), [basePath])
   const accountsApi = useCallback(() => new AccountsApi(createWebApiConfiguration(basePath, { refreshSession: true })), [basePath])
   const [type, setType] = useState<ExportType>(types[0] ?? 'PURCHASE_ORDER')
-  const [purpose, setPurpose] = useState('')
   const [items, setItems] = useState<DocumentExport[]>([])
   const [busy, setBusy] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [message, setMessage] = useState('')
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(false)
   const [sessionActive, setSessionActive] = useState(true)
@@ -62,10 +115,11 @@ export function DocumentExportWorkspace({ basePath, audience, types, resourceId,
   const { verify, dialog } = useAccountVerification({ api: accountsApi, portal: 'admin', explainError: notificationError, enabled: audience === 'admin' && sessionActive })
   const generation = useRef(0)
   const actionLock = useRef(false)
+  const controller = useRef<AbortController | null>(null)
   const contextKey = JSON.stringify({ basePath, audience, type, resourceId, filters, format })
   const context = useRef(contextKey)
   context.current = contextKey
-  const requestKey = useRef({ scope: '', key: crypto.randomUUID() })
+  const requestKey = useRef<{ scope: string; key: string; item?: DocumentExport }>({ scope: '', key: crypto.randomUUID() })
   const load = useCallback(async (number = 1) => {
     if (!sessionOpen.current) return
     const epoch = generation.current
@@ -83,11 +137,13 @@ export function DocumentExportWorkspace({ basePath, audience, types, resourceId,
     } finally { if (epoch === generation.current) setLoading(false) }
   }, [api, audience, type, resourceId, format])
   useEffect(() => {
-    generation.current++; setBusy(false); setItems([]); setPage(1); setHasMore(false); void load()
-    const clear = () => { generation.current++; sessionOpen.current = false; setSessionActive(false); setBusy(false); setLoading(false); setItems([]); setHasMore(false); setError('Sign in again to continue.') }
+    generation.current++; actionLock.current = false; setBusy(false); setItems([]); setPage(1); setHasMore(false); setError(''); setMessage('')
+    requestKey.current = { scope: '', key: crypto.randomUUID() }
+    if (!compact) void load()
+    const clear = () => { generation.current++; controller.current?.abort(); sessionOpen.current = false; setSessionActive(false); setBusy(false); setLoading(false); setItems([]); setHasMore(false); setMessage(''); setError('Sign in again to continue.') }
     window.addEventListener('materyalph:session-cleared', clear)
-    return () => { generation.current++; window.removeEventListener('materyalph:session-cleared', clear) }
-  }, [load])
+    return () => { generation.current++; controller.current?.abort(); window.removeEventListener('materyalph:session-cleared', clear) }
+  }, [load, contextKey, compact])
   const pending = items.some(item => item.state === 'QUEUED')
   useEffect(() => {
     const resume = () => { if (!document.hidden && pending && !busy) void load() }
@@ -101,27 +157,62 @@ export function DocumentExportWorkspace({ basePath, audience, types, resourceId,
   }, [pending, busy, loading, error, load])
 
   async function request() {
-    if (actionLock.current || !sessionActive) return
+    if (actionLock.current || !sessionActive || disabled) return
     actionLock.current = true
+    const abort = new AbortController()
+    controller.current = abort
     const epoch = generation.current
-    const isCurrent = () => sessionOpen.current && epoch === generation.current && context.current === contextKey
-    setBusy(true); setError('')
+    const isCurrent = () => !abort.signal.aborted && sessionOpen.current && epoch === generation.current && context.current === contextKey
+    setBusy(true); setError(''); setMessage('')
     try {
-      const input: DocumentExportInput = { type, format, resourceId: resourceId ?? null, purpose: purpose.trim(), filters }
+      if (resourceId && format === 'PDF' && type === 'PURCHASE_ORDER') {
+        const document = await waitForOrderDocument(api, audience, resourceId, type, isCurrent, abort.signal)
+        if (!document || !isCurrent()) return
+        const blob = await api.downloadOrderDocument({ audience, orderId: resourceId, kind: type })
+        await saveBlob(blob, 'PDF', `materyalph-${type.toLowerCase()}-${resourceId}.pdf`, isCurrent)
+        if (isCurrent()) setMessage('PDF download started.')
+        return
+      }
+      const input: DocumentExportInput = { type, format, resourceId: resourceId ?? null, purpose: `${label(type)} ${format} export from ${audience} ${resourceId ? 'record' : 'report'}.`, filters }
       const scope = JSON.stringify(input)
       if (requestKey.current.scope !== scope) requestKey.current = { scope, key: crypto.randomUUID() }
       const idempotencyKey = requestKey.current.key
       const submit = () => api.requestDocumentExport({ audience, idempotencyKey, documentExportInput: input })
-      const result = audience === 'admin'
+      const result = requestKey.current.item ? { data: requestKey.current.item } : audience === 'admin'
         ? await requestExportWithVerification(submit, () => verify(`Confirm ${label(type).toLowerCase()} export`), isCurrent)
         : await submit()
       if (!isCurrent()) return
       if (!result) { setError(`Verification was cancelled. Your ${format} was not requested.`); return }
-      requestKey.current = { scope: '', key: crypto.randomUUID() }
+      requestKey.current.item = result.data
       setItems(old => [result.data, ...old.filter(item => item.id !== result.data.id)])
-      await load()
-    } catch (cause) { const message = await notificationError(cause); if (isCurrent()) setError(message) }
-    finally { actionLock.current = false; if (epoch === generation.current) setBusy(false) }
+      const ready = await waitForExport(api, audience, result.data, type, format, isCurrent, abort.signal)
+      if (!ready || !isCurrent()) return
+      requestKey.current.item = ready
+      setItems(old => [ready, ...old.filter(item => item.id !== ready.id)])
+      await save(ready, isCurrent)
+      if (!isCurrent()) return
+      requestKey.current = { scope: '', key: crypto.randomUUID() }
+      setMessage(`${format} download started.`)
+      if (!compact) await load()
+    } catch (cause) {
+      const message = cause instanceof ExportDownloadError ? cause.message : await notificationError(cause)
+      if (isCurrent()) {
+        const unavailable = cause && typeof cause === 'object' && 'response' in cause && cause.response instanceof Response && [403, 410].includes(cause.response.status)
+        if (unavailable || (cause instanceof ExportDownloadError && !cause.resume)) requestKey.current = { scope: '', key: crypto.randomUUID() }
+        setError(message)
+      }
+    }
+    finally { if (epoch === generation.current) { actionLock.current = false; setBusy(false) } }
+  }
+  async function save(item: DocumentExport, isCurrent: () => boolean) {
+    const blob = await api.downloadDocumentExport({ audience, exportId: item.id })
+    await saveBlob(blob, item.format, `materyalph-${item.type.toLowerCase()}-${item.id}.${item.format.toLowerCase()}`, isCurrent)
+  }
+  async function saveBlob(blob: Blob, fileFormat: string, filename: string, isCurrent: () => boolean) {
+    if (!isCurrent()) return
+    if (fileFormat === 'PDF' && await blob.slice(0, 5).text() !== '%PDF-') throw new ExportDownloadError('The PDF could not be verified. Try downloading it again.')
+    if (!isCurrent()) return
+    saveDocumentBlob(new Blob([blob], { type: fileFormat === 'PDF' ? 'application/pdf' : 'text/csv;charset=utf-8' }), filename)
   }
   async function download(item: DocumentExport) {
     if (actionLock.current || !sessionActive) return
@@ -129,28 +220,32 @@ export function DocumentExportWorkspace({ basePath, audience, types, resourceId,
     const epoch = generation.current
     setBusy(true); setError('')
     try {
-      const blob = await api.downloadDocumentExport({ audience, exportId: item.id })
+      await save(item, () => sessionOpen.current && epoch === generation.current && context.current === contextKey)
       if (epoch !== generation.current) return
-      if (item.format === 'PDF' && await blob.slice(0, 5).text() !== '%PDF-') throw new Error('Invalid PDF response')
-      if (epoch !== generation.current) return
-      saveDocumentBlob(new Blob([blob], { type: item.format === 'PDF' ? 'application/pdf' : 'text/csv;charset=utf-8' }), `materyalph-${item.type.toLowerCase()}-${item.id}.${item.format.toLowerCase()}`)
       await load()
     } catch (cause) { const message = await notificationError(cause); if (epoch === generation.current) { setError(message); await load() } }
-    finally { actionLock.current = false; if (epoch === generation.current) setBusy(false) }
+    finally { if (epoch === generation.current) { actionLock.current = false; setBusy(false) } }
   }
+  if (compact) return <div className="grid min-w-0 gap-2" aria-busy={busy}>
+    <Button variant="secondary" disabled={disabled || busy || !sessionActive} onClick={() => void request()}><Download size={16} aria-hidden="true" />{busy ? 'Preparing download…' : buttonLabel}</Button>
+    {busy && <p role="status" className="text-sm text-text-secondary">Your {format} will download when it is ready.</p>}
+    {error && <StatusMessage tone="error">{error}</StatusMessage>}
+    {message && <p role="status" className="text-sm text-text-secondary">{message}</p>}
+    {dialog}
+  </div>
   const control = 'mt-1 min-h-12 w-full rounded-control border border-border-default bg-surface-primary px-3 text-text-strong'
   return <><section className="grid min-w-0 gap-5" aria-busy={busy}>
     <p className="text-sm text-text-secondary">{title ? `${title}. ` : ''}Private {format} snapshots expire after 24 hours. Downloads are recorded. MateryalPH documents are not tax invoices.</p>
     {error && <StatusMessage tone="error">{error}</StatusMessage>}
     <form className="grid gap-4" onSubmit={event => { event.preventDefault(); void request() }}>
       <label className="text-sm font-semibold">Document<select className={control} value={type} disabled={busy} onChange={event => { setError(''); setType(event.target.value as ExportType) }}>{types.map(value => <option key={value} value={value}>{label(value)}</option>)}</select></label>
-      <label className="text-sm font-semibold">Purpose<textarea className={`${control} py-3 font-normal`} minLength={10} maxLength={500} required disabled={busy} value={purpose} onChange={event => setPurpose(event.target.value)} placeholder="Describe why you need this document" /></label>
       {audience === 'admin' && <p className="text-sm text-text-secondary">If identity verification is required, you’ll be prompted here before your {format} is generated.</p>}
-      <div><Button type="submit" disabled={busy || !sessionActive}>{busy ? 'Preparing…' : `Generate ${format}`}</Button></div>
+      <div><Button type="submit" disabled={disabled || busy || !sessionActive}>{busy ? 'Preparing download…' : `Export ${format}`}</Button></div>
     </form>
+    {message && <p role="status">{message}</p>}
     <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border-default pt-5"><h3 className="font-semibold">Recent exports</h3><Button variant="secondary" disabled={busy || loading || !sessionActive} onClick={() => { setError(''); void load() }}>Refresh status</Button></div>
-    {loading && <p role="status">Loading exports…</p>}
-    {pending && <StatusMessage tone="info">Your {format} is generating. Its status updates automatically while this popup is open.</StatusMessage>}
+    {loading && <AsyncLoading compact label="Loading exports…" />}
+    {pending && <StatusMessage tone="info">Your {format} is generating. Its status updates automatically while this section is open.</StatusMessage>}
     {!loading && !items.length && <p className="text-sm text-text-secondary">No exports for this document yet.</p>}
     <ul className="divide-y divide-border-default">{items.map(item => {
       const expired = item.state === 'EXPIRED' || (item.expiresAt != null && new Date(item.expiresAt).getTime() <= Date.now())

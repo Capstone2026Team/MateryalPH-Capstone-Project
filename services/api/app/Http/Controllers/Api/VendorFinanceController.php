@@ -46,6 +46,14 @@ final class VendorFinanceController extends Controller
         return ApiResponse::success($result['data'], $result['meta']);
     }
 
+    public function thresholdPayments(Request $request): JsonResponse
+    {
+        $input = $request->validate(['page' => ['sometimes', 'integer', 'between:1,1000']]);
+        $result = $this->finance->thresholdPayments($request, (int) ($input['page'] ?? 1));
+
+        return ApiResponse::success($result['data'], $result['meta'])->header('Cache-Control', 'private, no-store');
+    }
+
     /** Owner-only audited reveal of the store's own full TIN; never cached. */
     public function revealTin(Request $request): JsonResponse
     {
@@ -68,7 +76,8 @@ final class VendorFinanceController extends Controller
 
     public function transactions(Request $request): JsonResponse
     {
-        $filters = $request->validate(['tab' => ['sometimes', Rule::in(VendorFinanceService::TABS)], 'page' => ['sometimes', 'integer', 'between:1,1000'], 'status' => ['sometimes', Rule::in(VendorFinanceService::PAYMENT_STATUSES)]] + PortalDateRange::rules($request));
+        $filters = $request->validate(['tab' => ['sometimes', Rule::in(VendorFinanceService::TABS)], 'page' => ['sometimes', 'integer', 'between:1,1000'], 'status' => ['sometimes', Rule::in(VendorFinanceService::PAYMENT_STATUSES)],
+            'statement_state' => ['sometimes', Rule::in(VendorFinanceService::STATEMENT_FILTERS)]] + PortalDateRange::rules($request));
         $result = $this->finance->transactions($request, $filters);
 
         return ApiResponse::success($result['items'], $result['meta']);
@@ -76,7 +85,8 @@ final class VendorFinanceController extends Controller
 
     public function export(Request $request): StreamedResponse
     {
-        $input = $request->validate(['tab' => ['required', Rule::in(VendorFinanceService::TABS)], 'status' => ['sometimes', Rule::in(VendorFinanceService::PAYMENT_STATUSES)]] + PortalDateRange::rules($request));
+        $input = $request->validate(['tab' => ['required', Rule::in(VendorFinanceService::TABS)], 'status' => ['sometimes', Rule::in(VendorFinanceService::PAYMENT_STATUSES)],
+            'statement_state' => ['sometimes', Rule::in(VendorFinanceService::STATEMENT_FILTERS)]] + PortalDateRange::rules($request));
 
         return $this->finance->export($request, (string) $input['tab'], $input);
     }

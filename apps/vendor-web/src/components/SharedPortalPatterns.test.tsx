@@ -63,7 +63,7 @@ it('selects a reversed calendar range in chronological order and applies once', 
 
 it('supports an inclusive open-ended range and resetting to All dates', () => {
   const change = vi.fn()
-  const view = render(<DateFilter onChange={change} />)
+  const view = render(<DateFilter value={ALL_DATES} onChange={change} />)
   fireEvent.click(screen.getByRole('button', { name: 'All dates' }))
   fireEvent.change(screen.getByLabelText('To'), { target: { value: '2026-10-08' } })
   fireEvent.click(screen.getByRole('button', { name: 'Apply' }))
@@ -96,7 +96,7 @@ it('blocks reversed, missing and over-limit dates on bounded analytics', () => {
 it('discards Escape changes, restores trigger focus and reopens from applied dates', () => {
   const change = vi.fn()
   render(<DateFilter onChange={change} />)
-  const trigger = screen.getByRole('button', { name: 'All dates' })
+  const trigger = screen.getByRole('button', { name: 'Last 30 days' })
   trigger.focus()
   fireEvent.click(trigger)
   fireEvent.click(screen.getByRole('button', { name: 'Last 7 days' }))
@@ -104,7 +104,7 @@ it('discards Escape changes, restores trigger focus and reopens from applied dat
   expect(trigger).toHaveFocus()
   expect(change).not.toHaveBeenCalled()
   fireEvent.click(trigger)
-  expect(within(screen.getByRole('dialog')).getByRole('button', { name: 'All dates' })).toHaveAttribute('aria-pressed', 'true')
+  expect(within(screen.getByRole('dialog')).getByRole('button', { name: 'Last 30 days' })).toHaveAttribute('aria-pressed', 'true')
 })
 
 it('moves calendar focus by keyboard across a month boundary', () => {

@@ -6,6 +6,7 @@ namespace App\Jobs;
 
 use App\Domain\Operations\ImportedOutboxBoundary;
 use App\Domain\Operations\OutboxProcessor;
+use App\Domain\Reporting\OrderDocumentService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -35,10 +36,15 @@ final class ProcessOutboxEvent implements ShouldQueue
         // Worker timeouts and exhausted reservations never reach OutboxProcessor's catch block.
         DB::transaction(function (): void {
             $event = ImportedOutboxBoundary::apply(DB::table('outbox_events'))->where('id', $this->eventId)->lockForUpdate()->first();
-            if ($event === null || $event->processed_at !== null || $event->event_type !== 'DOCUMENT_EXPORT_REQUESTED') {
+            if ($event === null || $event->processed_at !== null || ! in_array($event->event_type, ['DOCUMENT_EXPORT_REQUESTED', OrderDocumentService::EVENT], true)) {
                 return;
             }
             DB::table('outbox_events')->where('id', $event->id)->update(['attempts' => OutboxProcessor::MAX_ATTEMPTS, 'dispatched_until' => null, 'updated_at' => now()]);
+            if ($event->event_type === OrderDocumentService::EVENT) {
+                DB::table('order_documents')->where('id', $event->aggregate_id)->where('state', 'QUEUED')->update(['state' => 'FAILED', 'updated_at' => now()]);
+
+                return;
+            }
             DB::table('data_exports')->where('id', $event->aggregate_id)->where('state', 'QUEUED')
                 ->update(['state' => 'FAILED', 'failure_code' => 'GENERATION_FAILED', 'updated_at' => now()]);
         });

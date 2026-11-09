@@ -20,6 +20,7 @@ import 'package:materyalph_api_client/src/model/statement_payment_request.dart';
 import 'package:materyalph_api_client/src/model/vendor_commission_monitoring_envelope.dart';
 import 'package:materyalph_api_client/src/model/vendor_earnings_envelope.dart';
 import 'package:materyalph_api_client/src/model/vendor_finance_overview_envelope.dart';
+import 'package:materyalph_api_client/src/model/vendor_threshold_payments_envelope.dart';
 import 'package:materyalph_api_client/src/model/vendor_tin_reveal_envelope.dart';
 
 class VendorFinanceApi {
@@ -239,6 +240,7 @@ class VendorFinanceApi {
   /// Parameters:
   /// * [tab]
   /// * [status] - Payments tab only; ignored by every other tab. Each value matches the status badge a Payments row shows. PAID has no refund activity; LATE_CAPTURE covers every late-captured payment awaiting or after its refund; PENDING is any attempt not yet settled. PHYSICAL_* values select Cash on Delivery / In-Store obligations: COLLECTED (nothing remains), PARTIAL (part recorded), TO_RECORD (delivered or picked up, no cash recorded yet), AWAITING (before handover), RELEASED (cancelled unpaid).
+  /// * [statementState] - STATEMENTS only; ignored by other tabs. PAID selects fully paid statements. NOT_PAID selects every other published state, including voided statements. Omit for all published statements. Filtered before pagination and export bounds; dates refer to statement issue dates.
   /// * [from] - Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Same timestamp and filters as the selected Transaction History tab; filtered before the existing 5000-row export bound.
   /// * [to] - Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Same timestamp and filters as the selected Transaction History tab; filtered before the existing 5000-row export bound.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -253,6 +255,7 @@ class VendorFinanceApi {
   Future<Response<String>> exportVendorTransactions({
     required String tab,
     String? status,
+    String? statementState,
     Date? from,
     Date? to,
     CancelToken? cancelToken,
@@ -290,6 +293,7 @@ class VendorFinanceApi {
     final _queryParameters = <String, dynamic>{
       r'tab': encodeQueryParameter(_serializers, tab, const FullType(String)),
       if (status != null) r'status': encodeQueryParameter(_serializers, status, const FullType(String)),
+      if (statementState != null) r'statement_state': encodeQueryParameter(_serializers, statementState, const FullType(String)),
       if (from != null) r'from': encodeQueryParameter(_serializers, from, const FullType(Date)),
       if (to != null) r'to': encodeQueryParameter(_serializers, to, const FullType(Date)),
     };
@@ -427,8 +431,8 @@ class VendorFinanceApi {
   /// Owner-only FIN-11 Earnings with separate sales, confirmed online refunds, net online collections, charges, simulated CWT and commission. Confirmed refunds adjust the original payment and assessment date buckets; pending and failed refunds leave collections unchanged. Posted provider charges, CWT and FIN-04A thresholds remain unchanged; estimated remittance cash deducts confirmed refunds without deducting refunds already included in the assessment twice.
   ///
   /// Parameters:
-  /// * [from] - Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Commercial sales use order accepted_at; online collections paid_at; physical collections recorded_at; remittances created_at; commission earned_at and approved credit approved_at; estimates created_at; unpaid statements issued_on. Taxpayer thresholds are never recalculated by this view.
-  /// * [to] - Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Commercial sales use order accepted_at; online collections paid_at; physical collections recorded_at; remittances created_at; commission earned_at and approved credit approved_at; estimates created_at; unpaid statements issued_on. Taxpayer thresholds are never recalculated by this view.
+  /// * [from] - Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Net sales use the order first-confirmation timestamp; online collections paid_at; physical collections recorded_at; remittances created_at; commission earned_at and approved credit approved_at; estimates created_at; unpaid statements issued_on. Taxpayer thresholds are never recalculated by this view.
+  /// * [to] - Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Net sales use the order first-confirmation timestamp; online collections paid_at; physical collections recorded_at; remittances created_at; commission earned_at and approved credit approved_at; estimates created_at; unpaid statements issued_on. Taxpayer thresholds are never recalculated by this view.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -777,13 +781,106 @@ class VendorFinanceApi {
     );
   }
 
+  /// listVendorThresholdPayments
+  /// Owner-only paginated retained payments from the current taxpayer-year POSTED merchant assessments. Completed full principal refunds are omitted; completed partial refunds reduce the returned principal, fee and collection amounts once. Pending and failed refunds do not reduce amounts. Totals describe current retained payments, not a rewrite of the posted annual tax basis or crossed-threshold status. Own-store order references only; other stores sharing the taxpayer are aggregate-only without identities. VOIDED assessments, other years, direct COD and In-Store cash are excluded. Read-only TEST records.
+  ///
+  /// Parameters:
+  /// * [page]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [VendorThresholdPaymentsEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<VendorThresholdPaymentsEnvelope>> listVendorThresholdPayments({
+    int? page = 1,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/vendor/finance/threshold-payments';
+    final _options = Options(
+      method: r'GET',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'accessCookie',
+            'keyName': 'mp_access',
+            'where': '',
+          },{
+            'type': 'apiKey',
+            'name': 'webCsrf',
+            'keyName': 'X-CSRF-Token',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _queryParameters = <String, dynamic>{
+      if (page != null) r'page': encodeQueryParameter(_serializers, page, const FullType(int)),
+    };
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      queryParameters: _queryParameters,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    VendorThresholdPaymentsEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(VendorThresholdPaymentsEnvelope),
+      ) as VendorThresholdPaymentsEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<VendorThresholdPaymentsEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
   /// listVendorTransactions
-  /// Owner-only read-only Transaction History (former Wallet label). No balance, wallet or escrow.
+  /// Owner-only read-only Transaction History (former Wallet label). PAYMENTS is the unified list of payments and their recorded remittance/withholding assessments, with unlinked historical assessments retained as separate records. No balance, wallet or escrow.
   ///
   /// Parameters:
   /// * [tab]
   /// * [page]
   /// * [status] - Payments tab only; ignored by every other tab. Each value matches the status badge a Payments row shows. PAID has no refund activity; LATE_CAPTURE covers every late-captured payment awaiting or after its refund; PENDING is any attempt not yet settled. PHYSICAL_* values select Cash on Delivery / In-Store obligations: COLLECTED (nothing remains), PARTIAL (part recorded), TO_RECORD (delivered or picked up, no cash recorded yet), AWAITING (before handover), RELEASED (cancelled unpaid).
+  /// * [statementState] - STATEMENTS only; ignored by other tabs. PAID selects fully paid statements. NOT_PAID selects every other published state, including voided statements. Omit for all published statements. Filtered before pagination and export bounds; dates refer to statement issue dates.
   /// * [from] - Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. PAYMENTS paid_at with created_at fallback; PHYSICAL recorded_at; REMITTANCES created_at; STATEMENTS issued_on; REFUNDS created_at; TAX_DOCUMENTS period_end.
   /// * [to] - Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. PAYMENTS paid_at with created_at fallback; PHYSICAL recorded_at; REMITTANCES created_at; STATEMENTS issued_on; REFUNDS created_at; TAX_DOCUMENTS period_end.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
@@ -799,6 +896,7 @@ class VendorFinanceApi {
     String? tab,
     int? page,
     String? status,
+    String? statementState,
     Date? from,
     Date? to,
     CancelToken? cancelToken,
@@ -837,6 +935,7 @@ class VendorFinanceApi {
       if (tab != null) r'tab': encodeQueryParameter(_serializers, tab, const FullType(String)),
       if (page != null) r'page': encodeQueryParameter(_serializers, page, const FullType(int)),
       if (status != null) r'status': encodeQueryParameter(_serializers, status, const FullType(String)),
+      if (statementState != null) r'statement_state': encodeQueryParameter(_serializers, statementState, const FullType(String)),
       if (from != null) r'from': encodeQueryParameter(_serializers, from, const FullType(Date)),
       if (to != null) r'to': encodeQueryParameter(_serializers, to, const FullType(Date)),
     };

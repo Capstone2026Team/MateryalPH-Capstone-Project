@@ -1,3 +1,6 @@
+import 'async_state.dart';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -430,61 +433,451 @@ class PlatformDocumentsNotice extends StatelessWidget {
   );
 }
 
-/// A Vendor invoice copy with its origin label, compliance note and reconciliation state.
+/// A sent Vendor invoice: attachment first, then its preserved document and order facts.
 class InvoiceRecordTile extends StatelessWidget {
-  const InvoiceRecordTile({super.key, required this.record, this.onOpen});
-
+  const InvoiceRecordTile({
+    super.key,
+    required this.record,
+    this.onOpen,
+    this.loadFile,
+    this.onRefresh,
+  });
   final InvoiceRecordItem record;
   final VoidCallback? onOpen;
+  final Future<Uint8List> Function()? loadFile;
+  final Future<void> Function()? onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    final summary = record.orderSummary;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: BuyerTheme.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                LucideIcons.receiptText,
+                size: 18,
+                color: BuyerTheme.muted,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  record.invoiceType == 'VENDOR_ADJUSTMENT_DOCUMENT'
+                      ? 'Adjustment document'
+                      : 'Sales invoice',
+                  style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
+                ),
+              ),
+              const Icon(
+                LucideIcons.circleCheck,
+                size: 16,
+                color: BuyerTheme.action,
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            record.invoiceNumber,
+            style: const TextStyle(fontSize: 21, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 14),
+          InvoiceAttachmentPreview(
+            record: record,
+            loadFile: loadFile,
+            onOpen: onOpen,
+            onRefresh: onRefresh,
+          ),
+          const SizedBox(height: 20),
+          const Text(
+            'Invoice details',
+            style: TextStyle(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 12),
+          _InvoiceFact(label: 'Issued by', value: record.issuer),
+          if (summary?.billingName != null)
+            _InvoiceFact(label: 'Bill to', value: summary!.billingName!),
+          if (summary?.billingAddress != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(
+                summary!.billingAddress!,
+                style: const TextStyle(
+                  fontSize: 12,
+                  height: 1.5,
+                  color: BuyerTheme.muted,
+                ),
+              ),
+            ),
+          _InvoiceFact(label: 'Invoice date', value: record.issuedOn),
+          if (record.sentAt != null)
+            _InvoiceFact(
+              label: 'Sent',
+              value: formatManilaDateTime(record.sentAt!),
+            ),
+          if (record.sourceSystem != null)
+            _InvoiceFact(
+              label: 'Issued through',
+              value:
+                  const {
+                    'REGISTERED_CAS': 'Registered CAS / accounting system',
+                    'BIR_EIS': 'BIR EIS',
+                    'LOOSE_LEAF_OR_PRINTED': 'Loose-leaf or printed (ATP)',
+                    'OTHER_REGISTERED': 'Other registered process',
+                  }[record.sourceSystem] ??
+                  record.sourceSystem!,
+            ),
+          if (record.invoicingMethod != null)
+            _InvoiceFact(
+              label: 'Invoicing method',
+              value:
+                  const {
+                    'ELECTRONIC': 'Electronic',
+                    'COMPUTERIZED': 'Computerized',
+                    'MANUAL': 'Manual',
+                  }[record.invoicingMethod] ??
+                  record.invoicingMethod!,
+            ),
+          if (record.vatCentavos != null)
+            _InvoiceFact(
+              label: 'VAT shown on invoice',
+              value: formatPeso(record.vatCentavos!),
+            ),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: BuyerTheme.canvas,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Invoice total',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+                Flexible(
+                  child: Text(
+                    formatPeso(record.amountCentavos),
+                    textAlign: TextAlign.end,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (summary != null && summary.lines.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            const Divider(height: 1),
+            const SizedBox(height: 16),
+            const Text(
+              'Accepted order breakdown',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 4),
+            for (final line in summary.lines)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            line.name,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${line.quantity.contains('.') ? line.quantity.replaceFirst(RegExp(r'\.?0+$'), '') : line.quantity} ${line.unit}${line.unitPriceCentavos == null ? '' : ' × ${formatPeso(line.unitPriceCentavos!)}'}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: BuyerTheme.muted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      line.totalCentavos == null
+                          ? '—'
+                          : formatPeso(line.totalCentavos!),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            const Divider(height: 20),
+            if (summary.materialsCentavos != null)
+              _InvoiceFact(
+                label: 'Materials after discount',
+                value: formatPeso(summary.materialsCentavos!),
+              ),
+            if (summary.deliveryCentavos != null)
+              _InvoiceFact(
+                label: 'Delivery fee',
+                value: formatPeso(summary.deliveryCentavos!),
+              ),
+            if ((summary.discountCentavos ?? 0) > 0)
+              _InvoiceFact(
+                label: 'Discount (already applied)',
+                value: formatPeso(summary.discountCentavos!),
+              ),
+            if (summary.vatCentavos != null)
+              _InvoiceFact(
+                label: 'VAT (included)',
+                value: formatPeso(summary.vatCentavos!),
+              ),
+            if (summary.totalCentavos != null)
+              _InvoiceFact(
+                label: 'Accepted order total',
+                value: formatPeso(summary.totalCentavos!),
+              ),
+          ],
+          if (record.differs) ...[
+            const SizedBox(height: 12),
+            Text(
+              'This copy differs from your accepted total by ${formatPeso(record.reconciliationDifferenceCentavos)}. What you pay does not change.',
+              style: const TextStyle(fontSize: 13, height: 1.5),
+            ),
+          ],
+          if (record.reconciliationNote != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: Text(
+                'Store explanation: ${record.reconciliationNote}',
+                style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
+              ),
+            ),
+          const SizedBox(height: 16),
+          Text(
+            record.originLabel,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: Color(MateryalColorTokens.actionPrimaryPressed),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            record.complianceNote,
+            style: const TextStyle(
+              fontSize: 11,
+              height: 1.5,
+              color: BuyerTheme.muted,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InvoiceFact extends StatelessWidget {
+  const _InvoiceFact({required this.label, required this.value});
+  final String label;
+  final String value;
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          flex: 4,
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          flex: 6,
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              height: 1.4,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+/// Images are loaded as authorized bytes; PDFs retain the existing secure open/save action.
+class InvoiceAttachmentPreview extends StatefulWidget {
+  const InvoiceAttachmentPreview({
+    super.key,
+    required this.record,
+    this.loadFile,
+    this.onOpen,
+    this.onRefresh,
+  });
+  final InvoiceRecordItem record;
+  final Future<Uint8List> Function()? loadFile;
+  final VoidCallback? onOpen;
+  final Future<void> Function()? onRefresh;
+  @override
+  State<InvoiceAttachmentPreview> createState() =>
+      _InvoiceAttachmentPreviewState();
+}
+
+class _InvoiceAttachmentPreviewState extends State<InvoiceAttachmentPreview> {
+  Future<Uint8List>? _preview;
+  void _prepare() {
+    _preview = widget.record.contentType?.startsWith('image/') == true
+        ? widget.loadFile?.call()
+        : null;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _prepare();
+  }
+
+  @override
+  void didUpdateWidget(covariant InvoiceAttachmentPreview oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.record.id != widget.record.id ||
+        oldWidget.record.downloadUrl != widget.record.downloadUrl) {
+      _prepare();
+    }
+  }
 
   @override
   Widget build(BuildContext context) => Container(
-    margin: const EdgeInsets.only(bottom: 10),
-    padding: const EdgeInsets.all(12),
     decoration: BoxDecoration(
-      borderRadius: BorderRadius.circular(10),
+      color: BuyerTheme.canvas,
       border: Border.all(color: BuyerTheme.border),
+      borderRadius: BorderRadius.circular(10),
     ),
+    padding: const EdgeInsets.all(14),
     child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          '${record.invoiceType == 'VENDOR_ADJUSTMENT_DOCUMENT' ? 'Adjustment document' : 'Sales invoice'} ${record.invoiceNumber}',
-          style: const TextStyle(fontWeight: FontWeight.w700),
-        ),
-        Text(
-          '${record.issuer} · ${record.issuedOn} · ${formatPeso(record.amountCentavos)}',
-          style: const TextStyle(fontSize: 13, color: BuyerTheme.muted),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          record.originLabel,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
-            color: Color(MateryalColorTokens.actionPrimaryPressed),
+        if (_preview != null) ...[
+          FutureBuilder<Uint8List>(
+            future: _preview,
+            builder: (context, snapshot) {
+              if (snapshot.hasError) {
+                return Column(
+                  children: [
+                    const Icon(
+                      LucideIcons.imageOff,
+                      size: 30,
+                      color: BuyerTheme.muted,
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Preview unavailable. Refresh to try again.',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    if (widget.onRefresh != null)
+                      TextButton(
+                        onPressed: widget.onRefresh,
+                        child: const Text('Refresh invoice'),
+                      ),
+                  ],
+                );
+              }
+              if (!snapshot.hasData) {
+                return const SizedBox(
+                  height: 180,
+                  child: Center(child: BuyerLoadingIndicator()),
+                );
+              }
+              return Semantics(
+                label: 'Uploaded invoice image',
+                image: true,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: Image.memory(
+                    snapshot.data!,
+                    height: 220,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, _, _) => const Padding(
+                      padding: EdgeInsets.all(20),
+                      child: Text(
+                        'This image could not be previewed. Open the invoice copy to view it.',
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
-        ),
-        Text(record.complianceNote, style: const TextStyle(fontSize: 12)),
-        if (record.differs) ...[
-          const SizedBox(height: 6),
-          Text(
-            'This copy differs from your accepted total by ${formatPeso(record.reconciliationDifferenceCentavos)}. What you pay does not change.',
-            style: const TextStyle(fontSize: 13),
-          ),
+          const SizedBox(height: 12),
         ],
-        if (record.reconciliationNote != null)
-          Text(
-            'Store explanation: ${record.reconciliationNote}',
-            style: const TextStyle(fontSize: 13, color: BuyerTheme.muted),
-          ),
-        if (onOpen != null) ...[
-          const SizedBox(height: 8),
-          ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 44),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(
+              LucideIcons.fileText,
+              size: 30,
+              color: BuyerTheme.action,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.record.fileName ?? 'Invoice document',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${widget.record.contentType == 'application/pdf'
+                        ? 'PDF document'
+                        : widget.record.contentType?.startsWith('image/') == true
+                        ? 'Image copy'
+                        : 'Uploaded copy'}${widget.record.fileSizeBytes == null ? '' : ' · ${(widget.record.fileSizeBytes! / 1024).ceil()} KB'}',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: BuyerTheme.muted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        if (widget.onOpen != null) ...[
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
             child: OutlinedButton.icon(
-              onPressed: onOpen,
-              icon: const Icon(LucideIcons.fileDown, size: 16),
+              onPressed: widget.onOpen,
+              icon: const Icon(LucideIcons.fileDown, size: 17),
               label: const Text('Open invoice copy'),
             ),
           ),

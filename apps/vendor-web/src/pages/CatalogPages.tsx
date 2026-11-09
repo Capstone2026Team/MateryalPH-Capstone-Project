@@ -1,9 +1,9 @@
 import { CheckCircle2, CircleDashed, AlertTriangle } from 'lucide-react'
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { AlertCircle, LayoutGrid, Layers, Package, Rows3, Trash2 } from 'lucide-react'
+import { AlertCircle, LayoutGrid, Package, Rows3, Trash2 } from 'lucide-react'
 import { ResponseError, type ListingStatus } from '@materyalph/api-client-ts'
-import { Button, ConfirmDialog, Field, OnboardingFlow, Pagination, ResponsiveRecordList, RowErrorTable, Select, StatusMessage, StockLabelBadge, stockLabelText, StatCard, ActiveFilters, Toolbar, InfoNote, EmptyState, type RecordColumn } from '@materyalph/web-ui'
+import { BackNavigation, Button, ConfirmDialog, Field, MaterialThumbnail, OnboardingFlow, Pagination, ProductListingCard, ResponsiveRecordList, RowErrorTable, Select, StatusMessage, StockLabelBadge, stockLabelText, StatCard, ActiveFilters, Toolbar, InfoNote, EmptyState, type RecordColumn } from '@materyalph/web-ui'
 import {
   applyImport, catalogFieldErrors, createListing, deactivateListing, deleteListing, formatCentavos, getCatalogTaxonomy, getImport,
   getImportTemplate, getListing, getMaterial, listListings, publishListing, readableCatalogError, removeListingMedia,
@@ -14,7 +14,7 @@ import { statusLabel } from '../lib/vendor-status'
 import { storeName, useCatalogAccess } from '../lib/catalog-access'
 import { formFromListing, listingSteps, mergeSavedRows, quantityText, rowsFromListing, unitName, useMaterialSearch, usePhotoPreviews, variantClientErrors, type DetailsForm, type VariantRow } from '../lib/catalog-form'
 import { manualSaveReason, useListingAutosave, type SaveStatus } from '../lib/listing-autosave'
-import { ProductActions, ListingBadge, ListingState, ProductsTabs, SaveStatusLine } from './CatalogShared'
+import { ProductActions, ListingBadge, ProductsTabs, SaveStatusLine } from './CatalogShared'
 import { MaterialMatchOption, MaterialStep, ProductPhotosStep, ProductInformationStep, PublicationGate, ReviewStep } from './CatalogListingSteps'
 import { ErrorState, LoadingState, PageHeader, VendorShell } from './PhaseThreeVendorPages'
 import { ProductAnalyticsShortcut, ProductInsightStrip } from './ProductAnalyticsPages'
@@ -28,7 +28,7 @@ export function CatalogGate({ access, activeHref, children }: { access: ReturnTy
   if (access.loading) return <VendorShell activeHref={activeHref} accountLabel="Vendor" navigationData={null}><LoadingState label="Loading My Products…" /></VendorShell>
   if (access.error) return <VendorShell activeHref={activeHref} accountLabel="Vendor" navigationData={null}><ErrorState message={access.error} onRetry={() => void access.refresh()} /></VendorShell>
   if (!access.canView) return <VendorShell activeHref={activeHref} accountLabel={storeName(access.snapshot)} navigationData={access.snapshot}><StatusMessage tone="error">Your role does not include My Products. Ask the store Owner if you need product access.</StatusMessage></VendorShell>
-  if (!access.active) return <VendorShell activeHref={activeHref} accountLabel={storeName(access.snapshot)} navigationData={access.snapshot}><PageHeader eyebrow="Store Management" title="My Products" description="Listings open after Store Activation." /><div className="mt-6"><StatusMessage>Store Activation is {statusLabel(access.activation).toLowerCase()}. Products are not required to activate your store; you can add listings once activation completes. <Link className="font-semibold underline" to="/dashboard">Return to the dashboard</Link></StatusMessage></div></VendorShell>
+  if (!access.active) return <VendorShell activeHref={activeHref} accountLabel={storeName(access.snapshot)} navigationData={access.snapshot}><PageHeader eyebrow="Store Management" title="My Products" description="Listings open after Store Activation." /><div className="mt-6"><StatusMessage>Store Activation is {statusLabel(access.activation).toLowerCase()}. Products are not required to activate your store; you can add listings once activation completes. <BackNavigation><Link className="font-semibold underline" to="/dashboard">Return to the dashboard</Link></BackNavigation></StatusMessage></div></VendorShell>
   return <VendorShell activeHref={activeHref} accountLabel={storeName(access.snapshot)} navigationData={access.snapshot}>{children}</VendorShell>
 }
 
@@ -52,24 +52,20 @@ function StockLine({ row, unit }: { row: CatalogListingSummary; unit: string }) 
     : <span className="font-semibold text-status-error">Out of stock</span>
 }
 
-function ProductCard({ row, taxonomy, onDelete, analytics }: { row: CatalogListingSummary; taxonomy: CatalogTaxonomy | null; onDelete: (row: CatalogListingSummary) => void; analytics?: { summary: ProductSummary | undefined } | undefined }) {
+function ProductCard({ row, taxonomy, onDelete, analytics, canViewAnalytics }: { row: CatalogListingSummary; taxonomy: CatalogTaxonomy | null; onDelete: (row: CatalogListingSummary) => void; analytics?: { summary: ProductSummary | undefined } | undefined; canViewAnalytics: boolean }) {
+  const location = useLocation()
   const unit = unitName(taxonomy, row.unitCode)
-  return <li className="flex min-w-0 flex-col overflow-hidden rounded-surface border border-border-default bg-surface-primary transition-shadow hover:shadow-md motion-reduce:transition-none">
-    <div className="grid aspect-[16/10] place-items-center overflow-hidden bg-surface-canvas">
-      {row.primaryImageUrl ? <img src={row.primaryImageUrl} alt="" loading="lazy" className="h-full w-full object-cover" /> : <span className="grid justify-items-center gap-1 text-xs text-text-secondary"><Package size={36} aria-hidden="true" />No photo yet</span>}
-    </div>
-    <div className="flex flex-1 flex-col gap-2 p-4">
-      <h3 className="break-words font-semibold leading-snug"><Link className="hover:text-action-primary hover:underline" to={`/products/${row.id}`}>{row.displayName}</Link></h3>
-      <p className="flex items-center gap-1.5 text-xs text-text-secondary"><Layers size={14} aria-hidden="true" />{classification(row)} · SKU {row.vendorSku}</p>
-      <p><span className="text-lg font-semibold tabular-nums">{priceText(row)}</span>{unit && row.minPriceCentavos !== null && row.minPriceCentavos !== undefined && <span className="text-sm text-text-secondary"> / {unit}</span>}</p>
-      <div className="mt-auto flex flex-wrap gap-2 pt-1"><ListingBadge status={row.status} />{row.regulated && <ListingBadge status={row.complianceStatus} prefix="PS/ICC" />}</div>
-    </div>
-    {analytics && !row.deletable && <ProductInsightStrip listingId={row.id} summary={analytics.summary} />}
-    <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border-default px-4 py-2 text-sm">
-      <StockLine row={row} unit={unit} />
-      <span className="flex gap-2">{row.deletable && <Button variant="quiet" aria-label={`Delete ${row.displayName}`} onClick={() => onDelete(row)}><Trash2 size={16} aria-hidden="true" /> Delete</Button>}<Link className="inline-flex min-h-11 items-center rounded-control border border-border-default px-3 font-semibold hover:bg-surface-canvas" to={`/products/${row.id}`}>Edit<span className="sr-only"> {row.displayName}</span></Link></span>
-    </div>
-  </li>
+  return <ProductListingCard imageUrl={row.primaryImageUrl}
+    title={<Link title={row.displayName} className="mp-card-link hover:text-action-primary hover:underline" to={canViewAnalytics ? `/analytics/products/${row.id}` : `/products/${row.id}`} state={{ returnTo: location.pathname + location.search }}>{row.displayName}</Link>}
+    category={classification(row)} sku={row.vendorSku}
+    price={<>{priceText(row)}{unit && row.minPriceCentavos != null && <span> / {unit}</span>}</>}
+    variants={`${row.variantCount} ${row.variantCount === 1 ? 'variant' : 'variants'}`}
+    status={<ListingBadge status={row.status} />}
+    compliance={row.regulated ? <ListingBadge status={row.complianceStatus} prefix="PS/ICC" /> : 'Not regulated'}
+    stock={<StockLine row={row} unit={unit} />}
+    activity={analytics ? row.deletable ? <div className="mp-product-insight-strip"><span>Last 30 days</span><p className="text-xs text-text-secondary">Not published yet</p></div> : <ProductInsightStrip summary={analytics.summary} /> : undefined}
+    actions={<>{row.deletable && <Button variant="quiet" aria-label={`Delete ${row.displayName}`} onClick={() => onDelete(row)}><Trash2 size={16} aria-hidden="true" /><span className="sr-only">Delete</span></Button>}<Link to={`/products/${row.id}`}>Edit<span className="sr-only"> {row.displayName}</span></Link></>}
+  />
 }
 
 export function VendorCatalogPage() {
@@ -146,40 +142,41 @@ export function VendorCatalogPage() {
     ...(selectedStatus ? [{ key: 'status', label: selectedStatus === 'OUT_OF_STOCK' ? 'Out of stock' : selectedStatus === 'NEEDS_ATTENTION' ? 'Needs attention' : statusLabel(selectedStatus), onRemove: () => selectStatus('') }] : []),
     ...(categoryId ? [{ key: 'category', label: taxonomy?.categories.find(item => item.id === categoryId)?.name ?? 'Category', onRemove: () => setParams({ category: '' }) }] : []),
   ]
+  const productIdentity = (row: CatalogListingSummary) => <div className="mp-product-record-identity">
+    <MaterialThumbnail url={row.primaryImageUrl} size="sm" />
+    <div><Link className="font-semibold hover:text-action-primary hover:underline" to={`/products/${row.id}`}>{row.displayName}</Link><p>{classification(row)}</p>{row.materialName && row.materialName !== classification(row) && row.materialName !== row.displayName && <p>{row.materialName}</p>}<p>SKU <span className="text-text-strong">{row.vendorSku}</span></p>{row.otherLabel && row.materialName == null && classification(row) !== `Other: ${row.otherLabel}` && <p>Other: {row.otherLabel}</p>}</div>
+  </div>
   const columns: RecordColumn<CatalogListingSummary>[] = [
-    { key: 'name', header: 'Product', className: 'min-w-48 max-w-72', cell: row => <Link className="break-words font-semibold text-action-primary underline" to={`/products/${row.id}`}>{row.displayName}</Link> },
-    { key: 'sku', header: 'Vendor SKU', className: 'min-w-28 max-w-40', cell: row => row.vendorSku },
-    { key: 'status', header: 'Listing status', className: 'min-w-36 whitespace-nowrap', cell: row => <ListingState status={row.status} /> },
-    { key: 'compliance', header: 'PS/ICC', className: 'min-w-32 whitespace-nowrap', cell: row => row.regulated ? <ListingState status={row.complianceStatus} /> : <span className="text-text-secondary">Not regulated</span> },
-    { key: 'material', header: 'Material', className: 'min-w-40 max-w-56 [overflow-wrap:normal]', cell: row => row.materialName ?? (row.otherLabel ? `Other: ${row.otherLabel}` : 'Not classified') },
-    { key: 'variants', header: 'Variants', className: 'whitespace-nowrap tabular-nums', cell: row => row.variantCount },
-    { key: 'price', header: 'Price', className: 'min-w-40 whitespace-nowrap tabular-nums', cell: row => `${priceText(row)}${row.unitCode && row.minPriceCentavos != null ? ` / ${unitName(taxonomy, row.unitCode)}` : ''}` },
-    { key: 'stock', header: 'Stock (private)', className: 'min-w-44 whitespace-nowrap tabular-nums', cell: row => <StockLine row={row} unit={unitName(taxonomy, row.unitCode)} /> },
-    { key: 'availability', header: 'Buyers see', className: 'min-w-36 whitespace-nowrap', cell: row => <StockLabelBadge label={row.publicAvailability} prefix="" /> },
-    ...(access.canManage && !summariesFailed ? [{ key: 'analytics', header: 'Last 30 days', className: 'min-w-56 max-w-64 [overflow-wrap:normal]', cell: (row: CatalogListingSummary) => !row.deletable ? <ProductInsightStrip compact listingId={row.id} summary={summaries?.get(row.id)} /> : <span className="text-text-secondary">Not published yet</span> }] : []),
-    { key: 'actions', header: 'Actions', className: 'min-w-28 whitespace-nowrap', cell: row => row.deletable ? <Button variant="quiet" aria-label={`Delete ${row.displayName}`} onClick={() => setPendingDelete(row)}><Trash2 size={16} aria-hidden="true" /> Delete</Button> : <span className="text-text-secondary">—</span> },
+    { key: 'name', header: 'Product', className: 'w-[28%] min-w-56 max-w-80', cell: productIdentity },
+    { key: 'status', header: 'Status & compliance', className: 'min-w-36 max-w-48', cell: row => <div className="mp-product-record-stack"><ListingBadge status={row.status} />{row.regulated ? <ListingBadge status={row.complianceStatus} prefix="PS/ICC" /> : <span className="mp-product-record-secondary">Not regulated</span>}</div> },
+    { key: 'price', header: 'Price', className: 'min-w-36 max-w-52', cell: row => <div className="mp-product-record-stack"><span className="font-semibold tabular-nums">{`${priceText(row)}${row.unitCode && row.minPriceCentavos != null ? ` / ${unitName(taxonomy, row.unitCode)}` : ''}`}</span><span className="mp-product-record-secondary">{row.variantCount} {row.variantCount === 1 ? 'variant' : 'variants'}</span></div> },
+    { key: 'stock', header: 'Stock (private)', className: 'min-w-36 max-w-48', cell: row => <div className="mp-product-record-stack"><StockLine row={row} unit={unitName(taxonomy, row.unitCode)} /><StockLabelBadge label={row.publicAvailability} prefix="Buyers" /></div> },
+    ...(access.canManage && !summariesFailed ? [{ key: 'analytics', header: 'Last 30 days', className: 'min-w-40 max-w-48', cell: (row: CatalogListingSummary) => !row.deletable ? <ProductInsightStrip compact summary={summaries?.get(row.id)} /> : <span className="mp-product-record-secondary">Not published yet</span> }] : []),
+    { key: 'actions', header: 'Actions', className: 'w-24', cell: row => <div className="mp-product-listing-actions"><Link to={`/products/${row.id}`}>Edit<span className="sr-only"> {row.displayName}</span></Link>{row.deletable && <Button variant="quiet" aria-label={`Delete ${row.displayName}`} onClick={() => setPendingDelete(row)}><Trash2 size={16} aria-hidden="true" /><span className="sr-only">Delete</span></Button>}</div> },
   ]
   const lastPage = meta.lastPage ?? 1
 
   return <CatalogGate access={access} activeHref="/products">
-    <div className="space-y-6">
-      <PageHeader eyebrow="Store Management" title="My Products" description="Manage listings, variants, photos and compliance evidence." actions={<>{access.canManage && <ProductAnalyticsShortcut />}<ProductActions canManage={access.canManage} /></>} />
+    <div className="mp-product-catalog">
+      <PageHeader compact eyebrow="Store Management" title="My Products" description="Manage listings, variants, photos and compliance evidence." actions={<>{access.canManage && <ProductAnalyticsShortcut />}<ProductActions canManage={access.canManage} /></>} />
       <ProductsTabs active="listings" showInventory={access.canViewInventory} />
-      <dl aria-label="Listing summary" className="grid grid-cols-2 gap-4 xl:grid-cols-4">{kpis.map(item => <StatCard key={item.label} label={item.label} value={loading || error ? '—' : item.value} icon={<span aria-hidden="true">{item.icon}</span>} hint={item.hint} active={selectedStatus === item.filter} onClick={() => selectStatus(item.filter)} />)}</dl>
-      <Toolbar searchFirst search={{ label: 'Search name or SKU', placeholder: 'Name or SKU', value: query, onChange: setQuery, maxLength: 120, onSubmit: event => { event.preventDefault(); setParams({ q: query.trim() }) } }}
+      <div className="mp-product-catalog-controls">
+      <dl aria-label="Listing summary" className="mp-product-catalog-summary">{kpis.map(item => <StatCard compact key={item.label} label={item.label} value={loading || error ? '—' : item.value} icon={<span aria-hidden="true">{item.icon}</span>} hint={item.hint} active={selectedStatus === item.filter} onClick={() => selectStatus(item.filter)} />)}</dl>
+      <Toolbar compact searchFirst search={{ label: 'Search name or SKU', placeholder: 'Name or SKU', value: query, onChange: setQuery, maxLength: 120, onSubmit: event => { event.preventDefault(); setParams({ q: query.trim() }) } }}
         filters={<><Select label="Status" hideLabel value={selectedStatus} onChange={event => selectStatus(event.target.value)}><option value="">All statuses</option>{LISTING_STATUSES.map(value => <option key={value} value={value}>{statusLabel(value)}</option>)}<option value="NEEDS_ATTENTION">Needs attention</option><option value="OUT_OF_STOCK">Out of stock</option></Select><Select label="Category" hideLabel value={categoryId} onChange={event => setParams({ category: event.target.value })}><option value="">All categories</option>{taxonomy?.categories.map(category => <option key={category.id} value={category.id}>{category.name}</option>)}</Select></>}
-        viewToggle={<div role="group" aria-label="Layout" className="flex gap-2">{[{ value: 'grid', label: 'Grid', icon: <LayoutGrid size={16} /> }, { value: 'table', label: 'Table', icon: <Rows3 size={16} /> }].map(item => <Button key={item.value} variant={view === item.value ? 'primary' : 'secondary'} aria-pressed={view === item.value} onClick={() => setParams({ view: item.value === 'table' ? 'table' : '' })}><span aria-hidden="true">{item.icon}</span>{item.label}</Button>)}</div>} />
+        viewToggle={<div role="group" aria-label="Layout" className="mp-product-catalog-layout">{[{ value: 'grid', label: 'Grid', icon: <LayoutGrid size={16} /> }, { value: 'table', label: 'Table', icon: <Rows3 size={16} /> }].map(item => <Button key={item.value} variant={view === item.value ? 'primary' : 'secondary'} aria-pressed={view === item.value} onClick={() => setParams({ view: item.value === 'table' ? 'table' : '' })}><span aria-hidden="true">{item.icon}</span>{item.label}</Button>)}</div>} />
       <ActiveFilters filters={activeFilters} onClear={clearFilters} />
+      </div>
       <InfoNote dismissible>Your store stays active without products; discovery requires published stock and verified PS/ICC evidence for regulated materials.</InfoNote>
       {notice && <StatusMessage tone={notice.tone}>{notice.text}</StatusMessage>}
-      {loading ? <div className="grid grid-cols-1 gap-4 min-[480px]:grid-cols-2 lg:grid-cols-3" aria-busy="true" aria-label="Loading products">{[0, 1, 2].map(index => <div key={index} className="h-72 animate-pulse rounded-surface bg-surface-primary motion-reduce:animate-none" />)}</div>
+      {loading ? <div className="mp-product-listing-grid" aria-busy="true" aria-label="Loading products">{[0, 1, 2].map(index => <div key={index} className="h-72 animate-pulse rounded-surface bg-surface-primary motion-reduce:animate-none" />)}</div>
         : error ? <ErrorState message={error} onRetry={() => setAttempt(value => value + 1)} />
           : rows.length === 0 ? <EmptyState icon={<Package size={24} aria-hidden="true" />} message={meta.scope === 'ASSIGNED_ONLY' ? 'No products assigned to you.' : q || selectedStatus || categoryId ? 'No products match these filters.' : 'No products yet.'} action={q || selectedStatus || categoryId ? <Button variant="secondary" onClick={() => { setQuery(''); setSearchParams({ ...(view === 'table' ? { view } : {}) }, { replace: true }) }}>Clear filters</Button> : access.canManage ? <Link className="inline-flex min-h-11 items-center rounded-control border border-border-default px-4 text-sm font-semibold" to="/products/new">Add your first product</Link> : <Button variant="secondary" onClick={() => setAttempt(value => value + 1)}>Retry</Button>} />
             : <>
               {view === 'table'
-                ? <ResponsiveRecordList caption="Store products" tableClassName="[&_th]:whitespace-nowrap" rows={rows} columns={columns} rowKey={row => row.id} cardTitle={row => <Link className="text-action-primary underline" to={`/products/${row.id}`}>{row.displayName}</Link>} />
-                : <ul className="grid grid-cols-1 gap-4 min-[480px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5" aria-label="Store products">
-                  {rows.map(row => <ProductCard key={row.id} row={row} taxonomy={taxonomy} onDelete={setPendingDelete} analytics={analyticsFor(row)} />)}
+                ? <ResponsiveRecordList compact caption="Store products" tableClassName="[&_th]:whitespace-nowrap" rows={rows} columns={columns} rowKey={row => row.id} cardTitle={productIdentity} />
+                : <ul className="mp-product-listing-grid" aria-label="Store products">
+                  {rows.map(row => <ProductCard key={row.id} row={row} taxonomy={taxonomy} onDelete={setPendingDelete} analytics={analyticsFor(row)} canViewAnalytics={access.canManage} />)}
 
                 </ul>}
               {lastPage > 1 && <Pagination page={page} lastPage={lastPage} total={meta.total ?? 0} busy={loading} onChange={next => setParams({ page: String(next) })} />}
@@ -320,7 +317,7 @@ function EditorContent(props: {
   const previews = usePhotoPreviews(listing)
   const actions = readOnly ? null : <SaveStatusLine status={props.saveStatus} manual={props.manualSave} onSave={props.onSaveNow} onRetry={props.onRetrySave} />
   return <div className="space-y-5">
-    <Link className="inline-flex min-h-11 items-center text-sm font-semibold text-action-primary" to="/products">← My Products</Link>
+    <BackNavigation><Link to="/products">My Products</Link></BackNavigation>
     <PageHeader eyebrow={`Listing · ${listing.vendorSku}`} title={listing.displayName} description="Edit product details, variants, prices, photos and evidence." actions={<><ListingBadge status={listing.status} />{listing.permissions.canDelete && <Button variant="quiet" disabled={busy} onClick={props.onDelete}><Trash2 size={16} aria-hidden="true" /> Delete draft</Button>}</>} />
     <InfoNote>{listing.regulated ? `Regulated material: ${listing.regulatedRule?.productName ?? 'DTI-BPS mandatory certification'}. Publication requires verified PS/ICC evidence.` : 'Complete each step before publishing. The server checks publication readiness.'}</InfoNote>
     {props.conflict && <div className="flex flex-wrap items-center gap-3 rounded-surface border border-status-warning/40 bg-amber-50 p-4 text-sm" role="alert"><AlertCircle size={18} aria-hidden="true" /><span className="flex-1">This listing changed in another session. Reload to continue; unsaved edits on this page would be replaced.</span><Button variant="secondary" onClick={props.onReload}>Reload latest version</Button></div>}
@@ -365,19 +362,19 @@ function CreateListingForm({ canManage, onCreated }: { canManage: boolean; onCre
     finally { setBusy(false) }
   }
   return <div className="space-y-6">
-    <Link className="inline-flex min-h-11 items-center text-sm font-semibold text-action-primary" to="/products">← My Products</Link>
+    <BackNavigation><Link to="/products">My Products</Link></BackNavigation>
     <PageHeader eyebrow="Store Management" title="Add product" description="Start with the material, display name and SKU; save your draft at any step." />
     <div className="grid gap-5 lg:grid-cols-[17rem_minmax(0,1fr)] lg:items-start">
-      <ol className="grid gap-1 rounded-surface border border-border-default bg-surface-primary p-2 text-sm" aria-label="Listing steps after you create the draft">
+      <ol className="grid gap-1 mp-card p-2 text-sm" aria-label="Listing steps after you create the draft">
         {listingSteps.map((item, index) => <li key={item.label} className="flex items-start gap-3 px-3 py-2"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border-default text-xs font-semibold">{index + 1}</span><span><span className="block font-semibold">{item.label}</span><span className="text-xs text-text-secondary">{item.description}</span></span></li>)}
       </ol>
-      <form className="grid min-w-0 gap-4 rounded-surface border border-border-default bg-surface-primary p-5 sm:p-7" onSubmit={submit} aria-busy={busy} aria-labelledby="create-listing-heading">
+      <form className="grid min-w-0 gap-4 mp-card mp-card-padded" onSubmit={submit} aria-busy={busy} aria-labelledby="create-listing-heading">
         <h2 id="create-listing-heading" className="text-2xl font-semibold tracking-tight">New product listing</h2>
         {error && <StatusMessage tone="error">{error}</StatusMessage>}
         <Field label="Material name" name="material_query" value={materialQuery} autoComplete="off" hint="Type the material, for example Portland cement. Matches appear as you type; choosing one fills in the category and PS/ICC rules." onChange={event => { setMaterialQuery(event.target.value); if (chosen && event.target.value !== chosen.name) setChosen(null) }} />
         <p className="sr-only" role="status">{searching ? 'Searching materials…' : results ? `${results.length} matching materials` : ''}</p>
         {lookupError && <p className="text-sm text-status-error" role="alert">{lookupError}</p>}
-        {results && results.length > 0 && <fieldset className="min-w-0 overflow-hidden rounded-surface border border-border-default">
+        {results && results.length > 0 && <fieldset className="min-w-0 overflow-hidden mp-card">
           <legend className="sr-only">Matching materials</legend>
           <ul className="divide-y divide-border-default">{results.slice(0, 6).map(match => <MaterialMatchOption key={match.id} match={match} name="create_material_choice" selected={chosen?.id === match.id} onChoose={() => { setChosen(match); setMaterialQuery(match.name) }} />)}</ul>
         </fieldset>}
@@ -425,23 +422,23 @@ export function VendorCatalogImportPage() {
   const lastPage = Number(job?.rowErrorsMeta.last_page ?? 1)
   return <CatalogGate access={access} activeHref="/products">
     <div className="space-y-6">
-      <Link className="inline-flex min-h-11 items-center text-sm font-semibold text-action-primary" to="/products">← My Products</Link>
+      <BackNavigation><Link to="/products">My Products</Link></BackNavigation>
       <PageHeader eyebrow="Store Management" title="Bulk import" description="Upload and validate a CSV to create draft listings." />
       <InfoNote>Nothing is saved until you apply validated rows. Imported listings are never published automatically.</InfoNote>
       {!access.canManage ? <StatusMessage tone="error">Your role cannot import products.</StatusMessage> : <>
-        <section className="grid gap-3 rounded-surface border border-border-default bg-surface-primary p-5">
+        <section className="grid gap-3 mp-card mp-card-padded">
           <h2 className="text-lg font-semibold">1. Prepare the spreadsheet</h2>
           <p className="text-sm text-text-secondary">Save your spreadsheet as CSV with these columns. One row is one variant; rows sharing a Vendor SKU form one listing. Prices are pesos inclusive of VAT, for example 285.50.</p>
           <p className="break-words rounded-control bg-surface-canvas p-3 font-mono text-xs">{columns.join(', ') || 'Loading template…'}</p>
           {columns.length > 0 && <a className="inline-flex min-h-11 w-fit items-center gap-2 font-semibold text-action-primary underline" href={template} download="materyalph-catalog-template.csv">Download CSV template</a>}
         </section>
-        <section className="grid gap-3 rounded-surface border border-border-default bg-surface-primary p-5">
+        <section className="grid gap-3 mp-card mp-card-padded">
           <h2 className="text-lg font-semibold">2. Upload and validate</h2>
           <label className="grid w-fit min-w-0 max-w-full gap-2 text-sm font-semibold">CSV file<span className="font-normal text-text-secondary">Up to 2 MB and 500 rows.</span><input type="file" accept=".csv,text/csv" className="min-h-11 w-full min-w-0 text-sm" disabled={busy} onChange={event => { void upload(event.target.files?.[0]); event.target.value = '' }} /></label>
           {busy && !job && <p className="text-sm" role="status">Validating every row…</p>}
           {error && <StatusMessage tone="error">{error}</StatusMessage>}
         </section>
-        {job && <section className="grid gap-4 rounded-surface border border-border-default bg-surface-primary p-5" aria-labelledby="import-result">
+        {job && <section className="grid gap-4 mp-card mp-card-padded" aria-labelledby="import-result">
           <h2 id="import-result" className="text-lg font-semibold">3. {applied ? 'Import result' : 'Validation report'}</h2>
           <dl className="grid gap-3 text-sm min-[420px]:grid-cols-2 lg:grid-cols-4"><div><dt className="text-text-secondary">Rows</dt><dd className="text-xl font-semibold">{job.totalRows}</dd></div><div><dt className="text-text-secondary">Valid</dt><dd className="text-xl font-semibold">{job.validRows}</dd></div><div><dt className="text-text-secondary">Rejected</dt><dd className="text-xl font-semibold">{job.errorRows}</dd></div><div><dt className="text-text-secondary">Imported</dt><dd className="text-xl font-semibold">{job.appliedRows}</dd></div></dl>
           {job.status === 'VALIDATED' && <StatusMessage>All {job.validRows} rows passed validation. Nothing is saved until you apply them.</StatusMessage>}

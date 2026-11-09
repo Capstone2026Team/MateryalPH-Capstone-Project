@@ -1,6 +1,8 @@
+import { AsyncLoading } from './async-state'
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode, type RefCallback } from 'react'
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronRight, EyeOff, MapPinned } from 'lucide-react'
 import { chartLeftInset, chartMinimumWidth, chartTicks } from './chart-layout'
+import { ChartEmptyFrame } from './chart-empty-frame'
 import { loadGoogleMaps } from './google-maps'
 import { Button } from './button'
 import { geoShapeViewBox, projectGeoFeatures } from './geo-map-geometry'
@@ -194,7 +196,7 @@ export function GeoChoroplethMap({ browserKey, renderer = 'basemap', layout = 's
       {focused ? <><span className="font-semibold">{focused.name}</span> · {focused.levelLabel}: {focused.suppressed ? `Suppressed small cell${focused.note ? `: ${focused.note}` : ''}` : focused.value === null ? 'No value' : `${formatValue(focused.value)} ${metricLabel.toLowerCase()}`}{focused.drillable ? ' · Select to drill down' : ''}</>
         : scope?.code ? `Viewing ${scope.name}. ${areas.length > 0 ? 'Select an available area to explore further.' : 'This is the most detailed available view.'}` : `Click a region to view its map and marketplace activity. Use the area selector or comparison table for keyboard navigation.`}
     </p>
-    {reference.loading && <p role="status" className="text-xs text-text-secondary">Loading area borders…</p>}
+    {reference.loading && <AsyncLoading compact label="Loading area borders…" />}
     {reference.error && <div className="flex flex-wrap items-center gap-2 text-xs text-text-secondary"><p>Detailed area borders could not load.</p><Button variant="quiet" onClick={reference.retry}>Retry borders</Button></div>}
     {!reference.loading && unmapped.length > 0 && <p className="flex items-start gap-2 text-xs leading-5 text-text-secondary"><MapPinned size={14} aria-hidden="true" className="mt-0.5 shrink-0" />Boundary outlines are unavailable for {unmapped.length} {unmapped.length === 1 ? 'area' : 'areas'} at this level. Use the area selector or comparison table to explore them.</p>}
     {context.length > 0 && <p className="text-xs leading-5 text-text-secondary">Unshaded borders provide geographic context only. Metrics are shown for areas in the comparison table.</p>}
@@ -208,9 +210,10 @@ export type SortableColumn<T> = { key: string; header: string; cell: (row: T) =>
  * The accessible equivalent of the map: sortable headers with aria-sort, a selectable name button per row, and a
  * highlight that follows the map focus. Wide tables scroll inside their own region with a sticky header.
  */
-export function SortableDataTable<T>({ caption, columns, rows, rowKey, focusedKey, selectedKey, onFocusRow, onSelectRow, rowLabel, initialSort }: {
+export function SortableDataTable<T>({ caption, columns, rows, rowKey, focusedKey, selectedKey, onFocusRow, onSelectRow, rowLabel, initialSort, density = 'comfortable' }: {
   caption: string; columns: SortableColumn<T>[]; rows: T[]; rowKey: (row: T) => string; focusedKey?: string | null; selectedKey?: string | null
   onFocusRow?: (key: string | null) => void; onSelectRow?: (row: T) => void; rowLabel?: (row: T) => string; initialSort?: { key: string; direction: 'ascending' | 'descending' }
+  density?: 'comfortable' | 'compact'
 }) {
   const [sort, setSort] = useState(initialSort ?? null)
   const sorted = useMemo(() => {
@@ -228,7 +231,7 @@ export function SortableDataTable<T>({ caption, columns, rows, rowKey, focusedKe
   const [first, ...rest] = columns
   const columnWidth = (column: SortableColumn<T>, index: number) => column.minWidth ?? (index === 0 ? 224 : column.numeric ? 144 : 192)
   const minimumWidth = Math.max(720, columns.reduce((width, column, index) => width + columnWidth(column, index), 0))
-  return <div role="region" aria-label={caption} tabIndex={0} className="min-w-0 max-h-[70vh] max-w-full overflow-auto rounded-surface border border-border-default bg-surface-primary focus-visible:outline-2 focus-visible:outline-focus-ring">
+  return <div role="region" aria-label={caption} tabIndex={0} data-density={density} className="mp-geo-table-region min-w-0 max-h-[70vh] max-w-full overflow-auto mp-card focus-visible:outline-2 focus-visible:outline-focus-ring">
     <table className="mp-geo-table w-full border-separate border-spacing-0 text-left text-sm" style={{ minWidth: minimumWidth }}>
       <caption className="sr-only">{caption}. Column headers sort the table.</caption>
       <colgroup>{columns.map((column, index) => <col key={column.key} style={{ width: columnWidth(column, index) }} />)}</colgroup>
@@ -288,16 +291,18 @@ export function niceCeiling(value: number): number {
   return (NICE_STEPS.find(step => fraction <= step + 1e-9) ?? 10) * magnitude
 }
 
-/** Categorical series slots, in the validated fixed order (never cycled; see geo-analytics.css). */
-export type VizColor = '--mp-viz-series-1' | '--mp-viz-series-2' | '--mp-viz-series-3' | '--mp-viz-series-4' | '--mp-viz-series-5' | '--mp-viz-series-6'
+/** Shared theme series and semantic status roles; see geo-analytics.css. */
+export type VizColor = '--mp-viz-series-1' | '--mp-viz-series-2' | '--mp-viz-series-3' | '--mp-viz-series-4' | '--mp-viz-series-5' | '--mp-viz-series-6' | '--mp-viz-success' | '--mp-viz-warning' | '--mp-viz-error'
 
-export type TrendSeries = { key: string; label: string; colorVar: VizColor; values: (number | null)[]; kind?: 'line' | 'bar' }
+export type TrendSeries = { key: string; label: string; colorVar: VizColor; values: (number | null)[]; kind?: 'line' | 'bar'; formatValue?: (value: number) => string }
 
 /** A forecast continues the first series after the last label: a dashed line inside its 95% band. */
 export type TrendForecast = { label: string; labels: string[]; values: number[]; lower: number[]; upper: number[] }
 
 /** A labelled point of interest (for example an unusual day), by label index. */
 export type TrendMarker = { index: number; label: string }
+
+type TrendOverview = { label: string; value: ReactNode; context: string; seriesValues: ReactNode[] }
 
 const LINE_DASHES = ['', '6 3', '2 3', '8 3 2 3', '8 3 2 3 2 3', '1 3']
 
@@ -309,38 +314,69 @@ const LINE_DASHES = ['', '6 3', '2 3', '8 3 2 3', '8 3 2 3 2 3', '1 3']
  * series are named in the wrapping legend and in the focus text. Lines also have distinct dash patterns so identity
  * does not depend on colour; the caller renders the table view.
  */
-export function TrendLineChart({ title, labels, series, formatValue, emptyReason, forecast, markers = [], formatLabel = (label: string) => label }: {
+export function TrendLineChart({ title, labels, series, formatValue, formatTooltipValue = formatValue, emptyReason, forecast, markers = [], formatLabel = (label: string) => label, variant = 'line', overview, integerAxis = false }: {
   title: string; labels: string[]; series: TrendSeries[]; formatValue: (value: number) => string; emptyReason: string
   forecast?: TrendForecast | null | undefined; markers?: TrendMarker[]; formatLabel?: (label: string) => string
+  variant?: 'line' | 'area' | 'bar'; overview?: TrendOverview; formatTooltipValue?: (value: number) => string; integerAxis?: boolean
 }) {
   const summaryId = useId()
+  const tooltipId = useId()
+  const figure = useRef<HTMLElement>(null)
   const [focus, setFocus] = useState<number | null>(null)
-  const [frame, measured] = useMeasuredWidth(720)
+  const [showEstimates, setShowEstimates] = useState(false)
+  const [frame, measured] = useMeasuredWidth(600, overview ? 160 : 240)
+  const keyboardNavigation = useRef(false)
+  useEffect(() => {
+    if (focus === null) return
+    const dismiss = (event: globalThis.KeyboardEvent) => { if (event.key === 'Escape') setFocus(null) }
+    const outside = (event: PointerEvent) => { if (!figure.current?.contains(event.target as Node)) setFocus(null) }
+    document.addEventListener('keydown', dismiss)
+    document.addEventListener('pointerdown', outside)
+    return () => { document.removeEventListener('keydown', dismiss); document.removeEventListener('pointerdown', outside) }
+  }, [focus])
   const all = series.flatMap(item => item.values.filter((value): value is number => value !== null))
-  if (labels.length === 0 || all.length === 0) return <p className="rounded-control border border-dashed border-border-default px-4 py-6 text-center text-sm text-text-secondary">{emptyReason}</p>
-  const ahead = forecast && forecast.labels.length > 0 ? forecast : null
+  if (labels.length === 0 || all.length === 0) return <ChartEmptyFrame title={title} reason={emptyReason} variant={variant} />
+  const ahead = showEstimates && forecast && forecast.labels.length > 0 ? forecast : null
+  const visibleMarkers = showEstimates ? markers : []
   const total = labels.length + (ahead?.labels.length ?? 0)
+  const focusedIndex = focus !== null && focus < total ? focus : null
   const allLabels = [...labels, ...(ahead?.labels ?? [])]
-  const high = niceCeiling(Math.max(...all, ...(ahead?.upper ?? []), 1) * 1.05)
-  const ticks = [0, high / 2, high]
+  const maximum = Math.max(...all, ...(ahead?.upper ?? []), 1)
+  const high = integerAxis ? Math.ceil(niceCeiling(maximum)) : niceCeiling(maximum * 1.05)
+  const ticks = integerAxis ? [...new Set([0, Math.ceil(high / 2), high])] : [0, high / 2, high]
   const tickLabels = ticks.map(formatValue)
   const axisLabels = allLabels.map(formatLabel)
-  const height = 240, left = chartLeftInset(tickLabels, 72), right = 24, top = 16, bottom = 36
-  const minimumWidth = chartMinimumWidth(axisLabels, left, right)
+  const height = 176, left = chartLeftInset(tickLabels, 48), right = 16, top = 12, bottom = 28
+  const isBar = (item: TrendSeries) => (item.kind ?? (variant === 'bar' ? 'bar' : 'line')) === 'bar'
+  const bars = series.filter(isBar)
+  const lines = series.filter(item => !isBar(item))
+  const groupRatio = overview ? 0.94 : 0.72
+  const barRatio = overview ? 0.9 : 0.88
+  const minimumWidth = overview ? 0 : chartMinimumWidth(axisLabels, left, right, 240, 120)
   const width = Math.max(measured, minimumWidth)
   const plot = width - left - right
-  const x = (index: number) => left + (total === 1 ? plot / 2 : (index * plot) / (total - 1))
+  const band = plot / Math.max(1, total)
+  const x = (index: number) => left + (bars.length ? band * (index + 0.5) : total === 1 ? plot / 2 : (index * plot) / (total - 1))
   const y = (value: number) => top + (1 - value / high) * (height - top - bottom)
   const path = (values: (number | null)[]) => {
     let d = '', open = false
     values.forEach((value, index) => { if (value === null) { open = false; return } d += `${open ? 'L' : 'M'}${x(index).toFixed(1)},${y(value).toFixed(1)} `; open = true })
     return d
   }
-  const dateTicks = chartTicks(axisLabels, left, width - right)
+  // Close each observed run separately; missing or suppressed days never become filled data.
+  const areaPath = (values: (number | null)[]) => {
+    let d = '', start = -1, last = -1
+    values.forEach((value, index) => {
+      if (value === null) { if (start >= 0) d += `L${x(last)},${y(0)} L${x(start)},${y(0)} Z `; start = -1; return }
+      d += `${start < 0 ? 'M' : 'L'}${x(index)},${y(value)} `
+      if (start < 0) start = index
+      last = index
+    })
+    if (start >= 0) d += `L${x(last)},${y(0)} L${x(start)},${y(0)} Z`
+    return d
+  }
+  const dateTicks = chartTicks(axisLabels, x(0), x(total - 1))
   const gaps = labels.filter((_, index) => series.every(item => item.values[index] === null)).length
-  const band = plot / Math.max(1, total)
-  const bars = series.filter(item => item.kind === 'bar')
-  const lines = series.filter(item => item.kind !== 'bar')
   const lineDash = new Map(lines.map((item, index) => [item.key, LINE_DASHES[index % LINE_DASHES.length]]))
   const lead = series[0]
   const lastIndex = lead ? lead.values.reduce<number>((found, value, index) => (value === null ? found : index), -1) : -1
@@ -349,53 +385,74 @@ export function TrendLineChart({ title, labels, series, formatValue, emptyReason
     : ahead ? ahead.values.map((value, i) => `${i === 0 ? 'M' : 'L'}${x(labels.length + i).toFixed(1)},${y(value).toFixed(1)}`).join(' ') : ''
   const bandPath = ahead ? ahead.upper.map((value, i) => `${i === 0 ? 'M' : 'L'}${x(labels.length + i).toFixed(1)},${y(value).toFixed(1)}`).join(' ')
     + ' ' + [...ahead.lower].reverse().map((value, i) => `L${x(labels.length + ahead.lower.length - 1 - i).toFixed(1)},${y(value).toFixed(1)}`).join(' ') + ' Z' : ''
-  const markerAt = new Map(markers.map(marker => [marker.index, marker.label]))
+  const markerAt = new Map(visibleMarkers.map(marker => [marker.index, marker.label]))
   const move = (event: KeyboardEvent<SVGSVGElement>) => {
     const delta: Record<string, number> = { ArrowRight: 1, ArrowLeft: -1 }
-    if (event.key === 'Home' || event.key === 'End') { event.preventDefault(); setFocus(event.key === 'Home' ? 0 : total - 1); return }
+    if (event.key === 'Home' || event.key === 'End') { keyboardNavigation.current = true; event.preventDefault(); setFocus(event.key === 'Home' ? 0 : total - 1); return }
     if (!(event.key in delta)) return
+    keyboardNavigation.current = true
     event.preventDefault()
     setFocus(current => Math.min(total - 1, Math.max(0, (current ?? 0) + (delta[event.key] ?? 0))))
   }
   const describe = (index: number) => {
     if (ahead && index >= labels.length) {
       const i = index - labels.length
-      return `${formatLabel(ahead.labels[i] ?? '')}: ${ahead.label} ${formatValue(ahead.values[i] ?? 0)} (95% range ${formatValue(ahead.lower[i] ?? 0)} to ${formatValue(ahead.upper[i] ?? 0)})`
+      return `${formatLabel(ahead.labels[i] ?? '')}: ${ahead.label} ${formatTooltipValue(ahead.values[i] ?? 0)} (95% range ${formatTooltipValue(ahead.lower[i] ?? 0)} to ${formatTooltipValue(ahead.upper[i] ?? 0)})`
     }
     const marker = markerAt.get(index)
-    return `${formatLabel(labels[index] ?? '')}: ${series.map(item => `${item.label} ${item.values[index] === null || item.values[index] === undefined ? 'suppressed or no value' : formatValue(item.values[index] ?? 0)}`).join('; ')}${marker ? ` · ${marker}` : ''}`
+    return `${formatLabel(labels[index] ?? '')}: ${series.map(item => `${item.label} ${item.values[index] === null || item.values[index] === undefined ? 'suppressed or no value' : (item.formatValue ?? formatTooltipValue)(item.values[index] ?? 0)}`).join('; ')}${marker ? ` · ${marker}` : ''}`
   }
-  return <figure className="mp-viz m-0 min-w-0">
-    <figcaption id={summaryId} className="sr-only">{title}: {series.map(item => item.label).join(' and ')} over {labels.length} periods; {gaps} suppressed or empty periods.{ahead ? ` Followed by a ${ahead.labels.length}-period ${ahead.label.toLowerCase()} with a 95% range.` : ''}{markers.length ? ` ${markers.length} marked periods.` : ''} Use the arrow keys to read exact values; the table lists every value.</figcaption>
-    <ul className="mb-3 flex flex-wrap gap-x-4 gap-y-2 text-[13px] text-text-secondary">
-      {series.map(item => <li key={item.key} className="flex min-w-0 max-w-full items-center gap-2">
-        {item.kind === 'bar' ? <span aria-hidden="true" className="h-3 w-3 shrink-0 rounded-sm" style={{ background: `var(${item.colorVar})` }} />
+  return <figure ref={figure} className={`mp-viz m-0 min-w-0 ${overview ? 'mp-trend-overview' : ''} ${all.every(value => value === 0) ? 'mp-viz-muted' : ''}`} data-chart-variant={variant}>
+    <figcaption id={summaryId} className="sr-only">{title}: {series.map(item => item.label).join(' and ')} over {labels.length} periods; {gaps} suppressed or empty periods.{ahead ? ` Followed by a ${ahead.labels.length}-period ${ahead.label.toLowerCase()} with a 95% range.` : ''}{visibleMarkers.length ? ` ${visibleMarkers.length} marked periods.` : ''} Use the arrow keys to read exact values; the table lists every value.</figcaption>
+    {overview && <dl className="mp-trend-total"><dt>{overview.label}</dt><dd>{overview.value}</dd></dl>}
+    <div className={overview ? 'mp-trend-overview-legend' : 'mb-3 flex min-h-11 flex-wrap items-center justify-between gap-x-3 gap-y-1'}><ul aria-label={overview?.context} className="flex flex-wrap content-start gap-x-4 gap-y-1 text-xs leading-5 text-text-secondary">
+      {series.map((item, index) => <li key={item.key} className="flex min-w-0 max-w-full items-center gap-2">
+        {isBar(item) ? <span aria-hidden="true" className="h-3 w-3 shrink-0 rounded-sm" style={{ background: `var(${item.colorVar})` }} />
           : <svg width="28" height="12" viewBox="0 0 28 12" aria-hidden="true" className="shrink-0"><line x1="0" x2="28" y1="6" y2="6" stroke={`var(${item.colorVar})`} strokeWidth={2} strokeDasharray={lineDash.get(item.key)} /></svg>}
-        <span className="min-w-0 break-words">{item.label}</span></li>)}
+        <span className="min-w-0 break-words">{item.label}{overview && <strong className="mp-trend-series-value">{overview.seriesValues[index] ?? '—'}</strong>}</span></li>)}
       {ahead && <li className="flex min-w-0 max-w-full items-center gap-2"><span aria-hidden="true" className="mp-viz-forecast-swatch h-3 w-5 shrink-0" /><span className="min-w-0 break-words">{ahead.label} (95% range)</span></li>}
-      {markers.length > 0 && <li className="flex min-w-0 max-w-full items-center gap-2"><span aria-hidden="true" className="h-2.5 w-2.5 shrink-0 rotate-45 border-2 border-text-strong bg-surface-primary" /><span className="min-w-0 break-words">Marked period</span></li>}
-    </ul>
-    <div ref={frame} className="overflow-x-auto">
-      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-labelledby={summaryId} tabIndex={0} onKeyDown={move} onBlur={() => setFocus(null)} onMouseLeave={() => setFocus(null)}
+      {visibleMarkers.length > 0 && <li className="flex min-w-0 max-w-full items-center gap-2"><span aria-hidden="true" className="h-2.5 w-2.5 shrink-0 rotate-45 border-2 border-text-strong bg-surface-primary" /><span className="min-w-0 break-words">Marked period</span></li>}
+    </ul>{(forecast?.labels.length || markers.length > 0) ? <button type="button" aria-pressed={showEstimates} onClick={() => { setShowEstimates(current => !current); setFocus(null) }} className="min-h-11 rounded-control px-2 text-xs font-medium text-text-secondary hover:bg-surface-canvas focus-visible:outline-2 focus-visible:outline-focus-ring">{showEstimates ? 'Hide' : 'Show'} {forecast?.labels.length ? 'forecast' : 'unusual days'}</button> : null}</div>
+    <div className={overview ? 'mp-trend-overview-plot relative' : 'relative'} onMouseLeave={() => { if (!keyboardNavigation.current) setFocus(null) }}><div ref={frame} className={overview ? 'overflow-hidden' : 'overflow-x-auto'}>
+      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-labelledby={summaryId} aria-describedby={overview && focusedIndex !== null ? tooltipId : undefined} tabIndex={0} onKeyDown={move} onBlur={() => { keyboardNavigation.current = false; setFocus(null) }} onFocus={() => { if (overview) { keyboardNavigation.current = true; setFocus(0) } }}
         style={{ minWidth: minimumWidth }} className="h-auto w-full rounded-control focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring">
         {ahead && <rect x={x(labels.length) - band / 2} y={top} width={x(total - 1) - x(labels.length) + band} height={height - top - bottom} fill="var(--mp-viz-forecast-region)" />}
         {ticks.map((tick, index) => <g key={tick}><line x1={left} x2={width - right} y1={y(tick)} y2={y(tick)} stroke="var(--mp-viz-grid)" strokeWidth={1} />
           <text x={left - 8} y={y(tick) + 4} textAnchor="end" fontSize={11} fill="var(--mp-color-text-secondary)">{tickLabels[index]}</text></g>)}
         {dateTicks.map(tick => <text key={tick.index} x={tick.x} y={height - 12} textAnchor={tick.textAnchor} fontSize={11} fill="var(--mp-color-text-secondary)">{tick.label}</text>)}
-        {bars.map((item, b) => item.values.map((value, index) => value === null || value <= 0 ? null : <rect key={`${item.key}-${index}`} x={x(index) - (band * 0.6) / 2 + (b * band * 0.6) / Math.max(1, bars.length)}
-          y={y(value)} width={Math.max(1, (band * 0.6) / Math.max(1, bars.length) - 1)} height={Math.max(0, y(0) - y(value))} rx={Math.min(2, band * 0.15)} fill={`var(${item.colorVar})`} />))}
+        {bars.map((item, b) => item.values.map((value, index) => {
+          if (value === null || value <= 0) return null
+          // Give visible sales bars the day's space instead of reserving slots for zero or missing amounts.
+          const bucketBars = overview ? bars.filter(bar => (bar.values[index] ?? 0) > 0) : bars
+          const position = overview ? bucketBars.indexOf(item) : b
+          const groupWidth = band * groupRatio
+          const slotWidth = groupWidth / Math.max(1, bucketBars.length)
+          const barWidth = slotWidth * barRatio
+          const barX = x(index) - groupWidth / 2 + position * slotWidth + (overview ? (slotWidth - barWidth) / 2 : 0)
+          const barHeight = Math.max(0, y(0) - y(value))
+          if (!overview) return <rect key={`${item.key}-${index}`} x={barX} y={y(value)} width={barWidth} height={barHeight} rx={Math.min(3, band * 0.15)} fill={`var(${item.colorVar})`} />
+          const radius = Math.min(barWidth / 2, barHeight)
+          return <path key={`${item.key}-${index}`} data-bar-series={item.key} data-bar-index={index} d={`M${barX},${y(0)} V${y(value) + radius} Q${barX},${y(value)} ${barX + radius},${y(value)} H${barX + barWidth - radius} Q${barX + barWidth},${y(value)} ${barX + barWidth},${y(value) + radius} V${y(0)} Z`} fill={`var(${item.colorVar})`} stroke="var(--mp-color-action-primary)" strokeWidth={0.75} />
+        }))}
         {ahead && <path d={bandPath} fill="var(--mp-viz-forecast-band)" stroke="none" />}
         {ahead && <path d={forecastPath} fill="none" stroke="var(--mp-color-text-strong)" strokeWidth={2} strokeDasharray="5 4" strokeLinejoin="round" strokeLinecap="round" />}
-        {lines.map(item => <path key={item.key} d={path(item.values)} fill="none" stroke={`var(${item.colorVar})`} strokeWidth={2} strokeDasharray={lineDash.get(item.key)} strokeLinejoin="round" strokeLinecap="round" />)}
-        {markers.map(marker => { const value = lead?.values[marker.index]; return value === null || value === undefined ? null
+        {variant === 'area' && lines.slice(0, 1).map(item => <path key={`area-${item.key}`} d={areaPath(item.values)} fill={`var(${item.colorVar})`} fillOpacity={0.1} />)}
+        {lines.map(item => <g key={item.key}><path d={path(item.values)} fill="none" stroke={`var(${item.colorVar})`} strokeWidth={2} strokeDasharray={lineDash.get(item.key)} strokeLinejoin="round" strokeLinecap="round" />
+          {labels.length <= 14 && item.values.map((value, index) => value === null ? null : <circle key={index} cx={x(index)} cy={y(value)} r={2.5} fill={`var(${item.colorVar})`} />)}</g>)}
+        {visibleMarkers.map(marker => { const value = lead?.values[marker.index]; return value === null || value === undefined ? null
           : <rect key={`marker-${marker.index}`} x={x(marker.index) - 5} y={y(value) - 5} width={10} height={10} transform={`rotate(45 ${x(marker.index)} ${y(value)})`} fill="var(--mp-color-surface-primary)" stroke="var(--mp-color-text-strong)" strokeWidth={2} /> })}
-        {allLabels.map((label, index) => <rect key={`hit-${label}-${index}`} x={x(index) - band / 2} y={top} width={band} height={height - top - bottom} fill="transparent" onMouseEnter={() => setFocus(index)} />)}
-        {focus !== null && <g pointerEvents="none"><line x1={x(focus)} x2={x(focus)} y1={top} y2={height - bottom} stroke="var(--mp-color-text-secondary)" strokeDasharray="3 3" />
-          {focus < labels.length ? lines.map(item => item.values[focus] === null || item.values[focus] === undefined ? null : <circle key={`dot-${item.key}`} cx={x(focus)} cy={y(item.values[focus] ?? 0)} r={4} fill={`var(${item.colorVar})`} stroke="var(--mp-color-surface-primary)" strokeWidth={2} />)
-            : ahead && <circle cx={x(focus)} cy={y(ahead.values[focus - labels.length] ?? 0)} r={4} fill="var(--mp-color-surface-primary)" stroke="var(--mp-color-text-strong)" strokeWidth={2} />}</g>}
+        {allLabels.map((label, index) => <rect key={`hit-${label}-${index}`} data-trend-bucket={index} x={x(index) - band / 2} y={top} width={band} height={height - top - bottom} fill="transparent" onMouseEnter={() => { if (!keyboardNavigation.current) setFocus(index) }} onMouseMove={() => { keyboardNavigation.current = false; setFocus(index) }} onPointerDown={event => { keyboardNavigation.current = false; event.preventDefault(); setFocus(index) }} />)}
+        {focusedIndex !== null && <g pointerEvents="none"><line x1={x(focusedIndex)} x2={x(focusedIndex)} y1={top} y2={height - bottom} stroke="var(--mp-color-text-secondary)" strokeDasharray="3 3" />
+          {focusedIndex < labels.length ? lines.map(item => item.values[focusedIndex] === null || item.values[focusedIndex] === undefined ? null : <circle key={`dot-${item.key}`} cx={x(focusedIndex)} cy={y(item.values[focusedIndex] ?? 0)} r={4} fill={`var(${item.colorVar})`} stroke="var(--mp-color-surface-primary)" strokeWidth={2} />)
+            : ahead && <circle cx={x(focusedIndex)} cy={y(ahead.values[focusedIndex - labels.length] ?? 0)} r={4} fill="var(--mp-color-surface-primary)" stroke="var(--mp-color-text-strong)" strokeWidth={2} />}</g>}
       </svg>
     </div>
-    <p role="status" aria-live="polite" className="mt-2 min-h-11 text-sm text-text-strong">{focus === null ? 'Hover the chart or focus it and use the arrow keys to read exact values.' : describe(focus)}</p>
+    <p role="status" aria-live="polite" className={overview || focusedIndex === null ? 'sr-only' : 'pointer-events-none absolute right-2 top-1 max-w-[min(100%,18rem)] rounded-control border border-border-default bg-surface-primary px-3 py-2 text-xs leading-5 text-text-strong shadow-sm'}>{focusedIndex === null ? 'Hover or use the arrow keys to read values.' : describe(focusedIndex)}</p>
+    {overview && focusedIndex !== null && <div id={tooltipId} role="tooltip" className="mp-trend-tooltip" style={{ left: `clamp(0px, calc(${x(focusedIndex) / width * 100}% - 110px), max(0px, calc(100% - 220px)))` }}>
+      <p>{formatLabel(allLabels[focusedIndex] ?? '')}{markerAt.has(focusedIndex) ? ` · ${markerAt.get(focusedIndex)}` : ''}</p>
+      {focusedIndex < labels.length ? <dl>{series.map(item => <div key={item.key}><dt>{item.label}</dt><dd>{item.values[focusedIndex] == null ? 'Unavailable' : (item.formatValue ?? formatTooltipValue)(item.values[focusedIndex]!)}</dd></div>)}</dl>
+        : ahead && <dl><div><dt>{ahead.label}</dt><dd>{formatTooltipValue(ahead.values[focusedIndex - labels.length] ?? 0)}</dd></div><div><dt>95% range</dt><dd>{formatTooltipValue(ahead.lower[focusedIndex - labels.length] ?? 0)} to {formatTooltipValue(ahead.upper[focusedIndex - labels.length] ?? 0)}</dd></div></dl>}
+    </div>}</div>
   </figure>
 }
 
@@ -410,7 +467,7 @@ export function DemandHeatmap({ caption, columns, rows, formatValue }: { caption
   const thresholds = choroplethThresholds(numeric)
   const allZero = rows.length > 0 && rows.every(row => row.cells.every(cell => !cell.suppressed && cell.value !== null && Number(cell.value) === 0))
   const hasSuppressed = rows.some(row => row.cells.some(cell => cell.suppressed))
-  if (columns.length === 0) return <p className="rounded-control border border-dashed border-border-default px-4 py-6 text-center text-sm text-text-secondary">No categories or materials are available for this selection.</p>
+  if (columns.length === 0) return <ChartEmptyFrame title={caption} reason="No categories or materials are available for this selection." variant="heatmap" />
   return <div className="mp-viz min-w-0 overflow-hidden rounded-control border border-border-default bg-surface-primary">
     <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-border-default px-4 py-2 text-[13px]">
       <p role="status" className="font-medium text-text-strong">{visibleRows.length} of {rows.length} areas <span className="font-normal text-text-secondary">· 0 means no confirmed demand</span></p>

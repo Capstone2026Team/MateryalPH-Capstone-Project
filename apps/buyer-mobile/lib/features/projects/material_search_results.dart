@@ -1,3 +1,4 @@
+import '../../design_system/components/async_state.dart';
 import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -35,7 +36,7 @@ class MaterialSearchResults extends StatelessWidget {
     if (searching && matches.isEmpty) {
       return const Padding(
         padding: EdgeInsets.only(top: 8),
-        child: LinearProgressIndicator(),
+        child: BuyerLoadingProgress(),
       );
     }
     if (query.isEmpty) return const SizedBox.shrink();

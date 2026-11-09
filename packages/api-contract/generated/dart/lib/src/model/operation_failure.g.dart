@@ -28,8 +28,49 @@ final BuiltSet<OperationFailureKindEnum> _$operationFailureKindEnumValues =
   _$operationFailureKindEnum_OUTBOX_EVENT,
 ]);
 
+const OperationFailureRecoveryStatusEnum
+    _$operationFailureRecoveryStatusEnum_SCHEDULED =
+    const OperationFailureRecoveryStatusEnum._('SCHEDULED');
+const OperationFailureRecoveryStatusEnum
+    _$operationFailureRecoveryStatusEnum_LIMIT_REACHED =
+    const OperationFailureRecoveryStatusEnum._('LIMIT_REACHED');
+const OperationFailureRecoveryStatusEnum
+    _$operationFailureRecoveryStatusEnum_OWNING_PROCESS =
+    const OperationFailureRecoveryStatusEnum._('OWNING_PROCESS');
+const OperationFailureRecoveryStatusEnum
+    _$operationFailureRecoveryStatusEnum_RESOLVED =
+    const OperationFailureRecoveryStatusEnum._('RESOLVED');
+
+OperationFailureRecoveryStatusEnum _$operationFailureRecoveryStatusEnumValueOf(
+    String name) {
+  switch (name) {
+    case 'SCHEDULED':
+      return _$operationFailureRecoveryStatusEnum_SCHEDULED;
+    case 'LIMIT_REACHED':
+      return _$operationFailureRecoveryStatusEnum_LIMIT_REACHED;
+    case 'OWNING_PROCESS':
+      return _$operationFailureRecoveryStatusEnum_OWNING_PROCESS;
+    case 'RESOLVED':
+      return _$operationFailureRecoveryStatusEnum_RESOLVED;
+    default:
+      throw ArgumentError(name);
+  }
+}
+
+final BuiltSet<OperationFailureRecoveryStatusEnum>
+    _$operationFailureRecoveryStatusEnumValues = BuiltSet<
+        OperationFailureRecoveryStatusEnum>(const <OperationFailureRecoveryStatusEnum>[
+  _$operationFailureRecoveryStatusEnum_SCHEDULED,
+  _$operationFailureRecoveryStatusEnum_LIMIT_REACHED,
+  _$operationFailureRecoveryStatusEnum_OWNING_PROCESS,
+  _$operationFailureRecoveryStatusEnum_RESOLVED,
+]);
+
 Serializer<OperationFailureKindEnum> _$operationFailureKindEnumSerializer =
     _$OperationFailureKindEnumSerializer();
+Serializer<OperationFailureRecoveryStatusEnum>
+    _$operationFailureRecoveryStatusEnumSerializer =
+    _$OperationFailureRecoveryStatusEnumSerializer();
 
 class _$OperationFailureKindEnumSerializer
     implements PrimitiveSerializer<OperationFailureKindEnum> {
@@ -60,6 +101,40 @@ class _$OperationFailureKindEnumSerializer
           _fromWire[serialized] ?? (serialized is String ? serialized : ''));
 }
 
+class _$OperationFailureRecoveryStatusEnumSerializer
+    implements PrimitiveSerializer<OperationFailureRecoveryStatusEnum> {
+  static const Map<String, Object> _toWire = const <String, Object>{
+    'SCHEDULED': 'SCHEDULED',
+    'LIMIT_REACHED': 'LIMIT_REACHED',
+    'OWNING_PROCESS': 'OWNING_PROCESS',
+    'RESOLVED': 'RESOLVED',
+  };
+  static const Map<Object, String> _fromWire = const <Object, String>{
+    'SCHEDULED': 'SCHEDULED',
+    'LIMIT_REACHED': 'LIMIT_REACHED',
+    'OWNING_PROCESS': 'OWNING_PROCESS',
+    'RESOLVED': 'RESOLVED',
+  };
+
+  @override
+  final Iterable<Type> types = const <Type>[OperationFailureRecoveryStatusEnum];
+  @override
+  final String wireName = 'OperationFailureRecoveryStatusEnum';
+
+  @override
+  Object serialize(
+          Serializers serializers, OperationFailureRecoveryStatusEnum object,
+          {FullType specifiedType = FullType.unspecified}) =>
+      _toWire[object.name] ?? object.name;
+
+  @override
+  OperationFailureRecoveryStatusEnum deserialize(
+          Serializers serializers, Object serialized,
+          {FullType specifiedType = FullType.unspecified}) =>
+      OperationFailureRecoveryStatusEnum.valueOf(
+          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+}
+
 class _$OperationFailure extends OperationFailure {
   @override
   final OperationFailureKindEnum kind;
@@ -79,6 +154,12 @@ class _$OperationFailure extends OperationFailure {
   final bool retryable;
   @override
   final String? retryNote;
+  @override
+  final OperationFailureRecoveryStatusEnum? recoveryStatus;
+  @override
+  final int? recoveryAttempts;
+  @override
+  final DateTime? nextRetryAt;
 
   factory _$OperationFailure(
           [void Function(OperationFailureBuilder)? updates]) =>
@@ -93,7 +174,10 @@ class _$OperationFailure extends OperationFailure {
       this.attempts,
       required this.failedAt,
       required this.retryable,
-      this.retryNote})
+      this.retryNote,
+      this.recoveryStatus,
+      this.recoveryAttempts,
+      this.nextRetryAt})
       : super._();
   @override
   OperationFailure rebuild(void Function(OperationFailureBuilder) updates) =>
@@ -115,7 +199,10 @@ class _$OperationFailure extends OperationFailure {
         attempts == other.attempts &&
         failedAt == other.failedAt &&
         retryable == other.retryable &&
-        retryNote == other.retryNote;
+        retryNote == other.retryNote &&
+        recoveryStatus == other.recoveryStatus &&
+        recoveryAttempts == other.recoveryAttempts &&
+        nextRetryAt == other.nextRetryAt;
   }
 
   @override
@@ -130,6 +217,9 @@ class _$OperationFailure extends OperationFailure {
     _$hash = $jc(_$hash, failedAt.hashCode);
     _$hash = $jc(_$hash, retryable.hashCode);
     _$hash = $jc(_$hash, retryNote.hashCode);
+    _$hash = $jc(_$hash, recoveryStatus.hashCode);
+    _$hash = $jc(_$hash, recoveryAttempts.hashCode);
+    _$hash = $jc(_$hash, nextRetryAt.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -145,7 +235,10 @@ class _$OperationFailure extends OperationFailure {
           ..add('attempts', attempts)
           ..add('failedAt', failedAt)
           ..add('retryable', retryable)
-          ..add('retryNote', retryNote))
+          ..add('retryNote', retryNote)
+          ..add('recoveryStatus', recoveryStatus)
+          ..add('recoveryAttempts', recoveryAttempts)
+          ..add('nextRetryAt', nextRetryAt))
         .toString();
   }
 }
@@ -190,6 +283,21 @@ class OperationFailureBuilder
   String? get retryNote => _$this._retryNote;
   set retryNote(String? retryNote) => _$this._retryNote = retryNote;
 
+  OperationFailureRecoveryStatusEnum? _recoveryStatus;
+  OperationFailureRecoveryStatusEnum? get recoveryStatus =>
+      _$this._recoveryStatus;
+  set recoveryStatus(OperationFailureRecoveryStatusEnum? recoveryStatus) =>
+      _$this._recoveryStatus = recoveryStatus;
+
+  int? _recoveryAttempts;
+  int? get recoveryAttempts => _$this._recoveryAttempts;
+  set recoveryAttempts(int? recoveryAttempts) =>
+      _$this._recoveryAttempts = recoveryAttempts;
+
+  DateTime? _nextRetryAt;
+  DateTime? get nextRetryAt => _$this._nextRetryAt;
+  set nextRetryAt(DateTime? nextRetryAt) => _$this._nextRetryAt = nextRetryAt;
+
   OperationFailureBuilder() {
     OperationFailure._defaults(this);
   }
@@ -206,6 +314,9 @@ class OperationFailureBuilder
       _failedAt = $v.failedAt;
       _retryable = $v.retryable;
       _retryNote = $v.retryNote;
+      _recoveryStatus = $v.recoveryStatus;
+      _recoveryAttempts = $v.recoveryAttempts;
+      _nextRetryAt = $v.nextRetryAt;
       _$v = null;
     }
     return this;
@@ -243,6 +354,9 @@ class OperationFailureBuilder
           retryable: BuiltValueNullFieldError.checkNotNull(
               retryable, r'OperationFailure', 'retryable'),
           retryNote: retryNote,
+          recoveryStatus: recoveryStatus,
+          recoveryAttempts: recoveryAttempts,
+          nextRetryAt: nextRetryAt,
         );
     replace(_$result);
     return _$result;

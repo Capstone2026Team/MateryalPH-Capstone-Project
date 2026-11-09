@@ -80,23 +80,54 @@ final class InvoiceController extends Controller
             'vat_exempt_centavos' => ['sometimes', 'nullable', 'integer', 'min:0'], 'zero_rated_centavos' => ['sometimes', 'nullable', 'integer', 'min:0'],
             'related_line_ids' => ['sometimes', 'array', 'max:200'], 'related_line_ids.*' => ['uuid'],
             'source_system' => ['required', Rule::in(InvoiceService::SOURCE_SYSTEMS)], 'invoicing_method' => ['required', Rule::in(InvoiceService::INVOICING_METHODS)],
-            'amends_invoice_record_id' => ['sometimes', 'nullable', 'uuid'], 'invoice_request_id' => ['sometimes', 'nullable', 'uuid'], 'file' => ['required', 'file', 'max:'.PlatformSettings::current()->uploadKb('case_evidence')],
+            'amends_invoice_record_id' => ['sometimes', 'nullable', 'uuid'], 'invoice_request_id' => ['sometimes', 'nullable', 'uuid'],
+            'lock_version' => ['required', 'integer', 'min:0'], 'file' => ['sometimes', 'file', 'mimetypes:application/pdf,image/jpeg,image/png', 'max:'.PlatformSettings::current()->uploadKb('case_evidence')],
         ]);
         $file = $request->file('file');
-        if (! $file instanceof UploadedFile) {
+        if ($file !== null && ! $file instanceof UploadedFile) {
             throw new AuthenticationException('VALIDATION_FAILED', 'Attach the invoice copy.', 422, ['file' => ['Attach a PDF, JPG or PNG copy.']]);
         }
         $values = $input;
-        unset($values['file']);
+        unset($values['file'], $values['lock_version']);
         foreach (['amount_centavos', 'vat_centavos', 'vat_exempt_centavos', 'zero_rated_centavos'] as $field) {
             if (isset($values[$field])) {
                 $values[$field] = (int) $values[$field];
             }
         }
         /** @var array{invoice_type: string, issuer_name: string, invoice_number: string, issued_on: string, amount_centavos: int, vat_centavos?: int|null, vat_exempt_centavos?: int|null, zero_rated_centavos?: int|null, related_line_ids?: list<string>, source_system: string, invoicing_method: string, amends_invoice_record_id?: string|null, invoice_request_id?: string|null} $values */
-        $this->invoices->upload($request, $orderId, $values, $file);
+        $this->invoices->upload($request, $orderId, $values, $file, (int) $input['lock_version']);
 
         return ApiResponse::success($this->queries->vendorOrder($request, $orderId), [], 201);
+    }
+
+    public function send(Request $request, string $orderId): JsonResponse
+    {
+        $input = $request->validate(['lock_version' => ['required', 'integer', 'min:1']]);
+        $this->invoices->send($request, $orderId, (int) $input['lock_version']);
+
+        return ApiResponse::success($this->queries->vendorOrder($request, $orderId));
+    }
+
+    public function savePreset(Request $request): JsonResponse
+    {
+        $input = $request->validate(['invoice_type' => ['required', Rule::in(InvoiceService::VENDOR_TYPES)],
+            'issuer_name' => ['required', 'string', 'max:240'], 'source_system' => ['required', Rule::in(InvoiceService::SOURCE_SYSTEMS)],
+            'invoicing_method' => ['required', Rule::in(InvoiceService::INVOICING_METHODS)], 'lock_version' => ['required', 'integer', 'min:0']]);
+        $version = (int) $input['lock_version'];
+        unset($input['lock_version']);
+        $this->invoices->savePreset($request, $input, $version);
+
+        return ApiResponse::success($this->queries->preset($request));
+    }
+
+    public function preset(Request $request): JsonResponse
+    {
+        return ApiResponse::success($this->queries->preset($request));
+    }
+
+    public function draftContent(Request $request, string $draftId, string $fileId): StreamedResponse
+    {
+        return $this->invoices->streamDraft($request, $draftId, $fileId);
     }
 
     public function explain(Request $request, string $orderId, string $recordId): JsonResponse

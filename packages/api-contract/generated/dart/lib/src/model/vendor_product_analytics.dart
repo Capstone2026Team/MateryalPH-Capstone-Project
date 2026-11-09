@@ -11,6 +11,7 @@ import 'package:materyalph_api_client/src/model/product_analytics_suggestion.dar
 import 'package:materyalph_api_client/src/model/product_analytics_segments.dart';
 import 'package:materyalph_api_client/src/model/vendor_product_analytics_products.dart';
 import 'package:materyalph_api_client/src/model/product_analytics_series_point.dart';
+import 'package:materyalph_api_client/src/model/product_analytics_rated_product.dart';
 import 'package:materyalph_api_client/src/model/vendor_product_analytics_categories_inner.dart';
 import 'package:materyalph_api_client/src/model/vendor_product_analytics_forecast.dart';
 import 'package:materyalph_api_client/src/model/vendor_product_analytics_access.dart';
@@ -21,7 +22,7 @@ import 'package:built_value/serializer.dart';
 
 part 'vendor_product_analytics.g.dart';
 
-/// VendorProductAnalytics
+/// Product values use the same latest financial snapshot lines and first-confirmation dates as Finance and Dashboard product reports. Cancelled and fully refunded sales contribute zero. Materials include discounts and VAT, exclude delivery, and are before partial refunds; Finance shows the completed partial-refund deduction separately when reconciling to Net sales.
 ///
 /// Properties:
 /// * [generatedAt]
@@ -35,6 +36,7 @@ part 'vendor_product_analytics.g.dart';
 /// * [topSelling]
 /// * [topPerforming]
 /// * [mostViewed]
+/// * [topRated] - Up to five products ranked by all-time visible Product Quality average descending, count descending, then listing ID ascending, independent of the selected period. Null without reviews.view; an empty array means no rated published products. Uses the same blind-reveal, moderation, active-dispute and score-exclusion gates as Buyer product averages.
 /// * [categories]
 /// * [segments]
 /// * [basketRules]
@@ -74,6 +76,10 @@ abstract class VendorProductAnalytics implements Built<VendorProductAnalytics, V
 
   @BuiltValueField(wireName: r'most_viewed')
   BuiltList<ProductAnalyticsRow> get mostViewed;
+
+  /// Up to five products ranked by all-time visible Product Quality average descending, count descending, then listing ID ascending, independent of the selected period. Null without reviews.view; an empty array means no rated published products. Uses the same blind-reveal, moderation, active-dispute and score-exclusion gates as Buyer product averages.
+  @BuiltValueField(wireName: r'top_rated')
+  BuiltList<ProductAnalyticsRatedProduct>? get topRated;
 
   @BuiltValueField(wireName: r'categories')
   BuiltList<VendorProductAnalyticsCategoriesInner> get categories;
@@ -168,6 +174,13 @@ class _$VendorProductAnalyticsSerializer implements PrimitiveSerializer<VendorPr
       object.mostViewed,
       specifiedType: const FullType(BuiltList, [FullType(ProductAnalyticsRow)]),
     );
+    if (object.topRated != null) {
+      yield r'top_rated';
+      yield serializers.serialize(
+        object.topRated,
+        specifiedType: const FullType.nullable(BuiltList, [FullType(ProductAnalyticsRatedProduct)]),
+      );
+    }
     yield r'categories';
     yield serializers.serialize(
       object.categories,
@@ -292,6 +305,14 @@ class _$VendorProductAnalyticsSerializer implements PrimitiveSerializer<VendorPr
             specifiedType: const FullType(BuiltList, [FullType(ProductAnalyticsRow)]),
           ) as BuiltList<ProductAnalyticsRow>;
           result.mostViewed.replace(valueDes);
+          break;
+        case r'top_rated':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltList, [FullType(ProductAnalyticsRatedProduct)]),
+          ) as BuiltList<ProductAnalyticsRatedProduct>?;
+          if (valueDes == null) continue;
+          result.topRated.replace(valueDes);
           break;
         case r'categories':
           final valueDes = serializers.deserialize(

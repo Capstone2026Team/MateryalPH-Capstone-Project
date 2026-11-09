@@ -37,16 +37,16 @@ for (const [path, methods] of Object.entries(spec.paths)) {
     if (audience === 'BUYER') assert.deepEqual(operation.security, [{ passportBearer: [] }], `${key} uses the native Buyer bearer`)
     else assert.deepEqual(operation.security, [{ accessCookie: [], webCsrf: [] }], `${key} uses cookies with CSRF`)
     assert.ok(operation.responses['401'] && operation.responses['403'], `${key} documents authentication and authorization errors`)
-    if (method === 'post' && !NO_KEY.some(pattern => pattern.test(path))) {
+    if ((method === 'post' || path === '/vendor/invoices/preset' && method === 'put') && !NO_KEY.some(pattern => pattern.test(path))) {
       assert.ok(operation.parameters?.some(p => p.name === 'Idempotency-Key' && p.required), `${key} requires an Idempotency-Key`)
     }
-    if (/\/content$/.test(path)) {
+    if (/\/content$/.test(path) || path.startsWith('/vendor/invoice-drafts/')) {
       assert.ok(has('signed', 'Illuminate\\Routing\\Middleware\\ValidateSignature'), `${key} is a short-lived signed link`)
       assert.ok(operation.parameters?.some(p => p.name === 'signature' && p.required) && operation.parameters?.some(p => p.name === 'expires' && p.required), `${key} documents the signature`)
     }
   }
 }
-const phaseThirteen = /^api\/v1\/((buyers|vendor|admin)\/disputes|(buyers|vendor)\/orders\/\{[^}]+\}\/(dispute-eligibility|invoices)|vendor\/invoices|admin\/invoices|(buyers|vendor|admin)\/invoice-records)/
+const phaseThirteen = /^api\/v1\/((buyers|vendor|admin)\/disputes|(buyers|vendor)\/orders\/\{[^}]+\}\/(dispute-eligibility|invoices)|vendor\/invoices|vendor\/invoice-drafts|admin\/invoices|(buyers|vendor|admin)\/invoice-records)/
 for (const route of routes.filter(route => phaseThirteen.test(route.uri))) {
   for (const method of route.method.split('|').filter(method => method !== 'HEAD')) {
     assert.ok(expected.has(`${method} ${route.uri.replace(/\{[^}]+\}/g, '{}')}`), `Undocumented Phase 13 route ${method} ${route.uri}`)
@@ -69,6 +69,14 @@ for (const name of Object.keys(s).filter(name => /(Form|Request|Input|Answer)$/.
 assert.ok(!('refund_destination' in s.DisputeEligibility.properties) && s.DisputeEligibility.properties.original_payment_method, 'The masked original method is read-only information')
 assert.deepEqual(s.PlatformDocumentRef.properties.label.enum, ['Not a tax invoice'])
 assert.deepEqual(s.InvoiceUploadForm.properties.invoice_type.enum, ['VENDOR_GOODS_INVOICE', 'VENDOR_ADJUSTMENT_DOCUMENT'], 'Vendors upload only their own goods or adjustment documents')
+assert.ok(s.InvoiceUploadForm.required.includes('lock_version') && !s.InvoiceUploadForm.required.includes('file'), 'Draft revisions use concurrency checks and can retain a saved file')
+assert.ok(s.InvoiceSendInput.required.includes('lock_version'), 'Sending locks a specific prepared version')
+assert.deepEqual(s.VendorInvoicePreset.properties.date_mode.enum, ['TODAY'])
+for (const field of ['issued_on', 'invoice_number', 'amount_centavos', 'file']) assert.ok(!(field in s.InvoicePresetInput.properties), `${field} is specific to each invoice`)
+assert.ok(s.VendorOrderInvoices.properties.draft && s.VendorOrderInvoices.properties.can_send)
+assert.equal(s.VendorOrderInvoices.properties.buyer_name.type, 'string', 'Vendor invoice details expose the authorized order Buyer name independently of billing details')
+assert.equal(s.InvoiceLogRow.properties.buyer_name.type, 'string', 'Unrequested missing-copy rows can identify the order Buyer')
+assert.ok(!s.BuyerOrderInvoices.properties.draft, 'Buyer responses never expose private drafts')
 assert.ok(s.InvoiceRecordView.properties.reconciliation_state.enum.includes('INVOICE_RECONCILIATION_REQUIRED'))
 for (const name of ['InvoiceRecordView', 'VendorOrderInvoices', 'DisputeDetail', 'DisputeSummary']) {
   for (const field of Object.keys(s[name].properties)) assert.ok(!/commission|withholding|earning|payout|taxpayer|remittance|fee_statement/i.test(field), `${name}.${field} must not expose protected finance`)

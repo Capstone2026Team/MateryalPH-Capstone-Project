@@ -781,9 +781,7 @@ Future<Uint8List> paintSupplierMarker(
   required double ratio,
   double textScale = 1,
 }) async {
-  final label = item.markerLabel.length > 28
-      ? '${item.markerLabel.substring(0, 27)}…'
-      : item.markerLabel;
+  final label = item.compactMarkerLabel((28 / textScale).floor().clamp(12, 28));
   final textPainter = TextPainter(
     text: TextSpan(
       text: label,
@@ -1042,8 +1040,10 @@ Future<Uint8List> paintSupplierLabel(
   required double ratio,
   double textScale = 1,
 }) async {
-  final label = !selected && item.markerLabel.length > 28
-      ? '${item.markerLabel.substring(0, 27)}…'
+  final label = item.scoreKind == ScoreKind.vps || !selected
+      ? item.compactMarkerLabel(
+          ((selected ? 36 : 28) / textScale).floor().clamp(12, 36),
+        )
       : item.markerLabel;
   final text = TextPainter(
     text: TextSpan(

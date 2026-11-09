@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Analytics\Geo;
 
+use App\Domain\Finance\SalesReporting;
 use App\Domain\Geography\PsgcResolver;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
@@ -28,7 +29,7 @@ final class GeoFactsBuilder
 {
     public const ENVIRONMENT = 'TEST';
 
-    public const POST_CONFIRMATION = ['CONFIRMED', 'PROCESSING', 'READY_FOR_PICKUP', 'OUT_FOR_DELIVERY', 'DELIVERED', 'PICKED_UP', 'COMPLETED', 'DISPUTED', 'CANCELLATION_REQUESTED'];
+    public const POST_CONFIRMATION = SalesReporting::POST_CONFIRMATION;
 
     private const VENDOR_DECISIONS = ['AWAITING_PAYMENT', 'CONFIRMED', 'AWAITING_BUYER_APPROVAL', 'AWAITING_NRPC_ACCEPTANCE', 'DECLINED'];
 
@@ -130,11 +131,9 @@ final class GeoFactsBuilder
 
     private function orders(string $runId): int
     {
-        $confirmed = DB::table('order_status_history')->where('state_family', 'ORDER')->where('to_state', 'CONFIRMED')->groupBy('order_id')->selectRaw('order_id, MIN(created_at) AS confirmed_at');
         $count = 0;
-        DB::table('orders as o')->leftJoinSub($confirmed, 'h', 'h.order_id', '=', 'o.id')
-            ->where(fn ($q) => $q->whereNotNull('h.confirmed_at')->orWhereIn('o.order_state', self::POST_CONFIRMATION))
-            ->select(['o.*', 'h.confirmed_at'])->orderBy('o.id')
+        SalesReporting::orders()
+            ->select(['o.*', 'h.confirmed_at', DB::raw(SalesReporting::REFUNDS.' AS sales_refunds')])->orderBy('o.id')
             ->chunk(500, function ($orders) use ($runId, &$count): void {
                 foreach ($orders as $order) {
                     $this->orderFact($runId, $order);
@@ -152,10 +151,7 @@ final class GeoFactsBuilder
         $cancelled = $order->order_state === 'CANCELLED';
         $refunded = 0;
         if (! $cancelled) {
-            $refunded = (int) DB::table('refunds')->where('order_id', $order->id)->where('target_type', 'ORDER')->where('state', 'REFUNDED')->where('trigger', '<>', 'CANCELLATION')
-                ->sum(DB::raw('COALESCE(principal_centavos, amount_centavos)'));
-            $refunded += (int) DB::table('physical_reimbursements')->where('order_id', $order->id)->where('state', 'REIMBURSEMENT_CONFIRMED')->whereNotNull('dispute_decision_id')->sum('amount_centavos');
-            $refunded = min($gross, $refunded);
+            $refunded = (int) $order->sales_refunds;
         }
         $cancelledValue = $cancelled ? $gross : 0;
         $confirmedAt = CarbonImmutable::parse((string) ($order->confirmed_at ?? $order->accepted_at ?? $order->created_at));

@@ -753,7 +753,7 @@ class _GroupPreview extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               const Text(
-                'Prices already include any applicable VAT. The Vendor’s 2% commission and withholding are not Buyer charges.',
+                'Prices already include any applicable VAT. Vendor commission and withholding are not Buyer charges.',
                 style: TextStyle(fontSize: 12, color: BuyerTheme.muted),
               ),
             ],

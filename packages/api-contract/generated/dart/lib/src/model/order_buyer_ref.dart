@@ -12,12 +12,17 @@ part 'order_buyer_ref.g.dart';
 ///
 /// Properties:
 /// * [displayName]
+/// * [profilePhotoPath] - Private version-bound order-view photo path, including pickup and closed orders. Does not grant delivery phone/contact access.
 /// * [mobileE164] - Current Buyer phone for delivery coordination. Only Owner/Manager or current active assigned Fulfillment Staff on an accepted, open Site Delivery order receives it. Other roles and closed/pickup orders receive null.
 /// * [avatarPath] - Authorized order-scoped API photo path with the Buyer profile version. Uses the same delivery-contact authorization as mobile_e164; never a public storage URL. Null when the Buyer has no photo or contact is unavailable.
 @BuiltValue()
 abstract class OrderBuyerRef implements Built<OrderBuyerRef, OrderBuyerRefBuilder> {
   @BuiltValueField(wireName: r'display_name')
   String get displayName;
+
+  /// Private version-bound order-view photo path, including pickup and closed orders. Does not grant delivery phone/contact access.
+  @BuiltValueField(wireName: r'profile_photo_path')
+  String? get profilePhotoPath;
 
   /// Current Buyer phone for delivery coordination. Only Owner/Manager or current active assigned Fulfillment Staff on an accepted, open Site Delivery order receives it. Other roles and closed/pickup orders receive null.
   @BuiltValueField(wireName: r'mobile_e164')
@@ -55,6 +60,13 @@ class _$OrderBuyerRefSerializer implements PrimitiveSerializer<OrderBuyerRef> {
       object.displayName,
       specifiedType: const FullType(String),
     );
+    if (object.profilePhotoPath != null) {
+      yield r'profile_photo_path';
+      yield serializers.serialize(
+        object.profilePhotoPath,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
     if (object.mobileE164 != null) {
       yield r'mobile_e164';
       yield serializers.serialize(
@@ -98,6 +110,14 @@ class _$OrderBuyerRefSerializer implements PrimitiveSerializer<OrderBuyerRef> {
             specifiedType: const FullType(String),
           ) as String;
           result.displayName = valueDes;
+          break;
+        case r'profile_photo_path':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.profilePhotoPath = valueDes;
           break;
         case r'mobile_e164':
           final valueDes = serializers.deserialize(

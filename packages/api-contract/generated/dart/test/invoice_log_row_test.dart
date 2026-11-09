@@ -7,6 +7,12 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(InvoiceLogRow, () {
+    // The order Buyer's display name on Vendor DUE rows, including orders without a Buyer invoice request.
+    // String buyerName
+    test('to test the property `buyerName`', () async {
+      // TODO
+    });
+
     // String id
     test('to test the property `id`', () async {
       // TODO

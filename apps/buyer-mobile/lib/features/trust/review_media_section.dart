@@ -1,3 +1,4 @@
+import '../../design_system/components/async_state.dart';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -163,7 +164,7 @@ class _ReviewMediaSectionState extends State<ReviewMediaSection> {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      if (_busy) const LinearProgressIndicator(),
+      if (_busy) const BuyerLoadingProgress(),
       if (widget.compact && widget.media.isNotEmpty) ...[
         ReviewMediaTile(
           video: widget.media.first.video,

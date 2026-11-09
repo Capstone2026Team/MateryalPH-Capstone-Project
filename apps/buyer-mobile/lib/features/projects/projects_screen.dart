@@ -28,6 +28,8 @@ import 'work_package_material_widgets.dart' show materialQuantity;
 import 'work_package_overview_widgets.dart';
 
 typedef ProjectOpen = void Function(BuildContext context, String id);
+typedef ProjectOpenOrder =
+    FutureOr<void> Function(BuildContext context, String id);
 
 class ProjectsScreen extends StatefulWidget {
   const ProjectsScreen({
@@ -51,7 +53,8 @@ class ProjectsScreen extends StatefulWidget {
   final DiscoveryRepository discovery;
   final DeviceLocationService deviceLocation;
   final SupplierMapBuilder mapBuilder;
-  final ProjectOpen openConversation, openOrder, openStore;
+  final ProjectOpen openConversation, openStore;
+  final ProjectOpenOrder openOrder;
 
   /// Opens the Item-Based cart; missing materials are bought there.
   final void Function(BuildContext context)? openCart;
@@ -433,7 +436,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
             ),
       body: Column(
         children: [
-          if (_busy) const LinearProgressIndicator(),
+          if (_busy) const BuyerLoadingProgress(),
           if (_error != null && (_page != null || _project != null))
             MaterialBanner(
               content: Text(_error!),
@@ -901,11 +904,28 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
           ),
           const SizedBox(height: 12),
         ],
+        if (w.status == 'ACTIVE' &&
+            w.orderId != null &&
+            w.hasOrder != true) ...[
+          const Padding(
+            padding: EdgeInsets.only(bottom: 16),
+            child: Text(
+              'Your previous order is closed. This Work Package is open again. Find matching vendors to reuse your saved requirements.',
+            ),
+          ),
+        ],
         if (w.orderId != null && w.selectedArrangementId == null) ...[
           FilledButton.icon(
-            onPressed: () => widget.openOrder(context, projectText(w.orderId)),
+            onPressed: () async {
+              await widget.openOrder(context, projectText(w.orderId));
+              if (mounted) await _run(_reload);
+            },
             icon: const Icon(LucideIcons.receipt, size: 18),
-            label: const Text('Open order'),
+            label: Text(
+              w.status == 'ACTIVE' && w.hasOrder != true
+                  ? 'View previous order'
+                  : 'Open order',
+            ),
           ),
           const SizedBox(height: 12),
         ],
@@ -922,7 +942,10 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
               title: Text(projectText(order['reference'])),
               subtitle: Text(projectStatus(order['order_state'])),
               trailing: const Icon(LucideIcons.chevronRight, size: 18),
-              onTap: () => widget.openOrder(context, projectText(order['id'])),
+              onTap: () async {
+                await widget.openOrder(context, projectText(order['id']));
+                if (mounted) await _run(_reload);
+              },
             ),
         ],
         if (projectActive &&

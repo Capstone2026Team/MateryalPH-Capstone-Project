@@ -1,3 +1,4 @@
+import { BackNavigation } from './back-navigation'
 import { useEffect, useRef, type ReactNode } from 'react'
 import { ArrowRight, Check } from 'lucide-react'
 import { Button } from './button'
@@ -35,13 +36,13 @@ export function OnboardingFlow({ steps, current, onStep, section, children, acti
     return requirements.length > 0 && requirements.every(item => DONE.includes(checklistCompletionStatus(item)))
   }
   const next = steps[current + 1]
-  const content = <section className={`min-w-0 rounded-surface border border-border-default bg-surface-primary p-5 sm:p-7 ${rail ? 'lg:col-start-2 lg:row-span-2 lg:row-start-1' : ''}`} aria-labelledby="onboarding-section-title">
+  const content = <section className={`min-w-0 mp-card mp-card-padded ${rail ? 'lg:col-start-2 lg:row-span-2 lg:row-start-1' : ''}`} aria-labelledby="onboarding-section-title">
     <h2 ref={heading} tabIndex={-1} id="onboarding-section-title" className={`${rail && steps[current]?.description ? 'mb-1' : 'mb-6'} text-2xl font-semibold tracking-tight`}>{steps[current]?.label}</h2>
     {rail && steps[current]?.description && <p className="mb-6 text-sm text-text-secondary">{steps[current]?.description}</p>}
     <div className="min-w-0">{children}</div>
     <p className="mt-6 text-xs leading-5 text-text-secondary">{autosave ? `Progress saves when you change steps or return to the dashboard.${section.key === 'STORE_VERIFICATION' ? ' Only Submit for Admin Review sends your documents to Admin.' : ''}` : 'Switching steps keeps your edits on this page. Save a draft to keep them for later.'}</p>
     <div className="mt-8 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 border-t border-border-default pt-5">
-      {current > 0 && <Button type="button" variant="secondary" disabled={busy} onClick={() => onStep(current - 1)}>Back</Button>}
+      {current > 0 && <BackNavigation><button type="button" disabled={busy} onClick={() => onStep(current - 1)}>Back</button></BackNavigation>}
       {actions}
       {next && <Button type="button" className="sm:ml-auto" disabled={busy} onClick={() => onStep(current + 1)}>{nextLabel ? <>{nextLabel(next)} <ArrowRight size={16} aria-hidden="true" /></> : 'Next'}</Button>}
     </div>
@@ -49,7 +50,7 @@ export function OnboardingFlow({ steps, current, onStep, section, children, acti
 
   if (rail) {
     return <div className="grid min-w-0 gap-5 lg:grid-cols-[17rem_minmax(0,1fr)] lg:grid-rows-[auto_1fr] lg:items-start">
-      <nav aria-label={`${section.label} steps`} className="min-w-0 rounded-surface border border-border-default bg-surface-primary lg:col-start-1 lg:row-start-1">
+      <nav aria-label={`${section.label} steps`} className="min-w-0 mp-card lg:col-start-1 lg:row-start-1">
         <div className="border-b border-border-default px-4 py-3">
           {railTitle && <div className="min-w-0 break-words font-semibold">{railTitle}</div>}
           <p className="text-sm text-text-secondary" aria-live="polite" aria-atomic="true">Step {current + 1} of {steps.length} · {progress.complete} of {progress.total} checklist items complete</p>
@@ -71,7 +72,7 @@ export function OnboardingFlow({ steps, current, onStep, section, children, acti
   }
 
   return <div className="min-w-0 space-y-5">
-    <nav aria-label={`${section.label} steps`} className="min-w-0 rounded-surface border border-border-default bg-surface-primary">
+    <nav aria-label={`${section.label} steps`} className="min-w-0 mp-card">
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-border-default px-5 py-3 text-sm">
         <p className="font-semibold" aria-live="polite" aria-atomic="true">Step {current + 1} of {steps.length}</p>
         <p className="text-text-secondary">{progress.complete} of {progress.total} checklist items complete</p>

@@ -3,6 +3,7 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:materyalph_api_client/src/model/withholding_calculation_breakdown.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -11,6 +12,9 @@ part 'withholding_threshold_calculation.g.dart';
 /// Recorded components of POSTED MERCHANT_CWT assessments for the same environment and taxpayer-year accumulator. VOIDED assessments are excluded. Assessed cash is the original estimate for these assessments, before subsequent refunds; it is not a provider balance or date-filtered Earnings total.
 ///
 /// Properties:
+/// * [assessedPayments] - Number of POSTED merchant online-payment assessments included for this taxpayer and taxable year. Direct COD and In-Store cash records are excluded.
+/// * [paymentPrincipalCentavos] - Original online order principal in the included assessments, before refunds. Not the all-method, date-filtered Net sales figure.
+/// * [buyerProcessingFeesCentavos] - Buyer fees included in the assessed online collections. Payment principal plus these fees equals collections_centavos; Buyer fees are not sales revenue.
 /// * [collectionsCentavos]
 /// * [refundsCentavos]
 /// * [deliveryCentavos]
@@ -19,8 +23,21 @@ part 'withholding_threshold_calculation.g.dart';
 /// * [grossBasisCentavos]
 /// * [withheldCentavos]
 /// * [assessedCashCentavos]
+/// * [withholdingBreakdown] - Optional read-only preview for explaining the recorded withholding total. Null when concurrent source changes prevent a consistent preview; the recorded total is retained. Other stores remain aggregate-only.
 @BuiltValue()
 abstract class WithholdingThresholdCalculation implements Built<WithholdingThresholdCalculation, WithholdingThresholdCalculationBuilder> {
+  /// Number of POSTED merchant online-payment assessments included for this taxpayer and taxable year. Direct COD and In-Store cash records are excluded.
+  @BuiltValueField(wireName: r'assessed_payments')
+  int get assessedPayments;
+
+  /// Original online order principal in the included assessments, before refunds. Not the all-method, date-filtered Net sales figure.
+  @BuiltValueField(wireName: r'payment_principal_centavos')
+  int get paymentPrincipalCentavos;
+
+  /// Buyer fees included in the assessed online collections. Payment principal plus these fees equals collections_centavos; Buyer fees are not sales revenue.
+  @BuiltValueField(wireName: r'buyer_processing_fees_centavos')
+  int get buyerProcessingFeesCentavos;
+
   @BuiltValueField(wireName: r'collections_centavos')
   int get collectionsCentavos;
 
@@ -45,6 +62,10 @@ abstract class WithholdingThresholdCalculation implements Built<WithholdingThres
   @BuiltValueField(wireName: r'assessed_cash_centavos')
   int get assessedCashCentavos;
 
+  /// Optional read-only preview for explaining the recorded withholding total. Null when concurrent source changes prevent a consistent preview; the recorded total is retained. Other stores remain aggregate-only.
+  @BuiltValueField(wireName: r'withholding_breakdown')
+  WithholdingCalculationBreakdown? get withholdingBreakdown;
+
   WithholdingThresholdCalculation._();
 
   factory WithholdingThresholdCalculation([void updates(WithholdingThresholdCalculationBuilder b)]) = _$WithholdingThresholdCalculation;
@@ -68,6 +89,21 @@ class _$WithholdingThresholdCalculationSerializer implements PrimitiveSerializer
     WithholdingThresholdCalculation object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    yield r'assessed_payments';
+    yield serializers.serialize(
+      object.assessedPayments,
+      specifiedType: const FullType(int),
+    );
+    yield r'payment_principal_centavos';
+    yield serializers.serialize(
+      object.paymentPrincipalCentavos,
+      specifiedType: const FullType(int),
+    );
+    yield r'buyer_processing_fees_centavos';
+    yield serializers.serialize(
+      object.buyerProcessingFeesCentavos,
+      specifiedType: const FullType(int),
+    );
     yield r'collections_centavos';
     yield serializers.serialize(
       object.collectionsCentavos,
@@ -108,6 +144,13 @@ class _$WithholdingThresholdCalculationSerializer implements PrimitiveSerializer
       object.assessedCashCentavos,
       specifiedType: const FullType(int),
     );
+    if (object.withholdingBreakdown != null) {
+      yield r'withholding_breakdown';
+      yield serializers.serialize(
+        object.withholdingBreakdown,
+        specifiedType: const FullType.nullable(WithholdingCalculationBreakdown),
+      );
+    }
   }
 
   @override
@@ -131,6 +174,27 @@ class _$WithholdingThresholdCalculationSerializer implements PrimitiveSerializer
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'assessed_payments':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.assessedPayments = valueDes;
+          break;
+        case r'payment_principal_centavos':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.paymentPrincipalCentavos = valueDes;
+          break;
+        case r'buyer_processing_fees_centavos':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.buyerProcessingFeesCentavos = valueDes;
+          break;
         case r'collections_centavos':
           final valueDes = serializers.deserialize(
             value,
@@ -186,6 +250,14 @@ class _$WithholdingThresholdCalculationSerializer implements PrimitiveSerializer
             specifiedType: const FullType(int),
           ) as int;
           result.assessedCashCentavos = valueDes;
+          break;
+        case r'withholding_breakdown':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(WithholdingCalculationBreakdown),
+          ) as WithholdingCalculationBreakdown?;
+          if (valueDes == null) continue;
+          result.withholdingBreakdown.replace(valueDes);
           break;
         default:
           unhandled.add(key);

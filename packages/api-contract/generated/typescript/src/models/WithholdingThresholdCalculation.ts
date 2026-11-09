@@ -13,12 +13,32 @@
  */
 
 import { mapValues } from '../runtime';
+import type { WithholdingCalculationBreakdown } from './WithholdingCalculationBreakdown';
+import {
+    WithholdingCalculationBreakdownFromJSON,
+    WithholdingCalculationBreakdownFromJSONTyped,
+    WithholdingCalculationBreakdownToJSON,
+    WithholdingCalculationBreakdownToJSONTyped,
+} from './WithholdingCalculationBreakdown';
+
 /**
  * Recorded components of POSTED MERCHANT_CWT assessments for the same environment and taxpayer-year accumulator. VOIDED assessments are excluded. Assessed cash is the original estimate for these assessments, before subsequent refunds; it is not a provider balance or date-filtered Earnings total.
  * @export
  * @interface WithholdingThresholdCalculation
  */
 export interface WithholdingThresholdCalculation {
+    /**
+     * Number of POSTED merchant online-payment assessments included for this taxpayer and taxable year. Direct COD and In-Store cash records are excluded.
+     */
+    assessedPayments: number;
+    /**
+     * Original online order principal in the included assessments, before refunds. Not the all-method, date-filtered Net sales figure.
+     */
+    paymentPrincipalCentavos: number;
+    /**
+     * Buyer fees included in the assessed online collections. Payment principal plus these fees equals collections_centavos; Buyer fees are not sales revenue.
+     */
+    buyerProcessingFeesCentavos: number;
     /**
      *
      */
@@ -51,12 +71,19 @@ export interface WithholdingThresholdCalculation {
      *
      */
     assessedCashCentavos: number;
+    /**
+     * Optional read-only preview for explaining the recorded withholding total. Null when concurrent source changes prevent a consistent preview; the recorded total is retained. Other stores remain aggregate-only.
+     */
+    withholdingBreakdown?: WithholdingCalculationBreakdown | null;
 }
 
 /**
  * Check if a given object implements the WithholdingThresholdCalculation interface.
  */
 export function instanceOfWithholdingThresholdCalculation(value: object): value is WithholdingThresholdCalculation {
+    if ((!('assessedPayments' in (value as Record<string, any>)) && !('assessed_payments' in (value as Record<string, any>))) || ((value as Record<string, any>)['assessedPayments'] === undefined && (value as Record<string, any>)['assessed_payments'] === undefined)) return false;
+    if ((!('paymentPrincipalCentavos' in (value as Record<string, any>)) && !('payment_principal_centavos' in (value as Record<string, any>))) || ((value as Record<string, any>)['paymentPrincipalCentavos'] === undefined && (value as Record<string, any>)['payment_principal_centavos'] === undefined)) return false;
+    if ((!('buyerProcessingFeesCentavos' in (value as Record<string, any>)) && !('buyer_processing_fees_centavos' in (value as Record<string, any>))) || ((value as Record<string, any>)['buyerProcessingFeesCentavos'] === undefined && (value as Record<string, any>)['buyer_processing_fees_centavos'] === undefined)) return false;
     if ((!('collectionsCentavos' in (value as Record<string, any>)) && !('collections_centavos' in (value as Record<string, any>))) || ((value as Record<string, any>)['collectionsCentavos'] === undefined && (value as Record<string, any>)['collections_centavos'] === undefined)) return false;
     if ((!('refundsCentavos' in (value as Record<string, any>)) && !('refunds_centavos' in (value as Record<string, any>))) || ((value as Record<string, any>)['refundsCentavos'] === undefined && (value as Record<string, any>)['refunds_centavos'] === undefined)) return false;
     if ((!('deliveryCentavos' in (value as Record<string, any>)) && !('delivery_centavos' in (value as Record<string, any>))) || ((value as Record<string, any>)['deliveryCentavos'] === undefined && (value as Record<string, any>)['delivery_centavos'] === undefined)) return false;
@@ -78,6 +105,9 @@ export function WithholdingThresholdCalculationFromJSONTyped(json: any, ignoreDi
     }
     return {
 
+        'assessedPayments': json['assessed_payments'],
+        'paymentPrincipalCentavos': json['payment_principal_centavos'],
+        'buyerProcessingFeesCentavos': json['buyer_processing_fees_centavos'],
         'collectionsCentavos': json['collections_centavos'],
         'refundsCentavos': json['refunds_centavos'],
         'deliveryCentavos': json['delivery_centavos'],
@@ -86,6 +116,7 @@ export function WithholdingThresholdCalculationFromJSONTyped(json: any, ignoreDi
         'grossBasisCentavos': json['gross_basis_centavos'],
         'withheldCentavos': json['withheld_centavos'],
         'assessedCashCentavos': json['assessed_cash_centavos'],
+        'withholdingBreakdown': json['withholding_breakdown'] === undefined ? undefined : json['withholding_breakdown'] === null ? null : WithholdingCalculationBreakdownFromJSON(json['withholding_breakdown']),
     };
 }
 
@@ -100,6 +131,9 @@ export function WithholdingThresholdCalculationToJSONTyped(value?: WithholdingTh
 
     return {
 
+        'assessed_payments': value['assessedPayments'],
+        'payment_principal_centavos': value['paymentPrincipalCentavos'],
+        'buyer_processing_fees_centavos': value['buyerProcessingFeesCentavos'],
         'collections_centavos': value['collectionsCentavos'],
         'refunds_centavos': value['refundsCentavos'],
         'delivery_centavos': value['deliveryCentavos'],
@@ -108,6 +142,7 @@ export function WithholdingThresholdCalculationToJSONTyped(value?: WithholdingTh
         'gross_basis_centavos': value['grossBasisCentavos'],
         'withheld_centavos': value['withheldCentavos'],
         'assessed_cash_centavos': value['assessedCashCentavos'],
+        'withholding_breakdown': WithholdingCalculationBreakdownToJSON(value['withholdingBreakdown']),
     };
 }
 

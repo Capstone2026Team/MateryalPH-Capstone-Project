@@ -36,6 +36,7 @@ Name | Type | Description | Notes
 **availableActions** | **BuiltList&lt;String&gt;** |  | [optional]
 **payment** | [**OrderPaymentAvailability**](OrderPaymentAvailability.md) |  | [optional]
 **buyer** | [**OrderBuyerRef**](OrderBuyerRef.md) |  | [optional]
+**locationMap** | [**OrderLocationMap**](OrderLocationMap.md) |  | [optional]
 **autoAccept** | [**AutoAcceptOutcome**](AutoAcceptOutcome.md) |  | [optional]
 **reservations** | [**BuiltList&lt;OrderReservation&gt;**](OrderReservation.md) |  | [optional]
 **permissions** | [**VendorOrderPermissions**](VendorOrderPermissions.md) |  | [optional]

@@ -101,7 +101,7 @@ export function StoreVacationMode({ snapshot, onSaved }: { snapshot: VendorOnboa
   const available = ['Fulfilling your existing orders', 'Existing work and messaging', 'Your regular operating hours']
   return <div className="space-y-6">
     {message && <StatusMessage tone={message.tone}>{message.text}</StatusMessage>}
-    <section aria-label="Vacation Mode status" className="rounded-surface border border-border-default bg-surface-primary p-5 sm:p-6">
+    <section aria-label="Vacation Mode status" className="mp-card mp-card-padded">
       <div className="flex flex-wrap items-start justify-between gap-5">
         <div className="min-w-0 max-w-2xl space-y-3">
           <div className="flex flex-wrap items-center gap-3"><h2 className="text-xl font-semibold">Vacation Mode</h2><StatusBadge tone={status === 'ACTIVE' ? 'warning' : status === 'SCHEDULED' ? 'info' : 'neutral'} label={statusLabel} /></div>
@@ -120,8 +120,8 @@ export function StoreVacationMode({ snapshot, onSaved }: { snapshot: VendorOnboa
       </dl>}
     </section>
     <div className="grid gap-4 md:grid-cols-2">
-      <section aria-label="Paused while on" className="rounded-surface border border-border-default bg-surface-primary p-5"><h3 className="flex items-center gap-2 font-semibold"><Pause size={16} aria-hidden="true" className="text-status-warning" />Paused while Vacation Mode is on</h3><ul className="mt-3 space-y-2 text-sm text-text-secondary">{paused.map(item => <li key={item}>{item}</li>)}</ul></section>
-      <section aria-label="Stays available" className="rounded-surface border border-border-default bg-surface-primary p-5"><h3 className="flex items-center gap-2 font-semibold"><Check size={16} aria-hidden="true" className="text-status-success" />Stays available</h3><ul className="mt-3 space-y-2 text-sm text-text-secondary">{available.map(item => <li key={item}>{item}</li>)}</ul></section>
+      <section aria-label="Paused while on" className="mp-card mp-card-padded"><h3 className="flex items-center gap-2 font-semibold"><Pause size={16} aria-hidden="true" className="text-status-warning" />Paused while Vacation Mode is on</h3><ul className="mt-3 space-y-2 text-sm text-text-secondary">{paused.map(item => <li key={item}>{item}</li>)}</ul></section>
+      <section aria-label="Stays available" className="mp-card mp-card-padded"><h3 className="flex items-center gap-2 font-semibold"><Check size={16} aria-hidden="true" className="text-status-success" />Stays available</h3><ul className="mt-3 space-y-2 text-sm text-text-secondary">{available.map(item => <li key={item}>{item}</li>)}</ul></section>
     </div>
     <FormDialog open={dialogOpen} size="small" title={status === 'OFF' ? 'Set up Vacation Mode' : 'Edit Vacation Mode dates'} description="Dates use Philippine time. Vacation Mode begins at the start of the first day and ends after the last day." busy={busy} onClose={() => setDialogOpen(false)}
       footer={<div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end"><Button variant="secondary" disabled={busy} onClick={() => setDialogOpen(false)}>Cancel</Button><Button disabled={busy} onClick={() => void saveWindow()}>{busy ? 'Saving…' : status === 'OFF' ? 'Turn on Vacation Mode' : 'Save dates'}</Button></div>}>

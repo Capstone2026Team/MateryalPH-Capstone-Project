@@ -158,6 +158,8 @@ class _$VendorReviewRowVisibilityEnumSerializer
 
 class _$VendorReviewRow extends VendorReviewRow {
   @override
+  final String? buyerAvatarUrl;
+  @override
   final String? id;
   @override
   final VendorReviewRowTypeEnum? type;
@@ -192,7 +194,8 @@ class _$VendorReviewRow extends VendorReviewRow {
       (VendorReviewRowBuilder()..update(updates))._build();
 
   _$VendorReviewRow._(
-      {this.id,
+      {this.buyerAvatarUrl,
+      this.id,
       this.type,
       this.ratings,
       this.comment,
@@ -219,6 +222,7 @@ class _$VendorReviewRow extends VendorReviewRow {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is VendorReviewRow &&
+        buyerAvatarUrl == other.buyerAvatarUrl &&
         id == other.id &&
         type == other.type &&
         ratings == other.ratings &&
@@ -239,6 +243,7 @@ class _$VendorReviewRow extends VendorReviewRow {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, buyerAvatarUrl.hashCode);
     _$hash = $jc(_$hash, id.hashCode);
     _$hash = $jc(_$hash, type.hashCode);
     _$hash = $jc(_$hash, ratings.hashCode);
@@ -261,6 +266,7 @@ class _$VendorReviewRow extends VendorReviewRow {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'VendorReviewRow')
+          ..add('buyerAvatarUrl', buyerAvatarUrl)
           ..add('id', id)
           ..add('type', type)
           ..add('ratings', ratings)
@@ -283,6 +289,11 @@ class _$VendorReviewRow extends VendorReviewRow {
 class VendorReviewRowBuilder
     implements Builder<VendorReviewRow, VendorReviewRowBuilder> {
   _$VendorReviewRow? _$v;
+
+  String? _buyerAvatarUrl;
+  String? get buyerAvatarUrl => _$this._buyerAvatarUrl;
+  set buyerAvatarUrl(String? buyerAvatarUrl) =>
+      _$this._buyerAvatarUrl = buyerAvatarUrl;
 
   String? _id;
   String? get id => _$this._id;
@@ -357,6 +368,7 @@ class VendorReviewRowBuilder
   VendorReviewRowBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _buyerAvatarUrl = $v.buyerAvatarUrl;
       _id = $v.id;
       _type = $v.type;
       _ratings = $v.ratings?.toBuilder();
@@ -395,6 +407,7 @@ class VendorReviewRowBuilder
     try {
       _$result = _$v ??
           _$VendorReviewRow._(
+            buyerAvatarUrl: buyerAvatarUrl,
             id: id,
             type: type,
             ratings: _ratings?.build(),

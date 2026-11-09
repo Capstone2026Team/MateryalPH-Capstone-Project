@@ -18,6 +18,7 @@ Name | Type
 `disputesOpen` | number
 `commerceRestrictedUntil` | Date
 `sanctions` | [Array&lt;EnforcementSummary&gt;](EnforcementSummary.md)
+`recordableActions` | Array&lt;string&gt;
 
 ## Example
 
@@ -38,6 +39,7 @@ const example = {
   "disputesOpen": null,
   "commerceRestrictedUntil": null,
   "sanctions": null,
+  "recordableActions": null,
 } satisfies EnforcementSubjectEnvelopeData
 
 console.log(example)

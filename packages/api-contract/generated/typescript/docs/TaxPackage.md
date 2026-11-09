@@ -6,6 +6,7 @@
 
 Name | Type
 ------------ | -------------
+`vendorNames` | { [key: string]: string; }
 `id` | string
 `packageType` | string
 `state` | string
@@ -29,6 +30,7 @@ import type { TaxPackage } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "vendorNames": null,
   "id": null,
   "packageType": null,
   "state": null,

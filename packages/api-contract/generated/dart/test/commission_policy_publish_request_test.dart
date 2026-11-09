@@ -28,5 +28,30 @@ void main() {
       // TODO
     });
 
+    // String vendorMessage
+    test('to test the property `vendorMessage`', () async {
+      // TODO
+    });
+
+    // bool noticeOverride (default value: false)
+    test('to test the property `noticeOverride`', () async {
+      // TODO
+    });
+
+    // String noticeOverrideReason
+    test('to test the property `noticeOverrideReason`', () async {
+      // TODO
+    });
+
+    // String supersedesPolicyId
+    test('to test the property `supersedesPolicyId`', () async {
+      // TODO
+    });
+
+    // bool cancelScheduled (default value: false)
+    test('to test the property `cancelScheduled`', () async {
+      // TODO
+    });
+
   });
 }

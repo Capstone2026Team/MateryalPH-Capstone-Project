@@ -1,8 +1,9 @@
+import { AsyncLoading } from './async-state'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { parseDate, type NotificationItem, type NotificationsApi } from '@materyalph/api-client-ts'
 import { Bell, Settings2 } from 'lucide-react'
 import { Button } from './button'
-import { DateFilter } from './date-filter'
+import { DateFilter, dateFilterPreset } from './date-filter'
 import { EmptyState } from './page-patterns'
 import { useAutomaticRefresh } from './use-automatic-refresh'
 import { notificationError } from './notification-error'
@@ -26,7 +27,7 @@ export function NotificationInbox({ api, audience, disabled, onOpen, onPreferenc
   const controller = useRef<AbortController | null>(null)
   const optimistic = useRef<{ ids: Set<string>; at: string } | null>(null)
   const view = useMemo(() => notificationView(items, filters), [items, filters])
-  const filtersActive = filters.type !== '' || Boolean(filters.from || filters.to)
+  const filtersActive = filters.type !== ''
   const notifyCount = useCallback((snapshot: readonly NotificationItem[]) => {
     const unreadCount = snapshot.filter(item => !item.readAt).length
     window.dispatchEvent(new CustomEvent('materyalph:notification-count', { detail: { audience, unreadCount } }))
@@ -105,7 +106,7 @@ export function NotificationInbox({ api, audience, disabled, onOpen, onPreferenc
     url.searchParams.set('tab', 'inbox')
     window.history.replaceState(window.history.state, '', url)
   }
-  const clearFilters = () => changeFilters({ type: '' })
+  const clearFilters = () => changeFilters({ type: '', ...dateFilterPreset(30), dateLabel: 'Last 30 days' })
 
   async function markAllRead() {
     if (marking || optimistic.current || !view.unread.length || !items[0]) return
@@ -136,7 +137,7 @@ export function NotificationInbox({ api, audience, disabled, onOpen, onPreferenc
   }
 
   const selectClass = 'min-h-11 w-full min-w-0 rounded-control border border-border-default bg-surface-primary px-3 text-sm font-normal text-text-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring'
-  return <div className="min-w-0 rounded-surface border border-border-default bg-surface-primary">
+  return <div className="min-w-0 mp-card">
     <div className="grid gap-4 border-b border-border-default p-4">
       <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="font-semibold">Your inbox</h2><div className="flex flex-wrap items-center gap-2"><Button variant="secondary" disabled={disabled || marking || !loaded || !view.unread.length} onClick={() => void markAllRead()}>{marking ? 'Marking as read…' : 'Mark all as read'}</Button><Button variant="secondary" className="w-11 shrink-0 px-0!" aria-label="Notification preferences" title="Notification preferences" aria-haspopup="dialog" disabled={disabled || marking} onClick={onPreferences}><Settings2 size={18} aria-hidden="true" /></Button></div></div>
       <div className="flex flex-wrap items-end gap-3">
@@ -146,6 +147,6 @@ export function NotificationInbox({ api, audience, disabled, onOpen, onPreferenc
       </div>
     </div>
     {error && <div role="alert" className="grid gap-2 border-b border-border-default p-4"><p>{error}</p><Button variant="secondary" className="justify-self-start" disabled={marking} onClick={() => { setError(''); void refresh() }}>Retry</Button></div>}
-    {!loaded ? !error && <p role="status" className="p-6">Loading notifications…</p> : !view.visible.length ? <EmptyState icon={<Bell size={24} aria-hidden="true" />} message={filtersActive ? 'No notifications match your filters.' : "You're all caught up."} {...(filtersActive ? { action: <Button variant="secondary" onClick={clearFilters}>Clear filters</Button> } : {})} /> : <ul className="divide-y divide-border-default">{view.visible.map(item => <li key={item.id} className="p-4 sm:p-5"><div className="flex flex-wrap items-center gap-2"><h3 className="font-semibold">{item.title}</h3>{!item.readAt && <span className="text-xs font-semibold text-action-primary">Unread</span>}{item.mandatory && <span className="text-xs text-text-secondary">Required notice</span>}</div><p className="mt-2 text-sm text-text-secondary">{item.body}</p><div className="mt-3 flex flex-wrap items-center justify-between gap-3"><time className="text-xs text-text-secondary" dateTime={item.createdAt}>{new Date(item.createdAt).toLocaleString('en-PH', { timeZone: 'Asia/Manila' })} · Manila</time><Button variant="secondary" disabled={disabled || marking} onClick={() => void onOpen(item.id)}>View details<span className="sr-only">: {item.title}</span></Button></div></li>)}</ul>}
+    {!loaded ? !error && <AsyncLoading compact label="Loading notifications…" /> : !view.visible.length ? <EmptyState icon={<Bell size={24} aria-hidden="true" />} message={filtersActive ? 'No notifications match your filters.' : "You're all caught up."} {...(filtersActive ? { action: <Button variant="secondary" onClick={clearFilters}>Clear filters</Button> } : {})} /> : <ul className="divide-y divide-border-default">{view.visible.map(item => <li key={item.id} className="p-4 sm:p-5"><div className="flex flex-wrap items-center gap-2"><h3 className="font-semibold">{item.title}</h3>{!item.readAt && <span className="text-xs font-semibold text-action-primary">Unread</span>}{item.mandatory && <span className="text-xs text-text-secondary">Required notice</span>}</div><p className="mt-2 text-sm text-text-secondary">{item.body}</p><div className="mt-3 flex flex-wrap items-center justify-between gap-3"><time className="text-xs text-text-secondary" dateTime={item.createdAt}>{new Date(item.createdAt).toLocaleString('en-PH', { timeZone: 'Asia/Manila' })} · Manila</time><Button variant="secondary" disabled={disabled || marking} onClick={() => void onOpen(item.id)}>View details<span className="sr-only">: {item.title}</span></Button></div></li>)}</ul>}
   </div>
 }

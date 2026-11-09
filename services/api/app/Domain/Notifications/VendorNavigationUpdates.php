@@ -7,6 +7,7 @@ namespace App\Domain\Notifications;
 use App\Domain\Authorization\AccountAccess;
 use App\Domain\Authorization\VendorTeamMembersQuery;
 use App\Domain\Disputes\DisputeQueries;
+use App\Domain\Invoices\InvoiceQueries;
 use App\Domain\Messaging\ConversationService;
 use App\Domain\Orders\OrderQueries;
 use Illuminate\Http\Request;
@@ -29,8 +30,7 @@ final class VendorNavigationUpdates
             $sections['/disputes'] = app(DisputeQueries::class)->activeCount($request);
         }
         if (in_array('portal.invoices', $scope['permissions'], true)) {
-            $sections['/invoices'] = DB::table('invoice_requests')->where('vendor_organization_id', $scope['organization_id'])
-                ->whereIn('state', ['REQUESTED', 'RETURNED_FOR_CORRECTION'])->count();
+            $sections['/invoices'] = app(InvoiceQueries::class)->pendingVendorCount($request);
         }
         $preferences = DB::table('notification_preferences')->where('user_id', $user->getKey())->pluck('in_app', 'category');
         $notices = DB::table('notifications')->where('user_id', $user->getKey())->whereNull('read_at')->lazyById(200);

@@ -114,7 +114,7 @@ export function AdminPlatformSettingsPage() {
       {!settings.data.canManage && <p className="text-sm text-text-secondary">You can view settings. Changing them requires the Platform Settings management permission.</p>}
       {groups.map(([group, items]) => <section key={group} aria-labelledby={`group-${group}`} className="space-y-4">
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-border-default pb-3"><h2 id={`group-${group}`} className="text-lg font-semibold">{group}</h2><span className="text-sm text-text-secondary">{items.length} {items.length === 1 ? 'setting' : 'settings'}</span></div>
-        <div className="grid gap-5 xl:grid-cols-2">{items.map(item => <article key={item.key} className="flex min-w-0 flex-col gap-5 rounded-surface border border-border-default bg-surface-primary p-5 sm:p-6">
+        <div className="grid gap-5 xl:grid-cols-2">{items.map(item => <article key={item.key} className="flex min-w-0 flex-col gap-5 mp-card mp-card-padded">
           <header className="flex flex-wrap items-start justify-between gap-3"><div className="min-w-0 flex-1"><h3 className="break-words text-base font-semibold">{item.label}</h3><p className="mt-1 text-sm leading-6 text-text-secondary">{item.description}</p></div>
             <StatusBadge label={item.version === 0 ? 'Approved default' : `Version ${item.version}`} tone={item.version === 0 ? 'neutral' : 'info'} /></header>
           <div className="grid gap-4 rounded-control border border-border-default bg-surface-canvas p-4">

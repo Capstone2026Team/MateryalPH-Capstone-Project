@@ -71,9 +71,9 @@ export async function liftSuppression(suppressionId: string, reason: string): Pr
   await new AdminScoreMonitoringApi(config()).liftAdminBadgeSuppression({ suppressionId, idempotencyKey: key(), investigationReasonRequest: { reason } })
 }
 
-export async function listModeration(state: ModerationState, page = 1, range?: CalendarRange): Promise<{ items: ModerationQueueRow[]; total: number; perPage: number }> {
+export async function listModeration(state: ModerationState, page = 1, range?: CalendarRange): Promise<{ items: ModerationQueueRow[]; total: number; perPage: number; counts?: Record<string, number> | undefined }> {
   const response = await new AdminReviewModerationApi(config()).listAdminReviewModeration({ state, page, ...dateQuery(range) })
-  return { items: response.data, total: Number(response.meta.total ?? 0), perPage: response.meta.perPage ?? 20 }
+  return { items: response.data, total: Number(response.meta.total ?? 0), perPage: response.meta.perPage ?? 20, counts: response.meta.counts }
 }
 export async function getModeration(reviewId: string): Promise<ModerationDetail> {
   return (await new AdminReviewModerationApi(config()).getAdminReviewModeration({ reviewId })).data

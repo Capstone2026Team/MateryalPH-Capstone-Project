@@ -1,0 +1,11 @@
+.mp-analytics-change { display: flex; align-items: center; gap: 6px 8px; flex-wrap: wrap; margin-top: auto; padding-top: 14px; font-size: 11px; line-height: 16px; }
+.mp-analytics-change > span:last-child:not(:first-child) { color: var(--mp-color-text-secondary); }
+.mp-metric-card-accent > .mp-analytics-change > span:last-child:not(:first-child) { color: inherit; }
+.mp-analytics-change-badge { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; padding: 3px 7px; border: 1px solid transparent; border-radius: 9999px; font-variant-numeric: tabular-nums; background: var(--mp-color-surface-canvas); color: var(--mp-color-text-secondary); }
+.mp-analytics-change-badge strong { font-weight: 600; }
+.mp-analytics-change[data-direction="up"] .mp-analytics-change-badge { background: color-mix(in srgb, var(--mp-color-status-success) 15%, var(--mp-color-surface-primary)); color: color-mix(in srgb, var(--mp-color-status-success) 55%, var(--mp-color-text-strong)); }
+.mp-analytics-change[data-direction="down"] .mp-analytics-change-badge { background: color-mix(in srgb, var(--mp-color-status-error) 10%, var(--mp-color-surface-primary)); color: color-mix(in srgb, var(--mp-color-status-error) 80%, var(--mp-color-text-strong)); }
+.mp-analytics-change-unavailable { font-size: 10px; }
+@media (forced-colors: active) {
+  .mp-analytics-change-badge { border-color: currentColor; }
+}

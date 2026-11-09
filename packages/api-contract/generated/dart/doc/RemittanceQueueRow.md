@@ -22,6 +22,11 @@ Name | Type | Description | Notes
 **calculationState** | **String** |  |
 **deductionEvidenceState** | **String** |  |
 **reconciliationState** | **String** |  |
+**sourceVersion** | **String** | Version of the assessment source and current reconciliation state for backup approval. |
+**canApproveReconciliation** | **bool** | Current caller has the restricted role and permission and this assessment can be submitted for fresh validation. |
+**reconciliationMethod** | **String** |  | [optional]
+**reconciliationActorRole** | **String** |  | [optional]
+**reconciledAt** | [**DateTime**](DateTime.md) |  | [optional]
 **reviewItemId** | **String** |  | [optional]
 **reason** | **String** |  |
 **createdAt** | [**DateTime**](DateTime.md) |  |

@@ -21,7 +21,7 @@ use Illuminate\Support\Str;
  *                    payment (unique index), REFUND_PENDING with its provider request queued after commit; any
  *                    cash portion is a separate VENDOR_REIMBURSEMENT_PENDING record; the affected lines' original
  *                    VAT and discount allocations are consumed once; posted withholding opens a tax review and a
- *                    filed return is never amended automatically; the commission gets a reviewed credit proposal
+ *                    filed return is never amended automatically; the commission is credited automatically from the executed award
  *   replacement      a REPLACEMENT remedy the Vendor fulfils and the Buyer (or a reasoned Admin review) confirms
  *   full award       before handover the order is cancelled instead of completed
  *   sanctions        a warning and a confirmed metric event take effect; restriction, suspension and ban are

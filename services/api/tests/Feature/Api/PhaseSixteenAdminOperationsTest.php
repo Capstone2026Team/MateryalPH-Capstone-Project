@@ -11,14 +11,19 @@ use App\Domain\Finance\RemittanceAssessmentService;
 use App\Domain\Geography\PlacesProvider;
 use App\Domain\Geography\RadiusPolicy;
 use App\Domain\Geography\RouteProvider;
+use App\Domain\Identity\AuthenticationException;
 use App\Domain\Identity\TokenSessionService;
+use App\Domain\Notifications\NotificationDelivery;
 use App\Domain\Notifications\NotificationPolicy;
+use App\Domain\Notifications\NotificationService;
+use App\Domain\Operations\AutomaticOperationRecovery;
 use App\Domain\Operations\OutboxProcessor;
 use App\Domain\Settings\PlatformSettingRegistry;
 use App\Domain\Settings\PlatformSettings;
 use App\Domain\Vendors\AddressGeocoder;
 use App\Domain\Vendors\VendorFileScanner;
 use App\Jobs\ProcessOutboxEvent;
+use App\Mail\OrderNoticeMail;
 use App\Models\AuthSession;
 use App\Models\User;
 use App\Models\VendorOrganization;
@@ -30,6 +35,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -97,6 +103,107 @@ final class PhaseSixteenAdminOperationsTest extends TestCase
             $this->getJson($path.$separator.'from=2000-01-01&to=2000-01-01')->assertOk();
             $this->getJson($path.$separator.'from=2000-01-02&to=2000-01-01')->assertUnprocessable();
         }
+    }
+
+    public function test_enforcement_proof_is_subject_bound_private_immutable_and_replays_one_notice(): void
+    {
+        Queue::fake();
+        $buyer = $this->buyer();
+        $buyerId = $this->buyerProfileId($buyer);
+        $this->signInAdmin($this->admin('ADMIN_USER_MANAGEMENT'));
+        $subject = '/api/v1/admin/enforcement/subjects/BUYER/'.$buyerId;
+        $this->getJson($subject)->assertOk()->assertJsonPath('data.recordable_actions', ['WARNING', 'TEMPORARY_RESTRICTION', 'SUSPENSION']);
+        $file = $this->post($subject.'/files', ['file' => UploadedFile::fake()->image('proof.png')], ['Accept' => 'application/json'])->assertCreated()->json('data');
+        self::assertSame('PRIVATE', DB::table('files')->where('id', $file['id'])->value('visibility'));
+        $input = ['subject_type' => 'BUYER', 'subject_id' => $buyerId, 'action' => 'WARNING', 'reason' => 'Repeated pickup no-shows confirmed by review.', 'evidence_file_ids' => [$file['id']]];
+        $key = (string) Str::uuid7();
+        $action = $this->keyedPost('/api/v1/admin/enforcement', $input, $key)->assertCreated()->assertJsonPath('data.evidence.0.id', $file['id'])->json('data');
+        $this->keyedPost('/api/v1/admin/enforcement', $input, $key)->assertOk()->assertJsonPath('data.id', $action['id']);
+        self::assertSame(1, DB::table('enforcement_evidence')->where('enforcement_action_id', $action['id'])->count());
+        $notice = DB::table('notifications')->where('user_id', $buyer->id)->where('category', 'SUSPENSION')->sole();
+        self::assertStringContainsString($input['reason'], $notice->body);
+        app(NotificationService::class)->enqueue($notice->id);
+        app(NotificationService::class)->enqueue($notice->id);
+        self::assertSame(1, DB::table('notification_deliveries')->where('notification_id', $notice->id)->where('channel', 'EMAIL')->count());
+        Mail::fake();
+        $deliveryId = (string) DB::table('notification_deliveries')->where('notification_id', $notice->id)->where('channel', 'EMAIL')->value('id');
+        app(NotificationDelivery::class)->send($deliveryId);
+        app(NotificationDelivery::class)->send($deliveryId);
+        self::assertSame('SENT', DB::table('notification_deliveries')->where('id', $deliveryId)->value('state'));
+        Mail::assertSent(OrderNoticeMail::class, 1);
+        $link = $this->getJson('/api/v1/admin/enforcement/'.$action['id'].'/files/'.$file['id'])->assertOk()->json('data.url');
+        $this->get($link)->assertOk()->assertHeader('Content-Type', 'image/png')->assertHeader('X-Content-Type-Options', 'nosniff');
+        $this->get(strtok($link, '?'))->assertForbidden();
+        $this->getJson('/api/v1/admin/enforcement/'.Str::uuid7().'/files/'.$file['id'])->assertNotFound();
+        $this->keyedPost('/api/v1/admin/enforcement', $input)->assertUnprocessable()->assertJsonPath('errors.0.code', 'ENFORCEMENT_EVIDENCE_INVALID');
+        $this->expectAppendOnly(fn () => DB::table('enforcement_evidence')->where('file_id', $file['id'])->delete());
+        $this->signInAdmin($this->admin('ADMIN_SUPPORT'));
+        $this->post($subject.'/files', ['file' => UploadedFile::fake()->image('denied.png')], ['Accept' => 'application/json'])->assertForbidden();
+        $this->get($link)->assertForbidden();
+    }
+
+    public function test_enforcement_rejects_other_subject_or_actor_proof_and_invalid_content(): void
+    {
+        Queue::fake();
+        $buyer = $this->buyer();
+        $buyerId = $this->buyerProfileId($buyer);
+        $admin = $this->admin('ADMIN_USER_MANAGEMENT');
+        $this->signInAdmin($admin);
+        $subject = '/api/v1/admin/enforcement/subjects/BUYER/'.$buyerId;
+        $this->post($subject.'/files', ['file' => UploadedFile::fake()->createWithContent('fake.mp4', 'not video bytes')], ['Accept' => 'application/json'])->assertUnprocessable();
+        $file = $this->post($subject.'/files', ['file' => UploadedFile::fake()->image('proof.png')], ['Accept' => 'application/json'])->assertCreated()->json('data.id');
+        $otherBuyer = $this->buyerProfileId($this->buyer());
+        $this->signInAdmin($admin);
+        $input = ['subject_type' => 'BUYER', 'subject_id' => $otherBuyer, 'action' => 'WARNING', 'reason' => 'Reviewed the confirmed incident evidence.', 'evidence_file_ids' => [$file]];
+        $this->keyedPost('/api/v1/admin/enforcement', $input)->assertUnprocessable()->assertJsonPath('errors.0.code', 'ENFORCEMENT_EVIDENCE_INVALID');
+        $this->signInAdmin($this->admin('ADMIN_USER_MANAGEMENT'));
+        $input['subject_id'] = $buyerId;
+        $this->keyedPost('/api/v1/admin/enforcement', $input)->assertUnprocessable()->assertJsonPath('errors.0.code', 'ENFORCEMENT_EVIDENCE_INVALID');
+        self::assertSame(0, DB::table('enforcement_actions')->count());
+        self::assertSame(0, DB::table('notifications')->where('category', 'SUSPENSION')->count());
+        $this->signInAdmin($admin);
+        $this->mock(VendorFileScanner::class)->shouldReceive('assertClean')->andThrow(new AuthenticationException('FILE_SCANNER_UNAVAILABLE', 'Scanning is unavailable.', 503));
+        $this->post($subject.'/files', ['file' => UploadedFile::fake()->image('scan.png')], ['Accept' => 'application/json'])->assertStatus(503);
+        self::assertSame(1, DB::table('files')->where('purpose', 'ENFORCEMENT_EVIDENCE')->count());
+    }
+
+    public function test_vendor_enforcement_accepts_video_and_pdf_and_notifies_only_the_owner(): void
+    {
+        Queue::fake();
+        [$store, $owner] = $this->pickupStore('Enforcement Proof Store');
+        $this->signInAdmin($this->admin('ADMIN_USER_MANAGEMENT'));
+        $subject = '/api/v1/admin/enforcement/subjects/VENDOR_ORGANIZATION/'.$store->id;
+        $video = UploadedFile::fake()->createWithContent('proof.mp4', (string) file_get_contents(base_path('tests/Fixtures/review-video.mp4')));
+        $pdf = UploadedFile::fake()->createWithContent('justification.pdf', "%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\n%%EOF\n");
+        $ids = [];
+        foreach ([$video, $pdf] as $upload) {
+            $ids[] = $this->post($subject.'/files', ['file' => $upload], ['Accept' => 'application/json'])->assertCreated()->json('data.id');
+        }
+        $action = $this->keyedPost('/api/v1/admin/enforcement', ['subject_type' => 'VENDOR_ORGANIZATION', 'subject_id' => $store->id, 'action' => 'WARNING', 'reason' => 'Store incident reviewed with supporting proof.', 'evidence_file_ids' => $ids])->assertCreated()->json('data');
+        self::assertSame(['video/mp4', 'application/pdf'], array_column($action['evidence'], 'content_type'));
+        $notices = DB::table('notifications')->where('category', 'SUSPENSION')->get();
+        self::assertCount(1, $notices);
+        self::assertSame((int) $owner->id, (int) $notices[0]->user_id);
+        app(NotificationService::class)->enqueue($notices[0]->id);
+        self::assertSame(1, DB::table('notification_deliveries')->where('notification_id', $notices[0]->id)->where('channel', 'EMAIL')->count());
+    }
+
+    public function test_enforcement_tab_counts_respect_filters_before_state_and_pagination(): void
+    {
+        for ($index = 0; $index < 30; $index++) {
+            DB::table('enforcement_actions')->insert(['id' => (string) Str::uuid7(), 'subject_type' => $index === 28 ? 'VENDOR_ORGANIZATION' : 'BUYER',
+                'subject_id' => (string) Str::uuid7(), 'action' => 'WARNING', 'state' => $index === 26 ? 'EFFECTIVE' : 'REFERRED',
+                'source' => $index === 29 ? 'DISPUTE_REFERRAL' : 'DIRECT', 'reason' => 'Queue count fixture.', 'scope' => 'Marketplace activity',
+                'created_at' => $index === 27 ? '2026-09-01T04:00:00Z' : '2026-10-05T04:00:00Z', 'updated_at' => now()]);
+        }
+        $this->signInAdmin($this->admin('ADMIN_USER_MANAGEMENT'));
+        $base = '/api/v1/admin/enforcement?subject_type=BUYER&source=DIRECT&from=2026-10-01&to=2026-10-31';
+        $first = $this->getJson($base.'&state=REFERRED')->assertOk()->assertJsonCount(25, 'data')->assertJsonPath('meta.total', 26)
+            ->assertJsonPath('meta.counts.REFERRED', 26)->assertJsonPath('meta.counts.EFFECTIVE', 1)->assertJsonPath('meta.counts.APPLIED', 0);
+        $this->getJson($base.'&state=REFERRED&page=2')->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('meta.counts', $first->json('meta.counts'));
+        $this->getJson($base.'&state=EFFECTIVE')->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('meta.counts', $first->json('meta.counts'));
+        $this->signInAdmin($this->admin('ADMIN_SUPPORT'));
+        $this->getJson($base)->assertForbidden()->assertJsonMissingPath('meta.counts');
     }
 
     public function test_lower_upload_ceiling_preserves_other_saved_limits_and_published_history(): void
@@ -378,7 +485,10 @@ final class PhaseSixteenAdminOperationsTest extends TestCase
         $this->getJson('/api/v1/admin/integrations')->assertForbidden();
         $super = $this->admin('ADMIN_SUPERADMIN');
         $this->signInAdmin($super);
-        $overview = $this->getJson('/api/v1/admin/integrations')->assertOk();
+        $overview = $this->getJson('/api/v1/admin/integrations')->assertOk()
+            ->assertJsonPath('data.automatic_recovery.status', 'NO_RUN_RECORDED')
+            ->assertJsonPath('data.automatic_recovery.max_cycles', 3)
+            ->assertJsonPath('data.automatic_recovery.delays_minutes', [15, 60, 360]);
         self::assertStringNotContainsString('SECRET_SHOULD_NEVER_APPEAR', $overview->getContent());
         self::assertSame(2, $overview->json('data.queues.dead_letters'));
         $jobs = $this->getJson('/api/v1/admin/integrations/failures?kind=JOBS')->assertOk();
@@ -427,6 +537,78 @@ final class PhaseSixteenAdminOperationsTest extends TestCase
         app(OutboxProcessor::class)->process($safe);
         self::assertNotNull(DB::table('outbox_events')->where('id', $safe)->value('processed_at'));
         self::assertTrue(DB::table('operation_retries')->where('target_reference', $safeJob)->exists());
+    }
+
+    public function test_platform_monitoring_reports_recovery_limits_scheduler_health_and_system_activity(): void
+    {
+        $this->signInAdmin($this->admin('ADMIN_SUPERADMIN'));
+        $scheduled = $this->deadLetter('NOTIFICATIONS_CHANGED');
+        $limited = $this->deadLetter('NOTIFICATIONS_CHANGED');
+        $protected = $this->deadLetter('PAYMENT_REFUND_REQUESTED');
+        DB::table('outbox_events')->where('id', $limited)->update(['automatic_recovery_count' => 3]);
+        $rows = collect($this->getJson('/api/v1/admin/integrations/failures')->assertOk()->json('data'))->keyBy('reference');
+        self::assertSame('SCHEDULED', $rows[$scheduled]['recovery_status']);
+        self::assertNotNull($rows[$scheduled]['next_retry_at']);
+        self::assertSame('LIMIT_REACHED', $rows[$limited]['recovery_status']);
+        self::assertNull($rows[$limited]['next_retry_at']);
+        self::assertSame('OWNING_PROCESS', $rows[$protected]['recovery_status']);
+        DB::table('outbox_events')->where('id', $scheduled)->update(['updated_at' => now()->subHour()]);
+        self::assertSame(1, app(AutomaticOperationRecovery::class)->sweep());
+        $this->getJson('/api/v1/admin/integrations/retries')->assertOk()->assertJsonPath('data.0.actor', 'Automatic recovery')->assertJsonPath('data.0.actor_role', 'SYSTEM');
+        $run = (string) Str::uuid7();
+        DB::table('scheduled_task_runs')->insert(['id' => $run, 'task' => AutomaticOperationRecovery::COMMAND, 'outcome' => 'SUCCEEDED', 'started_at' => now()->subMinutes(10)]);
+        $this->getJson('/api/v1/admin/integrations')->assertOk()->assertJsonPath('data.automatic_recovery.status', 'OVERDUE');
+        DB::table('scheduled_task_runs')->where('id', $run)->update(['outcome' => 'FAILED', 'started_at' => now()]);
+        $this->getJson('/api/v1/admin/integrations')->assertOk()->assertJsonPath('data.automatic_recovery.status', 'FAILED');
+        DB::table('scheduled_task_runs')->where('id', $run)->update(['outcome' => 'SUCCEEDED']);
+        $this->getJson('/api/v1/admin/integrations')->assertOk()->assertJsonPath('data.automatic_recovery.status', 'HEALTHY');
+    }
+
+    public function test_vps_provider_catalog_reports_brevo_cloudinary_bouncer_backblaze_firebase_and_recaptcha_safely(): void
+    {
+        $this->signInAdmin($this->admin('ADMIN_SUPERADMIN'));
+        $this->app->instance('env', 'staging');
+        $hidden = 'test-only-configuration-marker';
+        config()->set([
+            'app.url' => 'https://materyalph26-api.duckdns.org',
+            'mail.default' => 'smtp', 'mail.mailers.smtp.host' => 'smtp-relay.brevo.com', 'mail.mailers.smtp.username' => $hidden, 'mail.mailers.smtp.password' => $hidden,
+            'filesystems.disks.s3.endpoint' => 'https://s3.example.backblazeb2.com', 'filesystems.disks.s3.key' => $hidden, 'filesystems.disks.s3.secret' => $hidden, 'filesystems.disks.s3.bucket' => $hidden,
+            'services.cloudinary.cloud_name' => $hidden, 'services.cloudinary.api_key' => $hidden, 'services.cloudinary.api_secret' => $hidden,
+            'malware.driver' => 'bouncer', 'malware.bouncer_api_key' => $hidden,
+            'notifications.push_driver' => 'fcm', 'notifications.firebase_project_id' => $hidden, 'notifications.firebase_credentials_base64' => $hidden,
+            'materyalph.bot_protection.enabled' => true, 'services.recaptcha.project_id' => $hidden, 'services.recaptcha.api_key' => $hidden,
+            'materyalph.bot_protection.site_keys.WEB' => $hidden, 'materyalph.bot_protection.site_keys.ADMIN_WEB' => $hidden,
+        ]);
+        $response = $this->getJson('/api/v1/admin/integrations')->assertOk()->assertJsonPath('data.environment.deployment', 'HOSTINGER_VPS');
+        $services = collect($response->json('data.integrations'))->keyBy('key');
+        foreach (['email', 'push', 'backblaze', 'cloudinary', 'bouncer', 'recaptcha'] as $provider) {
+            self::assertSame('HEALTHY', $services[$provider]['status'], $provider);
+        }
+        self::assertSame('Brevo transactional email', $services['email']['label']);
+        self::assertSame('Firebase Cloud Messaging', $services['push']['label']);
+        self::assertStringNotContainsString($hidden, $response->getContent());
+        self::assertStringNotContainsString('smtp-relay.brevo.com', $response->getContent());
+
+        config()->set(['mail.mailers.smtp.host' => 'mailpit', 'filesystems.disks.s3.endpoint' => 'http://minio:9000',
+            'services.cloudinary.api_secret' => '', 'malware.driver' => 'clamscan', 'notifications.firebase_credentials_base64' => '', 'notifications.firebase_credentials' => '', 'materyalph.bot_protection.enabled' => false]);
+        $incomplete = collect($this->getJson('/api/v1/admin/integrations')->assertOk()->json('data.integrations'))->keyBy('key');
+        foreach (['email', 'push', 'backblaze', 'cloudinary', 'bouncer', 'recaptcha'] as $provider) {
+            self::assertSame('NOT_CONFIGURED', $incomplete[$provider]['status'], $provider);
+        }
+    }
+
+    public function test_local_render_and_unapproved_hosts_are_not_vps_provider_health(): void
+    {
+        $this->signInAdmin($this->admin('ADMIN_SUPERADMIN'));
+        foreach ([['testing', 'https://materyalph26-api.duckdns.org'], ['staging', 'https://example.onrender.com'], ['staging', 'https://materyalph26-api.duckdns.org.example.com']] as [$environment, $url]) {
+            $this->app->instance('env', $environment);
+            config()->set('app.url', $url);
+            $response = $this->getJson('/api/v1/admin/integrations')->assertOk()->assertJsonPath('data.environment.deployment', 'OTHER');
+            $services = collect($response->json('data.integrations'))->keyBy('key');
+            self::assertFalse($services->has('cloudinary'));
+            self::assertFalse($services->has('backblaze'));
+            self::assertSame('Email delivery', $services['email']['label']);
+        }
     }
 
     private function failedOutboxJob(string $event): string

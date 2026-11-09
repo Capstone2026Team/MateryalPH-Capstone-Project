@@ -459,7 +459,7 @@ class _ProductFinalizationSheetState extends State<ProductFinalizationSheet> {
                         child: const Text('Retry destination'),
                       ),
                     ),
-                  if (_deliveryLoading) const LinearProgressIndicator(),
+                  if (_deliveryLoading) const BuyerLoadingProgress(),
                   if (_delivery != null)
                     DeliveryPreviewPanel(delivery: _delivery!),
                   if (_deliveryError != null || _delivery?.status == 'BLOCKED')
@@ -523,7 +523,7 @@ class _ProductFinalizationSheetState extends State<ProductFinalizationSheet> {
                       ? const SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                          child: BuyerLoadingIndicator(strokeWidth: 2),
                         )
                       : Text(widget.buy ? 'Checkout' : 'Add to Cart'),
                 ),

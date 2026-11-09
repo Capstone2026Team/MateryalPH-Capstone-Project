@@ -32,5 +32,11 @@ void main() {
       // TODO
     });
 
+    // Completed principal refunds and confirmed cash reimbursements for the remaining noncancelled, not fully refunded sales in this confirmation-date range. Subtract once from materials plus delivery to reconcile the product report and Net sales.
+    // int refundsCentavos
+    test('to test the property `refundsCentavos`', () async {
+      // TODO
+    });
+
   });
 }

@@ -483,6 +483,8 @@ class _$OrderDetail extends OrderDetail {
   @override
   final OrderBuyerRef? buyer;
   @override
+  final OrderLocationMap? locationMap;
+  @override
   final AutoAcceptOutcome? autoAccept;
   @override
   final BuiltList<OrderReservation>? reservations;
@@ -537,6 +539,7 @@ class _$OrderDetail extends OrderDetail {
       this.availableActions,
       this.payment,
       this.buyer,
+      this.locationMap,
       this.autoAccept,
       this.reservations,
       this.permissions,
@@ -588,6 +591,7 @@ class _$OrderDetail extends OrderDetail {
         availableActions == other.availableActions &&
         payment == other.payment &&
         buyer == other.buyer &&
+        locationMap == other.locationMap &&
         autoAccept == other.autoAccept &&
         reservations == other.reservations &&
         permissions == other.permissions &&
@@ -632,6 +636,7 @@ class _$OrderDetail extends OrderDetail {
     _$hash = $jc(_$hash, availableActions.hashCode);
     _$hash = $jc(_$hash, payment.hashCode);
     _$hash = $jc(_$hash, buyer.hashCode);
+    _$hash = $jc(_$hash, locationMap.hashCode);
     _$hash = $jc(_$hash, autoAccept.hashCode);
     _$hash = $jc(_$hash, reservations.hashCode);
     _$hash = $jc(_$hash, permissions.hashCode);
@@ -678,6 +683,7 @@ class _$OrderDetail extends OrderDetail {
           ..add('availableActions', availableActions)
           ..add('payment', payment)
           ..add('buyer', buyer)
+          ..add('locationMap', locationMap)
           ..add('autoAccept', autoAccept)
           ..add('reservations', reservations)
           ..add('permissions', permissions)
@@ -841,6 +847,12 @@ class OrderDetailBuilder implements Builder<OrderDetail, OrderDetailBuilder> {
   OrderBuyerRefBuilder get buyer => _$this._buyer ??= OrderBuyerRefBuilder();
   set buyer(OrderBuyerRefBuilder? buyer) => _$this._buyer = buyer;
 
+  OrderLocationMapBuilder? _locationMap;
+  OrderLocationMapBuilder get locationMap =>
+      _$this._locationMap ??= OrderLocationMapBuilder();
+  set locationMap(OrderLocationMapBuilder? locationMap) =>
+      _$this._locationMap = locationMap;
+
   AutoAcceptOutcomeBuilder? _autoAccept;
   AutoAcceptOutcomeBuilder get autoAccept =>
       _$this._autoAccept ??= AutoAcceptOutcomeBuilder();
@@ -939,6 +951,7 @@ class OrderDetailBuilder implements Builder<OrderDetail, OrderDetailBuilder> {
       _availableActions = $v.availableActions?.toBuilder();
       _payment = $v.payment?.toBuilder();
       _buyer = $v.buyer?.toBuilder();
+      _locationMap = $v.locationMap?.toBuilder();
       _autoAccept = $v.autoAccept?.toBuilder();
       _reservations = $v.reservations?.toBuilder();
       _permissions = $v.permissions?.toBuilder();
@@ -1006,6 +1019,7 @@ class OrderDetailBuilder implements Builder<OrderDetail, OrderDetailBuilder> {
             availableActions: _availableActions?.build(),
             payment: _payment?.build(),
             buyer: _buyer?.build(),
+            locationMap: _locationMap?.build(),
             autoAccept: _autoAccept?.build(),
             reservations: _reservations?.build(),
             permissions: _permissions?.build(),
@@ -1057,6 +1071,8 @@ class OrderDetailBuilder implements Builder<OrderDetail, OrderDetailBuilder> {
         _payment?.build();
         _$failedField = 'buyer';
         _buyer?.build();
+        _$failedField = 'locationMap';
+        _locationMap?.build();
         _$failedField = 'autoAccept';
         _autoAccept?.build();
         _$failedField = 'reservations';

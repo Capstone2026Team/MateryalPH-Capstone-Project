@@ -53,13 +53,20 @@ async function vendorFixture(page: Page) {
       permissions: ['portal.products', 'portal.vehicles', 'catalog.manage', 'inventory.view', 'inventory.manage', 'inventory.settings', 'auto_accept.configure', 'vehicles.manage'],
       verification: { status: 'APPROVED' }, setup: { status: 'COMPLETED' }, activation: { status: 'ACTIVE', marketplace_discoverability_status: 'DISCOVERABLE' }, sections: {},
     })
+    if (path === '/vendor/catalog/taxonomy') return fulfil(route, { categories: [], units: [], tags: [], attribute_definitions: [], tax_categories: [], allowed_tax_categories: [], limits: {} })
+    if (path === '/vendor/catalog/listings/rmc') return fulfil(route, {
+      id: 'rmc', display_name: 'Ready-mixed concrete', vendor_sku: 'RMC', status: 'DRAFT', lock_version: 1,
+      material: { id: 'material-rmc', code: 'READY_MIXED_CONCRETE', name: 'Ready-mixed concrete', regulated: false },
+      variants: [{ id: 'rmc-3000', sku: 'RMC-3000', label: '3000 PSI', unit_id: 'cum', unit_code: 'CUM', pack_quantity: '1', active: true, attributes: { compressive_strength_psi: '3000' }, weight_kg: '2400', lock_version: 1, volume_tiers: [], inventory: { quantity_on_hand: '6', available_to_sell: '6', hard_reserved_quantity: '0' } }],
+      media: [], compliance_submissions: [], status_history: [], blockers: [], completion: { steps: [] }, permissions: { can_manage: true },
+    })
     if (path === '/vendor/inventory/items' && method === 'GET') return fulfil(route, rows, ledgerMeta)
     if (path === '/vendor/inventory/settings') return fulfil(route, { reminder_local_time: '08:00', email_reminders: true, in_app_reminders: true, timezone: 'Asia/Manila', reminder_days: [7, 12], hide_after_days: 15, lock_version: 1, can_edit: true })
     if (path === '/vendor/inventory/items/v1' && method === 'PATCH') {
       return route.fulfill({ status: 409, contentType: 'application/json', body: JSON.stringify({ data: null, meta: {}, errors: [{ code: 'STALE_VERSION', message: 'Someone else changed this row.', details: { current: { ...rows[0], lock_version: 5, inventory: { ...rows[0]!.inventory, quantity_on_hand: '140.0000', available_to_sell: '120.0000' } } } }] }) })
     }
     if (path === '/vendor/auto-accept/policies/v1') return fulfil(route, { listing_variant_id: 'v1', listing_id: 'listing-v1', listing_name: rows[0]!.listing_name, listing_status: 'ACTIVE', variant_label: '40 kg bag', sku: 'V1-SKU', unit_code: 'BAG', stock: { quantity_on_hand: '120.0000', hard_reserved_quantity: '20.0000', soft_held_quantity: '12.0000', available_to_sell: '100.0000' }, policy: { ...rows[0]!.auto_accept, last_editor: 'Test Owner' }, versions: [], scope: { item_based_only: true, nrpc_excluded: true, project_based_excluded: true, rule_version: 'auto-accept.item-based.v1' }, permissions: { can_configure: true, can_update_allotment: true } })
-    if (path === '/vendor/fleet/vehicles' && method === 'GET') return fulfil(route, [vehicle('truck-1', 'Box truck'), vehicle('mixer-1', 'Transit mixer', { vehicle_type: 'CONCRETE_MIXER', capacity_kg: 24000, mixer_capacity_m3: 6, cargo_length_m: null, cargo_width_m: null, cargo_height_m: null }), vehicle('van-1', 'Spare van', { vehicle_category: 'VAN', vehicle_type: 'MID_SIZE_CARGO_VAN', heavy_classification: 'NOT_HEAVY', available: false, eligibility: { eligible: false, reasons: ['VEHICLE_UNAVAILABLE'] } })], { scope: 'ORGANIZATION', summary: { configurations: 3, total_vehicles: 6, active_vehicles: 6, available_vehicles: 4, out_for_delivery_vehicle_assignments: 2, out_for_delivery_orders: 1 }, delivery: { fulfillment_method: 'BOTH', delivery_enabled: true, service_radius_km: 50 }, permissions: { can_manage: true }, limits: { max_vehicles: 50 } })
+    if (path === '/vendor/fleet/vehicles' && method === 'GET') return fulfil(route, [vehicle('truck-1', 'Box truck'), vehicle('mixer-1', 'Transit mixer', { vehicle_type: 'CONCRETE_MIXER', capacity_kg: 24000, mixer_capacity_m3: 6, cargo_length_m: null, cargo_width_m: null, cargo_height_m: null }), vehicle('van-1', 'Spare van', { vehicle_category: 'VAN', vehicle_type: 'MID_SIZE_CARGO_VAN', heavy_classification: 'NOT_HEAVY', available: false, eligibility: { eligible: false, reasons: ['VEHICLE_UNAVAILABLE'] } })], { scope: 'ORGANIZATION', delivery_setup: { staff_ready: true, vehicle_ready: true, pickup_location_ready: true, service_settings_ready: true, ready: true, enabled: true, available: true, active_delivery_obligations: 0 }, summary: { configurations: 3, total_vehicles: 6, active_vehicles: 6, available_vehicles: 4, out_for_delivery_vehicle_assignments: 2, out_for_delivery_orders: 1 }, delivery: { fulfillment_method: 'BOTH', delivery_enabled: true, service_radius_km: 50 }, permissions: { can_manage: true }, limits: { max_vehicles: 50 } })
     if (path.startsWith('/vendor/fleet/vehicle-images/')) return fulfil(route, { url: 'https://files.example.test/truck.svg', expires_at: '2026-10-01T00:05:00Z' })
     return fulfil(route, {})
   })
@@ -81,8 +88,9 @@ async function fits(page: Page) {
 async function capture(page: Page, name: string) {
   const directory = resolve('../../docs/design/evidence/portal-standardization')
   mkdirSync(directory, { recursive: true })
-  await page.addStyleTag({ content: 'html, body, .portal-layout, .portal-workspace { height: auto !important; max-height: none !important; overflow: visible !important; } .portal-workspace > header { position: static !important; }' })
+  const style = await page.addStyleTag({ content: 'html, body, .portal-layout, .portal-workspace { height: auto !important; max-height: none !important; overflow: visible !important; } .portal-workspace > header { position: static !important; }' })
   await page.screenshot({ path: resolve(directory, `inventory-${page.viewportSize()!.width}-${name}.png`), fullPage: true })
+  await style.evaluate(element => element.remove())
 }
 
 test('the inventory ledger keeps its header and identifiers fixed and scrolls only inside its own region', async ({ page }) => {
@@ -91,6 +99,8 @@ test('the inventory ledger keeps its header and identifiers fixed and scrolls on
   const ledger = page.viewportSize()!.width >= 1024 ? page.getByRole('table', { name: 'Inventory ledger' }) : page.locator('div[aria-label="Inventory ledger"]')
   await expect(ledger).toBeVisible()
   await expect(page.getByRole('tab', { name: 'Inventory' })).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByRole('region', { name: 'Stock ledger' }).getByText('3 variants on this page')).toBeVisible()
+  if (page.viewportSize()!.width >= 640) expect((await page.getByLabel('Inventory summary').boundingBox())!.height).toBeLessThanOrEqual(104)
   await page.getByText('Stock confirmation alerts', { exact: true }).click()
   const band = page.getByRole('region', { name: /need a stock confirmation/ })
   await expect(band.getByText('Hidden from Buyers', { exact: true })).toBeVisible()
@@ -106,6 +116,8 @@ test('the inventory ledger keeps its header and identifiers fixed and scrolls on
   })
   expect(layout.headPosition).toBe('sticky')
   expect(layout.firstColumnPosition).toBe('sticky')
+  await expect(ledger.getByRole('columnheader')).toHaveCount(5)
+  await expect(ledger.getByRole('rowheader').first()).toContainText('V1-SKU')
   if (page.viewportSize()!.width === 1024) expect(layout.scrolls, 'narrow widths scroll the ledger inside its own region').toBe(true)
   } else {
     await expect(ledger.getByRole('article')).toHaveCount(3)
@@ -113,6 +125,35 @@ test('the inventory ledger keeps its header and identifiers fixed and scrolls on
   }
   await fits(page)
   await capture(page, 'inventory-ledger')
+})
+
+test('compact inventory keeps long identifiers, confirmation states and independent controls readable', async ({ page }) => {
+  const calls = await vendorFixture(page)
+  const samples = [
+    { ...rows[0], stock_confirmation: schedule('CONFIRMED', '2026-11-05T12:52:00Z', '2026-11-20T12:52:00Z') },
+    { ...rows[1], stock_confirmation: schedule('OVERDUE', '2026-10-01T00:00:00Z', '2026-10-16T00:00:00Z') },
+    { ...rows[2], sku: 'STEELREINFORCEMENTSTRUCTURAL12MM6000MMGALVANIZED', listing_status: 'INACTIVE', inventory: null, stock_confirmation: { state: 'NOT_CONFIRMED', confirmed_at: null, first_reminder_at: null, final_reminder_at: null, hide_at: null, days_since_confirmation: null } },
+  ]
+  await page.route('**/api/v1/vendor/inventory/items?*', route => fulfil(route, samples, { ...ledgerMeta, stale_listings: { count: 0, items: [] } }))
+  await page.goto('/products/inventory')
+  const ledger = page.viewportSize()!.width >= 1024 ? page.getByRole('table', { name: 'Inventory ledger' }) : page.locator('div[aria-label="Inventory ledger"]')
+  await expect(ledger.getByText('Confirmed', { exact: true })).toBeVisible()
+  await expect(ledger.getByText('Not confirmed', { exact: true })).toBeVisible()
+  await expect(ledger.getByText('No count yet', { exact: true })).toBeVisible()
+  await expect(ledger.getByText('Inactive', { exact: true })).toBeVisible()
+  await expect(ledger.getByText('STEELREINFORCEMENTSTRUCTURAL12MM6000MMGALVANIZED', { exact: true })).toBeVisible()
+  const product = ledger.getByRole('button', { name: /^View inventory details for Portland/ })
+  expect((await product.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+  await fits(page)
+  await page.getByRole('button', { name: 'Confirm counts on this page' }).click()
+  const confirm = page.getByRole('dialog', { name: 'Confirm these stock counts?' })
+  await expect(confirm.getByRole('button', { name: 'Confirm 2 counts' })).toBeVisible()
+  await confirm.getByRole('button', { name: 'Cancel' }).click()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  const style = await page.addStyleTag({ content: 'html, body, .portal-layout, .portal-workspace { height: auto !important; max-height: none !important; overflow: visible !important; } .portal-workspace > header { position: static !important; }' })
+  await page.screenshot({ path: test.info().outputPath('compact-inventory.png'), fullPage: true })
+  await style.evaluate(element => element.remove())
+  expect(calls.filter(call => call.path.includes('/inventory/'))).toHaveLength(0)
 })
 
 test('an inventory edit dialog conflict keeps typed values and shows the saved row', async ({ page }) => {
@@ -156,7 +197,8 @@ test('vehicles open with an overview and retain per-vehicle editing and validati
   const summary = page.getByRole('region', { name: 'Fleet overview' })
   await expect(summary.getByText('Total vehicles', { exact: true })).toBeVisible()
   await summary.getByRole('button', { name: 'About In use', exact: true }).focus()
-  await expect(summary.getByText('Vehicle assignments across 1 order Out for Delivery')).toBeVisible()
+  await expect(summary.getByRole('tooltip')).toContainText('1 order Out for Delivery')
+  await page.getByRole('heading', { name: 'Vehicles', exact: true }).click()
   await expect(summary.getByText('6', { exact: true })).toHaveCount(2)
   await expect(summary.getByText('4', { exact: true })).toBeVisible()
   await expect(summary.getByText('2', { exact: true })).toBeVisible()
@@ -166,7 +208,14 @@ test('vehicles open with an overview and retain per-vehicle editing and validati
   await fits(page)
   await page.screenshot({ path: test.info().outputPath('vehicles-overview.png'), fullPage: true })
   await page.getByRole('button', { name: 'Edit Transit mixer' }).click()
-  await expect(page.getByRole('group', { name: /Vehicle 2/ }).getByText(/Cargo dimensions: Not applicable/)).toBeVisible()
+  const mixerDialog = page.getByRole('dialog', { name: 'Edit Transit mixer' })
+  await expect(mixerDialog.getByLabel('Mixer Capacity (m³)')).toHaveValue('6')
+  await expect(mixerDialog.getByLabel('Cargo Length (m)')).toHaveCount(0)
+  await expect(mixerDialog.getByRole('heading', { name: 'Edit Transit mixer' })).toBeFocused()
+  const modal = await mixerDialog.boundingBox()
+  expect(modal!.width).toBeLessThanOrEqual(page.viewportSize()!.width)
+  if (page.viewportSize()!.width >= 1280) expect(modal!.width).toBeGreaterThanOrEqual(1000)
+  await page.screenshot({ path: test.info().outputPath('vehicles-mixer-dialog.png'), fullPage: true })
   await page.getByRole('button', { name: 'Back to vehicles' }).click()
   await page.getByRole('button', { name: 'Edit Box truck' }).click()
   await page.getByRole('group', { name: /Vehicle 1/ }).getByLabel('Maximum Delivery Distance (km)').fill('0')
@@ -182,5 +231,26 @@ test('vehicles open with an overview and retain per-vehicle editing and validati
   await fits(page)
   await page.getByRole('button', { name: 'Discard changes' }).click()
   await expect(page.getByRole('heading', { name: 'Your vehicles' })).toBeVisible()
+  await expect(page.getByRole('article')).toHaveCount(3)
+})
+
+test('ready-mix listing opens a prefilled wide mixer editor with Vendor-confirmed payload and access', async ({ page }) => {
+  await vendorFixture(page)
+  await page.goto('/vehicles?listing=rmc')
+  const dialog = page.getByRole('dialog', { name: 'Add vehicle', exact: true })
+  await expect(dialog).toBeVisible()
+  await expect(dialog.getByLabel('Mixer Capacity (m³)')).toHaveValue('6')
+  await expect(dialog.getByLabel('Maximum Weight Capacity (kg)')).toHaveValue('')
+  await expect(dialog.getByText('Suggested payload: 14,400 kg')).toBeVisible()
+  await dialog.getByRole('button', { name: 'Use suggested payload' }).click()
+  await expect(dialog.getByLabel('Maximum Weight Capacity (kg)')).toHaveValue('14400')
+  await dialog.getByRole('button', { name: 'Confirm heavy vehicle' }).click()
+  await expect(dialog.getByLabel('Heavy Vehicle Classification')).toHaveValue('HEAVY')
+  await dialog.getByRole('checkbox', { name: /I checked this mixer capacity/ }).check()
+  await fits(page)
+  await page.screenshot({ path: test.info().outputPath('vehicles-ready-mix-prefill.png'), fullPage: true })
+  await dialog.getByRole('button', { name: 'Discard changes' }).click()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(page.getByRole('link', { name: 'Return to the ready-mix listing' })).toHaveAttribute('href', '/products/rmc?step=1')
   await expect(page.getByRole('article')).toHaveCount(3)
 })

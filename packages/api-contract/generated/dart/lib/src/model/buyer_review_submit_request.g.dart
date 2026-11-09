@@ -7,6 +7,9 @@ part of 'buyer_review_submit_request.dart';
 // **************************************************************************
 
 const BuyerReviewSubmitRequestDisplayNameChoiceEnum
+    _$buyerReviewSubmitRequestDisplayNameChoiceEnum_FULL_NAME =
+    const BuyerReviewSubmitRequestDisplayNameChoiceEnum._('FULL_NAME');
+const BuyerReviewSubmitRequestDisplayNameChoiceEnum
     _$buyerReviewSubmitRequestDisplayNameChoiceEnum_FIRST_NAME_LAST_INITIAL =
     const BuyerReviewSubmitRequestDisplayNameChoiceEnum._(
         'FIRST_NAME_LAST_INITIAL');
@@ -17,6 +20,8 @@ const BuyerReviewSubmitRequestDisplayNameChoiceEnum
 BuyerReviewSubmitRequestDisplayNameChoiceEnum
     _$buyerReviewSubmitRequestDisplayNameChoiceEnumValueOf(String name) {
   switch (name) {
+    case 'FULL_NAME':
+      return _$buyerReviewSubmitRequestDisplayNameChoiceEnum_FULL_NAME;
     case 'FIRST_NAME_LAST_INITIAL':
       return _$buyerReviewSubmitRequestDisplayNameChoiceEnum_FIRST_NAME_LAST_INITIAL;
     case 'VERIFIED_BUYER':
@@ -29,6 +34,7 @@ BuyerReviewSubmitRequestDisplayNameChoiceEnum
 final BuiltSet<BuyerReviewSubmitRequestDisplayNameChoiceEnum>
     _$buyerReviewSubmitRequestDisplayNameChoiceEnumValues = BuiltSet<
         BuyerReviewSubmitRequestDisplayNameChoiceEnum>(const <BuyerReviewSubmitRequestDisplayNameChoiceEnum>[
+  _$buyerReviewSubmitRequestDisplayNameChoiceEnum_FULL_NAME,
   _$buyerReviewSubmitRequestDisplayNameChoiceEnum_FIRST_NAME_LAST_INITIAL,
   _$buyerReviewSubmitRequestDisplayNameChoiceEnum_VERIFIED_BUYER,
 ]);
@@ -41,10 +47,12 @@ class _$BuyerReviewSubmitRequestDisplayNameChoiceEnumSerializer
     implements
         PrimitiveSerializer<BuyerReviewSubmitRequestDisplayNameChoiceEnum> {
   static const Map<String, Object> _toWire = const <String, Object>{
+    'FULL_NAME': 'FULL_NAME',
     'FIRST_NAME_LAST_INITIAL': 'FIRST_NAME_LAST_INITIAL',
     'VERIFIED_BUYER': 'VERIFIED_BUYER',
   };
   static const Map<Object, String> _fromWire = const <Object, String>{
+    'FULL_NAME': 'FULL_NAME',
     'FIRST_NAME_LAST_INITIAL': 'FIRST_NAME_LAST_INITIAL',
     'VERIFIED_BUYER': 'VERIFIED_BUYER',
   };
@@ -72,7 +80,7 @@ class _$BuyerReviewSubmitRequestDisplayNameChoiceEnumSerializer
 
 class _$BuyerReviewSubmitRequest extends BuyerReviewSubmitRequest {
   @override
-  final BuyerReviewSubmitRequestDisplayNameChoiceEnum displayNameChoice;
+  final BuyerReviewSubmitRequestDisplayNameChoiceEnum? displayNameChoice;
   @override
   final BuyerReviewSubmitRequestVendorRating? vendorRating;
   @override
@@ -83,7 +91,7 @@ class _$BuyerReviewSubmitRequest extends BuyerReviewSubmitRequest {
       (BuyerReviewSubmitRequestBuilder()..update(updates))._build();
 
   _$BuyerReviewSubmitRequest._(
-      {required this.displayNameChoice, this.vendorRating, this.productReviews})
+      {this.displayNameChoice, this.vendorRating, this.productReviews})
       : super._();
   @override
   BuyerReviewSubmitRequest rebuild(
@@ -183,10 +191,7 @@ class BuyerReviewSubmitRequestBuilder
     try {
       _$result = _$v ??
           _$BuyerReviewSubmitRequest._(
-            displayNameChoice: BuiltValueNullFieldError.checkNotNull(
-                displayNameChoice,
-                r'BuyerReviewSubmitRequest',
-                'displayNameChoice'),
+            displayNameChoice: displayNameChoice,
             vendorRating: _vendorRating?.build(),
             productReviews: _productReviews?.build(),
           );

@@ -211,7 +211,7 @@ class _SiteInspectionSheetState extends State<SiteInspectionSheet> {
                   ? const SizedBox(
                       width: 20,
                       height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      child: BuyerLoadingIndicator(strokeWidth: 2),
                     )
                   : const Text('Send request'),
             ),

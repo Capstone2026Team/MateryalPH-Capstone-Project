@@ -35,6 +35,14 @@ import {
  */
 export interface ConversationView {
     /**
+     * Stable opaque Buyer identifier within the current store. Vendor inbox pagination groups on this identifier before selecting rows.
+     */
+    buyerThreadId?: string;
+    /**
+     * Number of currently authorized contexts represented by a grouped Vendor inbox row; one for an individual context.
+     */
+    conversationCount?: number;
+    /**
      *
      */
     id: string;
@@ -71,7 +79,7 @@ export interface ConversationView {
      */
     channel: string;
     /**
-     *
+     * Locked reference for this conversation. Vendor Work Package views include only the store allocation or its order snapshot items; the complete immutable Buyer original stays retained internally and available to its Buyer.
      */
     lockedReference: { [key: string]: any; };
     /**
@@ -150,6 +158,26 @@ export interface ConversationView {
      *
      */
     legacyPage?: number;
+    /**
+     * Buyer activity awaiting a manual store reply. Automated replies never clear it.
+     */
+    needsHumanResponse?: boolean;
+    /**
+     *
+     */
+    canConfigureAutomatedResponse?: boolean;
+    /**
+     *
+     */
+    canPrepareOrderQuotation?: boolean;
+    /**
+     *
+     */
+    orderLockVersion?: number;
+    /**
+     *
+     */
+    pendingOrderId?: string;
 }
 
 
@@ -201,6 +229,8 @@ export function ConversationViewFromJSONTyped(json: any, ignoreDiscriminator: bo
     }
     return {
 
+        'buyerThreadId': json['buyer_thread_id'] == null ? undefined : json['buyer_thread_id'],
+        'conversationCount': json['conversation_count'] == null ? undefined : json['conversation_count'],
         'id': json['id'],
         'purpose': json['purpose'],
         'contextType': json['context_type'],
@@ -230,6 +260,11 @@ export function ConversationViewFromJSONTyped(json: any, ignoreDiscriminator: bo
         'legacyConversationIds': json['legacy_conversation_ids'] == null ? undefined : json['legacy_conversation_ids'],
         'legacyHasMore': json['legacy_has_more'] == null ? undefined : json['legacy_has_more'],
         'legacyPage': json['legacy_page'] == null ? undefined : json['legacy_page'],
+        'needsHumanResponse': json['needs_human_response'] == null ? undefined : json['needs_human_response'],
+        'canConfigureAutomatedResponse': json['can_configure_automated_response'] == null ? undefined : json['can_configure_automated_response'],
+        'canPrepareOrderQuotation': json['can_prepare_order_quotation'] == null ? undefined : json['can_prepare_order_quotation'],
+        'orderLockVersion': json['order_lock_version'] == null ? undefined : json['order_lock_version'],
+        'pendingOrderId': json['pending_order_id'] == null ? undefined : json['pending_order_id'],
     };
 }
 
@@ -244,6 +279,8 @@ export function ConversationViewToJSONTyped(value?: ConversationView | null, ign
 
     return {
 
+        'buyer_thread_id': value['buyerThreadId'],
+        'conversation_count': value['conversationCount'],
         'id': value['id'],
         'purpose': value['purpose'],
         'context_type': value['contextType'],
@@ -273,6 +310,11 @@ export function ConversationViewToJSONTyped(value?: ConversationView | null, ign
         'legacy_conversation_ids': value['legacyConversationIds'],
         'legacy_has_more': value['legacyHasMore'],
         'legacy_page': value['legacyPage'],
+        'needs_human_response': value['needsHumanResponse'],
+        'can_configure_automated_response': value['canConfigureAutomatedResponse'],
+        'can_prepare_order_quotation': value['canPrepareOrderQuotation'],
+        'order_lock_version': value['orderLockVersion'],
+        'pending_order_id': value['pendingOrderId'],
     };
 }
 

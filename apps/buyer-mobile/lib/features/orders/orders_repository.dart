@@ -479,6 +479,35 @@ final class ApiOrdersRepository implements OrdersRepository {
           formattedAddress: point.formattedAddress,
         );
 
+  static String? _cargoDimensions(api.DeliveryVehicleProfile? profile) {
+    final values = [
+      profile?.cargoLengthM,
+      profile?.cargoWidthM,
+      profile?.cargoHeightM,
+    ];
+    return values.every((value) => value != null) ? values.join(' × ') : null;
+  }
+
+  static ConfirmedVehicleView _vehicleDisplay(
+    api.DeliveryVehicleProfile? profile, {
+    required String name,
+    required int vehicles,
+    required int trips,
+    required int perTripCentavos,
+  }) => ConfirmedVehicleView(
+    name: profile?.name ?? name,
+    brand: profile?.brand,
+    imageFileId: profile?.imageFileId,
+    vehicleType: profile?.customTypeName ?? profile?.vehicleType,
+    capacityKg: profile?.capacityKg,
+    mixerCapacityM3: profile?.mixerCapacityM3,
+    cargoDimensions: _cargoDimensions(profile),
+    heavyClassification: profile?.heavyClassification,
+    vehicles: vehicles,
+    trips: trips,
+    perTripCentavos: perTripCentavos,
+  );
+
   static OrderDetailView _detail(api.OrderDetail order) {
     final destination = order.destination;
     final confirmed = order.delivery.confirmed;
@@ -587,6 +616,19 @@ final class ApiOrdersRepository implements OrdersRepository {
               )
               .toList() ??
           const [],
+      recommendedVehicles:
+          recommended
+              ?.map(
+                (option) => _vehicleDisplay(
+                  option.vehicleDetails,
+                  name: option.vehicleName,
+                  vehicles: option.vehicles,
+                  trips: option.trips,
+                  perTripCentavos: option.feePerTripCentavos,
+                ),
+              )
+              .toList() ??
+          const [],
       confirmedDelivery: confirmed == null
           ? null
           : ConfirmedDeliveryView(
@@ -595,6 +637,19 @@ final class ApiOrdersRepository implements OrdersRepository {
                     (vehicle) => ConfirmedVehicleView(
                       name: vehicle.name ?? 'Vehicle',
                       brand: vehicle.brand,
+                      imageFileId: vehicle.vehicleDetails?.imageFileId,
+                      vehicleType:
+                          vehicle.vehicleDetails?.customTypeName ??
+                          vehicle.vehicleDetails?.vehicleType ??
+                          vehicle.vehicleType,
+                      capacityKg:
+                          vehicle.vehicleDetails?.capacityKg ??
+                          vehicle.capacityKg,
+                      mixerCapacityM3: vehicle.vehicleDetails?.mixerCapacityM3,
+                      cargoDimensions: _cargoDimensions(vehicle.vehicleDetails),
+                      heavyClassification:
+                          vehicle.vehicleDetails?.heavyClassification ??
+                          vehicle.heavyClassification,
                       vehicles: vehicle.numberOfVehicles,
                       trips: vehicle.totalVehicleTrips,
                       perTripCentavos: vehicle.perTripCentavos,

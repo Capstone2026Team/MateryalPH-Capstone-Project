@@ -1,5 +1,6 @@
+import { AsyncLoading } from './async-state'
 import { useEffect, useState } from 'react'
-import type { ChatAttachment, ChatIdentity, ChatMessage, ChatQuotationVersion, ChatStore, ConversationView } from '@materyalph/api-client-ts'
+import type { ChatAttachment, ChatIdentity, ChatMessage, ChatQuotationVersion, ChatStore, ConversationView, ChatWorkPackageAttachment } from '@materyalph/api-client-ts'
 import { BadgeCheck, Check, CheckCheck, Download, FileText, ImageOff, MessageSquare, Search } from 'lucide-react'
 import { Button } from './button'
 import { CountBadge } from './count-badge'
@@ -7,10 +8,11 @@ import { DeadlineCountdown, formatPesoCentavos } from './order-patterns'
 import { quotationChangeNotes, type QuotationChangeNote } from './quotation-changes'
 import { QuotationMaterialLines, QuotationPaymentBreakdown } from './quotation-details'
 import './messaging-patterns.css'
+import { WorkPackageAttachment } from './work-package-attachment'
 
-export const conversationLabel = (conversation: ConversationView) => conversation.purpose === 'FULFILLMENT' ? 'Order coordination' : conversation.contextType === 'PROJECT_BASED' ? conversation.inquiryLabel ?? 'Project inquiry' : 'Inquiry'
+export const conversationLabel = (conversation: ConversationView) => conversation.purpose === 'FULFILLMENT' ? 'Order coordination' : conversation.contextType === 'PROJECT_BASED' ? conversation.inquiryLabel ?? 'Work Package inquiry' : 'Inquiry'
 
-export function ConversationInbox({ rows, selected, onSelect, disabled = false, loadAvatar }: { rows: ConversationView[]; selected: string | null; onSelect: (id: string) => void; disabled?: boolean; loadAvatar?: (path: string) => Promise<Blob> }) {
+export function ConversationInbox({ rows, selected, selectedBuyerThreadId, onSelect, disabled = false, loadAvatar }: { rows: ConversationView[]; selected: string | null; selectedBuyerThreadId?: string | undefined; onSelect: (id: string) => void; disabled?: boolean; loadAvatar?: (path: string) => Promise<Blob> }) {
   const [query, setQuery] = useState('')
   const visible = rows.filter(row => `${row.buyer?.displayName ?? ''} ${row.lastMessagePreview ?? ''} ${conversationLabel(row)} ${row.handler?.displayName ?? ''} ${row.orderId ?? ''} ${row.id}`.toLowerCase().includes(query.trim().toLowerCase()))
   return <>
@@ -18,9 +20,9 @@ export function ConversationInbox({ rows, selected, onSelect, disabled = false, 
     <ul className="chat-inbox-list" aria-label="Conversations">{visible.map(row => {
       const unreadCount = row.unreadCount + (row.canListFulfillmentConversations ? row.fulfillmentUnreadCount ?? 0 : 0)
       return <li key={row.id}>
-        <button type="button" className="chat-inbox-row" aria-current={row.id === selected ? 'true' : undefined} disabled={disabled} onClick={() => onSelect(row.id)}>
+        <button type="button" className="chat-inbox-row" aria-current={row.id === selected || (selectedBuyerThreadId && row.buyerThreadId === selectedBuyerThreadId) ? 'true' : undefined} disabled={disabled} onClick={() => onSelect(row.id)}>
           <ChatAvatar name={row.buyer?.displayName ?? 'Buyer'} path={row.buyer?.avatarPath} load={loadAvatar} />
-          <span className="chat-inbox-copy"><span className="chat-inbox-title">{row.buyer?.displayName ?? conversationLabel(row)}</span><span className="chat-inbox-preview">{row.lastMessagePreview || (row.handler ? `Handled by ${row.handler.displayName}` : 'Needs a handler')}</span><span className="chat-inbox-reference">{row.orderId ? `Order · ${row.orderId.slice(-8)}` : conversationLabel(row)}</span></span>
+          <span className="chat-inbox-copy"><span className="chat-inbox-title">{row.buyer?.displayName ?? conversationLabel(row)}</span><span className="chat-inbox-preview">{row.lastMessagePreview || (row.handler ? `Handled by ${row.handler.displayName}` : 'Needs a handler')}</span><span className="chat-inbox-reference">{row.needsHumanResponse && 'Needs a reply · '}{row.buyerThreadId ? 'All inquiries & orders' : row.orderId ? `Order · ${row.orderId.slice(-8)}` : conversationLabel(row)}</span></span>
           <span className="chat-inbox-meta"><time dateTime={row.updatedAt}>{new Date(row.updatedAt).toLocaleDateString('en-PH', { timeZone: 'Asia/Manila', month: 'short', day: 'numeric' })}</time>{unreadCount > 0 && <><CountBadge count={unreadCount} /><span className="sr-only">{unreadCount} unread messages</span></>}</span>
         </button>
       </li>
@@ -32,14 +34,14 @@ export function ConversationInbox({ rows, selected, onSelect, disabled = false, 
 /** The server's body for an attachment-only message; it adds nothing beside the file itself. */
 const attachmentPlaceholder = (message: ChatMessage) => message.kind === 'ATTACHMENT' && message.body === 'Attachment' && message.attachments.length > 0
 
-export function ChatMessageBubble({ message, onOpenAttachment, loadAttachment, onOpenProduct, deliveryState, onRetry }: { message: ChatMessage; onOpenAttachment: (id: string, attachment?: ChatAttachment) => void; loadAttachment?: (id: string) => Promise<Blob>; onOpenProduct?: (listingId: string) => void; deliveryState?: 'pending' | 'failed'; onRetry?: () => void }) {
+export function ChatMessageBubble({ message, onOpenAttachment, loadAttachment, onOpenProduct, onPrepareWorkPackage, deliveryState, onRetry }: { message: ChatMessage; onOpenAttachment: (id: string, attachment?: ChatAttachment) => void; loadAttachment?: (id: string) => Promise<Blob>; onOpenProduct?: (listingId: string) => void; onPrepareWorkPackage?: (attachment: ChatWorkPackageAttachment) => void; deliveryState?: 'pending' | 'failed'; onRetry?: () => void }) {
   const date = new Date(message.sentAt)
   const timestamp = <time dateTime={message.sentAt} title={`${date.toLocaleString('en-PH', { timeZone: 'Asia/Manila' })} · Manila`}>{date.toLocaleTimeString('en-PH', { timeZone: 'Asia/Manila', hour: 'numeric', minute: '2-digit' })}</time>
-  if (message.kind === 'SYSTEM') return <li className="chat-system-message"><p>{message.body}</p>{timestamp}</li>
+  if (message.kind === 'SYSTEM' && !message.automatedReply) return <li className="chat-system-message"><p>{message.body}</p>{timestamp}</li>
   return <li className={`chat-message ${message.mine ? 'is-mine' : ''}`}>
     <ChatAvatar name={message.sender.displayName} />
-    <div className="chat-message-content"><p className="chat-message-author">{message.sender.displayName} · {chatRoleLabel(message.sender.role)}</p>
-      <div className="chat-message-bubble">{message.body && !attachmentPlaceholder(message) && <p>{message.body}</p>}{message.product && <button type="button" disabled={!message.product.available || !onOpenProduct} onClick={() => onOpenProduct?.(message.product!.listingId)} className="flex min-h-11 items-center gap-3 p-3 text-left">{message.product.imageUrl && <img src={message.product.imageUrl} alt="" className="size-12 object-cover" />}<span><strong className="block">{message.product.name}</strong>{formatPesoCentavos(message.product.priceCentavos)}{!message.product.available && <span className="block">No longer available</span>}</span></button>}{message.attachments.map(file => loadAttachment && file.scanState === 'CLEAN' && file.mediaType.startsWith('image/')
+    <div className="chat-message-content"><p className="chat-message-author">{message.sender.displayName}{!message.automatedReply && ` · ${chatRoleLabel(message.sender.role)}`}</p>
+      <div className="chat-message-bubble">{message.body && message.kind !== 'WORK_PACKAGE' && !attachmentPlaceholder(message) && <p>{message.body}</p>}{message.product && <button type="button" disabled={!message.product.available || !onOpenProduct} onClick={() => onOpenProduct?.(message.product!.listingId)} className="flex min-h-11 items-center gap-3 p-3 text-left">{message.product.imageUrl && <img src={message.product.imageUrl} alt="" className="size-12 object-cover" />}<span><strong className="block">{message.product.name}</strong>{formatPesoCentavos(message.product.priceCentavos)}{!message.product.available && <span className="block">No longer available</span>}</span></button>}{message.workPackageAttachment && <div className="mt-2 grid min-w-0 gap-2"><WorkPackageAttachment compact reference={message.workPackageAttachment.reference} />{message.workPackageAttachment.canPrepareQuotation && onPrepareWorkPackage && <Button variant="secondary" onClick={() => onPrepareWorkPackage(message.workPackageAttachment!)}>Prepare quotation</Button>}</div>}{message.attachments.map(file => loadAttachment && file.scanState === 'CLEAN' && file.mediaType.startsWith('image/')
         ? <ChatImageAttachment key={file.id} attachment={file} load={loadAttachment} onDownload={() => onOpenAttachment(file.id, file)} />
         : <ChatAttachmentButton key={file.id} attachment={file} onOpen={() => onOpenAttachment(file.id, file)} />)}</div>
       {deliveryState ? <p role="status">{deliveryState === 'pending' ? 'Sending…' : <button className="min-h-11 underline" type="button" onClick={onRetry}>Failed to send · Retry</button>}</p> :
@@ -70,11 +72,11 @@ export function ChatAvatar({ name, path, load }: { name: string; path?: string |
     return () => { active = false; if (objectUrl) URL.revokeObjectURL(objectUrl) }
   }, [path, load])
   const url = image?.path === path ? image?.url : null
-  return <span className="chat-avatar grid size-10 shrink-0 place-items-center overflow-hidden rounded-full bg-brand-orange-100 text-text-strong font-semibold" aria-label={name}>{url ? <img className="size-full object-cover" src={url} alt="" /> : name.trim().split(/\s+/).map(part => part[0]).slice(0, 2).join('').toUpperCase()}</span>
+  return <span className="chat-avatar grid size-10 shrink-0 place-items-center overflow-hidden rounded-full bg-brand-orange-100 text-text-strong font-semibold" aria-label={name}>{url ? <img className="size-full object-cover" src={url} alt="" onError={() => setImage(null)} /> : name.trim().split(/\s+/).map(part => part[0]).slice(0, 2).join('').toUpperCase()}</span>
 }
 
-export function ConversationHeader({ store, buyer, handler, purpose, loadAvatar }: { store: ChatStore; buyer?: ChatIdentity | null | undefined; handler?: ChatIdentity | null | undefined; purpose: string; loadAvatar?: (path: string) => Promise<Blob> }) {
-  const topic = purpose === 'FULFILLMENT' ? 'Fulfillment coordination' : 'Sales & quotations'
+export function ConversationHeader({ store, buyer, handler, purpose, combined = false, loadAvatar }: { store: ChatStore; buyer?: ChatIdentity | null | undefined; handler?: ChatIdentity | null | undefined; purpose: string; combined?: boolean; loadAvatar?: (path: string) => Promise<Blob> }) {
+  const topic = combined ? 'Messages & quotations' : purpose === 'FULFILLMENT' ? 'Fulfillment coordination' : 'Sales & quotations'
   return <header className="flex min-w-0 flex-wrap items-center justify-between gap-4 border-b border-border-default p-4 sm:p-5">
     {buyer ? <div className="flex min-w-0 items-center gap-3"><ChatAvatar name={buyer.displayName} path={buyer.avatarPath} load={loadAvatar} />
       <div className="min-w-0"><h2 className="break-words text-lg font-semibold">{buyer.displayName}</h2><p className="text-sm text-text-secondary">Buyer · {topic}</p></div>
@@ -100,14 +102,14 @@ function QuotationChangeRequest({ version }: { version: ChatQuotationVersion }) 
 
 /** Compact in-thread entry; full materials, changes and payment details open on demand. */
 export function QuotationThreadCard({ version, busy = false, onOpen, onRevise }: { version: ChatQuotationVersion; busy?: boolean; onOpen: () => void; onRevise?: () => void }) {
-  return <article className="w-full min-w-0 max-w-xl overflow-hidden rounded-surface border border-border-default bg-surface-primary" aria-label={`Quotation v${version.version}`}>
+  return <article className="w-full min-w-0 max-w-xl overflow-hidden mp-card" aria-label={`Quotation v${version.version}`}>
     <div className="p-4 sm:p-5">
     <div className="flex items-start gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-control bg-surface-canvas"><FileText size={20} aria-hidden="true" /></span><div className="min-w-0 flex-1">
       <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-semibold">Quotation v{version.version}</h3><span className="rounded-control bg-surface-canvas px-2 py-1 text-xs font-medium">{quotationStatus(version)}</span></div>
       <p className="mt-1 text-xs text-text-secondary">Published <time dateTime={version.publishedAt}>{new Date(version.publishedAt).toLocaleString('en-PH', { timeZone: 'Asia/Manila', dateStyle: 'medium', timeStyle: 'short' })} Manila</time></p>
     </div></div>
     <dl className="mt-4 border-t border-border-default pt-4"><dt className="text-xs text-text-secondary">Quotation order total</dt><dd className="mt-1 text-2xl font-semibold tracking-tight tabular-nums">{formatPesoCentavos(version.content.commercial.commercialTotalCentavos)}</dd></dl>
-    <p className="mt-1 text-xs text-text-secondary">{version.content.lines.length} material {version.content.lines.length === 1 ? 'line' : 'lines'} · {version.content.fulfillmentMethod === 'DELIVERY' ? 'Site Delivery' : 'Self-Pickup'} · Before payment processing fees</p>
+    <p className="mt-1 text-xs text-text-secondary">{version.content.lines.length} material {version.content.lines.length === 1 ? 'line' : 'lines'} · {version.content.fulfillmentMethod === 'DELIVERY' ? 'Site Delivery' : 'Self-Pickup'} · Before e-wallet transaction fees</p>
     {version.content.message && <p className="mt-4 whitespace-pre-wrap break-words border-l-2 border-border-default pl-3 text-sm leading-relaxed">{version.content.message}</p>}
     <QuotationChangeRequest version={version} />
     </div>
@@ -117,7 +119,7 @@ export function QuotationThreadCard({ version, busy = false, onOpen, onRevise }:
 
 export function QuotationVersionCard({ version, busy = false, onAction }: { version: ChatQuotationVersion; busy?: boolean; onAction?: (action: string, version: ChatQuotationVersion) => void }) {
   const content = version.content
-  return <article className="min-w-0 rounded-surface border border-border-default bg-surface-primary p-4 sm:p-5" aria-label={`Quotation version ${version.version}`}>
+  return <article className="min-w-0 mp-card mp-card-padded" aria-label={`Quotation version ${version.version}`}>
     <div className="flex flex-wrap items-start justify-between gap-2"><div><p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Order from chat</p><h3 className="mt-1 text-lg font-semibold">Quotation v{version.version}</h3></div><span className="rounded-control bg-surface-canvas px-2 py-1 text-sm font-semibold">{version.latest && ['PUBLISHED', 'VIEWED'].includes(version.state) ? 'Latest version' : quotationStatus(version)}</span></div>
     <p className="mt-2 text-sm text-text-secondary">{version.state === 'VIEWED' && version.viewed ? 'Viewed by Buyer' : `${version.state.replaceAll('_', ' ').toLowerCase().replace(/^./, letter => letter.toUpperCase())} · ${version.viewed ? 'Viewed by Buyer' : 'Not yet viewed'}`}</p>
     {content.message && <p className="mt-3 whitespace-pre-wrap break-words text-sm">{content.message}</p>}
@@ -162,7 +164,7 @@ export function ChatImageAttachment({ attachment, load, onDownload }: { attachme
   return <figure className="chat-image-attachment">
     {url ? <a href={url} target="_blank" rel="noopener noreferrer" className="chat-image-preview" aria-label={`Open ${attachment.displayName} full size`}><img src={url} alt={attachment.displayName} /></a>
       : failed === attachment.id ? <button type="button" className="chat-image-preview chat-image-status" onClick={() => setAttempt(value => value + 1)}><ImageOff size={20} aria-hidden="true" /><span>Image unavailable · Retry</span></button>
-        : <div className="chat-image-preview chat-image-status" role="status"><span>Loading image…</span></div>}
+        : <div className="chat-image-preview chat-image-status"><AsyncLoading compact label="Loading image…" /></div>}
     <figcaption><span className="min-w-0 truncate">{attachment.displayName} · {Math.ceil(attachment.sizeBytes / 1024)} KB</span><button type="button" className="chat-image-download" onClick={onDownload}><Download size={16} aria-hidden="true" />Download</button></figcaption>
   </figure>
 }

@@ -13,6 +13,14 @@
  */
 
 import { mapValues, parseDate, parseDateTime, serializeDate, serializeDateTime } from '../runtime';
+import type { CommissionEmailSummary } from './CommissionEmailSummary';
+import {
+    CommissionEmailSummaryFromJSON,
+    CommissionEmailSummaryFromJSONTyped,
+    CommissionEmailSummaryToJSON,
+    CommissionEmailSummaryToJSONTyped,
+} from './CommissionEmailSummary';
+
 /**
  *
  * @export
@@ -51,6 +59,34 @@ export interface CommissionPolicy {
      *
      */
     status: CommissionPolicyStatusEnum;
+    /**
+     *
+     */
+    termsVersion?: number | null;
+    /**
+     *
+     */
+    termsContent?: string | null;
+    /**
+     *
+     */
+    vendorMessage?: string | null;
+    /**
+     *
+     */
+    noticeHours?: number | null;
+    /**
+     * Admin only.
+     */
+    noticeOverrideReason?: string | null;
+    /**
+     * Admin audit identity; omitted in public and Vendor projections.
+     */
+    publishedBy?: string;
+    /**
+     *
+     */
+    delivery?: CommissionEmailSummary;
 }
 
 
@@ -61,6 +97,8 @@ export const CommissionPolicyStatusEnum = {
     Current: 'CURRENT',
     Scheduled: 'SCHEDULED',
     Previous: 'PREVIOUS',
+    Superseded: 'SUPERSEDED',
+    Cancelled: 'CANCELLED',
 } as const;
 export type CommissionPolicyStatusEnum = typeof CommissionPolicyStatusEnum[keyof typeof CommissionPolicyStatusEnum];
 
@@ -96,6 +134,13 @@ export function CommissionPolicyFromJSONTyped(json: any, ignoreDiscriminator: bo
         'agreementVersionId': json['agreement_version_id'] === undefined ? undefined : json['agreement_version_id'] === null ? null : json['agreement_version_id'],
         'reason': json['reason'] === undefined ? undefined : json['reason'] === null ? null : json['reason'],
         'status': json['status'],
+        'termsVersion': json['terms_version'] === undefined ? undefined : json['terms_version'] === null ? null : json['terms_version'],
+        'termsContent': json['terms_content'] === undefined ? undefined : json['terms_content'] === null ? null : json['terms_content'],
+        'vendorMessage': json['vendor_message'] === undefined ? undefined : json['vendor_message'] === null ? null : json['vendor_message'],
+        'noticeHours': json['notice_hours'] === undefined ? undefined : json['notice_hours'] === null ? null : json['notice_hours'],
+        'noticeOverrideReason': json['notice_override_reason'] === undefined ? undefined : json['notice_override_reason'] === null ? null : json['notice_override_reason'],
+        'publishedBy': json['published_by'] == null ? undefined : json['published_by'],
+        'delivery': json['delivery'] == null ? undefined : CommissionEmailSummaryFromJSON(json['delivery']),
     };
 }
 
@@ -118,6 +163,13 @@ export function CommissionPolicyToJSONTyped(value?: CommissionPolicy | null, ign
         'agreement_version_id': value['agreementVersionId'],
         'reason': value['reason'],
         'status': value['status'],
+        'terms_version': value['termsVersion'],
+        'terms_content': value['termsContent'],
+        'vendor_message': value['vendorMessage'],
+        'notice_hours': value['noticeHours'],
+        'notice_override_reason': value['noticeOverrideReason'],
+        'published_by': value['publishedBy'],
+        'delivery': CommissionEmailSummaryToJSON(value['delivery']),
     };
 }
 

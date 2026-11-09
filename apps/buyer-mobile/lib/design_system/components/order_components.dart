@@ -343,28 +343,31 @@ class _MoneyRow extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            fontWeight: strong ? FontWeight.w800 : FontWeight.w500,
-            color: muted ? BuyerTheme.muted : BuyerTheme.ink,
+            fontSize: 14,
+            fontWeight: strong ? FontWeight.w700 : FontWeight.w400,
+            color: strong ? BuyerTheme.ink : BuyerTheme.muted,
           ),
         ),
-        if (note != null)
+        if (note != null) ...[
+          const SizedBox(height: 4),
           Text(
             note!,
             style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
           ),
+        ],
       ],
     );
     final amount = Text(
       value,
       textAlign: TextAlign.right,
       style: TextStyle(
-        fontSize: strong ? 17 : 14,
-        fontWeight: strong ? FontWeight.w800 : FontWeight.w600,
+        fontSize: strong ? 20 : 14,
+        fontWeight: strong ? FontWeight.w700 : FontWeight.w600,
         color: muted ? BuyerTheme.muted : BuyerTheme.ink,
       ),
     );
     return Padding(
-      padding: EdgeInsets.only(top: strong ? 10 : 6, bottom: 6),
+      padding: EdgeInsets.only(top: strong ? 4 : 6, bottom: strong ? 0 : 6),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final stacked =
@@ -373,14 +376,23 @@ class _MoneyRow extends StatelessWidget {
           return stacked
               ? Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [description, const SizedBox(height: 4), amount],
+                  children: [
+                    description,
+                    const SizedBox(height: 4),
+                    Align(alignment: Alignment.centerRight, child: amount),
+                  ],
                 )
               : Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(child: description),
                     const SizedBox(width: 12),
-                    Flexible(child: amount),
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: constraints.maxWidth * 0.5,
+                      ),
+                      child: amount,
+                    ),
                   ],
                 );
         },
@@ -399,8 +411,14 @@ class MoneyBreakdownCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasMaterialsDiscount = money.vendorDiscountCentavos > 0;
+    final vatNote = money.includedVatCentavos > 0
+        ? 'Includes ${formatPeso(money.includedVatCentavos)} VAT'
+        : money.pricesIncludeVat
+        ? 'Prices include VAT'
+        : 'No VAT included';
     final delivery = switch (money.deliveryStatus) {
-      'NOT_APPLICABLE' => 'None (Self-Pickup)',
+      'NOT_APPLICABLE' => 'Not applicable',
       _ when money.deliveryCentavos != null => formatPeso(
         money.discount?.scope == 'DELIVERY'
             ? money.discount!.basisCentavos
@@ -437,7 +455,7 @@ class MoneyBreakdownCard extends StatelessWidget {
             money.commercialTotalCentavos ?? money.materialsSubtotalCentavos,
           );
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -450,38 +468,40 @@ class MoneyBreakdownCard extends StatelessWidget {
             header: true,
             child: const Text(
               'Payment breakdown',
-              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
             ),
           ),
-          const SizedBox(height: 4),
-          _MoneyRow('Materials', formatPeso(money.materialsGrossCentavos)),
-          if (money.vendorDiscountCentavos > 0)
+          const SizedBox(height: 16),
+          _MoneyRow(
+            'Materials',
+            formatPeso(
+              hasMaterialsDiscount
+                  ? money.materialsGrossCentavos
+                  : money.materialsSubtotalCentavos,
+            ),
+            note: hasMaterialsDiscount ? null : vatNote,
+          ),
+          if (hasMaterialsDiscount) ...[
             _MoneyRow(
               money.discount?.scope == 'MATERIALS'
                   ? 'Vendor discount ${money.discount!.percent}% (materials)'
                   : 'Vendor discount',
               '− ${formatPeso(money.vendorDiscountCentavos)}',
             ),
-          _MoneyRow(
-            'Materials subtotal',
-            formatPeso(money.materialsSubtotalCentavos),
-            note: money.pricesIncludeVat
-                ? 'Prices include VAT'
-                : 'No VAT included',
-          ),
-          if (money.includedVatCentavos > 0)
             _MoneyRow(
-              'Included VAT',
-              formatPeso(money.includedVatCentavos),
-              note: 'Already in the subtotal',
-              muted: true,
+              'Materials after discount',
+              formatPeso(money.materialsSubtotalCentavos),
+              note: vatNote,
             ),
+          ],
           _MoneyRow(
             money.discount?.scope == 'DELIVERY'
                 ? 'Delivery before discount'
                 : 'Delivery fee',
             delivery,
-            note: money.deliveryStatus == 'PENDING_VENDOR_CONFIRMATION'
+            note: money.deliveryStatus == 'NOT_APPLICABLE'
+                ? 'Self-Pickup'
+                : money.deliveryStatus == 'PENDING_VENDOR_CONFIRMATION'
                 ? 'The Vendor confirms it before you pay'
                 : null,
           ),
@@ -504,12 +524,14 @@ class MoneyBreakdownCard extends StatelessWidget {
                 ? 'Disclosed when you choose a payment channel'
                 : null,
           ),
-          const Divider(height: 12, color: BuyerTheme.border),
+          const Divider(height: 24, color: BuyerTheme.border),
           _MoneyRow(
             totalLabel,
             total,
-            note: money.processingFeeStatus == 'PENDING_PAYMENT_CHANNEL'
-                ? 'Before the processing fee'
+            note:
+                money.processingFeeStatus == 'PENDING_PAYMENT_CHANNEL' ||
+                    (money.processingFeeCentavos ?? 0) > 0
+                ? 'Excludes processing fee'
                 : null,
             strong: true,
           ),

@@ -35,6 +35,11 @@ Name | Type
 `vendorName` | string
 `downloads` | number
 `lastDownloadAt` | Date
+`fileName` | string
+`contentType` | string
+`fileSizeBytes` | number
+`sentAt` | Date
+`orderSummary` | [InvoiceOrderSummary](InvoiceOrderSummary.md)
 
 ## Example
 
@@ -71,6 +76,11 @@ const example = {
   "vendorName": null,
   "downloads": null,
   "lastDownloadAt": null,
+  "fileName": null,
+  "contentType": null,
+  "fileSizeBytes": null,
+  "sentAt": null,
+  "orderSummary": null,
 } satisfies InvoiceRecordView
 
 console.log(example)

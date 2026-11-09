@@ -3,6 +3,7 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:materyalph_api_client/src/model/automatic_recovery_health.dart';
 import 'package:materyalph_api_client/src/model/scheduled_task_health.dart';
 import 'package:built_collection/built_collection.dart';
 import 'package:materyalph_api_client/src/model/integration_status.dart';
@@ -12,13 +13,14 @@ import 'package:built_value/serializer.dart';
 
 part 'integration_overview.g.dart';
 
-/// Configuration presence and masked labels only; credentials, payloads, recipients and exception messages never appear.
+/// Configuration presence and masked labels only; credentials, payloads, recipients and exception messages never appear. Hostinger VPS responses also include Backblaze B2, Cloudinary, Bouncer and reCAPTCHA checks, with Brevo SMTP and Firebase FCM configuration checked explicitly. Local or Render responses are not VPS provider health.
 ///
 /// Properties:
 /// * [generatedAt]
-/// * [environment]
+/// * [environment] - Safe app and commerce labels. deployment is HOSTINGER_VPS only for the staging API on the approved MateryalPH Duck DNS host pattern; OTHER responses must not be presented as VPS provider health.
 /// * [integrations]
 /// * [queues]
+/// * [automaticRecovery]
 /// * [scheduledTasks]
 /// * [analytics]
 /// * [canRetry]
@@ -27,6 +29,7 @@ abstract class IntegrationOverview implements Built<IntegrationOverview, Integra
   @BuiltValueField(wireName: r'generated_at')
   DateTime get generatedAt;
 
+  /// Safe app and commerce labels. deployment is HOSTINGER_VPS only for the staging API on the approved MateryalPH Duck DNS host pattern; OTHER responses must not be presented as VPS provider health.
   @BuiltValueField(wireName: r'environment')
   BuiltMap<String, JsonObject?> get environment;
 
@@ -35,6 +38,9 @@ abstract class IntegrationOverview implements Built<IntegrationOverview, Integra
 
   @BuiltValueField(wireName: r'queues')
   BuiltMap<String, JsonObject?> get queues;
+
+  @BuiltValueField(wireName: r'automatic_recovery')
+  AutomaticRecoveryHealth? get automaticRecovery;
 
   @BuiltValueField(wireName: r'scheduled_tasks')
   BuiltList<ScheduledTaskHealth> get scheduledTasks;
@@ -88,6 +94,13 @@ class _$IntegrationOverviewSerializer implements PrimitiveSerializer<Integration
       object.queues,
       specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
     );
+    if (object.automaticRecovery != null) {
+      yield r'automatic_recovery';
+      yield serializers.serialize(
+        object.automaticRecovery,
+        specifiedType: const FullType(AutomaticRecoveryHealth),
+      );
+    }
     yield r'scheduled_tasks';
     yield serializers.serialize(
       object.scheduledTasks,
@@ -153,6 +166,14 @@ class _$IntegrationOverviewSerializer implements PrimitiveSerializer<Integration
             specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
           ) as BuiltMap<String, JsonObject?>;
           result.queues.replace(valueDes);
+          break;
+        case r'automatic_recovery':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(AutomaticRecoveryHealth),
+          ) as AutomaticRecoveryHealth?;
+          if (valueDes == null) continue;
+          result.automaticRecovery.replace(valueDes);
           break;
         case r'scheduled_tasks':
           final valueDes = serializers.deserialize(

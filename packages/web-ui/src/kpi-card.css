@@ -1,0 +1,21 @@
+/* Shared by every portal metric, including financial and summary cards. */
+.mp-metric-card { display: flex; flex-direction: column; min-width: 0; padding: 16px; border: 1px solid color-mix(in srgb, var(--mp-color-action-primary) 10%, var(--mp-color-surface-primary)); border-radius: var(--mp-radius-surface); background: color-mix(in srgb, var(--mp-color-brand-orange-50) 60%, var(--mp-color-surface-primary)); color: var(--mp-color-text-strong); }
+.mp-metric-card > .mp-kpi-label { display: flex; align-items: center; justify-content: space-between; min-height: 44px; gap: 12px; font-size: 12px; line-height: 18px; font-weight: 500; color: var(--mp-color-text-secondary); }
+.mp-metric-card .mp-kpi-icon { display: grid; flex-shrink: 0; place-items: center; width: 32px; height: 32px; border-radius: var(--mp-radius-control); color: var(--mp-color-action-primary); background: var(--mp-color-brand-orange-100); }
+.mp-metric-card > .mp-kpi-value { margin-top: 10px; font-size: clamp(24px, 2vw, 28px); line-height: 34px; font-weight: 600; letter-spacing: -.025em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; color: inherit; }
+.mp-metric-card > .mp-kpi-hint { margin-top: 4px; font-size: 11px; line-height: 16px; color: var(--mp-color-text-secondary); }
+.mp-metric-card > .mp-analytics-change { font-size: 11px; line-height: 16px; }
+.mp-metric-card > .mp-kpi-breakdown { margin-top: 16px; padding: 12px; border-radius: var(--mp-radius-control); background: var(--mp-color-surface-primary); color: var(--mp-color-text-strong); }
+.mp-metric-card-accent { background: var(--mp-color-action-primary); border-color: var(--mp-color-action-primary); color: var(--mp-color-surface-primary); }
+.mp-metric-card-accent > :is(.mp-kpi-label, .mp-kpi-hint) { color: inherit; }
+.mp-metric-card-accent .mp-kpi-icon { background: color-mix(in srgb, var(--mp-color-surface-primary) 16%, transparent); color: inherit; }
+@media (max-width: 639px) {
+  .mp-metric-card { padding: 12px; }
+}
+
+.mp-metric-card .mp-kpi-icon > svg { width: 16px; height: 16px; }
+.mp-metric-card[data-active="true"] { border-color: var(--mp-color-action-primary); outline: 1px solid var(--mp-color-action-primary); }
+.mp-metric-card[data-tone="success"] { border-inline-start: 3px solid var(--mp-color-status-success); }
+.mp-metric-card[data-tone="warning"] { border-inline-start: 3px solid var(--mp-color-status-warning); }
+.mp-metric-card[data-tone="error"] { border-inline-start: 3px solid var(--mp-color-status-error); }
+.mp-metric-card[data-tone="info"] { border-inline-start: 3px solid var(--mp-color-status-info); }

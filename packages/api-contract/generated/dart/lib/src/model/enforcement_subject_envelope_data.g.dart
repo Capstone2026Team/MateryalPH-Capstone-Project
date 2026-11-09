@@ -6,7 +6,92 @@ part of 'enforcement_subject_envelope_data.dart';
 // BuiltValueGenerator
 // **************************************************************************
 
+const EnforcementSubjectEnvelopeDataRecordableActionsEnum
+    _$enforcementSubjectEnvelopeDataRecordableActionsEnum_WARNING =
+    const EnforcementSubjectEnvelopeDataRecordableActionsEnum._('WARNING');
+const EnforcementSubjectEnvelopeDataRecordableActionsEnum
+    _$enforcementSubjectEnvelopeDataRecordableActionsEnum_TEMPORARY_RESTRICTION =
+    const EnforcementSubjectEnvelopeDataRecordableActionsEnum._(
+        'TEMPORARY_RESTRICTION');
+const EnforcementSubjectEnvelopeDataRecordableActionsEnum
+    _$enforcementSubjectEnvelopeDataRecordableActionsEnum_SUSPENSION =
+    const EnforcementSubjectEnvelopeDataRecordableActionsEnum._('SUSPENSION');
+const EnforcementSubjectEnvelopeDataRecordableActionsEnum
+    _$enforcementSubjectEnvelopeDataRecordableActionsEnum_PERMANENT_BAN =
+    const EnforcementSubjectEnvelopeDataRecordableActionsEnum._(
+        'PERMANENT_BAN');
+
+EnforcementSubjectEnvelopeDataRecordableActionsEnum
+    _$enforcementSubjectEnvelopeDataRecordableActionsEnumValueOf(String name) {
+  switch (name) {
+    case 'WARNING':
+      return _$enforcementSubjectEnvelopeDataRecordableActionsEnum_WARNING;
+    case 'TEMPORARY_RESTRICTION':
+      return _$enforcementSubjectEnvelopeDataRecordableActionsEnum_TEMPORARY_RESTRICTION;
+    case 'SUSPENSION':
+      return _$enforcementSubjectEnvelopeDataRecordableActionsEnum_SUSPENSION;
+    case 'PERMANENT_BAN':
+      return _$enforcementSubjectEnvelopeDataRecordableActionsEnum_PERMANENT_BAN;
+    default:
+      throw ArgumentError(name);
+  }
+}
+
+final BuiltSet<EnforcementSubjectEnvelopeDataRecordableActionsEnum>
+    _$enforcementSubjectEnvelopeDataRecordableActionsEnumValues = BuiltSet<
+        EnforcementSubjectEnvelopeDataRecordableActionsEnum>(const <EnforcementSubjectEnvelopeDataRecordableActionsEnum>[
+  _$enforcementSubjectEnvelopeDataRecordableActionsEnum_WARNING,
+  _$enforcementSubjectEnvelopeDataRecordableActionsEnum_TEMPORARY_RESTRICTION,
+  _$enforcementSubjectEnvelopeDataRecordableActionsEnum_SUSPENSION,
+  _$enforcementSubjectEnvelopeDataRecordableActionsEnum_PERMANENT_BAN,
+]);
+
+Serializer<EnforcementSubjectEnvelopeDataRecordableActionsEnum>
+    _$enforcementSubjectEnvelopeDataRecordableActionsEnumSerializer =
+    _$EnforcementSubjectEnvelopeDataRecordableActionsEnumSerializer();
+
+class _$EnforcementSubjectEnvelopeDataRecordableActionsEnumSerializer
+    implements
+        PrimitiveSerializer<
+            EnforcementSubjectEnvelopeDataRecordableActionsEnum> {
+  static const Map<String, Object> _toWire = const <String, Object>{
+    'WARNING': 'WARNING',
+    'TEMPORARY_RESTRICTION': 'TEMPORARY_RESTRICTION',
+    'SUSPENSION': 'SUSPENSION',
+    'PERMANENT_BAN': 'PERMANENT_BAN',
+  };
+  static const Map<Object, String> _fromWire = const <Object, String>{
+    'WARNING': 'WARNING',
+    'TEMPORARY_RESTRICTION': 'TEMPORARY_RESTRICTION',
+    'SUSPENSION': 'SUSPENSION',
+    'PERMANENT_BAN': 'PERMANENT_BAN',
+  };
+
+  @override
+  final Iterable<Type> types = const <Type>[
+    EnforcementSubjectEnvelopeDataRecordableActionsEnum
+  ];
+  @override
+  final String wireName = 'EnforcementSubjectEnvelopeDataRecordableActionsEnum';
+
+  @override
+  Object serialize(Serializers serializers,
+          EnforcementSubjectEnvelopeDataRecordableActionsEnum object,
+          {FullType specifiedType = FullType.unspecified}) =>
+      _toWire[object.name] ?? object.name;
+
+  @override
+  EnforcementSubjectEnvelopeDataRecordableActionsEnum deserialize(
+          Serializers serializers, Object serialized,
+          {FullType specifiedType = FullType.unspecified}) =>
+      EnforcementSubjectEnvelopeDataRecordableActionsEnum.valueOf(
+          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+}
+
 class _$EnforcementSubjectEnvelopeData extends EnforcementSubjectEnvelopeData {
+  @override
+  final BuiltList<EnforcementSubjectEnvelopeDataRecordableActionsEnum>
+      recordableActions;
   @override
   final BuiltList<EnforcementSummary> sanctions;
   @override
@@ -37,7 +122,8 @@ class _$EnforcementSubjectEnvelopeData extends EnforcementSubjectEnvelopeData {
       (EnforcementSubjectEnvelopeDataBuilder()..update(updates))._build();
 
   _$EnforcementSubjectEnvelopeData._(
-      {required this.sanctions,
+      {required this.recordableActions,
+      required this.sanctions,
       this.subjectType,
       this.subjectId,
       this.displayName,
@@ -63,6 +149,7 @@ class _$EnforcementSubjectEnvelopeData extends EnforcementSubjectEnvelopeData {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is EnforcementSubjectEnvelopeData &&
+        recordableActions == other.recordableActions &&
         sanctions == other.sanctions &&
         subjectType == other.subjectType &&
         subjectId == other.subjectId &&
@@ -80,6 +167,7 @@ class _$EnforcementSubjectEnvelopeData extends EnforcementSubjectEnvelopeData {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, recordableActions.hashCode);
     _$hash = $jc(_$hash, sanctions.hashCode);
     _$hash = $jc(_$hash, subjectType.hashCode);
     _$hash = $jc(_$hash, subjectId.hashCode);
@@ -99,6 +187,7 @@ class _$EnforcementSubjectEnvelopeData extends EnforcementSubjectEnvelopeData {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'EnforcementSubjectEnvelopeData')
+          ..add('recordableActions', recordableActions)
           ..add('sanctions', sanctions)
           ..add('subjectType', subjectType)
           ..add('subjectId', subjectId)
@@ -121,6 +210,17 @@ class EnforcementSubjectEnvelopeDataBuilder
             EnforcementSubjectEnvelopeDataBuilder>,
         SubjectReviewBuilder {
   _$EnforcementSubjectEnvelopeData? _$v;
+
+  ListBuilder<EnforcementSubjectEnvelopeDataRecordableActionsEnum>?
+      _recordableActions;
+  ListBuilder<EnforcementSubjectEnvelopeDataRecordableActionsEnum>
+      get recordableActions => _$this._recordableActions ??=
+          ListBuilder<EnforcementSubjectEnvelopeDataRecordableActionsEnum>();
+  set recordableActions(
+          covariant ListBuilder<
+                  EnforcementSubjectEnvelopeDataRecordableActionsEnum>?
+              recordableActions) =>
+      _$this._recordableActions = recordableActions;
 
   ListBuilder<EnforcementSummary>? _sanctions;
   ListBuilder<EnforcementSummary> get sanctions =>
@@ -188,6 +288,7 @@ class EnforcementSubjectEnvelopeDataBuilder
   EnforcementSubjectEnvelopeDataBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _recordableActions = $v.recordableActions.toBuilder();
       _sanctions = $v.sanctions.toBuilder();
       _subjectType = $v.subjectType;
       _subjectId = $v.subjectId;
@@ -223,6 +324,7 @@ class EnforcementSubjectEnvelopeDataBuilder
     try {
       _$result = _$v ??
           _$EnforcementSubjectEnvelopeData._(
+            recordableActions: recordableActions.build(),
             sanctions: sanctions.build(),
             subjectType: subjectType,
             subjectId: subjectId,
@@ -239,6 +341,8 @@ class EnforcementSubjectEnvelopeDataBuilder
     } catch (_) {
       late String _$failedField;
       try {
+        _$failedField = 'recordableActions';
+        recordableActions.build();
         _$failedField = 'sanctions';
         sanctions.build();
       } catch (e) {

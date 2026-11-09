@@ -8,6 +8,8 @@ import 'package:materyalph_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
+**buyerThreadId** | **String** | Stable opaque Buyer identifier within the current store. Vendor inbox pagination groups on this identifier before selecting rows. | [optional]
+**conversationCount** | **int** | Number of currently authorized contexts represented by a grouped Vendor inbox row; one for an individual context. | [optional]
 **id** | **String** |  |
 **purpose** | **String** |  |
 **contextType** | **String** |  |
@@ -17,7 +19,7 @@ Name | Type | Description | Notes
 **handler** | [**ChatIdentity**](ChatIdentity.md) |  | [optional]
 **unreadCount** | **int** |  |
 **channel** | **String** |  |
-**lockedReference** | [**BuiltMap&lt;String, JsonObject&gt;**](JsonObject.md) |  |
+**lockedReference** | [**BuiltMap&lt;String, JsonObject&gt;**](JsonObject.md) | Locked reference for this conversation. Vendor Work Package views include only the store allocation or its order snapshot items; the complete immutable Buyer original stays retained internally and available to its Buyer. |
 **updatedAt** | **String** |  |
 **canTransfer** | **bool** |  |
 **canListFulfillmentConversations** | **bool** | Current vendor Owner or Store Manager may list this sales inquiry buyer's fulfillment conversations. False for other roles and fulfillment threads. | [optional]
@@ -37,6 +39,11 @@ Name | Type | Description | Notes
 **legacyConversationIds** | **BuiltList&lt;String&gt;** |  | [optional]
 **legacyHasMore** | **bool** |  | [optional]
 **legacyPage** | **int** |  | [optional]
+**needsHumanResponse** | **bool** | Buyer activity awaiting a manual store reply. Automated replies never clear it. | [optional]
+**canConfigureAutomatedResponse** | **bool** |  | [optional]
+**canPrepareOrderQuotation** | **bool** |  | [optional]
+**orderLockVersion** | **int** |  | [optional]
+**pendingOrderId** | **String** |  | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

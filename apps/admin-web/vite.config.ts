@@ -1,7 +1,8 @@
 import { fileURLToPath } from 'node:url'
-import { defineConfig, searchForWorkspaceRoot, type ProxyOptions } from 'vite'
+import { defineConfig, type Plugin, type ProxyOptions } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import { watchGeneratedApiClient } from '../../packages/shared-config/vite-api-client.mjs'
 
 function portalApiProxy(): ProxyOptions {
   return {
@@ -29,9 +30,24 @@ function portalApiProxy(): ProxyOptions {
 const apiProxy = portalApiProxy()
 const publicTunnelHosts = ['.trycloudflare.com']
 
+/** The linked client's build changes without a lockfile change; refresh the active dependency snapshot too. */
+function refreshGeneratedApiClient(): Plugin {
+  const directory = fileURLToPath(new URL('../../packages/api-contract/generated/typescript/dist/esm', import.meta.url))
+  return {
+    name: 'materyalph-refresh-generated-api-client',
+    apply: 'serve',
+    configureServer(server) {
+      const stop = watchGeneratedApiClient(server.watcher, directory, () => {
+        void server.restart(true).catch(error => server.config.logger.error(String(error)))
+      })
+      server.httpServer?.once('close', stop)
+    },
+  }
+}
+
 export default defineConfig({
   resolve: { dedupe: ['react', 'react-dom'] },
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), refreshGeneratedApiClient()],
   // Prebundle the linked client, rebuilding on startup because regeneration does not change the npm lockfile.
   optimizeDeps: { include: ['@materyalph/api-client-ts'], force: true },
   server: {
@@ -40,9 +56,8 @@ export default defineConfig({
     fs: {
       strict: true,
       allow: [
-        searchForWorkspaceRoot(fileURLToPath(new URL('.', import.meta.url))),
-        fileURLToPath(new URL('../../packages/web-ui/src/assets', import.meta.url)),
-      ],
+        '.', '../../packages/web-ui/src', '../../packages/design-tokens', '../../packages/api-contract/generated/typescript',
+      ].map(path => fileURLToPath(new URL(path, import.meta.url))),
     },
     proxy: {
       '/api/v1': apiProxy,

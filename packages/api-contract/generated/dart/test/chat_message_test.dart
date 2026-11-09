@@ -7,6 +7,12 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(ChatMessage, () {
+    // Original authorized context for files and read receipts, including in a combined Buyer timeline.
+    // String conversationId
+    test('to test the property `conversationId`', () async {
+      // TODO
+    });
+
     // String id
     test('to test the property `id`', () async {
       // TODO
@@ -54,6 +60,17 @@ void main() {
 
     // ChatProduct product
     test('to test the property `product`', () async {
+      // TODO
+    });
+
+    // Static store reply. SYSTEM messages with this field do not count as human responses.
+    // ChatAutomatedReply automatedReply
+    test('to test the property `automatedReply`', () async {
+      // TODO
+    });
+
+    // ChatWorkPackageAttachment workPackageAttachment
+    test('to test the property `workPackageAttachment`', () async {
       // TODO
     });
 

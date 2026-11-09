@@ -18,6 +18,7 @@ Name | Type | Description | Notes
 **recentOrders** | [**BuiltList&lt;DirectoryBuyerProfileRecentOrdersInner&gt;**](DirectoryBuyerProfileRecentOrdersInner.md) |  |
 **sanctions** | [**BuiltList&lt;DirectorySanction&gt;**](DirectorySanction.md) | Empty unless the caller also holds enforcement.view. |
 **canViewEnforcement** | **bool** |  |
+**rating** | [**BuyerRatingSummary**](BuyerRatingSummary.md) |  |
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

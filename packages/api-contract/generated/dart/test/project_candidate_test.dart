@@ -7,6 +7,12 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(ProjectCandidate, () {
+    // Current active public awards for this Vendor; suppressed or revoked badges are omitted. Never part of the saved commercial estimate.
+    // BuiltList<PublicBadge> badges
+    test('to test the property `badges`', () async {
+      // TODO
+    });
+
     // String id
     test('to test the property `id`', () async {
       // TODO

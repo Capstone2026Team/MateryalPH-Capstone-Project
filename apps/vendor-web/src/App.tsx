@@ -1,11 +1,9 @@
 import { VendorContactPage, VendorSupportRequestsPage, VendorSupportTicketPage, GuestSupportAccessPage, GuestSupportTicketPage } from './pages/SupportPages'
-import { VendorNotificationsPage } from './pages/NotificationPages'
-import { VendorPlaceholderPage } from './pages/PhaseThreeVendorPages'
 import { AcceptStaffInvitation } from './pages/AcceptStaffInvitation'
-import { BotProtectionFields, Button, Field, GoogleButton, GoogleMark, googleButtonClassName, PasswordField, PhoneField, StatusMessage, PortalIdentityProvider, PortalResourceProvider } from '@materyalph/web-ui'
+import { BackNavigation, BotProtectionFields, Button, Field, GoogleButton, GoogleMark, googleButtonClassName, PasswordField, PhoneField, StatusMessage, PortalIdentityProvider, PortalResourceProvider, lazyPortalPage, PortalPageLoading, useCommissionPolicy } from '@materyalph/web-ui'
 import { ArrowRight } from 'lucide-react'
 import { type FormEvent, type ReactNode, useEffect, useRef, useState } from 'react'
-import { BrowserRouter, Link, Outlet, Route, Routes, useNavigate, useSearchParams } from 'react-router-dom'
+import { BrowserRouter, Navigate, Link, Outlet, Route, Routes, useNavigate, useSearchParams } from 'react-router-dom'
 
 import './App.css'
 import { AuthenticatedPublicPage } from './pages/AuthenticatedPublicPage'
@@ -27,22 +25,45 @@ import {
 } from './pages/AuthSupportPages'
 import { VendorLandingPage } from './pages/VendorLandingPage'
 import { VendorLegalPage } from './pages/VendorLegalPage'
-import { VendorCatalogImportPage, VendorCatalogPage, VendorListingEditorPage } from './pages/CatalogPages'
-import { VendorInventoryPage } from './pages/InventoryPages'
-import { VendorFleetPage } from './pages/FleetPages'
-import { VendorMessagesPage } from './pages/MessagingPage'
-import { VendorOrderDetailPage, VendorOrdersPage } from './pages/OrderPages'
-import { VendorFulfillmentPage } from './pages/FulfillmentPages'
-import { VendorDisputeDetailPage, VendorDisputesPage, VendorFileDisputePage } from './pages/DisputePages'
-import { VendorInvoicesPage } from './pages/InvoicePages'
-import { VendorMaterialPriceDetailsPage, VendorMaterialsAnalyticsPage, VendorProductAnalyticsPage, VendorReviewDetailPage, VendorReviewsPage, VendorStorePerformancePage } from './pages/TrustPages'
-import { VendorCommissionPage, VendorEarningsPage, VendorFinancePage, VendorStatementPage, VendorTransactionHistoryPage } from './pages/FinancePages'
-import { VendorAccountPage, VendorStoreProfilePage, VendorDashboardPage, VendorSetupPage, VendorTeamPage, VendorVerificationPage, VendorWelcomePage } from './pages/PhaseThreeVendorPages'
+import { CommissionTermsPage } from './pages/CommissionTermsPage'
+
+const VendorNotificationsPage = lazyPortalPage(() => import('./pages/NotificationPages').then(module => ({ default: module.VendorNotificationsPage })))
+const VendorPlaceholderPage = lazyPortalPage(() => import('./pages/PhaseThreeVendorPages').then(module => ({ default: module.VendorPlaceholderPage })))
+const VendorCatalogImportPage = lazyPortalPage(() => import('./pages/CatalogPages').then(module => ({ default: module.VendorCatalogImportPage })))
+const VendorCatalogPage = lazyPortalPage(() => import('./pages/CatalogPages').then(module => ({ default: module.VendorCatalogPage })))
+const VendorListingEditorPage = lazyPortalPage(() => import('./pages/CatalogPages').then(module => ({ default: module.VendorListingEditorPage })))
+const VendorInventoryPage = lazyPortalPage(() => import('./pages/InventoryPages').then(module => ({ default: module.VendorInventoryPage })))
+const VendorFleetPage = lazyPortalPage(() => import('./pages/FleetPages').then(module => ({ default: module.VendorFleetPage })))
+const VendorMessagesPage = lazyPortalPage(() => import('./pages/MessagingPage').then(module => ({ default: module.VendorMessagesPage })))
+const VendorOrderDetailPage = lazyPortalPage(() => import('./pages/OrderPages').then(module => ({ default: module.VendorOrderDetailPage })))
+const VendorOrdersPage = lazyPortalPage(() => import('./pages/OrderPages').then(module => ({ default: module.VendorOrdersPage })))
+const VendorFulfillmentPage = lazyPortalPage(() => import('./pages/FulfillmentPages').then(module => ({ default: module.VendorFulfillmentPage })))
+const VendorDisputeDetailPage = lazyPortalPage(() => import('./pages/DisputePages').then(module => ({ default: module.VendorDisputeDetailPage })))
+const VendorDisputesPage = lazyPortalPage(() => import('./pages/DisputePages').then(module => ({ default: module.VendorDisputesPage })))
+const VendorFileDisputePage = lazyPortalPage(() => import('./pages/DisputePages').then(module => ({ default: module.VendorFileDisputePage })))
+const VendorInvoicesPage = lazyPortalPage(() => import('./pages/InvoicePages').then(module => ({ default: module.VendorInvoicesPage })))
+const VendorProductAnalyticsOverviewPage = lazyPortalPage(() => import('./pages/TrustPages').then(module => ({ default: module.VendorProductAnalyticsOverviewPage })))
+const VendorProductAnalyticsPage = lazyPortalPage(() => import('./pages/TrustPages').then(module => ({ default: module.VendorProductAnalyticsPage })))
+const VendorReviewDetailPage = lazyPortalPage(() => import('./pages/TrustPages').then(module => ({ default: module.VendorReviewDetailPage })))
+const VendorReviewsPage = lazyPortalPage(() => import('./pages/TrustPages').then(module => ({ default: module.VendorReviewsPage })))
+const VendorStorePerformancePage = lazyPortalPage(() => import('./pages/TrustPages').then(module => ({ default: module.VendorStorePerformancePage })))
+const VendorCommissionPage = lazyPortalPage(() => import('./pages/FinancePages').then(module => ({ default: module.VendorCommissionPage })))
+const VendorEarningsPage = lazyPortalPage(() => import('./pages/FinancePages').then(module => ({ default: module.VendorEarningsPage })))
+const VendorFinancePage = lazyPortalPage(() => import('./pages/FinancePages').then(module => ({ default: module.VendorFinancePage })))
+const VendorStatementPage = lazyPortalPage(() => import('./pages/FinancePages').then(module => ({ default: module.VendorStatementPage })))
+const VendorTransactionHistoryPage = lazyPortalPage(() => import('./pages/FinancePages').then(module => ({ default: module.VendorTransactionHistoryPage })))
+const VendorAccountPage = lazyPortalPage(() => import('./pages/PhaseThreeVendorPages').then(module => ({ default: module.VendorAccountPage })))
+const VendorStoreProfilePage = lazyPortalPage(() => import('./pages/PhaseThreeVendorPages').then(module => ({ default: module.VendorStoreProfilePage })))
+const VendorDashboardPage = lazyPortalPage(() => import('./pages/PhaseThreeVendorPages').then(module => ({ default: module.VendorDashboardPage })))
+const VendorSetupPage = lazyPortalPage(() => import('./pages/PhaseThreeVendorPages').then(module => ({ default: module.VendorSetupPage })))
+const VendorTeamPage = lazyPortalPage(() => import('./pages/PhaseThreeVendorPages').then(module => ({ default: module.VendorTeamPage })))
+const VendorVerificationPage = lazyPortalPage(() => import('./pages/PhaseThreeVendorPages').then(module => ({ default: module.VendorVerificationPage })))
+const VendorWelcomePage = lazyPortalPage(() => import('./pages/PhaseThreeVendorPages').then(module => ({ default: module.VendorWelcomePage })))
 
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
+      <PortalPageLoading><Routes>
         <Route path="/" element={<AuthenticatedPublicPage><VendorLandingPage /></AuthenticatedPublicPage>} />
         <Route path="/login" element={<AuthenticatedPublicPage><LoginPage /></AuthenticatedPublicPage>} />
         <Route path="/register" element={<RegisterPage />} />
@@ -81,8 +102,9 @@ function App() {
           <Route path="/reviews/:reviewId" element={<VendorReviewDetailPage />} />
           <Route path="/performance" element={<VendorStorePerformancePage />} />
           <Route path="/performance/products/:listingId" element={<VendorProductAnalyticsPage />} />
-          <Route path="/analytics/materials" element={<VendorMaterialsAnalyticsPage />} />
-          <Route path="/analytics/materials/:groupId" element={<VendorMaterialPriceDetailsPage />} />
+          <Route path="/analytics/products" element={<VendorProductAnalyticsOverviewPage />} />
+          <Route path="/analytics/products/:listingId" element={<VendorProductAnalyticsPage />} />
+          <Route path="/analytics/materials/*" element={<Navigate to="/analytics/products" replace />} />
           <Route path="/finance" element={<VendorFinancePage />} />
           <Route path="/finance/commissions" element={<VendorCommissionPage />} />
           <Route path="/finance/transactions" element={<VendorTransactionHistoryPage />} />
@@ -101,8 +123,9 @@ function App() {
         <Route path="/contact/access" element={<GuestSupportAccessPage />} />
         <Route path="/contact/tickets/:ticketId" element={<GuestSupportTicketPage />} />
         <Route path="/legal/:document" element={<VendorLegalPage />} />
+        <Route path="/commission-terms" element={<CommissionTermsPage />} />
         <Route path="*" element={<NotFound />} />
-      </Routes>
+      </Routes></PortalPageLoading>
     </BrowserRouter>
   )
 }
@@ -160,7 +183,7 @@ function LoginPage() {
     catch (error) { setMessage(await readableApiError(error)); setBusy(false) }
   }
 
-  const successMessage = searchParams.get('logout') === 'success' ? 'You have signed out securely.' : searchParams.get('verified') === 'success'
+  const successMessage = searchParams.get('deleted') === 'success' ? 'Your Vendor account has been deleted. Your store is closed and all team sessions have been signed out.' : searchParams.get('logout') === 'success' ? 'You have signed out securely.' : searchParams.get('verified') === 'success'
     ? 'Email verified. You can now sign in.'
     : searchParams.get('reset') === 'success'
       ? 'Password updated. Sign in with your new password.'
@@ -342,7 +365,8 @@ function InfoPage({ title, children }: { title: string; children: ReactNode }) {
 }
 
 function FeesContent() {
-  return <div className="info-copy"><p><strong>Vendor-paid monthly platform commission:</strong> the initial default is 2.00%. The effective versioned rate is shown in Vendor Finance and the Commission Terms. It applies only to completed materials after Vendor discounts and excluding included materials VAT.</p><p>Buyer processing fees, Vendor commission liability, monthly settlement, withholding scenarios, refunds, and dispute adjustments remain separate records. Commission and processing fees are explained separately so you can understand each charge.</p></div>
+  const policy = useCommissionPolicy(import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1')
+  return <div className="info-copy"><p><strong>Vendor-paid monthly platform commission:</strong> current rate {policy.data?.current?.rateLabel ?? 'unavailable'}. <Link to="/commission-terms">Review the effective Commission Terms</Link>. It applies only to completed materials after Vendor discounts and excluding included materials VAT.</p>{policy.error && <p role="alert">{policy.error} <Button variant="secondary" onClick={policy.reload}>Retry policy</Button></p>}<p>E-wallet transaction fees, Vendor commission liability, monthly settlement, withholding scenarios, refunds, and dispute adjustments remain separate records. Commission and e-wallet transaction fees are explained separately so you can understand each charge.</p></div>
 }
 
 function VerificationContent() {
@@ -354,7 +378,7 @@ function OpportunitiesContent() {
 }
 
 function NotFound() {
-  return <InfoPage title="Page not found"><div className="info-copy"><p>The requested Vendor page is not available.</p><Link className="text-link" to="/">Return to the Vendor home page</Link></div></InfoPage>
+  return <InfoPage title="Page not found"><div className="info-copy"><p>The requested Vendor page is not available.</p><BackNavigation><Link to="/">Return to the Vendor home page</Link></BackNavigation></div></InfoPage>
 }
 
 export default App

@@ -95,10 +95,10 @@ final class PhaseFourteenRulesTest extends TestCase
         self::assertSame('2026-10-15 23:30:00', ReviewRules::closesAt($completed)->format('Y-m-d H:i:s'));
         self::assertSame('2026-10-02 23:30:00', ReviewRules::editableUntil($completed)->format('Y-m-d H:i:s'));
         self::assertSame([14, 24, 7, 1000], [ReviewRules::WINDOW_DAYS, ReviewRules::EDIT_HOURS, ReviewRules::CORRECTION_DAYS, ReviewRules::COMMENT_MAX]);
-        self::assertSame('Juan C.', ReviewRules::publicName('Juan dela Cruz', 'FIRST_NAME_LAST_INITIAL'));
+        self::assertSame('Juan dela Cruz', ReviewRules::publicName('Juan dela Cruz', 'FIRST_NAME_LAST_INITIAL'));
         self::assertSame('Maria', ReviewRules::publicName('Maria', 'FIRST_NAME_LAST_INITIAL'));
-        self::assertSame('Verified Buyer', ReviewRules::publicName('Juan dela Cruz', 'VERIFIED_BUYER'));
-        self::assertSame('Verified Buyer', ReviewRules::publicName('', 'FIRST_NAME_LAST_INITIAL'));
+        self::assertSame('Juan dela Cruz', ReviewRules::publicName('Juan dela Cruz', 'VERIFIED_BUYER'));
+        self::assertSame('Reviewer unavailable', ReviewRules::publicName('', 'FIRST_NAME_LAST_INITIAL'));
         self::assertSame(['DELIVERY_SPEED', 'PROCESSING_SPEED'], [ReviewRules::speedKind('DELIVERY'), ReviewRules::speedKind('PICKUP')]);
         self::assertSame([], ReviewModerationService::actionsFor('REMOVED'), 'Remove is final.');
         self::assertSame(['DISMISS_FLAG', 'HIDE_PENDING_REVIEW', 'REQUEST_CORRECTION', 'REMOVE'], ReviewModerationService::actionsFor('FLAGGED'));

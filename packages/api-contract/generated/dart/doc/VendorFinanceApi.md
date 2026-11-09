@@ -17,6 +17,7 @@ Method | HTTP request | Description
 [**getVendorFeePayment**](VendorFinanceApi.md#getvendorfeepayment) | **GET** /vendor/finance/payments/{paymentId} |
 [**getVendorFeeStatement**](VendorFinanceApi.md#getvendorfeestatement) | **GET** /vendor/finance/statements/{statementId} |
 [**getVendorFinanceOverview**](VendorFinanceApi.md#getvendorfinanceoverview) | **GET** /vendor/finance |
+[**listVendorThresholdPayments**](VendorFinanceApi.md#listvendorthresholdpayments) | **GET** /vendor/finance/threshold-payments |
 [**listVendorTransactions**](VendorFinanceApi.md#listvendortransactions) | **GET** /vendor/finance/transactions |
 [**payVendorFeeStatement**](VendorFinanceApi.md#payvendorfeestatement) | **POST** /vendor/finance/statements/{statementId}/payments |
 [**recordVendorPhysicalPayment**](VendorFinanceApi.md#recordvendorphysicalpayment) | **POST** /vendor/orders/{orderId}/physical-payments |
@@ -134,7 +135,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **exportVendorTransactions**
-> String exportVendorTransactions(tab, status, from, to)
+> String exportVendorTransactions(tab, status, statementState, from, to)
 
 
 
@@ -155,11 +156,12 @@ import 'package:materyalph_api_client/api.dart';
 final api = MateryalphApiClient().getVendorFinanceApi();
 final String tab = tab_example; // String |
 final String status = status_example; // String | Payments tab only; ignored by every other tab. Each value matches the status badge a Payments row shows. PAID has no refund activity; LATE_CAPTURE covers every late-captured payment awaiting or after its refund; PENDING is any attempt not yet settled. PHYSICAL_* values select Cash on Delivery / In-Store obligations: COLLECTED (nothing remains), PARTIAL (part recorded), TO_RECORD (delivered or picked up, no cash recorded yet), AWAITING (before handover), RELEASED (cancelled unpaid).
+final String statementState = statementState_example; // String | STATEMENTS only; ignored by other tabs. PAID selects fully paid statements. NOT_PAID selects every other published state, including voided statements. Omit for all published statements. Filtered before pagination and export bounds; dates refer to statement issue dates.
 final Date from = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Same timestamp and filters as the selected Transaction History tab; filtered before the existing 5000-row export bound.
 final Date to = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Same timestamp and filters as the selected Transaction History tab; filtered before the existing 5000-row export bound.
 
 try {
-    final response = api.exportVendorTransactions(tab, status, from, to);
+    final response = api.exportVendorTransactions(tab, status, statementState, from, to);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling VendorFinanceApi->exportVendorTransactions: $e\n');
@@ -172,6 +174,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **tab** | **String**|  |
  **status** | **String**| Payments tab only; ignored by every other tab. Each value matches the status badge a Payments row shows. PAID has no refund activity; LATE_CAPTURE covers every late-captured payment awaiting or after its refund; PENDING is any attempt not yet settled. PHYSICAL_* values select Cash on Delivery / In-Store obligations: COLLECTED (nothing remains), PARTIAL (part recorded), TO_RECORD (delivered or picked up, no cash recorded yet), AWAITING (before handover), RELEASED (cancelled unpaid). | [optional]
+ **statementState** | **String**| STATEMENTS only; ignored by other tabs. PAID selects fully paid statements. NOT_PAID selects every other published state, including voided statements. Omit for all published statements. Filtered before pagination and export bounds; dates refer to statement issue dates. | [optional]
  **from** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Same timestamp and filters as the selected Transaction History tab; filtered before the existing 5000-row export bound. | [optional]
  **to** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Same timestamp and filters as the selected Transaction History tab; filtered before the existing 5000-row export bound. | [optional]
 
@@ -261,8 +264,8 @@ import 'package:materyalph_api_client/api.dart';
 //defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
 
 final api = MateryalphApiClient().getVendorFinanceApi();
-final Date from = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Commercial sales use order accepted_at; online collections paid_at; physical collections recorded_at; remittances created_at; commission earned_at and approved credit approved_at; estimates created_at; unpaid statements issued_on. Taxpayer thresholds are never recalculated by this view.
-final Date to = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Commercial sales use order accepted_at; online collections paid_at; physical collections recorded_at; remittances created_at; commission earned_at and approved credit approved_at; estimates created_at; unpaid statements issued_on. Taxpayer thresholds are never recalculated by this view.
+final Date from = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Net sales use the order first-confirmation timestamp; online collections paid_at; physical collections recorded_at; remittances created_at; commission earned_at and approved credit approved_at; estimates created_at; unpaid statements issued_on. Taxpayer thresholds are never recalculated by this view.
+final Date to = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Net sales use the order first-confirmation timestamp; online collections paid_at; physical collections recorded_at; remittances created_at; commission earned_at and approved credit approved_at; estimates created_at; unpaid statements issued_on. Taxpayer thresholds are never recalculated by this view.
 
 try {
     final response = api.getVendorEarnings(from, to);
@@ -276,8 +279,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **from** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Commercial sales use order accepted_at; online collections paid_at; physical collections recorded_at; remittances created_at; commission earned_at and approved credit approved_at; estimates created_at; unpaid statements issued_on. Taxpayer thresholds are never recalculated by this view. | [optional]
- **to** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Commercial sales use order accepted_at; online collections paid_at; physical collections recorded_at; remittances created_at; commission earned_at and approved credit approved_at; estimates created_at; unpaid statements issued_on. Taxpayer thresholds are never recalculated by this view. | [optional]
+ **from** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Net sales use the order first-confirmation timestamp; online collections paid_at; physical collections recorded_at; remittances created_at; commission earned_at and approved credit approved_at; estimates created_at; unpaid statements issued_on. Taxpayer thresholds are never recalculated by this view. | [optional]
+ **to** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Net sales use the order first-confirmation timestamp; online collections paid_at; physical collections recorded_at; remittances created_at; commission earned_at and approved credit approved_at; estimates created_at; unpaid statements issued_on. Taxpayer thresholds are never recalculated by this view. | [optional]
 
 ### Return type
 
@@ -443,12 +446,63 @@ This endpoint does not need any parameter.
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **listVendorThresholdPayments**
+> VendorThresholdPaymentsEnvelope listVendorThresholdPayments(page)
+
+
+
+Owner-only paginated retained payments from the current taxpayer-year POSTED merchant assessments. Completed full principal refunds are omitted; completed partial refunds reduce the returned principal, fee and collection amounts once. Pending and failed refunds do not reduce amounts. Totals describe current retained payments, not a rewrite of the posted annual tax basis or crossed-threshold status. Own-store order references only; other stores sharing the taxpayer are aggregate-only without identities. VOIDED assessments, other years, direct COD and In-Store cash are excluded. Read-only TEST records.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getVendorFinanceApi();
+final int page = 56; // int |
+
+try {
+    final response = api.listVendorThresholdPayments(page);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling VendorFinanceApi->listVendorThresholdPayments: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **page** | **int**|  | [optional] [default to 1]
+
+### Return type
+
+[**VendorThresholdPaymentsEnvelope**](VendorThresholdPaymentsEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **listVendorTransactions**
-> FinanceTransactionListEnvelope listVendorTransactions(tab, page, status, from, to)
+> FinanceTransactionListEnvelope listVendorTransactions(tab, page, status, statementState, from, to)
 
 
 
-Owner-only read-only Transaction History (former Wallet label). No balance, wallet or escrow.
+Owner-only read-only Transaction History (former Wallet label). PAYMENTS is the unified list of payments and their recorded remittance/withholding assessments, with unlinked historical assessments retained as separate records. No balance, wallet or escrow.
 
 ### Example
 ```dart
@@ -466,11 +520,12 @@ final api = MateryalphApiClient().getVendorFinanceApi();
 final String tab = tab_example; // String |
 final int page = 56; // int |
 final String status = status_example; // String | Payments tab only; ignored by every other tab. Each value matches the status badge a Payments row shows. PAID has no refund activity; LATE_CAPTURE covers every late-captured payment awaiting or after its refund; PENDING is any attempt not yet settled. PHYSICAL_* values select Cash on Delivery / In-Store obligations: COLLECTED (nothing remains), PARTIAL (part recorded), TO_RECORD (delivered or picked up, no cash recorded yet), AWAITING (before handover), RELEASED (cancelled unpaid).
+final String statementState = statementState_example; // String | STATEMENTS only; ignored by other tabs. PAID selects fully paid statements. NOT_PAID selects every other published state, including voided statements. Omit for all published statements. Filtered before pagination and export bounds; dates refer to statement issue dates.
 final Date from = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. PAYMENTS paid_at with created_at fallback; PHYSICAL recorded_at; REMITTANCES created_at; STATEMENTS issued_on; REFUNDS created_at; TAX_DOCUMENTS period_end.
 final Date to = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. PAYMENTS paid_at with created_at fallback; PHYSICAL recorded_at; REMITTANCES created_at; STATEMENTS issued_on; REFUNDS created_at; TAX_DOCUMENTS period_end.
 
 try {
-    final response = api.listVendorTransactions(tab, page, status, from, to);
+    final response = api.listVendorTransactions(tab, page, status, statementState, from, to);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling VendorFinanceApi->listVendorTransactions: $e\n');
@@ -484,6 +539,7 @@ Name | Type | Description  | Notes
  **tab** | **String**|  | [optional]
  **page** | **int**|  | [optional]
  **status** | **String**| Payments tab only; ignored by every other tab. Each value matches the status badge a Payments row shows. PAID has no refund activity; LATE_CAPTURE covers every late-captured payment awaiting or after its refund; PENDING is any attempt not yet settled. PHYSICAL_* values select Cash on Delivery / In-Store obligations: COLLECTED (nothing remains), PARTIAL (part recorded), TO_RECORD (delivered or picked up, no cash recorded yet), AWAITING (before handover), RELEASED (cancelled unpaid). | [optional]
+ **statementState** | **String**| STATEMENTS only; ignored by other tabs. PAID selects fully paid statements. NOT_PAID selects every other published state, including voided statements. Omit for all published statements. Filtered before pagination and export bounds; dates refer to statement issue dates. | [optional]
  **from** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. PAYMENTS paid_at with created_at fallback; PHYSICAL recorded_at; REMITTANCES created_at; STATEMENTS issued_on; REFUNDS created_at; TAX_DOCUMENTS period_end. | [optional]
  **to** | **Date**| Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. PAYMENTS paid_at with created_at fallback; PHYSICAL recorded_at; REMITTANCES created_at; STATEMENTS issued_on; REFUNDS created_at; TAX_DOCUMENTS period_end. | [optional]
 

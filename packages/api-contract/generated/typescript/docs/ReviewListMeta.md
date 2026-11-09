@@ -6,6 +6,7 @@
 
 Name | Type
 ------------ | -------------
+`counts` | { [key: string]: number; }
 `page` | number
 `perPage` | number
 `total` | number
@@ -21,6 +22,7 @@ import type { ReviewListMeta } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "counts": null,
   "page": null,
   "perPage": null,
   "total": null,

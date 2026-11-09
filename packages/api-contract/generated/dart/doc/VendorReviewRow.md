@@ -8,6 +8,7 @@ import 'package:materyalph_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
+**buyerAvatarUrl** | **String** | Five-minute signed review-scoped Buyer photo URL, including for legacy reviews now shown with full identity. Null for store-authored Buyer ratings or missing photos. Fetch with the current Vendor session; never use a private storage URL. | [optional]
 **id** | **String** |  | [optional]
 **type** | **String** |  | [optional]
 **ratings** | [**ReviewRatings**](ReviewRatings.md) |  | [optional]

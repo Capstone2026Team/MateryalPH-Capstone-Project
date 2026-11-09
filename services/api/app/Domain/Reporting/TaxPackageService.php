@@ -187,6 +187,8 @@ final class TaxPackageService
         }
         $row = (array) $package;
         $row['snapshot'] = json_decode($package->snapshot, true);
+        $vendorIds = array_column($row['snapshot']['monthly_totals'] ?? [], 'payee');
+        $row['vendor_names'] = (object) DB::table('vendor_organizations')->whereIn('id', $vendorIds)->pluck('store_name', 'id')->all();
         $row['due_date_status'] = $package->due_date_reviewer_id === null ? 'DUE_DATE_REVIEW_REQUIRED' : 'REVIEWED';
 
         return $row;

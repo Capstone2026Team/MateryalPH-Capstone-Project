@@ -38,3 +38,27 @@ Owner-only access is unchanged. The new object exposes aggregate money component
 - The Vendor build retains its existing chunk-size warning. Browser/device and live-provider acceptance were not tested. Tests used the isolated database; the development check was read-only.
 
 Suggested commit: `fix(finance): explain threshold basis versus remittance cash`.
+
+## Annual online payment sources — 2026-11-06
+
+The supplied ₱1,611.77 is four POSTED online-payment assessments for the taxable year: ₱293.05 + ₱293.05 + ₱732.62 + ₱293.05. Their order amounts total ₱1,570.25 and Buyer fees total ₱41.52. This is distinct from the selected 30-day Net sales of ₱30,051.75: that total includes ₱29,052.50 COD and ₱999.25 online sales, excludes Buyer fees, and excludes the two earlier online orders totalling ₱571.00. Reconciliation: ₱30,051.75 - ₱29,052.50 + ₱571.00 + ₱41.52 = ₱1,611.77. These are TEST records verified with a read-only development query.
+
+The shared threshold table labels the starting amount **Assessed online payments (4)** and shows order amounts plus Buyer fees. **View payment breakdown** expands directly below that row. Each source displays its order reference, assessment date, order amount, Buyer fee, and payment total. The annual subtotal remains separate from the delivery, material VAT and provider-charge deductions. Full-year remittance-history links convert the exclusive tax-year end into the last included Manila date.
+
+`GET /api/v1/vendor/finance/threshold-payments?page=1` uses the existing Owner finance authorization and matching TEST taxpayer-year accumulator, checks that its assessment basis reconciles, and returns at most 20 own-store records per page. Other stores sharing the taxpayer appear as combined totals only, without order references, store identities, taxpayer hashes, provider identifiers or Buyer details. Voided assessments, other taxpayers and other years are excluded. Historical counters without a matching reconstruction return `THRESHOLD_BREAKDOWN_UNAVAILABLE`; retries never change financial records.
+
+No migration, accounting formula, permission, notification or financial-write behavior changes. OpenAPI and both generated clients document the additive source response. No manual environment setup is required.
+
+Automated acceptance includes source equations and totals, page boundaries without duplicate records, aggregate-only other-store contributions, invalid pages, Owner-only denial, unavailable historical breakdowns, lazy expansion, retry/empty states, and responsive keyboard access.
+
+Validation for this update:
+
+- Isolated `VendorEarningsTrendTest.php`: **10 passed, 788 assertions**.
+- Vendor Finance, shared patterns and payment-breakdown components: **69 passed**; Admin Finance components: **12 passed**.
+- Threshold browser acceptance: **16 passed** across 320, 375, 390, 768, 1024, 1280, 1440 and 1920px, including keyboard expansion, payment sources, annual-history dates, mobile cards and page-overflow checks. Desktop and narrow-mobile source screenshots were visually reviewed. An isolated preview build avoided concurrent portal builds changing test assets.
+- Vendor lint/typecheck/build and Admin typecheck/build passed. One existing unrelated `inStore` lint warning and the existing build chunk-size warnings remain.
+- OpenAPI validation passed with its eight existing unused-model recommendations. Earnings/source contract checks and the generated TypeScript build passed.
+- Dart builders/serializers regenerated; both the annual source JSON contract check and the threshold calculation JSON check passed. Scoped Dart analysis: **no issues**.
+- Scoped Pint (four files), full PHPStan, Compose configuration and `git diff --check` passed. Gitleaks scanned **2.07 MB** of relevant source with **no leaks**; the staged scan had no content.
+
+Browser checks used mocked TEST responses; no live payment provider, production tax filing or deployment was involved. Suggested commit: `fix(finance): show assessed payment source breakdown`.

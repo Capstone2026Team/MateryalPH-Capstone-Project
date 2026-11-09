@@ -5,8 +5,10 @@ All URIs are relative to */api/v1*
 | Method | HTTP request | Description |
 |------------- | ------------- | -------------|
 | [**downloadDocumentExport**](ReportingApi.md#downloaddocumentexport) | **GET** /{audience}/reports/{exportId}/download | download Document Export |
+| [**downloadOrderDocument**](ReportingApi.md#downloadorderdocument) | **GET** /{audience}/orders/{orderId}/documents/{kind}/download | Download an already generated order PDF |
 | [**getTaxPackage**](ReportingApi.md#gettaxpackage) | **GET** /admin/reports/tax/{packageId} | get Tax Package |
 | [**listDocumentExports**](ReportingApi.md#listdocumentexports) | **GET** /{audience}/reports | list Document Exports |
+| [**listOrderDocuments**](ReportingApi.md#listorderdocuments) | **GET** /{audience}/orders/{orderId}/documents | List automatically issued order documents |
 | [**listTaxPackages**](ReportingApi.md#listtaxpackages) | **GET** /admin/reports/tax | list Tax Packages |
 | [**prepareTaxPackage**](ReportingApi.md#preparetaxpackage) | **POST** /admin/reports/tax | prepare Tax Package |
 | [**recordTaxSimulation**](ReportingApi.md#recordtaxsimulation) | **POST** /admin/reports/tax/{packageId}/simulation | record Tax Simulation |
@@ -91,6 +93,88 @@ example().catch(console.error);
 | **410** | Structured error; see errors[0].code and correlation ID. |  -  |
 | **422** | Structured error; see errors[0].code and correlation ID. |  -  |
 | **503** | Structured error; see errors[0].code and correlation ID. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## downloadOrderDocument
+
+> Blob downloadOrderDocument(audience, orderId, kind)
+
+Download an already generated order PDF
+
+Read-only, private, audited attachment. Rechecks current order access and file checksum; never generates a new report. Canonical files follow commercial-record retention rather than the 24-hour report-copy expiry.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  ReportingApi,
+} from '@materyalph/api-client-ts';
+import type { DownloadOrderDocumentRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // Configure HTTP bearer authorization: passportBearer
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new ReportingApi(config);
+
+  const body = {
+    // 'buyers' | 'vendor' | 'admin' | Authenticated surface; account type must match.
+    audience: audience_example,
+    // string
+    orderId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // 'PURCHASE_ORDER'
+    kind: kind_example,
+  } satisfies DownloadOrderDocumentRequest;
+
+  try {
+    const data = await api.downloadOrderDocument(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **audience** | `buyers`, `vendor`, `admin` | Authenticated surface; account type must match. | [Defaults to `undefined`] [Enum: buyers, vendor, admin] |
+| **orderId** | `string` |  | [Defaults to `undefined`] |
+| **kind** | `PURCHASE_ORDER` |  | [Defaults to `undefined`] [Enum: PURCHASE_ORDER] |
+
+### Return type
+
+**Blob**
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/octet-stream`, `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Stored PDF attachment. |  -  |
+| **401** | Structured error with stable code and correlation ID. |  -  |
+| **403** | Structured error with stable code and correlation ID. |  -  |
+| **404** | Structured error with stable code and correlation ID. |  -  |
+| **409** | Structured error with stable code and correlation ID. |  -  |
+| **503** | Structured error with stable code and correlation ID. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -202,7 +286,7 @@ async function example() {
     audience: audience_example,
     // number (optional)
     page: 56,
-    // 'PURCHASE_ORDER' | 'PAYMENT_CONFIRMATION' | 'PROJECT_SUMMARY' | 'BUDGET_REPORT' | 'OPERATIONAL_ORDER' | 'FEE_STATEMENT' | 'MATERIALS_ANALYTICS' | 'TAX_PACKAGE' | 'AUDIT_LOG' | 'GEO_ANALYTICS' | 'TRANSACTION_HISTORY' | 'EARNINGS' (optional)
+    // 'PURCHASE_ORDER' | 'PROJECT_SUMMARY' | 'BUDGET_REPORT' | 'OPERATIONAL_ORDER' | 'FEE_STATEMENT' | 'MATERIALS_ANALYTICS' | 'TAX_PACKAGE' | 'AUDIT_LOG' | 'GEO_ANALYTICS' | 'TRANSACTION_HISTORY' | 'EARNINGS' (optional)
     type: type_example,
     // string (optional)
     resourceId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
@@ -233,7 +317,7 @@ example().catch(console.error);
 |------------- | ------------- | ------------- | -------------|
 | **audience** | `buyers`, `vendor`, `admin` | Authenticated surface. The server rejects mismatched account types. | [Defaults to `undefined`] [Enum: buyers, vendor, admin] |
 | **page** | `number` |  | [Optional] [Defaults to `undefined`] |
-| **type** | `PURCHASE_ORDER`, `PAYMENT_CONFIRMATION`, `PROJECT_SUMMARY`, `BUDGET_REPORT`, `OPERATIONAL_ORDER`, `FEE_STATEMENT`, `MATERIALS_ANALYTICS`, `TAX_PACKAGE`, `AUDIT_LOG`, `GEO_ANALYTICS`, `TRANSACTION_HISTORY`, `EARNINGS` |  | [Optional] [Defaults to `undefined`] [Enum: PURCHASE_ORDER, PAYMENT_CONFIRMATION, PROJECT_SUMMARY, BUDGET_REPORT, OPERATIONAL_ORDER, FEE_STATEMENT, MATERIALS_ANALYTICS, TAX_PACKAGE, AUDIT_LOG, GEO_ANALYTICS, TRANSACTION_HISTORY, EARNINGS] |
+| **type** | `PURCHASE_ORDER`, `PROJECT_SUMMARY`, `BUDGET_REPORT`, `OPERATIONAL_ORDER`, `FEE_STATEMENT`, `MATERIALS_ANALYTICS`, `TAX_PACKAGE`, `AUDIT_LOG`, `GEO_ANALYTICS`, `TRANSACTION_HISTORY`, `EARNINGS` |  | [Optional] [Defaults to `undefined`] [Enum: PURCHASE_ORDER, PROJECT_SUMMARY, BUDGET_REPORT, OPERATIONAL_ORDER, FEE_STATEMENT, MATERIALS_ANALYTICS, TAX_PACKAGE, AUDIT_LOG, GEO_ANALYTICS, TRANSACTION_HISTORY, EARNINGS] |
 | **resourceId** | `string` |  | [Optional] [Defaults to `undefined`] |
 | **format** | `PDF`, `CSV` |  | [Optional] [Defaults to `undefined`] [Enum: PDF, CSV] |
 | **from** | `Date` | Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Export requested_at (created_at); each download rechecks current permissions. | [Optional] [Defaults to `undefined`] |
@@ -263,6 +347,85 @@ example().catch(console.error);
 | **410** | Structured error; see errors[0].code and correlation ID. |  -  |
 | **422** | Structured error; see errors[0].code and correlation ID. |  -  |
 | **503** | Structured error; see errors[0].code and correlation ID. |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## listOrderDocuments
+
+> ListOrderDocuments200Response listOrderDocuments(audience, orderId)
+
+List automatically issued order documents
+
+Read-only. The Purchase Order includes payment and fulfillment methods, recorded Buyer/Vendor details, and Buyer account email/mobile. Separate payment confirmations are retired. Documents are retained commercial records, not expiring report copies or Vendor tax invoices. No document is generated by this read.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  ReportingApi,
+} from '@materyalph/api-client-ts';
+import type { ListOrderDocumentsRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // Configure HTTP bearer authorization: passportBearer
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new ReportingApi(config);
+
+  const body = {
+    // 'buyers' | 'vendor' | 'admin' | Authenticated surface; account type must match.
+    audience: audience_example,
+    // string
+    orderId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+  } satisfies ListOrderDocumentsRequest;
+
+  try {
+    const data = await api.listOrderDocuments(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **audience** | `buyers`, `vendor`, `admin` | Authenticated surface; account type must match. | [Defaults to `undefined`] [Enum: buyers, vendor, admin] |
+| **orderId** | `string` |  | [Defaults to `undefined`] |
+
+### Return type
+
+[**ListOrderDocuments200Response**](ListOrderDocuments200Response.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Both document kinds and their current availability. |  -  |
+| **401** | Structured error with stable code and correlation ID. |  -  |
+| **403** | Structured error with stable code and correlation ID. |  -  |
+| **404** | Structured error with stable code and correlation ID. |  -  |
+| **409** | Structured error with stable code and correlation ID. |  -  |
+| **503** | Structured error with stable code and correlation ID. |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
@@ -513,7 +676,7 @@ example().catch(console.error);
 
 request Document Export
 
-Private immutable snapshot. Current access checked at request, generation and download. Admin requires recent authentication. Files expire 24 hours after generation. MAT audience suppression applies.
+Private immutable snapshot. Current access checked at request, generation and download. Admin requires recent authentication. Files expire 24 hours after generation. MAT audience suppression applies. Admin TRANSACTION_HISTORY exports only successful Vendor commission payments, with finance.view plus finance.export; from, to and status filters match the commission payment ledger. Monthly statements are created and issued automatically with immutable invoices.
 
 ### Example
 

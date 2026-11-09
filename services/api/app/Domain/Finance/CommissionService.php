@@ -19,7 +19,7 @@ use Illuminate\Support\Str;
  *   full reversal     consumes every remaining fee centavo
  *   DEMO_VAT_12       fee VAT = money(fee × 12 / 112); revenue = fee − VAT (DEMO_NONVAT: no fee VAT)
  *
- * A credit is prepared by one finance user and approved by a different one; it never edits the earned source
+ * Executed dispute awards are credited automatically; manual corrections require two different finance users; it never edits the earned source
  * amount, posts a reversing ledger batch and is billed as a credit line on the next statement (or recorded as an
  * audited payable when the original statement was already paid). Commission is never deducted from a remittance.
  */
@@ -146,11 +146,11 @@ final class CommissionService
         return DB::transaction(function () use ($assessmentId, $returnedExclusiveCentavos, $reason, $preparerUserId): string {
             $assessment = DB::table('fee_assessments')->where('id', $assessmentId)->lockForUpdate()->first();
             if ($assessment === null || $assessment->state !== 'EARNED') {
-                throw new AuthenticationException('FEE_CREDIT_NOT_AVAILABLE', 'Only an earned commission can be credited.', 409);
+                throw new AuthenticationException('FEE_CREDIT_NOT_AVAILABLE', 'Only platform commission charges for completed orders can be credited.', 409);
             }
             $computed = self::creditTarget((int) $assessment->commission_basis_centavos, (int) $assessment->earned_target_centavos, (int) $assessment->credited_centavos, $returnedExclusiveCentavos, (int) $assessment->commission_basis_points);
             if ($computed['credit_centavos'] <= 0) {
-                throw new AuthenticationException('FEE_CREDIT_NOT_AVAILABLE', 'This return does not reduce the earned commission.', 422);
+                throw new AuthenticationException('FEE_CREDIT_NOT_AVAILABLE', 'This return does not reduce the platform commission charges.', 422);
             }
             $id = (string) Str::uuid7();
             DB::table('finance_review_items')->insert(['id' => $id, 'environment' => 'TEST', 'kind' => 'FEE_CREDIT_PROPOSAL', 'vendor_organization_id' => $assessment->vendor_organization_id,
@@ -180,38 +180,74 @@ final class CommissionService
             if ($computed['credit_centavos'] <= 0) {
                 throw new AuthenticationException('FEE_CREDIT_NOT_AVAILABLE', 'This commission was already credited.', 409);
             }
-            $adjustmentId = (string) Str::uuid7();
-            $before = (int) $assessment->earned_target_centavos - (int) $assessment->credited_centavos;
-            DB::table('fee_adjustments')->insert(['id' => $adjustmentId, 'fee_assessment_id' => $assessment->id, 'kind' => 'CREDIT', 'amount_centavos' => $computed['credit_centavos'],
-                'target_fee_before_centavos' => $before, 'target_fee_after_centavos' => $computed['target_centavos'], 'reason' => (string) $proposal->summary,
-                'prepared_by_user_id' => (int) $values['prepared_by_user_id'], 'approved_by_user_id' => $approverUserId, 'approved_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
-            $credited = (int) $assessment->credited_centavos + $computed['credit_centavos'];
-            DB::table('fee_assessments')->where('id', $assessment->id)->update(['credited_centavos' => $credited,
-                'credited_state' => $credited >= (int) $assessment->earned_centavos ? 'CREDITED' : 'PARTIALLY_CREDITED', 'updated_at' => now()]);
-            $adjustment = DB::table('fee_adjustments')->where('id', $adjustmentId)->first();
-            $allocation = app(StatementService::class)->applyCredit($adjustment);
-            $originalVat = (int) DB::table('financial_ledger_entries')->where('source_type', 'FEE_ASSESSMENT')->where('source_id', $assessment->id)->where('account_code', 'OUTPUT_VAT')->where('direction', 'CREDIT')->sum('amount_centavos');
-            $creditedVat = self::creditedVat((string) $assessment->id);
-            $split = self::creditSplit((int) $assessment->earned_centavos, $originalVat, (int) $assessment->credited_centavos, $creditedVat, $computed['credit_centavos']);
-            $source = ['FEE_ADJUSTMENT', $adjustmentId];
-            $this->ledger->post(FinancialLedgerService::PLATFORM_FEE, 'FEE_CREDIT', 'PLATFORM_FEE:CREDIT:'.$adjustmentId, [
-                FinancialLedgerService::debit('FEE_REVENUE', $split['revenue_centavos'], ...$source), FinancialLedgerService::debit('OUTPUT_VAT', $split['vat_centavos'], ...$source),
-                FinancialLedgerService::credit('FEE_RECEIVABLE', $computed['credit_centavos'] - $allocation['refund_centavos'], ...$source),
-                FinancialLedgerService::credit('FEE_REFUND_PAYABLE', $allocation['refund_centavos'], ...$source),
-            ], $correlationId, $approverUserId, 'FINANCE_REVIEWER');
-            if ($allocation['refund_centavos'] > 0) {
-                // FIN-07 PLATFORM_FEE target: refund through the original fee captures only; never another party's funds.
-                $covered = app(RefundService::class)->createFeeCreditRefunds($adjustment, $assessment, $correlationId, $allocation['refund_centavos']);
-                if ($covered < $allocation['refund_centavos']) {
-                    app(WithholdingThresholdService::class)->reviewItem('TEST', (string) $assessment->vendor_organization_id, 'PAID_FEE_CREDIT_PAYABLE', $adjustmentId, 'CREDIT_ON_PAID_STATEMENT',
-                        'A fee credit exceeds the unpaid debt and no supported original fee capture covers ₱'.WithholdingThresholdService::pesos($allocation['refund_centavos'] - $covered).'. Record the audited payable.',
-                        ['credit_centavos' => $allocation['refund_centavos'], 'refund_covered_centavos' => $covered], [], 'FEE_ADJUSTMENT');
-                }
-            }
+            $adjustmentId = $this->postCredit($assessment, $computed, (string) $proposal->summary, (int) $values['prepared_by_user_id'], $approverUserId, $correlationId);
             DB::table('finance_review_items')->where('id', $proposalId)->update(['state' => 'RESOLVED', 'resolution' => 'Approved as fee adjustment '.$adjustmentId, 'resolved_by_user_id' => $approverUserId, 'resolved_at' => now(), 'updated_at' => now()]);
-            $this->outbox->publish('FEE_CREDIT_APPROVED', 'FEE_ADJUSTMENT', $adjustmentId, ['fee_adjustment_id' => $adjustmentId, 'credit_centavos' => $computed['credit_centavos']]);
 
             return $adjustmentId;
         });
+    }
+
+    /** Caller holds the order, assessment and remedy locks. Only an executed award can create a system credit. */
+    public function creditDisputeRemedy(object $assessment, object $remedy, int $returnedExclusiveCentavos, string $correlationId): ?string
+    {
+        if (DB::transactionLevel() < 1) {
+            throw new \LogicException('Automatic credits require the remedy transaction.');
+        }
+        $validSource = DB::table('dispute_remedies as r')->join('dispute_cases as c', 'c.id', '=', 'r.dispute_case_id')
+            ->where('r.id', $remedy->id)->where('c.order_id', $assessment->order_id)->where('r.kind', 'FEE_CREDIT_REVIEW')
+            ->whereIn('r.state', ['PENDING', 'COMPLETED'])->whereExists(fn (Builder $q) => $q->selectRaw('1')->from('dispute_events as e')
+            ->whereColumn('e.dispute_case_id', 'r.dispute_case_id')->where('e.event_type', 'DECISION_ENFORCEABLE')
+            ->whereRaw("e.payload->>'decision_id' = r.dispute_decision_id::text"))->exists();
+        if (! $validSource || $assessment->state !== 'EARNED') {
+            throw new AuthenticationException('FEE_CREDIT_NOT_AVAILABLE', 'Automatic credits require an executed award on an earned commission.', 409);
+        }
+        $existing = DB::table('fee_adjustments')->where('dispute_remedy_id', $remedy->id)->value('id');
+        if ($existing !== null) {
+            return (string) $existing;
+        }
+        $computed = self::creditTarget((int) $assessment->commission_basis_centavos, (int) $assessment->earned_target_centavos,
+            (int) $assessment->credited_centavos, $returnedExclusiveCentavos, (int) $assessment->commission_basis_points);
+        if ($computed['credit_centavos'] <= 0) {
+            return null;
+        }
+
+        return $this->postCredit($assessment, $computed, 'Automatic commission credit for executed dispute decision '.$remedy->dispute_decision_id,
+            null, null, $correlationId, (string) $remedy->id);
+    }
+
+    /** @param array{target_centavos: int, credit_centavos: int} $computed */
+    private function postCredit(object $assessment, array $computed, string $reason, ?int $preparerUserId, ?int $approverUserId, string $correlationId, ?string $remedyId = null): string
+    {
+        $adjustmentId = (string) Str::uuid7();
+        $before = (int) $assessment->earned_target_centavos - (int) $assessment->credited_centavos;
+        DB::table('fee_adjustments')->insert(['id' => $adjustmentId, 'fee_assessment_id' => $assessment->id, 'kind' => 'CREDIT', 'amount_centavos' => $computed['credit_centavos'],
+            'target_fee_before_centavos' => $before, 'target_fee_after_centavos' => $computed['target_centavos'], 'reason' => $reason, 'origin' => $remedyId === null ? 'MANUAL' : 'DISPUTE', 'dispute_remedy_id' => $remedyId,
+            'prepared_by_user_id' => $preparerUserId, 'approved_by_user_id' => $approverUserId, 'approved_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
+        $credited = (int) $assessment->credited_centavos + $computed['credit_centavos'];
+        DB::table('fee_assessments')->where('id', $assessment->id)->update(['credited_centavos' => $credited,
+            'credited_state' => $credited >= (int) $assessment->earned_centavos ? 'CREDITED' : 'PARTIALLY_CREDITED', 'updated_at' => now()]);
+        $adjustment = DB::table('fee_adjustments')->where('id', $adjustmentId)->first();
+        $allocation = app(StatementService::class)->applyCredit($adjustment);
+        $originalVat = (int) DB::table('financial_ledger_entries')->where('source_type', 'FEE_ASSESSMENT')->where('source_id', $assessment->id)->where('account_code', 'OUTPUT_VAT')->where('direction', 'CREDIT')->sum('amount_centavos');
+        $creditedVat = self::creditedVat((string) $assessment->id);
+        $split = self::creditSplit((int) $assessment->earned_centavos, $originalVat, (int) $assessment->credited_centavos, $creditedVat, $computed['credit_centavos']);
+        $source = ['FEE_ADJUSTMENT', $adjustmentId];
+        $this->ledger->post(FinancialLedgerService::PLATFORM_FEE, 'FEE_CREDIT', 'PLATFORM_FEE:CREDIT:'.$adjustmentId, [
+            FinancialLedgerService::debit('FEE_REVENUE', $split['revenue_centavos'], ...$source), FinancialLedgerService::debit('OUTPUT_VAT', $split['vat_centavos'], ...$source),
+            FinancialLedgerService::credit('FEE_RECEIVABLE', $computed['credit_centavos'] - $allocation['refund_centavos'], ...$source),
+            FinancialLedgerService::credit('FEE_REFUND_PAYABLE', $allocation['refund_centavos'], ...$source),
+        ], $correlationId, $approverUserId, $remedyId === null ? 'FINANCE_REVIEWER' : 'SYSTEM');
+        if ($allocation['refund_centavos'] > 0) {
+            // FIN-07 PLATFORM_FEE target: refund through the original fee captures only; never another party's funds.
+            $covered = app(RefundService::class)->createFeeCreditRefunds($adjustment, $assessment, $correlationId, $allocation['refund_centavos']);
+            if ($covered < $allocation['refund_centavos']) {
+                app(WithholdingThresholdService::class)->reviewItem('TEST', (string) $assessment->vendor_organization_id, 'PAID_FEE_CREDIT_PAYABLE', $adjustmentId, 'CREDIT_ON_PAID_STATEMENT',
+                    'A fee credit exceeds the unpaid debt and no supported original fee capture covers ₱'.WithholdingThresholdService::pesos($allocation['refund_centavos'] - $covered).'. Record the audited payable.',
+                    ['credit_centavos' => $allocation['refund_centavos'], 'refund_covered_centavos' => $covered], [], 'FEE_ADJUSTMENT');
+            }
+        }
+        $this->outbox->publish('FEE_CREDIT_APPROVED', 'FEE_ADJUSTMENT', $adjustmentId, ['fee_adjustment_id' => $adjustmentId, 'credit_centavos' => $computed['credit_centavos']]);
+
+        return $adjustmentId;
     }
 }

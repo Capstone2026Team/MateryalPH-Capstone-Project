@@ -404,12 +404,14 @@ class EvidencePhoto extends StatefulWidget {
     required this.fileId,
     required this.repository,
     required this.semanticLabel,
+    this.fit = BoxFit.cover,
   });
 
   final String orderId;
   final String fileId;
   final OrdersRepository repository;
   final String semanticLabel;
+  final BoxFit fit;
 
   @override
   State<EvidencePhoto> createState() => _EvidencePhotoState();
@@ -455,7 +457,7 @@ class _EvidencePhotoState extends State<EvidencePhoto> {
           ),
           child: Image.memory(
             bytes,
-            fit: BoxFit.cover,
+            fit: widget.fit,
             errorBuilder: (_, _, _) =>
                 const Icon(LucideIcons.imageOff, color: BuyerTheme.muted),
           ),

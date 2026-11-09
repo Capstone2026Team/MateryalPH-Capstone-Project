@@ -83,6 +83,8 @@ class _$DirectoryVendorProfile extends DirectoryVendorProfile {
   final bool canViewEnforcement;
   @override
   final bool canViewVerification;
+  @override
+  final bool canViewScores;
 
   factory _$DirectoryVendorProfile(
           [void Function(DirectoryVendorProfileBuilder)? updates]) =>
@@ -99,7 +101,8 @@ class _$DirectoryVendorProfile extends DirectoryVendorProfile {
       required this.activity,
       required this.sanctions,
       required this.canViewEnforcement,
-      required this.canViewVerification})
+      required this.canViewVerification,
+      required this.canViewScores})
       : super._();
   @override
   DirectoryVendorProfile rebuild(
@@ -124,7 +127,8 @@ class _$DirectoryVendorProfile extends DirectoryVendorProfile {
         activity == other.activity &&
         sanctions == other.sanctions &&
         canViewEnforcement == other.canViewEnforcement &&
-        canViewVerification == other.canViewVerification;
+        canViewVerification == other.canViewVerification &&
+        canViewScores == other.canViewScores;
   }
 
   @override
@@ -141,6 +145,7 @@ class _$DirectoryVendorProfile extends DirectoryVendorProfile {
     _$hash = $jc(_$hash, sanctions.hashCode);
     _$hash = $jc(_$hash, canViewEnforcement.hashCode);
     _$hash = $jc(_$hash, canViewVerification.hashCode);
+    _$hash = $jc(_$hash, canViewScores.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -158,7 +163,8 @@ class _$DirectoryVendorProfile extends DirectoryVendorProfile {
           ..add('activity', activity)
           ..add('sanctions', sanctions)
           ..add('canViewEnforcement', canViewEnforcement)
-          ..add('canViewVerification', canViewVerification))
+          ..add('canViewVerification', canViewVerification)
+          ..add('canViewScores', canViewScores))
         .toString();
   }
 }
@@ -222,6 +228,11 @@ class DirectoryVendorProfileBuilder
   set canViewVerification(bool? canViewVerification) =>
       _$this._canViewVerification = canViewVerification;
 
+  bool? _canViewScores;
+  bool? get canViewScores => _$this._canViewScores;
+  set canViewScores(bool? canViewScores) =>
+      _$this._canViewScores = canViewScores;
+
   DirectoryVendorProfileBuilder() {
     DirectoryVendorProfile._defaults(this);
   }
@@ -240,6 +251,7 @@ class DirectoryVendorProfileBuilder
       _sanctions = $v.sanctions.toBuilder();
       _canViewEnforcement = $v.canViewEnforcement;
       _canViewVerification = $v.canViewVerification;
+      _canViewScores = $v.canViewScores;
       _$v = null;
     }
     return this;
@@ -284,6 +296,8 @@ class DirectoryVendorProfileBuilder
                 canViewVerification,
                 r'DirectoryVendorProfile',
                 'canViewVerification'),
+            canViewScores: BuiltValueNullFieldError.checkNotNull(
+                canViewScores, r'DirectoryVendorProfile', 'canViewScores'),
           );
     } catch (_) {
       late String _$failedField;

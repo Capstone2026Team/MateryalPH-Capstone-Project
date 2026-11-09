@@ -348,10 +348,22 @@ class ConfirmedVehicleView {
     required this.trips,
     required this.perTripCentavos,
     this.brand,
+    this.imageFileId,
+    this.vehicleType,
+    this.capacityKg,
+    this.mixerCapacityM3,
+    this.cargoDimensions,
+    this.heavyClassification,
   });
 
   final String name;
   final String? brand;
+  final String? imageFileId;
+  final String? vehicleType;
+  final String? capacityKg;
+  final String? mixerCapacityM3;
+  final String? cargoDimensions;
+  final String? heavyClassification;
   final int vehicles;
   final int trips;
   final int perTripCentavos;
@@ -550,6 +562,7 @@ class OrderDetailView {
     this.destination,
     this.confirmedDelivery,
     this.deliveryRecommendation = const [],
+    this.recommendedVehicles = const [],
     this.nrpc,
     this.vendorResponseDueAt,
     this.buyerResponseDueAt,
@@ -585,6 +598,7 @@ class OrderDetailView {
   final OrderDestinationView? destination;
   final ConfirmedDeliveryView? confirmedDelivery;
   final List<String> deliveryRecommendation;
+  final List<ConfirmedVehicleView> recommendedVehicles;
   final NrpcView? nrpc;
   final DateTime? vendorResponseDueAt;
   final DateTime? buyerResponseDueAt;

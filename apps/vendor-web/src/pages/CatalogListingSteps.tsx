@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { AlertCircle, Camera, Check, CheckCircle2, ChevronDown, ClipboardCheck, ClipboardList, Package, Pencil, QrCode, RefreshCw, Search, ShieldAlert, Trash2, Truck, UploadCloud } from 'lucide-react'
 import type { CatalogAttributeDefinition, CompliancePath, ComplianceRegisterRecord, MarkingType } from '@materyalph/api-client-ts'
 import { Button, ChoiceField, Field, FileSelectionField, QuantityField, MediaUploadField, RowGroup, StatusMessage, type MediaItem } from '@materyalph/web-ui'
@@ -9,7 +10,7 @@ import {
 import { decodeQrFromImage } from '../lib/qr-decode'
 import { IMAGE_TYPES, MAX_TIERS, emptyVariant, groupedBlockers, quantityText, tierRange, unitName, useMaterialSearch, type DetailsForm, type TierRow, type VariantRow } from '../lib/catalog-form'
 import { measuringTip, suggestMeasurements, suggestedVariantLabel, technicalWarnings } from '../lib/listing-measurements'
-import { statusLabel } from '../lib/vendor-status'
+import { statusLabel, useOnboardingSnapshot } from '../lib/vendor-status'
 import { ATTRIBUTE_DESCRIPTIONS, duplicateStrengths, isReadyMixed, STRENGTH_ATTRIBUTE, strengthLabel } from '../lib/ready-mixed-concrete'
 import { listFleet, type FleetVehicle } from '../lib/inventory-api'
 import { AdvisoryText, CategorySection, CustomTagField, MeasurementFields, MixerVolumeSuggestion, ReadyMixedWeightField } from './CatalogMeasurementParts'
@@ -56,14 +57,14 @@ export function MaterialStep({ form, setForm, taxonomy, material, setMaterial, e
       <p className="sr-only" role="status">{searching ? 'Searching materials…' : results ? `${results.length} matching materials` : ''}</p>
       {(searchError ?? lookupError) && <p className="text-sm text-status-error" role="alert">{searchError ?? lookupError}</p>}
       {errors.material && <p className="text-sm text-status-error" role="alert">{errors.material}</p>}
-      <fieldset className="min-w-0 overflow-hidden rounded-surface border border-border-default" disabled={readOnly} aria-busy={searching}>
+      <fieldset className="min-w-0 overflow-hidden mp-card" disabled={readOnly} aria-busy={searching}>
         <legend className="sr-only">Choose a material</legend>
         <ul className="divide-y divide-border-default">
           {shown.map(match => <MaterialMatchOption key={match.id} match={match} name="material_choice" selected={form.materialId === match.id} onChoose={() => void choose(match)} />)}
           {results !== null && results.length === 0 && <li className="px-4 py-3 text-sm text-text-secondary">No canonical material matches “{query.trim()}”. Describe the product with an Other label below.</li>}
           <li><label className={`flex min-h-14 cursor-pointer items-start gap-3 px-4 py-3 ${other ? 'bg-brand-orange-50' : 'hover:bg-surface-canvas'}`}>
             <input type="radio" name="material_choice" className="mt-0.5 h-5 w-5 shrink-0 accent-action-primary" checked={other} onChange={() => { setForm({ ...form, materialId: null, otherLabel: form.otherLabel || query.trim().slice(0, 60) }); setMaterial(null) }} />
-            <span className="min-w-0"><span className="font-semibold">Not listed — use an Other label</span><span className="block text-sm text-text-secondary">The label describes this listing only. It never adds a shared material or category, and the listing stays Not Yet Comparable in Materials Analytics.</span></span>
+            <span className="min-w-0"><span className="font-semibold">Not listed — use an Other label</span><span className="block text-sm text-text-secondary">The label describes this listing only. It never adds a shared material or category.</span></span>
           </label></li>
         </ul>
       </fieldset>
@@ -142,6 +143,8 @@ export function ProductInformationStep({ listing, form, setForm, rows, setRows, 
 }
 
 function VariantRows({ listing, form, rows, setRows, taxonomy, material, errors, busy, readOnly }: { listing: CatalogListing; form: DetailsForm; rows: VariantRow[]; setRows: (rows: VariantRow[]) => void; taxonomy: CatalogTaxonomy; material: CatalogMaterial | null; errors: Record<string, string>; busy: boolean; readOnly: boolean }) {
+  const { snapshot } = useOnboardingSnapshot()
+  const canManageFleet = snapshot?.permissions.includes('vehicles.manage') ?? false
   const units = material && material.compatibleUnitIds.length ? taxonomy.units.filter(unit => material.compatibleUnitIds.includes(unit.id)) : taxonomy.units
   const allowedTax = taxonomy.allowedTaxCategories
   const { materialCode, categoryCode } = measurementCodes(listing, form, taxonomy, material)
@@ -168,17 +171,26 @@ function VariantRows({ listing, form, rows, setRows, taxonomy, material, errors,
   }, [readyMixed, readOnly, rows, cubicMeterId])
   // The Vendor's listed mixer trucks drive the batch-volume suggestion; a failed read just hides the suggestion.
   const [fleet, setFleet] = useState<FleetVehicle[] | null>(null)
+  const [fleetError, setFleetError] = useState(false)
+  const [fleetAttempt, setFleetAttempt] = useState(0)
   useEffect(() => {
     if (!readyMixed) return
     let active = true
-    listFleet().then(result => { if (active) setFleet(result.items) }).catch(() => undefined)
-    return () => { active = false }
-  }, [readyMixed])
+    const reload = () => { void listFleet().then(result => { if (active) { setFleet(result.items); setFleetError(false) } }).catch(() => { if (active) setFleetError(true) }) }
+    reload()
+    window.addEventListener('focus', reload)
+    return () => { active = false; window.removeEventListener('focus', reload) }
+  }, [readyMixed, fleetAttempt])
   const rowError = (index: number, field: string) => errors[`variants.${index}.${field}`]
   const select = (invalid: boolean) => `${control} ${invalid ? 'border-status-error' : 'border-border-default'}`
   return <>
     {allowedTax.length === 0 && <StatusMessage tone="error">Your reviewed VAT classification is not available yet, so payable prices cannot be published. You can still save drafts.</StatusMessage>}
     {errors.variants && <StatusMessage tone="error">{errors.variants}</StatusMessage>}
+    {readyMixed && <StatusMessage tone={fleet && !fleet.some(vehicle => vehicle.vehicleType === 'CONCRETE_MIXER' && vehicle.eligibility.eligible) ? 'error' : 'info'}>
+      <p>A complete, available Concrete Mixer Truck / Transit Mixer and active Site Delivery are required before publishing this concrete.</p>
+      {fleetError && <p>Vehicle availability could not be checked. <button type="button" className="min-h-11 font-semibold underline" onClick={() => setFleetAttempt(value => value + 1)}>Retry vehicle check</button></p>}
+      {!readOnly && (canManageFleet ? <Link className="inline-flex min-h-11 items-center font-semibold underline" target="_blank" rel="noopener" to={`/vehicles?listing=${encodeURIComponent(listing.id)}`}>Configure mixer truck from this listing</Link> : <p>Ask the Owner or Store Manager to configure the mixer truck in Vehicles.</p>)}
+    </StatusMessage>}
     <RowGroup legend="Variants" rows={rows} maxRows={taxonomy.limits.maxVariants} disabled={readOnly || busy} addLabel="Add variant"
       rowLabel={(row, index) => `Variant ${index + 1}${row.label ? ` — ${row.label}` : ''}`}
       errorsFor={index => [...new Set(Object.entries(errors).filter(([key]) => key.startsWith(`variants.${index}.`)).map(([, message]) => message))]}
@@ -420,7 +432,7 @@ function ComplianceSection({ listing, canSubmit, busy, setBusy, onSubmitted, bef
     <label className="flex min-h-11 items-start gap-3 text-sm"><input type="checkbox" className="mt-1 h-5 w-5 accent-action-primary" checked={confirmed} aria-invalid={Boolean(errors.confirmed)} aria-describedby={errors.confirmed ? 'confirm-error' : undefined} onChange={event => setConfirmed(event.target.checked)} />I checked this {copy.numberLabel} against the physical marking on the product.</label>
     {errors.confirmed && <p id="confirm-error" className="text-sm text-status-error" role="alert">{errors.confirmed}</p>}
   </>
-  return <section aria-labelledby="compliance-heading" className="grid min-w-0 gap-6 rounded-surface border border-border-default bg-surface-primary p-4 sm:p-6">
+  return <section aria-labelledby="compliance-heading" className="grid min-w-0 gap-6 mp-card mp-card-padded">
     <header className="grid gap-4 border-b border-border-default pb-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-control bg-brand-orange-50 text-action-primary"><ShieldAlert size={22} aria-hidden="true" /></span><div className="min-w-0"><h3 id="compliance-heading" className="text-lg font-semibold leading-6">DTI-BPS compliance marking<span className="sr-only"> (required)</span></h3><p className="mt-1 text-sm text-text-secondary">Required before publishing this regulated product.</p></div></div>
@@ -441,7 +453,7 @@ function ComplianceSection({ listing, canSubmit, busy, setBusy, onSubmitted, bef
       <div hidden={Boolean(pending)}>
         <FileSelectionField inputRef={picker} label={path === 'QR' ? 'Upload QR code image' : `Upload ${copy.name} marking photo`} accept={IMAGE_TYPES.join(',')} chooseLabel="Choose photo" file={null} disabled={busy} camera={path === 'PHOTO_OCR'} hint={`${path === 'QR' ? 'Keep the whole QR code sharp and in frame.' : `Include the ${copy.numberLabel} below the mark.`} JPG, PNG or WebP · up to 10 MB · private evidence.`} onChange={file => choose(file ?? undefined)} />
       </div>
-      {pending && <section aria-labelledby="pending-photo-heading" className="grid gap-4 rounded-surface border border-border-default p-4 xl:grid-cols-[minmax(0,18rem)_minmax(0,1fr)] xl:items-start">
+      {pending && <section aria-labelledby="pending-photo-heading" className="grid gap-4 mp-card p-4 xl:grid-cols-[minmax(0,18rem)_minmax(0,1fr)] xl:items-start">
         <div className="grid min-h-48 place-items-center overflow-hidden rounded-control border border-border-default bg-surface-canvas">{pending.url ? <img src={pending.url} alt={`Preview of ${pending.file.name}`} className="max-h-72 w-full object-contain" /> : <UploadCloud size={32} className="text-text-secondary" aria-hidden="true" />}</div>
         <div className="grid min-w-0 content-start gap-3">
           <h4 id="pending-photo-heading" className="text-lg font-semibold">Check the photo before uploading</h4>
@@ -515,7 +527,7 @@ export function PublicationGate({ listing, onGoTo }: { listing: CatalogListing; 
   const groups = groupedBlockers(listing)
   const count = listing.blockers.length
   const waitingForCompliance = listing.regulated && listing.complianceStatus !== 'VERIFIED'
-  return <section aria-labelledby="publication-gate-heading" className="grid gap-3 rounded-surface border border-border-default bg-surface-primary p-4 text-sm">
+  return <section aria-labelledby="publication-gate-heading" className="grid gap-3 mp-card mp-card-padded text-sm">
     <h2 id="publication-gate-heading" className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Publication gate</h2>
     <div className="flex flex-wrap gap-2"><ListingBadge status={listing.status} />{listing.regulated && <ListingBadge status={listing.complianceStatus} prefix="PS/ICC" />}</div>
     {listing.status === 'ACTIVE' ? <p className="flex items-start gap-2 text-status-success"><CheckCircle2 size={16} className="mt-0.5 shrink-0" aria-hidden="true" />Published. Buyers can find it while it is in stock.</p>
@@ -544,7 +556,7 @@ export function ReviewStep({ listing, taxonomy, previews, busy, readOnly, onGoTo
         : requested && waitingForCompliance ? <StatusMessage>Publication requested. The listing becomes active automatically once its PS/ICC evidence is verified; until then it stays hidden from Buyers.</StatusMessage>
         : waitingForCompliance ? <StatusMessage>Ready to request publication. The listing becomes active only after its PS/ICC evidence is verified; until then it stays hidden from Buyers.</StatusMessage>
           : <StatusMessage tone="success">Ready to publish. Publishing makes it active immediately; Buyers find it while it is in stock.</StatusMessage>}
-    <section aria-labelledby="preview-heading" className="overflow-hidden rounded-surface border border-border-default">
+    <section aria-labelledby="preview-heading" className="overflow-hidden mp-card">
       <div className="flex items-center justify-between gap-3 border-b border-border-default bg-surface-canvas px-4 py-2"><h3 id="preview-heading" className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Listing preview</h3>{!readOnly && <Button variant="quiet" onClick={() => onGoTo(1)}>Edit details</Button>}</div>
       <div className="grid gap-4 p-4 sm:grid-cols-[8rem_minmax(0,1fr)]">
         <div className="grid aspect-square w-32 place-items-center overflow-hidden rounded-control bg-surface-canvas">{photoUrl ? <img src={photoUrl} alt="" className="h-full w-full object-cover" /> : <Package size={36} className="text-text-secondary" aria-hidden="true" />}</div>

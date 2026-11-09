@@ -44,6 +44,18 @@ export async function getOrder(orderId: string): Promise<OrderDetail> {
   return (await ordersApi().getVendorOrder({ orderId })).data
 }
 
+export async function getOrderRoute(orderId: string) {
+  return (await ordersApi().getVendorOrderRoute({ orderId }, { cache: 'no-store' })).data
+}
+
+export async function readOrderBuyerPhoto(path: string): Promise<Blob> {
+  const match = /^\/vendor\/orders\/([0-9a-f-]{36})\/buyer-photo\?version=([1-9][0-9]*)$/i.exec(path)
+  if (!match) throw new Error('The Buyer photo is unavailable. Reload the order.')
+  const photo = await ordersApi().getVendorOrderBuyerPhoto({ orderId: match[1]!, version: Number(match[2]) }, { cache: 'no-store' })
+  if (photo.type.split(';')[0] !== 'image/png') throw new Error('The Buyer photo could not be displayed.')
+  return photo
+}
+
 export async function getDeliveryPlan(orderId: string, lines: { orderLineId: string; confirmedQuantity: string }[]): Promise<DeliveryPlan> {
   return (await ordersApi().getVendorOrderDeliveryPlan({ orderId, deliveryPlanRequest: { lines } })).data
 }

@@ -42,6 +42,120 @@ Map<String, Object?> _envelope(void Function(Map<String, dynamic> data) edit) {
 
 void main() {
   test(
+    'confirmed delivery parses the saved vehicle profile and photo',
+    () async {
+      final repository = _repositoryReturning(
+        _envelope((data) {
+          data['fulfillment_method'] = 'DELIVERY';
+          data['delivery'] = {
+            'status': 'CONFIRMED',
+            'estimate': null,
+            'confirmed': {
+              'vehicles': [
+                {
+                  'name': 'Accepted mixer',
+                  'vehicle_category': 'TRUCK',
+                  'vehicle_type': 'CONCRETE_MIXER',
+                  'custom_type_name': null,
+                  'brand': 'Isuzu',
+                  'capacity_kg': '14400',
+                  'heavy_classification': 'HEAVY',
+                  'configuration_version': 1,
+                  'rate_version': 1,
+                  'number_of_vehicles': 1,
+                  'total_vehicle_trips': 2,
+                  'per_trip_centavos': 25000,
+                  'trip_total_centavos': 50000,
+                  'vehicle_details': {
+                    'name': 'Accepted mixer',
+                    'vehicle_type': 'CONCRETE_MIXER',
+                    'brand': 'Isuzu',
+                    'image_file_id': 'accepted-photo',
+                    'capacity_kg': '14400',
+                    'mixer_capacity_m3': '6',
+                    'heavy_classification': 'HEAVY',
+                  },
+                },
+              ],
+              'distance_meters': 4200,
+              'route_source': 'GOOGLE_ROUTES',
+              'basis': 'ADVISORY_CONFIRMED',
+              'endpoint': 'INTENDED_LOCATION',
+              'heavy_vehicle_restriction': false,
+              'intended': null,
+              'alternate_drop_off': null,
+              'final_fee_centavos': 50000,
+              'fulfillment_date': null,
+              'arrangement': 'Unload at the gate',
+              'calculation_version': 'fixture',
+              'confirmed_by_role': 'OWNER',
+              'confirmed_at': '2026-11-05T01:00:00Z',
+            },
+          };
+        }),
+      );
+      final detail = await repository.order('order');
+      final vehicle = detail.confirmedDelivery!.vehicles.single;
+      expect(vehicle.name, 'Accepted mixer');
+      expect(vehicle.imageFileId, 'accepted-photo');
+      expect(vehicle.mixerCapacityM3, '6');
+      expect(vehicle.capacityKg, '14400');
+      expect(vehicle.trips, 2);
+      expect(detail.recommendedVehicles, isEmpty);
+    },
+  );
+  test(
+    'submitted delivery recommendations parse vehicle photos and capacities without becoming confirmed',
+    () async {
+      final repository = _repositoryReturning(
+        _envelope((data) {
+          data['fulfillment_method'] = 'DELIVERY';
+          data['delivery'] = {
+            'status': 'ADVISORY_ESTIMATE',
+            'confirmed': null,
+            'estimate': {
+              'fee_min_centavos': 50000,
+              'fee_max_centavos': 50000,
+              'trips_min': 2,
+              'trips_max': 2,
+              'options': [
+                {
+                  'load_key': 'line',
+                  'vehicle_id': 'truck',
+                  'vehicle_name': 'Mixer A',
+                  'vehicle_type': 'CONCRETE_MIXER',
+                  'vehicles': 1,
+                  'trips': 2,
+                  'fee_centavos': 50000,
+                  'fee_per_trip_centavos': 25000,
+                  'mobilization_fee_centavos': 0,
+                  'mobilization_total_centavos': 0,
+                  'vehicle_details': {
+                    'name': 'Mixer A',
+                    'brand': 'Isuzu',
+                    'image_file_id': 'vehicle-photo',
+                    'capacity_kg': '14400',
+                    'mixer_capacity_m3': '6',
+                    'vehicle_type': 'CONCRETE_MIXER',
+                    'heavy_classification': 'HEAVY',
+                  },
+                },
+              ],
+            },
+          };
+        }),
+      );
+      final detail = await repository.order('order');
+      final vehicle = detail.recommendedVehicles.single;
+      expect(vehicle.name, 'Mixer A');
+      expect(vehicle.imageFileId, 'vehicle-photo');
+      expect(vehicle.capacityKg, '14400');
+      expect(vehicle.mixerCapacityM3, '6');
+      expect(vehicle.trips, 2);
+      expect(detail.confirmedDelivery, isNull);
+    },
+  );
+  test(
     'delivery assignment and proof parse public coordination fields and private evidence paths',
     () async {
       const path =

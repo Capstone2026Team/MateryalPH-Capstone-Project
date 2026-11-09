@@ -39,7 +39,7 @@ final class SupportController extends Controller
             'user_type' => ['sometimes', Rule::in(SupportRules::TYPES)]] + PortalDateRange::rules($request));
         $page = $this->support->list($request, $filters);
 
-        return ApiResponse::success($page['items'], ['next_cursor' => $page['next_cursor']]);
+        return ApiResponse::success($page['items'], ['next_cursor' => $page['next_cursor']] + (isset($page['counts']) ? ['counts' => $page['counts']] : []));
     }
 
     public function show(Request $request, string $ticketId): JsonResponse

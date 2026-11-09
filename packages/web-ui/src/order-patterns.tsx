@@ -12,12 +12,17 @@ export function formatPesoCentavos(centavos: number | null | undefined): string 
   return peso.format(centavos / 100)
 }
 
+/** Deductions retain their minus sign, including a zero deduction. Missing is not zero. */
+export function formatDeductionCentavos(centavos: number | null | undefined): string {
+  return centavos == null ? '—' : `-${formatPesoCentavos(Math.abs(centavos))}`
+}
+
 const familyLabels: Record<string, string> = { ORDER: 'Order', PAYMENT: 'Payment', FULFILLMENT: 'Fulfillment', REFUND: 'Refund', DISPUTE: 'Dispute' }
 
 /** A fixed heading with an independently scrollable, keyboard-accessible order history. */
 export function OrderHistory({ events }: { events: OrderTimelineEvent[] }) {
   const headingId = useId()
-  return <section aria-labelledby={headingId} className="grid min-w-0 gap-3 rounded-surface border border-border-default bg-surface-primary p-4">
+  return <section aria-labelledby={headingId} className="grid min-w-0 gap-3 mp-card mp-card-padded">
     <h2 id={headingId} className="text-base font-semibold">History</h2>
     <div role="region" aria-label="Order history events" tabIndex={0} className="max-h-[28rem] min-h-0 overflow-y-auto overscroll-contain rounded-control pr-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring" style={{ scrollbarGutter: 'stable' }}>
       {events.length === 0 ? <p className="text-sm text-text-secondary">No order history yet.</p> : <ol className="ml-1.5 grid border-l border-border-default pl-5">
@@ -97,7 +102,7 @@ const toneIcons = { success: CheckCircle2, warning: Clock, error: XCircle, info:
  * implies the others. Each state is text plus icon; color is only reinforcement.
  */
 export function OrderStateRows({ states, className = '' }: { states: OrderStateRow[]; className?: string }) {
-  return <dl className={`grid min-w-0 divide-y divide-border-default rounded-surface border border-border-default bg-surface-primary ${className}`} aria-label="Order status by area">
+  return <dl className={`grid min-w-0 divide-y divide-border-default mp-card ${className}`} aria-label="Order status by area">
     {states.map(row => {
       const tone = orderStateTone(row.state)
       const FamilyIcon = familyIcons[row.family as keyof typeof familyIcons] ?? PackageCheck
@@ -158,18 +163,22 @@ export function DeadlineCountdown({ at, label, endedLabel = 'Window ended', onEx
 }
 
 function MoneyRow({ label, value, note, strong = false, muted = false }: { label: string; value: string; note?: string | undefined; strong?: boolean; muted?: boolean }) {
-  return <div className={`flex min-w-0 flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5 py-2 ${strong ? 'border-t border-border-default pt-3' : ''}`}>
-    <dt className={`min-w-0 text-sm ${strong ? 'font-semibold text-text-strong' : muted ? 'text-text-secondary' : 'text-text-strong'}`}>{label}{note && <span className="block text-xs font-normal text-text-secondary">{note}</span>}</dt>
-    <dd className={`tabular-nums ${strong ? 'text-lg font-semibold text-text-strong' : muted ? 'text-sm text-text-secondary' : 'text-sm font-semibold text-text-strong'}`}>{value}</dd>
+  return <div className={`grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-x-4 ${strong ? 'mt-1 border-t border-border-default pt-4' : 'py-1.5'}`}>
+    <dt className={`min-w-0 text-sm leading-5 ${strong ? 'font-semibold text-text-strong' : 'text-text-secondary'}`}>{label}{note && <span className="mt-1 block text-xs font-normal leading-4 text-text-secondary">{note}</span>}</dt>
+    <dd className={`min-w-0 max-w-40 break-words text-right tabular-nums ${strong ? 'text-xl font-semibold leading-6 text-text-strong' : muted ? 'text-sm leading-5 text-text-secondary' : 'text-sm font-medium leading-5 text-text-strong'}`}>{value}</dd>
   </div>
 }
 
 /**
  * FIN-02 Buyer amounts: materials, discount, included VAT (never added again), delivery, NRPC as part of the
- * materials value, processing fee and the total. Vendor commission and withholding never appear here.
+ * materials value, e-wallet transaction fee and the total. Vendor commission and withholding never appear here.
  */
 export function MoneyBreakdown({ money, title = 'Payment breakdown', compact = false }: { money: MoneyBreakdownData; title?: string; compact?: boolean }) {
+  const headingId = useId()
   const discount = money.discount
+  const hasMaterialsDiscount = money.vendorDiscountCentavos > 0
+  const vatNote = money.includedVatCentavos > 0 ? `Includes ${formatPesoCentavos(money.includedVatCentavos)} VAT`
+    : money.vatTreatment === 'PRICES_INCLUDE_VAT' ? 'Prices include VAT' : 'No VAT included'
   const deliveryDiscount = discount?.scope === 'DELIVERY' ? discount : null
   const materialsDiscountLabel = discount?.scope === 'MATERIALS' ? `Vendor discount ${discount.percent}% (materials)` : 'Vendor discount'
   const deliveryDiscountLabel = deliveryDiscount ? `Vendor discount ${deliveryDiscount.percent}% (delivery fee)` : ''
@@ -192,7 +201,7 @@ export function MoneyBreakdown({ money, title = 'Payment breakdown', compact = f
       <ReviewMoneyRow label={deliveryDiscount ? "Delivery before discount" : "Delivery fee"} value={delivery} />
       {deliveryDiscount && <ReviewMoneyRow label={deliveryDiscountLabel} value={`− ${formatPesoCentavos(deliveryDiscount.deductionCentavos)}`} />}
       {money.nrpc.amountCentavos > 0 && <ReviewMoneyRow label="NRPC (in materials)" value={formatPesoCentavos(money.nrpc.amountCentavos)} muted />}
-      <ReviewMoneyRow label="Payment processing fee" value={fee} />
+      <ReviewMoneyRow label="E-wallet transaction fee" value={fee} />
       <div className="mt-1 grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4 border-t-2 border-text-strong pt-3 text-xs font-bold text-text-strong">
         <dt className="uppercase tracking-wide">{totalLabel}</dt>
         <dd className="text-right tabular-nums">{total}</dd>
@@ -200,20 +209,21 @@ export function MoneyBreakdown({ money, title = 'Payment breakdown', compact = f
       {physical && <ReviewMoneyRow label="Pay the Vendor directly" value={formatPesoCentavos(money.physicalBalanceCentavos)} />}
     </dl>
     {money.delivery.status === 'PENDING_VENDOR_CONFIRMATION' && <p className="mt-2 text-xs leading-5 text-text-secondary">Delivery fee is awaiting Vendor confirmation.</p>}
-    {money.processingFee.status === 'PENDING_PAYMENT_CHANNEL' && <p className="mt-2 text-xs leading-5 text-text-secondary">Order total excludes the processing fee, disclosed when a payment channel is selected.</p>}
+    {money.processingFee.status === 'PENDING_PAYMENT_CHANNEL' && <p className="mt-2 text-xs leading-5 text-text-secondary">Order total excludes the e-wallet transaction fee, disclosed when a payment channel is selected.</p>}
   </section>
-  return <section aria-labelledby="money-breakdown-heading" className="min-w-0">
-    <h3 id="money-breakdown-heading" className="text-base font-semibold text-text-strong">{title}</h3>
-    <dl className="mt-2 divide-y divide-border-default/70">
-      <MoneyRow label="Materials" value={formatPesoCentavos(money.materialsGrossCentavos)} />
-      {money.vendorDiscountCentavos > 0 && <MoneyRow label={materialsDiscountLabel} value={`− ${formatPesoCentavos(money.vendorDiscountCentavos)}`} />}
-      <MoneyRow label="Materials subtotal" value={formatPesoCentavos(money.materialsSubtotalCentavos)} note={money.vatTreatment === 'PRICES_INCLUDE_VAT' ? 'Prices include VAT' : 'No VAT included'} />
-      {money.includedVatCentavos > 0 && <MoneyRow muted label="Included VAT (already in the subtotal)" value={formatPesoCentavos(money.includedVatCentavos)} />}
-      <MoneyRow label={deliveryDiscount ? "Delivery before discount" : "Delivery fee"} value={delivery} note={money.delivery.status === 'PENDING_VENDOR_CONFIRMATION' ? 'Confirmed by the Vendor before you pay' : undefined} />
+  return <section aria-labelledby={headingId} className="min-w-0">
+    <h3 id={headingId} className="text-base font-semibold text-text-strong">{title}</h3>
+    <dl className="mt-4 grid gap-1">
+      <MoneyRow label="Materials" value={formatPesoCentavos(hasMaterialsDiscount ? money.materialsGrossCentavos : money.materialsSubtotalCentavos)} note={hasMaterialsDiscount ? undefined : vatNote} />
+      {hasMaterialsDiscount && <>
+        <MoneyRow label={materialsDiscountLabel} value={`− ${formatPesoCentavos(money.vendorDiscountCentavos)}`} />
+        <MoneyRow label="Materials after discount" value={formatPesoCentavos(money.materialsSubtotalCentavos)} note={vatNote} />
+      </>}
+      <MoneyRow label={deliveryDiscount ? "Delivery before discount" : "Delivery fee"} value={money.delivery.status === 'NOT_APPLICABLE' ? 'Not applicable' : delivery} note={money.delivery.status === 'NOT_APPLICABLE' ? 'Self-Pickup' : money.delivery.status === 'PENDING_VENDOR_CONFIRMATION' ? 'Confirmed by the Vendor before you pay' : undefined} />
       {deliveryDiscount && <MoneyRow label={deliveryDiscountLabel} value={`− ${formatPesoCentavos(deliveryDiscount.deductionCentavos)}`} />}
       {money.nrpc.amountCentavos > 0 && <MoneyRow muted label="Non-Recoverable Preparation Cost" value={formatPesoCentavos(money.nrpc.amountCentavos)} note="Part of the materials subtotal, not an extra charge" />}
-      <MoneyRow label="Payment processing fee" value={fee} note={money.processingFee.status === 'PENDING_PAYMENT_CHANNEL' ? 'Disclosed when a payment channel is chosen' : undefined} />
-      <MoneyRow strong label={totalLabel} value={total} note={money.processingFee.status === 'PENDING_PAYMENT_CHANNEL' ? 'Before the processing fee' : undefined} />
+      <MoneyRow label="E-wallet transaction fee" value={fee} note={money.processingFee.status === 'PENDING_PAYMENT_CHANNEL' ? 'Disclosed when a payment channel is chosen' : undefined} />
+      <MoneyRow strong label={totalLabel} value={total} note={money.processingFee.status === 'PENDING_PAYMENT_CHANNEL' || (money.processingFee.amountCentavos ?? 0) > 0 ? 'Excludes e-wallet transaction fee' : undefined} />
       {physical && <MoneyRow label="Pay the Vendor directly" value={formatPesoCentavos(money.physicalBalanceCentavos)} />}
     </dl>
   </section>
@@ -235,7 +245,7 @@ export function OrderSummaryCard({ order, identity, action }: { order: OrderSumm
     { label: 'Payment method', value: order.paymentMethod === 'ONLINE' ? 'Online payment' : order.paymentMethod === 'CASH_ON_DELIVERY' ? 'Cash on Delivery' : 'In-Store Payment' },
     { label: 'Confirmation', value: order.confirmationSource === 'AUTO_ACCEPT' ? 'Auto-accepted' : order.confirmationSource === 'MANUAL' ? 'Manual' : 'Awaiting review' },
   ]
-  return <article aria-label={order.reference} className="min-w-0 overflow-hidden rounded-surface border border-border-default bg-surface-primary">
+  return <article aria-label={order.reference} className="min-w-0 overflow-hidden mp-card">
     <header className="flex min-w-0 flex-col justify-between gap-4 p-4 sm:flex-row sm:p-5">
       <div className="flex min-w-0 items-start gap-3">
         <span className="grid h-11 w-11 shrink-0 place-items-center rounded-control border border-border-default bg-surface-canvas text-action-primary"><PackageCheck size={22} aria-hidden="true" /></span>

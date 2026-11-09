@@ -48,7 +48,7 @@ for (const [path, methods] of Object.entries(spec.paths)) {
     }
   }
 }
-const phaseFourteen = /^api\/v1\/((buyers|vendor|admin)\/(reviews|materials-analytics)|(buyers|vendor)\/orders\/\{[^}]+\}\/(reviews|buyer-rating)|buyers\/(listings|stores)\/\{[^}]+\}\/reviews|vendor\/performance|admin\/scores)/
+const phaseFourteen = /^api\/v1\/((buyers|vendor|admin)\/(reviews|materials-analytics)|buyers\/ratings|(buyers|vendor)\/orders\/\{[^}]+\}\/(reviews|buyer-rating)|buyers\/(listings|stores)\/\{[^}]+\}\/reviews|vendor\/performance|admin\/scores)/
 for (const route of routes.filter(route => phaseFourteen.test(route.uri))) {
   for (const method of route.method.split('|').filter(method => method !== 'HEAD')) {
     assert.ok(expected.has(`${method} ${route.uri.replace(/\{[^}]+\}/g, '{}')}`), `Undocumented Phase 14 route ${method} ${route.uri}`)
@@ -74,7 +74,22 @@ assert.match(vendorReviewDetail.description, /reviews\.view/, 'Review detail ret
 assert.match(vendorReviewDetail.description, /blind reveal.*dispute.*moderation.*exclusion/, 'Review detail documents every current visibility gate')
 assert.ok(vendorReviewDetail.responses['404'], 'A foreign or newly hidden review is unavailable')
 assert.equal(vendorReviewDetail.responses['200'].content['application/json'].schema.$ref, '#/components/schemas/VendorReviewEnvelope')
+const buyerPhoto = spec.paths['/vendor/reviews/{reviewId}/buyer-photo'].get
+assert.equal(buyerPhoto.operationId, 'getVendorReviewBuyerPhoto')
+assert.match(buyerPhoto.description, /Legacy anonymous reviews now show the actual Buyer identity/)
+assert.ok(buyerPhoto.parameters.some(parameter => parameter.name === 'signature' && parameter.required))
+const buyerPhotoRoute = routes.find(route => route.uri === 'api/v1/vendor/reviews/{reviewId}/buyer-photo')
+assert.ok(buyerPhotoRoute.middleware.some(value => value === 'signed' || value === 'Illuminate\\Routing\\Middleware\\ValidateSignature'))
+assert.ok(s.VendorReviewRow.properties.buyer_avatar_url.oneOf.some(schema => schema.type === 'null'))
+assert.equal(spec.paths['/buyers/ratings'].get.operationId, 'listBuyerReceivedRatings')
+assert.deepEqual(s.ReviewDisplayOption.properties.choice.enum, ['FULL_NAME'])
+assert.equal(s.BuyerRatingSummary.properties.minimum_count.minimum, 5)
+assert.equal(s.BuyerRatingSummary.properties.window_days.minimum, 90)
 assert.equal(s.VendorReviewEnvelope.properties.data.$ref, '#/components/schemas/VendorReviewRow')
+assert.deepEqual(s.ReviewProduct.properties.image_url.oneOf, [{ type: 'string', format: 'uri' }, { type: 'null' }], 'Product review details carry a nullable catalog photo URL')
+assert.ok(!s.ReviewProduct.required.includes('image_url'), 'Older review responses may omit the product photo')
+assert.match(readFileSync(new URL('../generated/typescript/src/models/ReviewProduct.ts', import.meta.url), 'utf8'), /imageUrl\?: string \| null/, 'TypeScript preserves the optional product photo')
+assert.match(readFileSync(new URL('../generated/dart/lib/src/model/review_product.dart', import.meta.url), 'utf8'), /String\? get imageUrl/, 'Dart preserves the optional product photo')
 assert.ok(s.VendorReviewRow.properties.product.oneOf.some(schema => schema.$ref === '#/components/schemas/ReviewProduct'))
 assert.ok(s.VendorReviewRow.properties.product.oneOf.some(schema => schema.type === 'null'), 'Non-product ratings have no product')
 assert.deepEqual(s.ReviewProduct.required, ['listing_id', 'name', 'variant_label'])

@@ -111,7 +111,7 @@ class _SupportRequestsScreenState extends State<SupportRequestsScreen> {
             const Center(
               child: Padding(
                 padding: EdgeInsets.all(20),
-                child: CircularProgressIndicator(),
+                child: BuyerLoadingIndicator(),
               ),
             ),
           if (!_busy && _failure == null && _items.isEmpty)
@@ -247,7 +247,8 @@ class _SupportFormScreenState extends State<SupportFormScreen> {
           'Send a concern to the MateryalPH administration team. Responses and follow-ups stay in a private support ticket.',
         ),
         const SizedBox(height: 20),
-        if (_loading) const Center(child: CircularProgressIndicator()),
+        if (_loading)
+          const BuyerLoadingState(label: 'Loading account details…'),
         if (_failure != null)
           StateMessage(
             kind: StateKind.error,
@@ -634,7 +635,7 @@ class _SupportDetailScreenState extends State<SupportDetailScreen> {
             const Center(
               child: Padding(
                 padding: EdgeInsets.all(16),
-                child: CircularProgressIndicator(),
+                child: BuyerLoadingIndicator(),
               ),
             ),
           if (_failure != null)

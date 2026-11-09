@@ -8,6 +8,7 @@ import 'package:materyalph_api_client/src/model/vendor_dashboard_orders_products
 import 'package:materyalph_api_client/src/model/vendor_dashboard_orders_products_categories_inner.dart';
 import 'package:built_collection/built_collection.dart';
 import 'package:materyalph_api_client/src/model/vendor_dashboard_product.dart';
+import 'package:materyalph_api_client/src/model/vendor_product_sales_breakdown.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -16,12 +17,17 @@ part 'vendor_dashboard_orders_products.g.dart';
 /// VendorDashboardOrdersProducts
 ///
 /// Properties:
+/// * [salesBreakdown] - Owner-only reconciliation for the same surviving confirmed orders, latest financial snapshots and Manila dates as Finance and Product Analytics. Product/category values include discounts and VAT and are before partial refunds. Materials plus delivery less completed partial refunds equal Net sales.
 /// * [top]
 /// * [categories]
 /// * [segments]
 /// * [basketRules]
 @BuiltValue()
 abstract class VendorDashboardOrdersProducts implements Built<VendorDashboardOrdersProducts, VendorDashboardOrdersProductsBuilder> {
+  /// Owner-only reconciliation for the same surviving confirmed orders, latest financial snapshots and Manila dates as Finance and Product Analytics. Product/category values include discounts and VAT and are before partial refunds. Materials plus delivery less completed partial refunds equal Net sales.
+  @BuiltValueField(wireName: r'sales_breakdown')
+  VendorProductSalesBreakdown? get salesBreakdown;
+
   @BuiltValueField(wireName: r'top')
   BuiltList<VendorDashboardProduct> get top;
 
@@ -57,6 +63,11 @@ class _$VendorDashboardOrdersProductsSerializer implements PrimitiveSerializer<V
     VendorDashboardOrdersProducts object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    yield r'sales_breakdown';
+    yield object.salesBreakdown == null ? null : serializers.serialize(
+      object.salesBreakdown,
+      specifiedType: const FullType.nullable(VendorProductSalesBreakdown),
+    );
     yield r'top';
     yield serializers.serialize(
       object.top,
@@ -100,6 +111,14 @@ class _$VendorDashboardOrdersProductsSerializer implements PrimitiveSerializer<V
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'sales_breakdown':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(VendorProductSalesBreakdown),
+          ) as VendorProductSalesBreakdown?;
+          if (valueDes == null) continue;
+          result.salesBreakdown.replace(valueDes);
+          break;
         case r'top':
           final valueDes = serializers.deserialize(
             value,

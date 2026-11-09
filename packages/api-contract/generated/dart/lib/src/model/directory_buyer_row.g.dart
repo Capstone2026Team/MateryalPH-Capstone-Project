@@ -159,6 +159,10 @@ class _$DirectoryBuyerRow extends DirectoryBuyerRow {
   final DateTime joinedAt;
   @override
   final DateTime? lastActiveAt;
+  @override
+  final BuyerRatingSummary rating;
+  @override
+  final String? avatarUrl;
 
   factory _$DirectoryBuyerRow(
           [void Function(DirectoryBuyerRowBuilder)? updates]) =>
@@ -172,7 +176,9 @@ class _$DirectoryBuyerRow extends DirectoryBuyerRow {
       required this.buyerType,
       this.companyName,
       required this.joinedAt,
-      this.lastActiveAt})
+      this.lastActiveAt,
+      required this.rating,
+      this.avatarUrl})
       : super._();
   @override
   DirectoryBuyerRow rebuild(void Function(DirectoryBuyerRowBuilder) updates) =>
@@ -193,7 +199,9 @@ class _$DirectoryBuyerRow extends DirectoryBuyerRow {
         buyerType == other.buyerType &&
         companyName == other.companyName &&
         joinedAt == other.joinedAt &&
-        lastActiveAt == other.lastActiveAt;
+        lastActiveAt == other.lastActiveAt &&
+        rating == other.rating &&
+        avatarUrl == other.avatarUrl;
   }
 
   @override
@@ -207,6 +215,8 @@ class _$DirectoryBuyerRow extends DirectoryBuyerRow {
     _$hash = $jc(_$hash, companyName.hashCode);
     _$hash = $jc(_$hash, joinedAt.hashCode);
     _$hash = $jc(_$hash, lastActiveAt.hashCode);
+    _$hash = $jc(_$hash, rating.hashCode);
+    _$hash = $jc(_$hash, avatarUrl.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -221,7 +231,9 @@ class _$DirectoryBuyerRow extends DirectoryBuyerRow {
           ..add('buyerType', buyerType)
           ..add('companyName', companyName)
           ..add('joinedAt', joinedAt)
-          ..add('lastActiveAt', lastActiveAt))
+          ..add('lastActiveAt', lastActiveAt)
+          ..add('rating', rating)
+          ..add('avatarUrl', avatarUrl))
         .toString();
   }
 }
@@ -264,6 +276,15 @@ class DirectoryBuyerRowBuilder
   set lastActiveAt(DateTime? lastActiveAt) =>
       _$this._lastActiveAt = lastActiveAt;
 
+  BuyerRatingSummaryBuilder? _rating;
+  BuyerRatingSummaryBuilder get rating =>
+      _$this._rating ??= BuyerRatingSummaryBuilder();
+  set rating(BuyerRatingSummaryBuilder? rating) => _$this._rating = rating;
+
+  String? _avatarUrl;
+  String? get avatarUrl => _$this._avatarUrl;
+  set avatarUrl(String? avatarUrl) => _$this._avatarUrl = avatarUrl;
+
   DirectoryBuyerRowBuilder() {
     DirectoryBuyerRow._defaults(this);
   }
@@ -279,6 +300,8 @@ class DirectoryBuyerRowBuilder
       _companyName = $v.companyName;
       _joinedAt = $v.joinedAt;
       _lastActiveAt = $v.lastActiveAt;
+      _rating = $v.rating.toBuilder();
+      _avatarUrl = $v.avatarUrl;
       _$v = null;
     }
     return this;
@@ -298,23 +321,38 @@ class DirectoryBuyerRowBuilder
   DirectoryBuyerRow build() => _build();
 
   _$DirectoryBuyerRow _build() {
-    final _$result = _$v ??
-        _$DirectoryBuyerRow._(
-          id: BuiltValueNullFieldError.checkNotNull(
-              id, r'DirectoryBuyerRow', 'id'),
-          name: BuiltValueNullFieldError.checkNotNull(
-              name, r'DirectoryBuyerRow', 'name'),
-          email: BuiltValueNullFieldError.checkNotNull(
-              email, r'DirectoryBuyerRow', 'email'),
-          status: BuiltValueNullFieldError.checkNotNull(
-              status, r'DirectoryBuyerRow', 'status'),
-          buyerType: BuiltValueNullFieldError.checkNotNull(
-              buyerType, r'DirectoryBuyerRow', 'buyerType'),
-          companyName: companyName,
-          joinedAt: BuiltValueNullFieldError.checkNotNull(
-              joinedAt, r'DirectoryBuyerRow', 'joinedAt'),
-          lastActiveAt: lastActiveAt,
-        );
+    _$DirectoryBuyerRow _$result;
+    try {
+      _$result = _$v ??
+          _$DirectoryBuyerRow._(
+            id: BuiltValueNullFieldError.checkNotNull(
+                id, r'DirectoryBuyerRow', 'id'),
+            name: BuiltValueNullFieldError.checkNotNull(
+                name, r'DirectoryBuyerRow', 'name'),
+            email: BuiltValueNullFieldError.checkNotNull(
+                email, r'DirectoryBuyerRow', 'email'),
+            status: BuiltValueNullFieldError.checkNotNull(
+                status, r'DirectoryBuyerRow', 'status'),
+            buyerType: BuiltValueNullFieldError.checkNotNull(
+                buyerType, r'DirectoryBuyerRow', 'buyerType'),
+            companyName: companyName,
+            joinedAt: BuiltValueNullFieldError.checkNotNull(
+                joinedAt, r'DirectoryBuyerRow', 'joinedAt'),
+            lastActiveAt: lastActiveAt,
+            rating: rating.build(),
+            avatarUrl: avatarUrl,
+          );
+    } catch (_) {
+      late String _$failedField;
+      try {
+        _$failedField = 'rating';
+        rating.build();
+      } catch (e) {
+        throw BuiltValueNestedFieldError(
+            r'DirectoryBuyerRow', _$failedField, e.toString());
+      }
+      rethrow;
+    }
     replace(_$result);
     return _$result;
   }

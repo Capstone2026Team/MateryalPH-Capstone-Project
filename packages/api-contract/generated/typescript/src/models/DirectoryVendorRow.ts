@@ -59,6 +59,14 @@ export interface DirectoryVendorRow {
      *
      */
     joinedAt: Date;
+    /**
+     * Published VPS from the latest immutable score snapshot. Null below eligibility gates.
+     */
+    vps: string | null;
+    /**
+     * Current clean store logo URL. Null when no clean logo is available.
+     */
+    logoUrl: string | null;
 }
 
 
@@ -104,6 +112,8 @@ export function instanceOfDirectoryVendorRow(value: object): value is DirectoryV
     if ((!('accountStatus' in (value as Record<string, any>)) && !('account_status' in (value as Record<string, any>))) || ((value as Record<string, any>)['accountStatus'] === undefined && (value as Record<string, any>)['account_status'] === undefined)) return false;
     if (!('location' in value) || value['location'] === undefined) return false;
     if ((!('joinedAt' in (value as Record<string, any>)) && !('joined_at' in (value as Record<string, any>))) || ((value as Record<string, any>)['joinedAt'] === undefined && (value as Record<string, any>)['joined_at'] === undefined)) return false;
+    if (!('vps' in value) || value['vps'] === undefined) return false;
+    if ((!('logoUrl' in (value as Record<string, any>)) && !('logo_url' in (value as Record<string, any>))) || ((value as Record<string, any>)['logoUrl'] === undefined && (value as Record<string, any>)['logo_url'] === undefined)) return false;
     return true;
 }
 
@@ -127,6 +137,8 @@ export function DirectoryVendorRowFromJSONTyped(json: any, ignoreDiscriminator: 
         'accountStatus': json['account_status'],
         'location': json['location'],
         'joinedAt': (json['joined_at'] == null ? json['joined_at'] : parseDateTime(json['joined_at'])),
+        'vps': json['vps'],
+        'logoUrl': json['logo_url'],
     };
 }
 
@@ -151,6 +163,8 @@ export function DirectoryVendorRowToJSONTyped(value?: DirectoryVendorRow | null,
         'account_status': value['accountStatus'],
         'location': value['location'],
         'joined_at': value['joinedAt'] == null ? value['joinedAt'] : serializeDateTime(value['joinedAt']),
+        'vps': value['vps'],
+        'logo_url': value['logoUrl'],
     };
 }
 

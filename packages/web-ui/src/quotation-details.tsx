@@ -55,9 +55,9 @@ export function QuotationPaymentBreakdown({ content, selectedPaymentMethod, acce
         </> : <QuotationMoneyRow label={content.fulfillmentMethod === 'PICKUP' ? 'Delivery (Self-Pickup)' : 'Delivery'} value={formatPesoCentavos(money.deliveryCentavos)} />}
       </dl>
       <p className="mt-2 text-xs text-text-secondary">VAT is already included in the materials amount.</p>
-      <dl className="mt-4 border-t border-border-default pt-4"><QuotationMoneyRow label="Total before processing fee" value={formatPesoCentavos(money.commercialTotalCentavos)} strong /></dl>
-      <dl className="mt-3"><QuotationMoneyRow label="Processing fee" value={directPhysical ? 'Not applicable' : 'Pending'} muted /></dl>
-      <p className="mt-1 text-xs text-text-secondary">{directPhysical ? 'No online processing fee for this payment method.' : 'Calculated when a payment channel is selected.'}</p>
+      <dl className="mt-4 border-t border-border-default pt-4"><QuotationMoneyRow label="Total before e-wallet transaction fee" value={formatPesoCentavos(money.commercialTotalCentavos)} strong /></dl>
+      <dl className="mt-3"><QuotationMoneyRow label="E-wallet transaction fee" value={directPhysical ? 'Not applicable' : 'Pending'} muted /></dl>
+      <p className="mt-1 text-xs text-text-secondary">{directPhysical ? 'No e-wallet transaction fee for this payment method.' : 'Calculated when a payment channel is selected.'}</p>
       {money.nrpcCentavos > 0 && <dl className="mt-3 rounded-control bg-surface-canvas p-3"><QuotationMoneyRow label="NRPC included in total" value={formatPesoCentavos(money.nrpcCentavos)} /></dl>}
     </section>
     <section aria-label="Fulfillment and payment" className="mt-4 border-t border-border-default pt-4">

@@ -20,6 +20,10 @@ import { mapValues } from '../runtime';
  */
 export interface SupportPageMeta {
     /**
+     * Admin ticket lists only. Full totals for all five support statuses after search, category, user type and date filters but before status selection and cursor pagination. Includes zeroes for empty statuses; absent from Buyer, Vendor, history and handler lists.
+     */
+    counts?: { [key: string]: number; };
+    /**
      *
      */
     nextCursor: string | null;
@@ -47,6 +51,7 @@ export function SupportPageMetaFromJSONTyped(json: any, ignoreDiscriminator: boo
     }
     return {
 
+        'counts': json['counts'] == null ? undefined : json['counts'],
         'nextCursor': json['next_cursor'],
         'correlationId': json['correlation_id'] == null ? undefined : json['correlation_id'],
     };
@@ -63,6 +68,7 @@ export function SupportPageMetaToJSONTyped(value?: SupportPageMeta | null, ignor
 
     return {
 
+        'counts': value['counts'],
         'next_cursor': value['nextCursor'],
         'correlation_id': value['correlationId'],
     };

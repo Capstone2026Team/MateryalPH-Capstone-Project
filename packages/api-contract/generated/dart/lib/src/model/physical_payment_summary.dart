@@ -17,7 +17,7 @@ part 'physical_payment_summary.g.dart';
 /// * [applicable]
 /// * [method]
 /// * [state]
-/// * [remainingCentavos]
+/// * [remainingCentavos] - Current collectible physical balance. A CANCELLATION_RELEASE resolves to zero and state CANCELLED_UNPAID; historical records retain the amount released.
 /// * [onlineBalanceApproved]
 /// * [handoverCash]
 /// * [records]
@@ -33,6 +33,7 @@ abstract class PhysicalPaymentSummary implements Built<PhysicalPaymentSummary, P
   @BuiltValueField(wireName: r'state')
   String get state;
 
+  /// Current collectible physical balance. A CANCELLATION_RELEASE resolves to zero and state CANCELLED_UNPAID; historical records retain the amount released.
   @BuiltValueField(wireName: r'remaining_centavos')
   int? get remainingCentavos;
 

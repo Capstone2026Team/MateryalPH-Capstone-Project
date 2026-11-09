@@ -76,6 +76,26 @@ export interface RemittanceQueueRow {
      */
     reconciliationState: string;
     /**
+     * Version of the assessment source and current reconciliation state for backup approval.
+     */
+    sourceVersion: string;
+    /**
+     * Current caller has the restricted role and permission and this assessment can be submitted for fresh validation.
+     */
+    canApproveReconciliation: boolean;
+    /**
+     *
+     */
+    reconciliationMethod?: RemittanceQueueRowReconciliationMethodEnum | null;
+    /**
+     *
+     */
+    reconciliationActorRole?: string | null;
+    /**
+     *
+     */
+    reconciledAt?: Date | null;
+    /**
      *
      */
     reviewItemId?: string | null;
@@ -88,6 +108,17 @@ export interface RemittanceQueueRow {
      */
     createdAt: Date;
 }
+
+
+/**
+ * @export
+ */
+export const RemittanceQueueRowReconciliationMethodEnum = {
+    Automatic: 'AUTOMATIC',
+    BackupApproval: 'BACKUP_APPROVAL',
+} as const;
+export type RemittanceQueueRowReconciliationMethodEnum = typeof RemittanceQueueRowReconciliationMethodEnum[keyof typeof RemittanceQueueRowReconciliationMethodEnum];
+
 
 /**
  * Check if a given object implements the RemittanceQueueRow interface.
@@ -102,6 +133,8 @@ export function instanceOfRemittanceQueueRow(value: object): value is Remittance
     if ((!('calculationState' in (value as Record<string, any>)) && !('calculation_state' in (value as Record<string, any>))) || ((value as Record<string, any>)['calculationState'] === undefined && (value as Record<string, any>)['calculation_state'] === undefined)) return false;
     if ((!('deductionEvidenceState' in (value as Record<string, any>)) && !('deduction_evidence_state' in (value as Record<string, any>))) || ((value as Record<string, any>)['deductionEvidenceState'] === undefined && (value as Record<string, any>)['deduction_evidence_state'] === undefined)) return false;
     if ((!('reconciliationState' in (value as Record<string, any>)) && !('reconciliation_state' in (value as Record<string, any>))) || ((value as Record<string, any>)['reconciliationState'] === undefined && (value as Record<string, any>)['reconciliation_state'] === undefined)) return false;
+    if ((!('sourceVersion' in (value as Record<string, any>)) && !('source_version' in (value as Record<string, any>))) || ((value as Record<string, any>)['sourceVersion'] === undefined && (value as Record<string, any>)['source_version'] === undefined)) return false;
+    if ((!('canApproveReconciliation' in (value as Record<string, any>)) && !('can_approve_reconciliation' in (value as Record<string, any>))) || ((value as Record<string, any>)['canApproveReconciliation'] === undefined && (value as Record<string, any>)['can_approve_reconciliation'] === undefined)) return false;
     if (!('reason' in value) || value['reason'] === undefined) return false;
     if ((!('createdAt' in (value as Record<string, any>)) && !('created_at' in (value as Record<string, any>))) || ((value as Record<string, any>)['createdAt'] === undefined && (value as Record<string, any>)['created_at'] === undefined)) return false;
     return true;
@@ -131,6 +164,11 @@ export function RemittanceQueueRowFromJSONTyped(json: any, ignoreDiscriminator: 
         'calculationState': json['calculation_state'],
         'deductionEvidenceState': json['deduction_evidence_state'],
         'reconciliationState': json['reconciliation_state'],
+        'sourceVersion': json['source_version'],
+        'canApproveReconciliation': json['can_approve_reconciliation'],
+        'reconciliationMethod': json['reconciliation_method'] === undefined ? undefined : json['reconciliation_method'] === null ? null : json['reconciliation_method'],
+        'reconciliationActorRole': json['reconciliation_actor_role'] === undefined ? undefined : json['reconciliation_actor_role'] === null ? null : json['reconciliation_actor_role'],
+        'reconciledAt': json['reconciled_at'] === undefined ? undefined : json['reconciled_at'] === null ? null : (parseDateTime(json['reconciled_at'])),
         'reviewItemId': json['review_item_id'] === undefined ? undefined : json['review_item_id'] === null ? null : json['review_item_id'],
         'reason': json['reason'],
         'createdAt': (json['created_at'] == null ? json['created_at'] : parseDateTime(json['created_at'])),
@@ -162,6 +200,11 @@ export function RemittanceQueueRowToJSONTyped(value?: RemittanceQueueRow | null,
         'calculation_state': value['calculationState'],
         'deduction_evidence_state': value['deductionEvidenceState'],
         'reconciliation_state': value['reconciliationState'],
+        'source_version': value['sourceVersion'],
+        'can_approve_reconciliation': value['canApproveReconciliation'],
+        'reconciliation_method': value['reconciliationMethod'],
+        'reconciliation_actor_role': value['reconciliationActorRole'],
+        'reconciled_at': value['reconciledAt'] == null ? value['reconciledAt'] : serializeDateTime(value['reconciledAt']),
         'review_item_id': value['reviewItemId'],
         'reason': value['reason'],
         'created_at': value['createdAt'] == null ? value['createdAt'] : serializeDateTime(value['createdAt']),

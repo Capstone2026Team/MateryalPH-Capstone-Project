@@ -19,6 +19,7 @@ Name | Type | Description | Notes
 **topSelling** | [**BuiltList&lt;ProductAnalyticsRow&gt;**](ProductAnalyticsRow.md) |  |
 **topPerforming** | [**BuiltList&lt;ProductAnalyticsRow&gt;**](ProductAnalyticsRow.md) |  |
 **mostViewed** | [**BuiltList&lt;ProductAnalyticsRow&gt;**](ProductAnalyticsRow.md) |  |
+**topRated** | [**BuiltList&lt;ProductAnalyticsRatedProduct&gt;**](ProductAnalyticsRatedProduct.md) | Up to five products ranked by all-time visible Product Quality average descending, count descending, then listing ID ascending, independent of the selected period. Null without reviews.view; an empty array means no rated published products. Uses the same blind-reveal, moderation, active-dispute and score-exclusion gates as Buyer product averages. | [optional]
 **categories** | [**BuiltList&lt;VendorProductAnalyticsCategoriesInner&gt;**](VendorProductAnalyticsCategoriesInner.md) |  |
 **segments** | [**ProductAnalyticsSegments**](ProductAnalyticsSegments.md) |  |
 **basketRules** | [**VendorProductAnalyticsBasketRules**](VendorProductAnalyticsBasketRules.md) |  |

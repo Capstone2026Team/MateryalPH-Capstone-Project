@@ -3,10 +3,10 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:materyalph_api_client/src/model/enforcement_list_envelope_meta.dart';
 import 'package:built_collection/built_collection.dart';
 import 'package:materyalph_api_client/src/model/api_error.dart';
 import 'package:materyalph_api_client/src/model/enforcement_summary.dart';
-import 'package:built_value/json_object.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -24,7 +24,7 @@ abstract class EnforcementListEnvelope implements Built<EnforcementListEnvelope,
   BuiltList<EnforcementSummary> get data;
 
   @BuiltValueField(wireName: r'meta')
-  BuiltMap<String, JsonObject?> get meta;
+  EnforcementListEnvelopeMeta get meta;
 
   @BuiltValueField(wireName: r'errors')
   BuiltList<ApiError> get errors;
@@ -60,7 +60,7 @@ class _$EnforcementListEnvelopeSerializer implements PrimitiveSerializer<Enforce
     yield r'meta';
     yield serializers.serialize(
       object.meta,
-      specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
+      specifiedType: const FullType(EnforcementListEnvelopeMeta),
     );
     yield r'errors';
     yield serializers.serialize(
@@ -100,8 +100,8 @@ class _$EnforcementListEnvelopeSerializer implements PrimitiveSerializer<Enforce
         case r'meta':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
-          ) as BuiltMap<String, JsonObject?>;
+            specifiedType: const FullType(EnforcementListEnvelopeMeta),
+          ) as EnforcementListEnvelopeMeta;
           result.meta.replace(valueDes);
           break;
         case r'errors':

@@ -15,6 +15,7 @@ part 'vendor_review_row.g.dart';
 /// VendorReviewRow
 ///
 /// Properties:
+/// * [buyerAvatarUrl] - Five-minute signed review-scoped Buyer photo URL, including for legacy reviews now shown with full identity. Null for store-authored Buyer ratings or missing photos. Fetch with the current Vendor session; never use a private storage URL.
 /// * [id]
 /// * [type]
 /// * [ratings]
@@ -32,6 +33,10 @@ part 'vendor_review_row.g.dart';
 /// * [canReport]
 @BuiltValue()
 abstract class VendorReviewRow implements Built<VendorReviewRow, VendorReviewRowBuilder> {
+  /// Five-minute signed review-scoped Buyer photo URL, including for legacy reviews now shown with full identity. Null for store-authored Buyer ratings or missing photos. Fetch with the current Vendor session; never use a private storage URL.
+  @BuiltValueField(wireName: r'buyer_avatar_url')
+  String? get buyerAvatarUrl;
+
   @BuiltValueField(wireName: r'id')
   String? get id;
 
@@ -103,6 +108,13 @@ class _$VendorReviewRowSerializer implements PrimitiveSerializer<VendorReviewRow
     VendorReviewRow object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.buyerAvatarUrl != null) {
+      yield r'buyer_avatar_url';
+      yield serializers.serialize(
+        object.buyerAvatarUrl,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
     if (object.id != null) {
       yield r'id';
       yield serializers.serialize(
@@ -231,6 +243,14 @@ class _$VendorReviewRowSerializer implements PrimitiveSerializer<VendorReviewRow
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'buyer_avatar_url':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.buyerAvatarUrl = valueDes;
+          break;
         case r'id':
           final valueDes = serializers.deserialize(
             value,

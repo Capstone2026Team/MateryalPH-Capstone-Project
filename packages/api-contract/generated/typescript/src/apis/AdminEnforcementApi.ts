@@ -24,6 +24,16 @@ import {
     EnforcementDetailEnvelopeToJSON,
 } from '../models/EnforcementDetailEnvelope';
 import {
+    type EnforcementEvidenceEnvelope,
+    EnforcementEvidenceEnvelopeFromJSON,
+    EnforcementEvidenceEnvelopeToJSON,
+} from '../models/EnforcementEvidenceEnvelope';
+import {
+    type EnforcementEvidenceLinkEnvelope,
+    EnforcementEvidenceLinkEnvelopeFromJSON,
+    EnforcementEvidenceLinkEnvelopeToJSON,
+} from '../models/EnforcementEvidenceLinkEnvelope';
+import {
     type EnforcementListEnvelope,
     EnforcementListEnvelopeFromJSON,
     EnforcementListEnvelopeToJSON,
@@ -76,11 +86,41 @@ export interface DeclineEnforcementActionRequest {
     reasonedVersionRequest: ReasonedVersionRequest;
 }
 
+export interface DownloadEnforcementEvidenceRequest {
+    /**
+     *
+     */
+    actionId: string;
+    /**
+     *
+     */
+    fileId: string;
+    /**
+     *
+     */
+    expires: number;
+    /**
+     *
+     */
+    signature: string;
+}
+
 export interface GetEnforcementActionRequest {
     /**
      *
      */
     actionId: string;
+}
+
+export interface GetEnforcementEvidenceLinkRequest {
+    /**
+     *
+     */
+    actionId: string;
+    /**
+     *
+     */
+    fileId: string;
 }
 
 export interface GetEnforcementSubjectRequest {
@@ -160,6 +200,21 @@ export interface SearchEnforcementSubjectsRequest {
      *
      */
     q: string;
+}
+
+export interface UploadEnforcementEvidenceRequest {
+    /**
+     *
+     */
+    type: UploadEnforcementEvidenceTypeEnum;
+    /**
+     *
+     */
+    subjectId: string;
+    /**
+     *
+     */
+    file: Blob;
 }
 
 /**
@@ -286,6 +341,85 @@ export class AdminEnforcementApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates request options for downloadEnforcementEvidence without sending the request
+     */
+    async downloadEnforcementEvidenceRequestOpts(requestParameters: DownloadEnforcementEvidenceRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['actionId'] == null) {
+            throw new runtime.RequiredError(
+                'actionId',
+                'Required parameter "actionId" was null or undefined when calling downloadEnforcementEvidence().'
+            );
+        }
+
+        if (requestParameters['fileId'] == null) {
+            throw new runtime.RequiredError(
+                'fileId',
+                'Required parameter "fileId" was null or undefined when calling downloadEnforcementEvidence().'
+            );
+        }
+
+        if (requestParameters['expires'] == null) {
+            throw new runtime.RequiredError(
+                'expires',
+                'Required parameter "expires" was null or undefined when calling downloadEnforcementEvidence().'
+            );
+        }
+
+        if (requestParameters['signature'] == null) {
+            throw new runtime.RequiredError(
+                'signature',
+                'Required parameter "signature" was null or undefined when calling downloadEnforcementEvidence().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['expires'] != null) {
+            queryParameters['expires'] = requestParameters['expires'];
+        }
+
+        if (requestParameters['signature'] != null) {
+            queryParameters['signature'] = requestParameters['signature'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/admin/enforcement/{actionId}/files/{fileId}/content`;
+        urlPath = urlPath.replace('{actionId}', encodeURIComponent(String(requestParameters['actionId'])));
+        urlPath = urlPath.replace('{fileId}', encodeURIComponent(String(requestParameters['fileId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * enforcement.view and a valid signature. Reauthorizes the current Admin and checks that this record references the private clean file. Audited read.
+     */
+    async downloadEnforcementEvidenceRaw(requestParameters: DownloadEnforcementEvidenceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Blob>> {
+        const requestOptions = await this.downloadEnforcementEvidenceRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.BlobApiResponse(response);
+    }
+
+    /**
+     * enforcement.view and a valid signature. Reauthorizes the current Admin and checks that this record references the private clean file. Audited read.
+     */
+    async downloadEnforcementEvidence(requestParameters: DownloadEnforcementEvidenceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Blob> {
+        const response = await this.downloadEnforcementEvidenceRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Creates request options for getEnforcementAction without sending the request
      */
     async getEnforcementActionRequestOpts(requestParameters: GetEnforcementActionRequest): Promise<runtime.RequestOpts> {
@@ -331,6 +465,63 @@ export class AdminEnforcementApi extends runtime.BaseAPI {
      */
     async getEnforcementAction(requestParameters: GetEnforcementActionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<EnforcementDetailEnvelope> {
         const response = await this.getEnforcementActionRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for getEnforcementEvidenceLink without sending the request
+     */
+    async getEnforcementEvidenceLinkRequestOpts(requestParameters: GetEnforcementEvidenceLinkRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['actionId'] == null) {
+            throw new runtime.RequiredError(
+                'actionId',
+                'Required parameter "actionId" was null or undefined when calling getEnforcementEvidenceLink().'
+            );
+        }
+
+        if (requestParameters['fileId'] == null) {
+            throw new runtime.RequiredError(
+                'fileId',
+                'Required parameter "fileId" was null or undefined when calling getEnforcementEvidenceLink().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/admin/enforcement/{actionId}/files/{fileId}`;
+        urlPath = urlPath.replace('{actionId}', encodeURIComponent(String(requestParameters['actionId'])));
+        urlPath = urlPath.replace('{fileId}', encodeURIComponent(String(requestParameters['fileId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * enforcement.view. Get a five-minute signed link for proof attached to this exact enforcement record.
+     */
+    async getEnforcementEvidenceLinkRaw(requestParameters: GetEnforcementEvidenceLinkRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<EnforcementEvidenceLinkEnvelope>> {
+        const requestOptions = await this.getEnforcementEvidenceLinkRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => EnforcementEvidenceLinkEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * enforcement.view. Get a five-minute signed link for proof attached to this exact enforcement record.
+     */
+    async getEnforcementEvidenceLink(requestParameters: GetEnforcementEvidenceLinkRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<EnforcementEvidenceLinkEnvelope> {
+        const response = await this.getEnforcementEvidenceLinkRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -648,6 +839,91 @@ export class AdminEnforcementApi extends runtime.BaseAPI {
         return await response.value();
     }
 
+    /**
+     * Creates request options for uploadEnforcementEvidence without sending the request
+     */
+    async uploadEnforcementEvidenceRequestOpts(requestParameters: UploadEnforcementEvidenceRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['type'] == null) {
+            throw new runtime.RequiredError(
+                'type',
+                'Required parameter "type" was null or undefined when calling uploadEnforcementEvidence().'
+            );
+        }
+
+        if (requestParameters['subjectId'] == null) {
+            throw new runtime.RequiredError(
+                'subjectId',
+                'Required parameter "subjectId" was null or undefined when calling uploadEnforcementEvidence().'
+            );
+        }
+
+        if (requestParameters['file'] == null) {
+            throw new runtime.RequiredError(
+                'file',
+                'Required parameter "file" was null or undefined when calling uploadEnforcementEvidence().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+        const consumes: runtime.Consume[] = [
+            { contentType: 'multipart/form-data' },
+        ];
+        // @ts-ignore: canConsumeForm may be unused
+        const canConsumeForm = runtime.canConsumeForm(consumes);
+
+        let formParams: { append(param: string, value: any): any };
+        let useForm = false;
+        // use FormData to transmit files using content-type "multipart/form-data"
+        useForm = canConsumeForm;
+        if (useForm) {
+            formParams = new FormData();
+        } else {
+            formParams = new URLSearchParams();
+        }
+
+        if (requestParameters['file'] != null) {
+            formParams.append('file', requestParameters['file'] as any);
+        }
+
+
+        let urlPath = `/admin/enforcement/subjects/{type}/{subjectId}/files`;
+        urlPath = urlPath.replace('{type}', encodeURIComponent(String(requestParameters['type'])));
+        urlPath = urlPath.replace('{subjectId}', encodeURIComponent(String(requestParameters['subjectId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: formParams,
+        };
+    }
+
+    /**
+     * enforcement.view and enforcement.apply. Stage one private proof file for this subject before recording an action. JPG/PNG/PDF up to 10 MB; MP4/MOV up to 25 MB. Content validation and malware scanning fail closed.
+     */
+    async uploadEnforcementEvidenceRaw(requestParameters: UploadEnforcementEvidenceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<EnforcementEvidenceEnvelope>> {
+        const requestOptions = await this.uploadEnforcementEvidenceRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => EnforcementEvidenceEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * enforcement.view and enforcement.apply. Stage one private proof file for this subject before recording an action. JPG/PNG/PDF up to 10 MB; MP4/MOV up to 25 MB. Content validation and malware scanning fail closed.
+     */
+    async uploadEnforcementEvidence(requestParameters: UploadEnforcementEvidenceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<EnforcementEvidenceEnvelope> {
+        const response = await this.uploadEnforcementEvidenceRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
 }
 
 /**
@@ -703,3 +979,11 @@ export const SearchEnforcementSubjectsTypeEnum = {
     VendorOrganization: 'VENDOR_ORGANIZATION',
 } as const;
 export type SearchEnforcementSubjectsTypeEnum = typeof SearchEnforcementSubjectsTypeEnum[keyof typeof SearchEnforcementSubjectsTypeEnum];
+/**
+ * @export
+ */
+export const UploadEnforcementEvidenceTypeEnum = {
+    Buyer: 'BUYER',
+    VendorOrganization: 'VENDOR_ORGANIZATION',
+} as const;
+export type UploadEnforcementEvidenceTypeEnum = typeof UploadEnforcementEvidenceTypeEnum[keyof typeof UploadEnforcementEvidenceTypeEnum];

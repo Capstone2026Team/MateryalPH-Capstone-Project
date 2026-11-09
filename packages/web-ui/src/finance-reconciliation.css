@@ -1,0 +1,55 @@
+.mp-finance-queue { overflow: clip; }
+.mp-finance-queue-header { padding: 20px 20px 0; }
+.mp-finance-queue-header h2 { font-size: 16px; line-height: 24px; font-weight: 600; }
+.mp-finance-queue-header p { margin-top: 4px; color: var(--mp-color-text-secondary); font-size: 13px; line-height: 20px; }
+.mp-finance-queue-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px; }
+.mp-finance-queue-toolbar > div { min-width: 0; max-width: 100%; }
+.mp-finance-queue-note { display: flex; align-items: start; gap: 8px; padding: 12px 20px; border-top: 1px solid var(--mp-color-border-default); background: var(--mp-color-surface-canvas); color: var(--mp-color-text-secondary); font-size: 13px; line-height: 20px; }
+.mp-finance-queue-note > svg { flex-shrink: 0; margin-top: 2px; }
+.mp-finance-queue-content { min-width: 0; border-top: 1px solid var(--mp-color-border-default); }
+.mp-finance-queue-content nav[aria-label="Pagination"] { margin: 0 20px 16px; }
+.mp-finance-reconciliation-ledger > [role="region"] { border: 0; border-radius: 0; }
+.mp-finance-reconciliation-ledger table { min-width: 0; table-layout: fixed; }
+.mp-finance-reconciliation-ledger tbody > tr { vertical-align: top; }
+.mp-finance-reconciliation-ledger th { white-space: normal; }
+.mp-finance-reconciliation-ledger th:first-child { min-width: 0; }
+.mp-finance-reconciliation-ledger table tr > :first-child { width: 28%; }
+.mp-finance-reconciliation-ledger table tr > :nth-child(2) { width: 23%; }
+.mp-finance-reconciliation-ledger table tr > :nth-child(3) { width: 23%; }
+.mp-finance-reconciliation-ledger table tr > :nth-child(4) { width: 26%; }
+.mp-finance-reconciliation-ledger :is(th, td) { overflow-wrap: anywhere; }
+.mp-finance-reconciliation-ledger tbody tr:last-child > * { border-bottom: 0; }
+.mp-finance-record-facts { display: grid; gap: 6px; min-width: 0; font-size: 13px; line-height: 20px; }
+.mp-finance-record-facts > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; min-width: 0; }
+.mp-finance-record-facts dt { color: var(--mp-color-text-secondary); }
+.mp-finance-record-facts dd { max-width: 100%; min-width: 0; font-weight: 500; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.mp-finance-review-list { margin: 0; padding: 0; list-style: none; }
+.mp-finance-review-list > li { display: grid; gap: 12px; padding: 20px; }
+.mp-finance-review-list > li + li { border-top: 1px solid var(--mp-color-border-default); }
+.mp-finance-review-values { min-width: 0; border-block: 1px solid var(--mp-color-border-default); font-size: 13px; }
+.mp-finance-review-values summary { display: flex; align-items: center; gap: 8px; min-height: 44px; width: fit-content; cursor: pointer; font-weight: 600; }
+.mp-finance-review-values summary::-webkit-details-marker { display: none; }
+.mp-finance-review-values summary:focus-visible { outline: 2px solid var(--mp-color-focus-ring); outline-offset: 2px; border-radius: var(--mp-radius-control); }
+.mp-finance-review-values summary > svg { transition: transform 120ms ease; }
+.mp-finance-review-values[open] summary > svg { transform: rotate(180deg); }
+.mp-finance-review-values-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; padding: 4px 0 16px; }
+.mp-finance-review-values-grid > section { min-width: 0; }
+.mp-finance-review-values-grid h4 { margin-bottom: 8px; font-size: 12px; font-weight: 600; color: var(--mp-color-text-secondary); }
+.mp-finance-review-values-grid p { color: var(--mp-color-text-secondary); }
+@media (max-width: 1023px) {
+  .mp-finance-reconciliation-ledger > .mp-ledger-mobile-compact { gap: 0; }
+  .mp-finance-reconciliation-ledger article.mp-card { padding: 16px 20px; border: 0; border-radius: 0; }
+  .mp-finance-reconciliation-ledger article.mp-card + article { border-top: 1px solid var(--mp-color-border-default); }
+  .mp-finance-reconciliation-ledger article > dl { grid-template-columns: minmax(0, 1fr); }
+  .mp-finance-reconciliation-ledger article > dl > div:first-child { grid-column: auto; }
+  .mp-finance-reconciliation-ledger article > dl > div > dt { margin-bottom: 8px; font-size: 12px; font-weight: 600; }
+}
+@media (max-width: 639px) {
+  .mp-finance-queue-header { padding: 16px 16px 0; }
+  .mp-finance-queue-toolbar { padding: 12px 16px; }
+  .mp-finance-queue-note, .mp-finance-review-list > li, .mp-finance-reconciliation-ledger article.mp-card { padding: 16px; }
+  .mp-finance-review-values-grid { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mp-finance-review-values summary > svg { transition: none; }
+}

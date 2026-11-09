@@ -21,10 +21,24 @@ void main() {
       // TODO
     });
 
+    // enforcement.view and a valid signature. Reauthorizes the current Admin and checks that this record references the private clean file. Audited read.
+    //
+    //Future<Uint8List> downloadEnforcementEvidence(String actionId, String fileId, int expires, String signature) async
+    test('test downloadEnforcementEvidence', () async {
+      // TODO
+    });
+
     // enforcement.view. Sanction, subject review, append-only events and the actions your role may take.
     //
     //Future<EnforcementDetailEnvelope> getEnforcementAction(String actionId) async
     test('test getEnforcementAction', () async {
+      // TODO
+    });
+
+    // enforcement.view. Get a five-minute signed link for proof attached to this exact enforcement record.
+    //
+    //Future<EnforcementEvidenceLinkEnvelope> getEnforcementEvidenceLink(String actionId, String fileId) async
+    test('test getEnforcementEvidenceLink', () async {
       // TODO
     });
 
@@ -60,6 +74,13 @@ void main() {
     //
     //Future<EnforcementSubjectMatchListEnvelope> searchEnforcementSubjects(String type, String q) async
     test('test searchEnforcementSubjects', () async {
+      // TODO
+    });
+
+    // enforcement.view and enforcement.apply. Stage one private proof file for this subject before recording an action. JPG/PNG/PDF up to 10 MB; MP4/MOV up to 25 MB. Content validation and malware scanning fail closed.
+    //
+    //Future<EnforcementEvidenceEnvelope> uploadEnforcementEvidence(String type, String subjectId, MultipartFile file) async
+    test('test uploadEnforcementEvidence', () async {
       // TODO
     });
 

@@ -21,6 +21,7 @@ part 'enforcement_record_request.g.dart';
 /// * [restorationCondition]
 /// * [continuationPlan]
 /// * [continuationNote]
+/// * [evidenceFileIds] - Clean private proof files uploaded by this Admin for the same subject. Immutable once recorded.
 @BuiltValue()
 abstract class EnforcementRecordRequest implements Built<EnforcementRecordRequest, EnforcementRecordRequestBuilder> {
   @BuiltValueField(wireName: r'subject_type')
@@ -52,6 +53,10 @@ abstract class EnforcementRecordRequest implements Built<EnforcementRecordReques
 
   @BuiltValueField(wireName: r'continuation_note')
   String? get continuationNote;
+
+  /// Clean private proof files uploaded by this Admin for the same subject. Immutable once recorded.
+  @BuiltValueField(wireName: r'evidence_file_ids')
+  BuiltSet<String>? get evidenceFileIds;
 
   EnforcementRecordRequest._();
 
@@ -129,6 +134,13 @@ class _$EnforcementRecordRequestSerializer implements PrimitiveSerializer<Enforc
       yield serializers.serialize(
         object.continuationNote,
         specifiedType: const FullType.nullable(String),
+      );
+    }
+    if (object.evidenceFileIds != null) {
+      yield r'evidence_file_ids';
+      yield serializers.serialize(
+        object.evidenceFileIds,
+        specifiedType: const FullType(BuiltSet, [FullType(String)]),
       );
     }
   }
@@ -221,6 +233,14 @@ class _$EnforcementRecordRequestSerializer implements PrimitiveSerializer<Enforc
           ) as String?;
           if (valueDes == null) continue;
           result.continuationNote = valueDes;
+          break;
+        case r'evidence_file_ids':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltSet, [FullType(String)]),
+          ) as BuiltSet<String>?;
+          if (valueDes == null) continue;
+          result.evidenceFileIds.replace(valueDes);
           break;
         default:
           unhandled.add(key);

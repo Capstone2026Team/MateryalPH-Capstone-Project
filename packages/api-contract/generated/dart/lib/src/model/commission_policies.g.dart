@@ -16,6 +16,12 @@ class _$CommissionPolicies extends CommissionPolicies {
   @override
   final bool canManage;
   @override
+  final int? minNoticeDays;
+  @override
+  final int? eligibleVendorCount;
+  @override
+  final bool? canExport;
+  @override
   final BuiltList<CommissionPolicy> versions;
 
   factory _$CommissionPolicies(
@@ -27,6 +33,9 @@ class _$CommissionPolicies extends CommissionPolicies {
       this.next,
       required this.latestVersion,
       required this.canManage,
+      this.minNoticeDays,
+      this.eligibleVendorCount,
+      this.canExport,
       required this.versions})
       : super._();
   @override
@@ -46,6 +55,9 @@ class _$CommissionPolicies extends CommissionPolicies {
         next == other.next &&
         latestVersion == other.latestVersion &&
         canManage == other.canManage &&
+        minNoticeDays == other.minNoticeDays &&
+        eligibleVendorCount == other.eligibleVendorCount &&
+        canExport == other.canExport &&
         versions == other.versions;
   }
 
@@ -56,6 +68,9 @@ class _$CommissionPolicies extends CommissionPolicies {
     _$hash = $jc(_$hash, next.hashCode);
     _$hash = $jc(_$hash, latestVersion.hashCode);
     _$hash = $jc(_$hash, canManage.hashCode);
+    _$hash = $jc(_$hash, minNoticeDays.hashCode);
+    _$hash = $jc(_$hash, eligibleVendorCount.hashCode);
+    _$hash = $jc(_$hash, canExport.hashCode);
     _$hash = $jc(_$hash, versions.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
@@ -68,6 +83,9 @@ class _$CommissionPolicies extends CommissionPolicies {
           ..add('next', next)
           ..add('latestVersion', latestVersion)
           ..add('canManage', canManage)
+          ..add('minNoticeDays', minNoticeDays)
+          ..add('eligibleVendorCount', eligibleVendorCount)
+          ..add('canExport', canExport)
           ..add('versions', versions))
         .toString();
   }
@@ -96,6 +114,20 @@ class CommissionPoliciesBuilder
   bool? get canManage => _$this._canManage;
   set canManage(bool? canManage) => _$this._canManage = canManage;
 
+  int? _minNoticeDays;
+  int? get minNoticeDays => _$this._minNoticeDays;
+  set minNoticeDays(int? minNoticeDays) =>
+      _$this._minNoticeDays = minNoticeDays;
+
+  int? _eligibleVendorCount;
+  int? get eligibleVendorCount => _$this._eligibleVendorCount;
+  set eligibleVendorCount(int? eligibleVendorCount) =>
+      _$this._eligibleVendorCount = eligibleVendorCount;
+
+  bool? _canExport;
+  bool? get canExport => _$this._canExport;
+  set canExport(bool? canExport) => _$this._canExport = canExport;
+
   ListBuilder<CommissionPolicy>? _versions;
   ListBuilder<CommissionPolicy> get versions =>
       _$this._versions ??= ListBuilder<CommissionPolicy>();
@@ -113,6 +145,9 @@ class CommissionPoliciesBuilder
       _next = $v.next?.toBuilder();
       _latestVersion = $v.latestVersion;
       _canManage = $v.canManage;
+      _minNoticeDays = $v.minNoticeDays;
+      _eligibleVendorCount = $v.eligibleVendorCount;
+      _canExport = $v.canExport;
       _versions = $v.versions.toBuilder();
       _$v = null;
     }
@@ -143,6 +178,9 @@ class CommissionPoliciesBuilder
                 latestVersion, r'CommissionPolicies', 'latestVersion'),
             canManage: BuiltValueNullFieldError.checkNotNull(
                 canManage, r'CommissionPolicies', 'canManage'),
+            minNoticeDays: minNoticeDays,
+            eligibleVendorCount: eligibleVendorCount,
+            canExport: canExport,
             versions: versions.build(),
           );
     } catch (_) {

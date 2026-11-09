@@ -63,5 +63,10 @@ void main() {
       // TODO
     });
 
+    // bool canViewScores
+    test('to test the property `canViewScores`', () async {
+      // TODO
+    });
+
   });
 }

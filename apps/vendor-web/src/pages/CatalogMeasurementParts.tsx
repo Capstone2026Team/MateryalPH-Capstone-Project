@@ -29,7 +29,7 @@ export function CategorySection({ form, setForm, taxonomy, material, readOnly, e
       <p className="mt-1 text-sm text-text-secondary">Buyers browse these same categories in the MateryalPH app, and Technical details follow the category.</p>
     </div>
     {form.materialId !== null ? <>
-      <div className="flex flex-wrap items-center gap-4 rounded-surface border border-border-default bg-surface-canvas p-4">
+      <div className="flex flex-wrap items-center gap-4 mp-card bg-surface-canvas p-4">
         <CategoryBadge code={current?.code} />
         <div className="min-w-0 flex-1">
           <p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Buyer category</p>

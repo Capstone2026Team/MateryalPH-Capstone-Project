@@ -849,7 +849,7 @@ export class VendorFulfillmentApi extends runtime.BaseAPI {
     }
 
     /**
-     * Order evidence for authorized Vendor users of this order; Fulfillment Staff only while assigned.
+     * Order evidence and frozen delivery vehicle images for authorized Vendor users of this order; Fulfillment Staff only while assigned. Vehicle images must be referenced by the saved order arrangement or submitted estimate.
      */
     async getVendorOrderFileRaw(requestParameters: GetVendorOrderFileRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Blob>> {
         const requestOptions = await this.getVendorOrderFileRequestOpts(requestParameters);
@@ -859,7 +859,7 @@ export class VendorFulfillmentApi extends runtime.BaseAPI {
     }
 
     /**
-     * Order evidence for authorized Vendor users of this order; Fulfillment Staff only while assigned.
+     * Order evidence and frozen delivery vehicle images for authorized Vendor users of this order; Fulfillment Staff only while assigned. Vehicle images must be referenced by the saved order arrangement or submitted estimate.
      */
     async getVendorOrderFile(requestParameters: GetVendorOrderFileRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Blob> {
         const response = await this.getVendorOrderFileRaw(requestParameters, initOverrides);

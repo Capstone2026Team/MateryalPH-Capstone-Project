@@ -414,6 +414,14 @@ class InvoiceRecordItem {
     required this.buyerTotalUnchanged,
     this.reconciliationNote,
     this.downloadUrl,
+    this.fileName,
+    this.contentType,
+    this.fileSizeBytes,
+    this.sentAt,
+    this.vatCentavos,
+    this.sourceSystem,
+    this.invoicingMethod,
+    this.orderSummary,
   });
 
   final String id;
@@ -428,9 +436,53 @@ class InvoiceRecordItem {
   final int reconciliationDifferenceCentavos;
   final String? reconciliationNote;
   final String? downloadUrl;
+  final String? fileName;
+  final String? contentType;
+  final int? fileSizeBytes;
+  final DateTime? sentAt;
+  final int? vatCentavos;
+  final String? sourceSystem;
+  final String? invoicingMethod;
+  final InvoiceOrderSnapshot? orderSummary;
   final bool buyerTotalUnchanged;
 
   bool get differs => reconciliationState == 'INVOICE_RECONCILIATION_REQUIRED';
+}
+
+class InvoiceOrderLineItem {
+  const InvoiceOrderLineItem({
+    required this.name,
+    required this.quantity,
+    required this.unit,
+    this.unitPriceCentavos,
+    this.totalCentavos,
+  });
+  final String name;
+  final String quantity;
+  final String unit;
+  final int? unitPriceCentavos;
+  final int? totalCentavos;
+}
+
+class InvoiceOrderSnapshot {
+  const InvoiceOrderSnapshot({
+    this.lines = const [],
+    this.materialsCentavos,
+    this.discountCentavos,
+    this.deliveryCentavos,
+    this.vatCentavos,
+    this.totalCentavos,
+    this.billingName,
+    this.billingAddress,
+  });
+  final List<InvoiceOrderLineItem> lines;
+  final int? materialsCentavos;
+  final int? discountCentavos;
+  final int? deliveryCentavos;
+  final int? vatCentavos;
+  final int? totalCentavos;
+  final String? billingName;
+  final String? billingAddress;
 }
 
 class InvoiceRequestItem {

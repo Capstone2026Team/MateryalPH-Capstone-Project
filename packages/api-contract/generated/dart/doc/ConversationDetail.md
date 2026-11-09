@@ -8,6 +8,8 @@ import 'package:materyalph_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
+**threadAuthority** | **String** | Opaque authorized-context epoch for the combined Vendor timeline. Discard retained pages when it changes; it is never an authorization credential. | [optional]
+**threadContexts** | [**BuiltList&lt;ConversationView&gt;**](ConversationView.md) | Authorized original references used to resolve older messages, quotations, files and receipts within the single chat. No reply-subject selector is shown. | [optional]
 **conversation** | [**ConversationView**](ConversationView.md) |  |
 **messages** | [**ChatMessagePage**](ChatMessagePage.md) |  |
 **quotations** | [**ChatQuotationPage**](ChatQuotationPage.md) |  |

@@ -44,7 +44,7 @@ class _OrderReviewsScreenState extends State<OrderReviewsScreen> {
   OrderReviewsView? _view;
   DiscoveryFailure? _failure;
   bool _busy = false;
-  String _choice = 'FIRST_NAME_LAST_INITIAL';
+  static const _choice = 'FULL_NAME';
   int? _service;
   int? _speed;
   final _vendorComment = TextEditingController();
@@ -182,7 +182,7 @@ class _OrderReviewsScreenState extends State<OrderReviewsScreen> {
     final name = view.displayOptions
         .firstWhere(
           (option) => option.choice == _choice,
-          orElse: () => (choice: _choice, preview: 'Verified Buyer'),
+          orElse: () => (choice: _choice, preview: 'Your full profile name'),
         )
         .preview;
     final confirmed = await showDialog<bool>(
@@ -742,28 +742,10 @@ class _OrderReviewsScreenState extends State<OrderReviewsScreen> {
                       ),
                     if (view.canSubmitVendorRating ||
                         view.lines.any((line) => line.canReview)) ...[
-                      const SectionHeading('How your name appears'),
-                      RadioGroup<String>(
-                        groupValue: _choice,
-                        onChanged: (value) {
-                          if (!_busy) {
-                            setState(() => _choice = value ?? _choice);
-                          }
-                        },
-                        child: Column(
-                          children: [
-                            for (final option in view.displayOptions)
-                              RadioListTile<String>(
-                                value: option.choice,
-                                contentPadding: EdgeInsets.zero,
-                                title: Text(option.preview),
-                                subtitle: Text(
-                                  option.choice == 'VERIFIED_BUYER'
-                                      ? 'More private: no name shown'
-                                      : 'First name and last initial',
-                                ),
-                              ),
-                          ],
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        child: Text(
+                          'Your review shows your full profile name${view.displayOptions.isEmpty ? '.' : ': ${view.displayOptions.first.preview}.'}',
                         ),
                       ),
                       FilledButton(

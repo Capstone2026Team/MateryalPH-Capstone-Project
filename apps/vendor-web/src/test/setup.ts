@@ -2,6 +2,9 @@ import '@testing-library/jest-dom/vitest'
 import { cleanup } from '@testing-library/react'
 import { afterEach } from 'vitest'
 
-afterEach(() => cleanup())
+afterEach(() => {
+  cleanup()
+  if (typeof window !== 'undefined') window.localStorage.removeItem('materyalph:date-filter:v1')
+})
 
-Element.prototype.scrollIntoView = () => {}
+if (typeof Element !== 'undefined') Element.prototype.scrollIntoView = () => {}

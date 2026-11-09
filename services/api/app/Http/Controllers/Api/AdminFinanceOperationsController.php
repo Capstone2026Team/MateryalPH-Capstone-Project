@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api;
 
 use App\Domain\Finance\FinanceOperationsService;
+use App\Domain\Finance\RemittanceReconciliationService;
 use App\Domain\Finance\TaxAdjustmentService;
+use App\Domain\Finance\TaxpayerContext;
+use App\Domain\Finance\WithholdingRegister;
 use App\Http\ApiResponse;
 use App\Http\Controllers\Controller;
 use App\Support\PortalDateRange;
@@ -16,6 +19,30 @@ use Illuminate\Validation\Rule;
 /** FIN-10 Admin finance queues, KPIs and tax adjustments; every action is authorized in its domain service. */
 final class AdminFinanceOperationsController extends Controller
 {
+    public function taxIssues(Request $request, WithholdingRegister $register): JsonResponse
+    {
+        $input = $request->validate(['page' => ['sometimes', 'integer', 'between:1,1000']]);
+        $result = $register->issues($request, (int) ($input['page'] ?? 1));
+
+        return ApiResponse::success($result['items'], $result['meta']);
+    }
+
+    public function withholdingVendor(Request $request, string $vendorId, WithholdingRegister $register): JsonResponse
+    {
+        $input = $request->validate(['month' => ['required', 'date_format:Y-m'], 'withholding_entity' => ['required', Rule::in(TaxpayerContext::SCENARIOS)], 'page' => ['sometimes', 'integer', 'between:1,1000']]);
+        $result = $register->vendor($request, $vendorId, $input['month'], $input['withholding_entity'], (int) ($input['page'] ?? 1));
+
+        return ApiResponse::success($result['data'], $result['meta']);
+    }
+
+    public function withholding(Request $request, WithholdingRegister $register): JsonResponse
+    {
+        $input = $request->validate(['month' => ['sometimes', 'required', 'date_format:Y-m'], 'page' => ['sometimes', 'integer', 'between:1,1000']]);
+        $result = $register->month($request, $input['month'] ?? null, (int) ($input['page'] ?? 1));
+
+        return ApiResponse::success($result['data'], $result['meta']);
+    }
+
     public function kpis(Request $request, FinanceOperationsService $finance): JsonResponse
     {
         $input = $request->validate(PortalDateRange::rules($request));
@@ -31,6 +58,13 @@ final class AdminFinanceOperationsController extends Controller
         $result = $finance->remittances($request, $filters);
 
         return ApiResponse::success($result['items'], $result['meta']);
+    }
+
+    public function approveRemittanceReconciliation(Request $request, string $assessmentId, RemittanceReconciliationService $reconciliation): JsonResponse
+    {
+        $input = $request->validate(['source_version' => ['required', 'string', 'regex:/^[a-f0-9]{64}$/'], 'reason' => ['required', 'string', 'min:10', 'max:2000']]);
+
+        return ApiResponse::success($reconciliation->approve($request, $assessmentId, $input));
     }
 
     public function evidence(Request $request, FinanceOperationsService $finance): JsonResponse

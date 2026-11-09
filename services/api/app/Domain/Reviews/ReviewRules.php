@@ -43,7 +43,10 @@ final class ReviewRules
     /** Vendor rates the Buyer (CCS). */
     public const BUYER = 'BUYER';
 
-    public const DISPLAY_CHOICES = ['FIRST_NAME_LAST_INITIAL', 'VERIFIED_BUYER'];
+    public const DISPLAY_CHOICES = ['FULL_NAME'];
+
+    /** Accepted only for older clients; neither value can anonymize a new submission. */
+    public const LEGACY_DISPLAY_CHOICES = ['FIRST_NAME_LAST_INITIAL', 'VERIFIED_BUYER'];
 
     public const FLAG_REASONS = ['OFFENSIVE', 'PERSONAL_INFORMATION', 'SPAM', 'IRRELEVANT', 'CONFLICT_OF_INTEREST', 'FALSE_CLAIM', 'OTHER'];
 
@@ -88,20 +91,13 @@ final class ReviewRules
         return $speedKind === 'DELIVERY_SPEED' ? 'Delivery Speed' : 'Processing Speed';
     }
 
-    /** "Juan dela Cruz" → "Juan C." ; a single name keeps only the first name; empty → Verified Buyer. */
-    public static function publicName(?string $fullName, string $choice): string
+    /** Owner decision 2026-11-05: every Buyer-authored review shows the actual profile name. */
+    public static function publicName(?string $fullName, string $choice = 'FULL_NAME'): string
     {
         $parts = preg_split('/\s+/u', trim((string) $fullName)) ?: [];
         $parts = array_values(array_filter($parts, static fn (string $part): bool => $part !== ''));
-        if ($choice !== 'FIRST_NAME_LAST_INITIAL' || $parts === []) {
-            return 'Verified Buyer';
-        }
-        $first = mb_substr($parts[0], 0, 40);
-        if (count($parts) === 1) {
-            return $first;
-        }
 
-        return $first.' '.mb_strtoupper(mb_substr($parts[count($parts) - 1], 0, 1)).'.';
+        return $parts === [] ? 'Reviewer unavailable' : mb_substr(implode(' ', $parts), 0, 160);
     }
 
     /**

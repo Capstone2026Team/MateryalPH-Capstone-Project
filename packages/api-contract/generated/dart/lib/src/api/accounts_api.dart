@@ -37,6 +37,9 @@ import 'package:materyalph_api_client/src/model/buyer_account_deletion_result_en
 import 'package:materyalph_api_client/src/model/buyer_two_factor_confirmation.dart';
 import 'package:materyalph_api_client/src/model/buyer_two_factor_disable.dart';
 import 'package:materyalph_api_client/src/model/buyer_two_factor_enrollment_envelope.dart';
+import 'package:materyalph_api_client/src/model/vendor_account_deletion_preview_envelope.dart';
+import 'package:materyalph_api_client/src/model/vendor_account_deletion_request.dart';
+import 'package:materyalph_api_client/src/model/vendor_account_deletion_result_envelope.dart';
 import 'package:materyalph_api_client/src/model/vendor_invitation_acceptance.dart';
 import 'package:materyalph_api_client/src/model/vendor_staff_update.dart';
 import 'package:materyalph_api_client/src/model/vendor_team_deletion.dart';
@@ -1150,6 +1153,116 @@ class AccountsApi {
     );
   }
 
+  /// deleteVendorAccount
+  /// Requires Vendor Owner authority, recent authenticator verification and typed DELETE confirmation. Rechecks eligibility under the organization lock. Returns ACCOUNT_DELETION_BLOCKED with details.blockers if orders, payments, refunds (including failed refunds), disputes or financial obligations remain unresolved. Atomically closes the organization with final DELETED status, anonymizes the Owner login and personal profile, removes external sign-in links and revokes all Owner and current team sessions and unused invitations. Personal avatar cleanup and a security notice use the post-commit outbox. Staff identities and immutable commercial, financial, compliance, dispute, agreement and audit records are retained for their stated purposes under the approved retention schedule. Clears access and refresh cookies. Revoked sessions cannot replay the deletion or restore the account; subsequent authenticated requests require sign-in.
+  ///
+  /// Parameters:
+  /// * [idempotencyKey]
+  /// * [vendorAccountDeletionRequest]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [VendorAccountDeletionResultEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<VendorAccountDeletionResultEnvelope>> deleteVendorAccount({
+    required String idempotencyKey,
+    required VendorAccountDeletionRequest vendorAccountDeletionRequest,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/vendors/account/deletion';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        r'Idempotency-Key': idempotencyKey,
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'accessCookie',
+            'keyName': 'mp_access',
+            'where': '',
+          },{
+            'type': 'apiKey',
+            'name': 'webCsrf',
+            'keyName': 'X-CSRF-Token',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(VendorAccountDeletionRequest);
+      _bodyData = _serializers.serialize(vendorAccountDeletionRequest, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    VendorAccountDeletionResultEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(VendorAccountDeletionResultEnvelope),
+      ) as VendorAccountDeletionResultEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<VendorAccountDeletionResultEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
   /// deleteVendorTeamInvitation
   /// Owner only. Allowed for unaccepted expired invitations or accepted invitations linked to a deleted membership. Otherwise returns TEAM_INVITATION_NOT_DELETABLE. Stale lock_version returns RESOURCE_VERSION_CONFLICT. Requires recent authentication and current agreements. Repeated deletion succeeds without duplicating audit events.
   ///
@@ -1898,6 +2011,91 @@ class AccountsApi {
     }
 
     return Response<Uint8List>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// getVendorAccountDeletionPreview
+  /// Owner-only eligibility review and retained-record disclosure for permanent store account deletion. Counts include all recorded environments and financial obligations, including earned unbilled commission.
+  ///
+  /// Parameters:
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [VendorAccountDeletionPreviewEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<VendorAccountDeletionPreviewEnvelope>> getVendorAccountDeletionPreview({
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/vendors/account/deletion';
+    final _options = Options(
+      method: r'GET',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'accessCookie',
+            'keyName': 'mp_access',
+            'where': '',
+          },{
+            'type': 'apiKey',
+            'name': 'webCsrf',
+            'keyName': 'X-CSRF-Token',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    VendorAccountDeletionPreviewEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(VendorAccountDeletionPreviewEnvelope),
+      ) as VendorAccountDeletionPreviewEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<VendorAccountDeletionPreviewEnvelope>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

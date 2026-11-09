@@ -7,6 +7,7 @@ import '../core/buyer_transport.dart';
 import '../design_system/components/buyer_overlays.dart'
     show showBuyerBottomSheet;
 import '../design_system/components/discovery_controls.dart' show ScoreBadge;
+import '../design_system/components/vendor_performance.dart';
 import '../design_system/components/procurement_components.dart';
 import '../design_system/theme.dart';
 import '../features/item_procurement/procurement_models.dart';
@@ -98,7 +99,7 @@ class _BuyerStoreBrowseScreenState extends State<BuyerStoreBrowseScreen> {
   @override
   Widget build(BuildContext context) => SafeArea(
     child: _loading && _stores.isEmpty
-        ? const Center(child: CircularProgressIndicator())
+        ? const BuyerLoadingState(label: 'Loading stores…')
         : _error != null && _stores.isEmpty
         ? StatePage(
             child: StateMessage(
@@ -127,7 +128,7 @@ class _BuyerStoreBrowseScreenState extends State<BuyerStoreBrowseScreen> {
             itemBuilder: (context, index) {
               if (index == _stores.length) {
                 return _loading
-                    ? const Center(child: CircularProgressIndicator())
+                    ? const Center(child: BuyerLoadingIndicator())
                     : TextButton(
                         onPressed: () {
                           if (_error == null) {
@@ -280,7 +281,7 @@ class _BuyerPublicStoreProfileScreenState
       future: _profile,
       builder: (context, snapshot) {
         if (!snapshot.hasData && !snapshot.hasError) {
-          return const Center(child: CircularProgressIndicator());
+          return const BuyerLoadingState(label: 'Loading store…');
         }
         if (snapshot.hasError) {
           return SafeArea(
@@ -570,6 +571,7 @@ class _StoreHeader extends StatelessWidget {
                     ? ScoreKind.directory
                     : ScoreKind.newVendor,
                 text: profile.scoreLabel.text,
+                value: profile.scoreLabel.value,
               ),
             ],
           ),
@@ -1094,7 +1096,7 @@ class _StoreRatingSection extends StatelessWidget {
       if (view == null) {
         return Semantics(
           label: 'Loading store rating',
-          child: const LinearProgressIndicator(),
+          child: const BuyerLoadingProgress(),
         );
       }
       final count = view.ratingCount;
@@ -1161,45 +1163,19 @@ class _StoreRatingSection extends StatelessWidget {
           if (view.mqs != null)
             _ScoreBar(label: 'Material Quality Score', value: view.mqs),
           if (view.vps != null)
-            _ScoreBar(label: 'Vendor Performance Score', value: view.vps),
+            _ScoreBar(
+              label: 'Vendor Performance Score',
+              value: view.vps,
+              isVps: true,
+            ),
           if (view.badges.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            for (final badge in view.badges)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(
-                      LucideIcons.badgeCheck,
-                      size: 18,
-                      color: BuyerTheme.action,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            badge.scopeLabel == null
-                                ? badge.name
-                                : '${badge.name} · ${badge.scopeLabel}',
-                            style: const TextStyle(fontWeight: FontWeight.w700),
-                          ),
-                          Text(
-                            badge.description,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              height: 1.4,
-                              color: BuyerTheme.muted,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+            const SizedBox(height: 16),
+            const Text(
+              'Earned badges',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 8),
+            VendorBadges(badges: view.badges),
           ],
           const SizedBox(height: 10),
           const Text(
@@ -1218,10 +1194,15 @@ class _StoreRatingSection extends StatelessWidget {
 
 /// One 1–5 value as text and a bar; the text carries the meaning, the bar is decoration.
 class _ScoreBar extends StatelessWidget {
-  const _ScoreBar({required this.label, required this.value});
+  const _ScoreBar({
+    required this.label,
+    required this.value,
+    this.isVps = false,
+  });
 
   final String label;
   final String? value;
+  final bool isVps;
 
   @override
   Widget build(BuildContext context) {
@@ -1240,13 +1221,23 @@ class _ScoreBar extends StatelessWidget {
                 Expanded(
                   child: Text(label, style: const TextStyle(fontSize: 13)),
                 ),
-                Text(
-                  value ?? '—',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
+                if (isVps && value != null)
+                  VendorRatingValue(
+                    score: value!,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: BuyerTheme.action,
+                    ),
+                  )
+                else
+                  Text(
+                    value ?? '—',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
               ],
             ),
             const SizedBox(height: 4),
@@ -1607,7 +1598,7 @@ class _ProductsTabState extends State<_ProductsTab> {
             onOpen: (card) => widget.onOpen?.call(context, card.listingId),
           ),
           if (products.loadingMore)
-            const Center(child: CircularProgressIndicator())
+            const Center(child: BuyerLoadingIndicator())
           else if (products.page?.hasMore == true)
             OutlinedButton(
               onPressed: products.loadMore,

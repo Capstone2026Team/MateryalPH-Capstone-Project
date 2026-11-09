@@ -14,6 +14,13 @@ Name | Type
 `agreementVersionId` | string
 `reason` | string
 `status` | string
+`termsVersion` | number
+`termsContent` | string
+`vendorMessage` | string
+`noticeHours` | number
+`noticeOverrideReason` | string
+`publishedBy` | string
+`delivery` | [CommissionEmailSummary](CommissionEmailSummary.md)
 
 ## Example
 
@@ -30,6 +37,13 @@ const example = {
   "agreementVersionId": null,
   "reason": null,
   "status": null,
+  "termsVersion": null,
+  "termsContent": null,
+  "vendorMessage": null,
+  "noticeHours": null,
+  "noticeOverrideReason": null,
+  "publishedBy": null,
+  "delivery": null,
 } satisfies CommissionPolicy
 
 console.log(example)

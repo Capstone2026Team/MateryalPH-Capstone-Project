@@ -1,9 +1,51 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { expect, test, vi } from 'vitest'
-import { PageHeader, SupportClient, SupportConversation, SupportRequestList } from '@materyalph/web-ui'
+import { dateFilterPreset, PageHeader, SupportClient, SupportConversation, SupportRequestList } from '@materyalph/web-ui'
 import { parseDate } from '@materyalph/api-client-ts'
 
+const defaultDates = () => ({ status: 'OPEN' as const, from: parseDate(dateFilterPreset(30).from), to: parseDate(dateFilterPreset(30).to) })
+
 const empty = { data: [], meta: { nextCursor: null }, errors: [] }
+
+test('support status changes keep the header, filters and badges steady while results load', async () => {
+  const client = new SupportClient('/api/v1', 'admin')
+  let finish!: (response: Awaited<ReturnType<SupportClient['list']>>) => void
+  vi.spyOn(client, 'list').mockResolvedValueOnce({ ...empty, meta: { nextCursor: null, counts: { OPEN: 32, RESOLVED: 9 } } }).mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
+  render(<SupportRequestList client={client} admin renderHeader={actions => <PageHeader eyebrow="Compliance & quality" title="Support Requests" actions={actions} />} onOpen={vi.fn()} />)
+  await screen.findByRole('tab', { name: 'Open 32' })
+  const header = screen.getByRole('heading', { level: 1 })
+  const search = screen.getByRole('textbox', { name: 'Search requests' })
+  const dates = screen.getByRole('button', { name: 'Last 30 days' })
+  fireEvent.click(screen.getByRole('tab', { name: 'Resolved 9' }))
+  const loading = screen.getByText('Loading support requests…')
+  expect(loading.closest('[aria-label="Support request results"]')).toHaveAttribute('aria-busy', 'true')
+  expect(screen.queryByText('No support requests found.')).not.toBeInTheDocument()
+  expect(screen.getByRole('heading', { level: 1 })).toBe(header)
+  expect(screen.getByRole('textbox', { name: 'Search requests' })).toBe(search)
+  expect(screen.getByRole('button', { name: 'Last 30 days' })).toBe(dates)
+  expect(screen.getByRole('tab', { name: 'Open 32' })).toBeVisible()
+  expect(screen.getByRole('tab', { name: 'Resolved 9' })).toHaveAttribute('aria-selected', 'true')
+  await act(async () => { finish({ ...empty, meta: { nextCursor: null, counts: { OPEN: 32, RESOLVED: 0 } } }) })
+  expect(await screen.findByText('No support requests found.')).toBeVisible()
+  expect(screen.getByRole('tab', { name: 'Resolved 0' })).toHaveAttribute('aria-selected', 'true')
+})
+
+test('support tab badges use server totals, refresh with filters and hide after a failed load', async () => {
+  const client = new SupportClient('/api/v1', 'admin')
+  const list = vi.spyOn(client, 'list').mockResolvedValue({ ...empty, meta: { nextCursor: null, counts: { OPEN: 32, IN_PROGRESS: 4, WAITING_FOR_USER: 2, RESOLVED: 9, CLOSED: 0 } } })
+  render(<SupportRequestList client={client} admin onOpen={vi.fn()} />)
+  expect(await screen.findByRole('tab', { name: 'Open 32' })).toHaveAttribute('aria-selected', 'true')
+  expect(screen.getByRole('tab', { name: 'Closed 0' })).toBeInTheDocument()
+  list.mockResolvedValue({ ...empty, meta: { nextCursor: null, counts: { OPEN: 3, IN_PROGRESS: 0, WAITING_FOR_USER: 0, RESOLVED: 1, CLOSED: 0 } } })
+  fireEvent.change(screen.getByRole('combobox', { name: 'Category' }), { target: { value: 'COMPLAINT' } })
+  expect(await screen.findByRole('tab', { name: 'Open 3' })).toBeInTheDocument()
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Refresh requests' })).toBeEnabled())
+  list.mockRejectedValue(new Error('Connection lost'))
+  fireEvent.click(screen.getByRole('button', { name: 'Refresh requests' }))
+  await screen.findByRole('button', { name: 'Retry' })
+  expect(screen.getByRole('tab', { name: 'Open' })).toBeInTheDocument()
+  expect(screen.queryByRole('tab', { name: 'Open 3' })).not.toBeInTheDocument()
+})
 
 test('ticket management and conversation keep independent submissions and preserve version checks', async () => {
   const client = new SupportClient('/api/v1', 'admin')
@@ -46,22 +88,23 @@ test('support filters update automatically, preserve other selections and reset 
   expect(screen.getByRole('button', { name: 'Refresh requests' })).toBeDisabled()
   await screen.findByText('No support requests found.')
   expect(screen.getByRole('button', { name: 'Refresh requests' }).closest('header')).not.toBeNull()
-  expect(screen.getAllByRole('tab').map(tab => tab.textContent)).toEqual(['All requests', 'Open', 'In Progress', 'Waiting For User', 'Resolved', 'Closed'])
-  expect(screen.getByRole('tab', { name: 'All requests' })).toHaveAttribute('aria-selected', 'true')
+  expect(screen.getAllByRole('tab').map(tab => tab.textContent)).toEqual(['Open', 'In Progress', 'Waiting For User', 'Resolved', 'Closed'])
+  expect(screen.getByRole('tab', { name: 'Open' })).toHaveAttribute('aria-selected', 'true')
+  expect(list).toHaveBeenLastCalledWith(defaultDates(), undefined)
   expect(screen.queryByRole('button', { name: 'Apply filters' })).not.toBeInTheDocument()
 
   fireEvent.change(screen.getByRole('textbox', { name: 'Search requests' }), { target: { value: 'delivery' } })
   fireEvent.change(screen.getByRole('combobox', { name: 'Category' }), { target: { value: 'COMPLAINT' } })
-  expect(list).toHaveBeenLastCalledWith({ category: 'COMPLAINT' }, undefined)
+  expect(list).toHaveBeenLastCalledWith({ ...defaultDates(), category: 'COMPLAINT' }, undefined)
   fireEvent.change(screen.getByRole('combobox', { name: 'User type' }), { target: { value: 'GUEST' } })
-  expect(list).toHaveBeenLastCalledWith({ category: 'COMPLAINT', userType: 'GUEST' }, undefined)
-  await waitFor(() => expect(list).toHaveBeenLastCalledWith({ q: 'delivery', category: 'COMPLAINT', userType: 'GUEST' }, undefined))
-  fireEvent.click(screen.getByRole('button', { name: 'All dates' }))
+  expect(list).toHaveBeenLastCalledWith({ ...defaultDates(), category: 'COMPLAINT', userType: 'GUEST' }, undefined)
+  await waitFor(() => expect(list).toHaveBeenLastCalledWith({ ...defaultDates(), q: 'delivery', category: 'COMPLAINT', userType: 'GUEST' }, undefined))
+  fireEvent.click(screen.getByRole('button', { name: 'Last 30 days' }))
   fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-10-01' } })
   fireEvent.change(screen.getByLabelText('To'), { target: { value: '2026-10-19' } })
   list.mockResolvedValue({ ...empty, meta: { nextCursor: 'next-page' } })
   fireEvent.click(screen.getByRole('button', { name: 'Apply' }))
-  const applied = { q: 'delivery', category: 'COMPLAINT', userType: 'GUEST', from: parseDate('2026-10-01'), to: parseDate('2026-10-19') }
+  const applied = { status: 'OPEN', q: 'delivery', category: 'COMPLAINT', userType: 'GUEST', from: parseDate('2026-10-01'), to: parseDate('2026-10-19') }
   await waitFor(() => expect(list).toHaveBeenLastCalledWith(applied, undefined))
   fireEvent.click(await screen.findByRole('button', { name: 'Load more requests' }))
   await waitFor(() => expect(list).toHaveBeenLastCalledWith(applied, 'next-page'))
@@ -76,14 +119,14 @@ test('support filters update automatically, preserve other selections and reset 
   expect(screen.getByRole('textbox', { name: 'Search requests' })).toHaveValue('updated search')
 
   await waitFor(() => expect(list).toHaveBeenLastCalledWith({ ...applied, q: 'updated search', status: 'CLOSED' }, undefined))
-  fireEvent.click(screen.getByRole('tab', { name: 'All requests' }))
-  await waitFor(() => expect(list).toHaveBeenLastCalledWith({ ...applied, q: 'updated search', status: undefined }, undefined))
-  expect(screen.getByRole('tab', { name: 'All requests' })).toHaveAttribute('aria-selected', 'true')
+  fireEvent.click(screen.getByRole('tab', { name: 'Open' }))
+  await waitFor(() => expect(list).toHaveBeenLastCalledWith({ ...applied, q: 'updated search' }, undefined))
+  expect(screen.getByRole('tab', { name: 'Open' })).toHaveAttribute('aria-selected', 'true')
   await waitFor(() => expect(screen.getByRole('button', { name: 'Refresh requests' })).toBeEnabled())
   const calls = list.mock.calls.length
   fireEvent.click(screen.getByRole('button', { name: 'Refresh requests' }))
   await waitFor(() => expect(list).toHaveBeenCalledTimes(calls + 1))
-  expect(list).toHaveBeenLastCalledWith({ ...applied, q: 'updated search', status: undefined }, undefined)
+  expect(list).toHaveBeenLastCalledWith({ ...applied, q: 'updated search' }, undefined)
 })
 
 test('search waits until typing pauses, clears automatically and ignores late results', async () => {
@@ -103,12 +146,12 @@ test('search waits until typing pauses, clears automatically and ignores late re
     await act(async () => { await vi.advanceTimersByTimeAsync(299) })
     expect(list).toHaveBeenCalledTimes(1)
     await act(async () => { await vi.advanceTimersByTimeAsync(1) })
-    expect(list).toHaveBeenLastCalledWith({ q: 'delivery' }, undefined)
+    expect(list).toHaveBeenLastCalledWith({ ...defaultDates(), q: 'delivery' }, undefined)
     expect(screen.getByText('Loading support requests…')).toBeInTheDocument()
 
     fireEvent.change(search, { target: { value: '' } })
     await act(async () => { await vi.advanceTimersByTimeAsync(300) })
-    expect(list).toHaveBeenLastCalledWith({ q: undefined }, undefined)
+    expect(list).toHaveBeenLastCalledWith({ ...defaultDates(), q: undefined }, undefined)
     expect(screen.getByText('No support requests found.')).toBeInTheDocument()
     await act(async () => { resolveSearch?.({ ...empty, meta: { nextCursor: 'stale-search-page' } }) })
     expect(screen.queryByRole('button', { name: 'Load more requests' })).not.toBeInTheDocument()
@@ -129,18 +172,19 @@ test('support date dialog cancels safely, applies open-ended dates and clears th
   render(<SupportRequestList client={client} admin onOpen={vi.fn()} />)
   await screen.findByText('No support requests found.')
   fireEvent.click(screen.getByRole('tab', { name: 'Open' }))
-  await waitFor(() => expect(list).toHaveBeenLastCalledWith({ status: 'OPEN' }, undefined))
+  await waitFor(() => expect(list).toHaveBeenLastCalledWith({ ...defaultDates(), status: 'OPEN' }, undefined))
   const calls = list.mock.calls.length
 
-  fireEvent.click(screen.getByRole('button', { name: 'All dates' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Last 30 days' }))
   expect(screen.getByRole('dialog', { name: 'Request received dates' })).toHaveTextContent('Inclusive calendar dates in Asia/Manila.')
   fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-10-01' } })
   fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
   expect(list).toHaveBeenCalledTimes(calls)
 
-  fireEvent.click(screen.getByRole('button', { name: 'All dates' }))
-  expect(screen.getByLabelText('From')).toHaveValue('')
+  fireEvent.click(screen.getByRole('button', { name: 'Last 30 days' }))
+  expect(screen.getByLabelText('From')).toHaveValue(dateFilterPreset(30).from)
   fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-10-01' } })
+  fireEvent.change(screen.getByLabelText('To'), { target: { value: '' } })
   fireEvent.click(screen.getByRole('button', { name: 'Apply' }))
   await waitFor(() => expect(list).toHaveBeenLastCalledWith({ status: 'OPEN', from: parseDate('2026-10-01'), to: undefined }, undefined))
 
@@ -159,8 +203,6 @@ test('keyboard status changes ignore a late response from the previous status', 
     ? new Promise(resolve => { resolveOpen = resolve })
     : Promise.resolve(empty))
   render(<SupportRequestList client={client} admin onOpen={vi.fn()} />)
-  await screen.findByText('No support requests found.')
-  fireEvent.click(screen.getByRole('tab', { name: 'Open' }))
   expect(await screen.findByText('Loading support requests…')).toBeInTheDocument()
   const openTab = screen.getByRole('tab', { name: 'Open' })
   openTab.focus()

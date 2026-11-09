@@ -36,6 +36,11 @@ Name | Type | Description | Notes
 **vendorName** | **String** |  | [optional]
 **downloads** | **int** |  | [optional]
 **lastDownloadAt** | [**DateTime**](DateTime.md) |  | [optional]
+**fileName** | **String** |  | [optional]
+**contentType** | **String** |  | [optional]
+**fileSizeBytes** | **int** |  | [optional]
+**sentAt** | [**DateTime**](DateTime.md) |  | [optional]
+**orderSummary** | [**InvoiceOrderSummary**](InvoiceOrderSummary.md) |  | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

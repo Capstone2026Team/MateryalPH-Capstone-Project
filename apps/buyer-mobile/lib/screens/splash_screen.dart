@@ -1,3 +1,4 @@
+import '../design_system/components/async_state.dart';
 import 'package:flutter/material.dart';
 
 import '../design_system/generated/color_tokens.dart';
@@ -101,7 +102,7 @@ class _SplashScreenState extends State<SplashScreen>
                     width: 120,
                     child: ClipRRect(
                       borderRadius: BorderRadius.all(Radius.circular(2)),
-                      child: LinearProgressIndicator(
+                      child: BuyerLoadingProgress(
                         minHeight: 4,
                         color: Color(MateryalColorTokens.actionPrimary),
                         backgroundColor: Color(

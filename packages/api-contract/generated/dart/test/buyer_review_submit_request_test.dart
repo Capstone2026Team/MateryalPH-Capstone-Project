@@ -7,7 +7,8 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(BuyerReviewSubmitRequest, () {
-    // String displayNameChoice
+    // Deprecated compatibility field; FULL_NAME is always used. Legacy choices are accepted from older clients but cannot hide identity.
+    // String displayNameChoice (default value: 'FULL_NAME')
     test('to test the property `displayNameChoice`', () async {
       // TODO
     });

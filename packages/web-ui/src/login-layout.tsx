@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { ConnectionNotice } from './async-state'
 import { FileCheck2, LockKeyhole, PackageCheck, ShieldCheck } from 'lucide-react'
 import './login-layout.css'
 
@@ -32,7 +33,7 @@ export function LoginLayout({ portal, brand, navigation, title, description, chi
         <header className="login-layout__card-heading">
           <div className="login-layout__heading-copy"><h1>{title}</h1><p className="login-layout__description">{description}</p></div>
         </header>
-        {children}
+        <ConnectionNotice />{children}
       </section>
     </div>
   </main>

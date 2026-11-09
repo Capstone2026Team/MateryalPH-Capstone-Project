@@ -4,7 +4,7 @@ import { NotificationsApi } from '@materyalph/api-client-ts'
 import { NotificationsWorkspace } from '@materyalph/web-ui'
 
 afterEach(() => { cleanup(); vi.restoreAllMocks() })
-const notice = { id: '01995000-0000-7000-8000-000000000001', category: 'SECURITY', title: 'Account update', body: 'Review current account access.', mandatory: true, readAt: null, createdAt: '2026-10-05T00:00:00Z' }
+const notice = { id: '01995000-0000-7000-8000-000000000001', category: 'SECURITY', title: 'Account update', body: 'Review current account access.', mandatory: true, readAt: null, createdAt: new Date().toISOString() }
 const required = { category: 'SECURITY', mandatory: true, explanation: 'Required for account safety.', inApp: true, email: true, push: true }
 
 describe('notification workspace', () => {

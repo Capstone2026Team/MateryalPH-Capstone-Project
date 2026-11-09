@@ -12,6 +12,12 @@ void main() {
       // TODO
     });
 
+    // Private version-bound order-view photo path, including pickup and closed orders. Does not grant delivery phone/contact access.
+    // String profilePhotoPath
+    test('to test the property `profilePhotoPath`', () async {
+      // TODO
+    });
+
     // Current Buyer phone for delivery coordination. Only Owner/Manager or current active assigned Fulfillment Staff on an accepted, open Site Delivery order receives it. Other roles and closed/pickup orders receive null.
     // String mobileE164
     test('to test the property `mobileE164`', () async {

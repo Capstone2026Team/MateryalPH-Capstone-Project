@@ -57,9 +57,12 @@ Route::prefix('vendor')->middleware($web('VENDOR'))->group(function (): void {
         Route::post('/remedies/{remedyId}/record', [D::class, 'recordReplacement'])->whereUuid('remedyId');
     });
     Route::get('/invoices', [I::class, 'vendorIndex']);
+    Route::put('/invoices/preset', [I::class, 'savePreset']);
+    Route::get('/invoices/preset', [I::class, 'preset']);
     Route::prefix('orders/{orderId}/invoices')->whereUuid('orderId')->group(function (): void {
         Route::get('/', [I::class, 'vendorOrder']);
         Route::post('/', [I::class, 'upload']);
+        Route::post('/send', [I::class, 'send']);
         Route::post('/{recordId}/explanation', [I::class, 'explain'])->whereUuid('recordId');
     });
 });
@@ -92,5 +95,7 @@ Route::get('/buyers/invoice-records/{recordId}/content', [I::class, 'content'])-
     ->middleware(['auth.transport:MOBILE', 'auth:api', 'account.access:BUYER', 'signed'])->name('invoices.buyer.file');
 Route::get('/vendor/invoice-records/{recordId}/content', [I::class, 'content'])->whereUuid('recordId')
     ->middleware(['auth.transport:WEB', 'auth.cookie', 'auth:api', 'account.access:VENDOR', 'signed'])->name('invoices.vendor.file');
+Route::get('/vendor/invoice-drafts/{draftId}/files/{fileId}', [I::class, 'draftContent'])->whereUuid(['draftId', 'fileId'])
+    ->middleware(['auth.transport:WEB', 'auth.cookie', 'auth:api', 'account.access:VENDOR', 'signed'])->name('invoices.vendor.draft.file');
 Route::get('/admin/invoice-records/{recordId}/content', [I::class, 'content'])->whereUuid('recordId')
     ->middleware(['auth.transport:WEB', 'auth.cookie', 'auth:api', 'account.access:ADMIN', 'signed'])->name('invoices.admin.file');

@@ -13,7 +13,7 @@ Sign in to the Vendor Portal to review your onboarding status.
 @endsection
 
 @section('action')
-@include('mail.notification-link')
+@include('mail.notification-link', ['purposeLabel' => 'Review store setup'])
 @endsection
 
 @section('security', 'MateryalPH will never ask you to send a password, one-time code, payment secret, or private document by email.')

@@ -1,4 +1,5 @@
-import { ArrowLeft, ArrowRight, Check, KeyRound, Mail, ShieldCheck } from 'lucide-react'
+import { BackNavigation } from './back-navigation'
+import { ArrowRight, Check, KeyRound, Mail, ShieldCheck } from 'lucide-react'
 import { type FormEvent, useEffect, useRef, useState } from 'react'
 import type { VendorBotProtectionEvidence } from '@materyalph/api-client-ts'
 import { AuthenticatorCodeField } from './authenticator-code-field'
@@ -178,7 +179,7 @@ export function PasswordRecoveryFlow({ portal, initialEmail = '', initialCodeEnt
     {currentStage === 'email' && <form onSubmit={submitEmail} aria-busy={working}>
       <Field label="Account email" name="email" type="email" autoComplete="email" value={email} onChange={event => setEmail(event.currentTarget.value)} autoFocus required disabled={working} />
       <Button className="w-full" type="submit" disabled={working}>{working ? 'Sending…' : method === 'recovery' || initialCodeEntry ? 'Continue' : 'Send authentication code'}<ArrowRight size={18} aria-hidden="true" /></Button>
-      <Button variant="quiet" disabled={working} onClick={startOver}><ArrowLeft size={16} aria-hidden="true" />Back to recovery methods</Button>
+      <BackNavigation><button type="button" disabled={working} onClick={startOver}>Back to recovery methods</button></BackNavigation>
     </form>}
     {currentStage === 'code' && <form onSubmit={verify} aria-busy={working}>
       {method === 'email' && <StatusMessage>If this {portal === 'admin' ? 'Admin' : 'Vendor'} account exists, a six-digit authentication code is being delivered to {maskedEmail(email)}.</StatusMessage>}
@@ -188,7 +189,7 @@ export function PasswordRecoveryFlow({ portal, initialEmail = '', initialCodeEnt
       {method === 'email' && codeExpiry && <p className="recovery-flow__expiry">Code expires <time dateTime={codeExpiry}>{formatExpiry(codeExpiry)}</time> (Manila).</p>}
       <Button className="w-full" type="submit" disabled={working}>{busy ? 'Verifying…' : 'Verify and continue'}<ArrowRight size={18} aria-hidden="true" /></Button>
       {method === 'email' && <Button className="w-full" variant="quiet" disabled={working || resendIn > 0} onClick={() => void resend()}>{resendIn > 0 ? `Request another code in ${resendIn}s` : 'Request another code'}</Button>}
-      <Button className="w-full" variant="quiet" disabled={working} onClick={startOver}><ArrowLeft size={16} aria-hidden="true" />Back to recovery methods</Button>
+      <BackNavigation><button type="button" className="w-full" disabled={working} onClick={startOver}>Back to recovery methods</button></BackNavigation>
     </form>}
     {currentStage === 'password' && <form onSubmit={savePassword} aria-busy={busy}>
       <PasswordField label="New password" name="password" autoComplete="new-password" minLength={minPasswordLength} required autoFocus disabled={busy} />

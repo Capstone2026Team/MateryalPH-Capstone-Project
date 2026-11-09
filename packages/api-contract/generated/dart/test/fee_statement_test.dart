@@ -7,6 +7,18 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(FeeStatement, () {
+    // Admin draft heading; frozen on issue.
+    // String invoiceHeading
+    test('to test the property `invoiceHeading`', () async {
+      // TODO
+    });
+
+    // Admin draft Vendor message; frozen on issue.
+    // String invoiceMessage
+    test('to test the property `invoiceMessage`', () async {
+      // TODO
+    });
+
     // String id
     test('to test the property `id`', () async {
       // TODO

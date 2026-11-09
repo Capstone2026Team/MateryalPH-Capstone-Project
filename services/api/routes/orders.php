@@ -26,6 +26,8 @@ Route::prefix('vendor')->middleware([
 ])->group(function (): void {
     Route::get('/orders', [VendorOrderController::class, 'index']);
     Route::get('/orders/{orderId}', [VendorOrderController::class, 'show'])->whereUuid('orderId');
+    Route::get('/orders/{orderId}/buyer-photo', [VendorOrderController::class, 'buyerPhoto'])->whereUuid('orderId');
+    Route::get('/orders/{orderId}/route', [VendorOrderController::class, 'route'])->whereUuid('orderId');
     Route::post('/orders/{orderId}/delivery-recommendations', [VendorOrderController::class, 'deliveryPlan'])->whereUuid('orderId');
     Route::post('/orders/{orderId}/confirm', [VendorOrderController::class, 'confirm'])->whereUuid('orderId');
     Route::post('/orders/{orderId}/decline', [VendorOrderController::class, 'decline'])->whereUuid('orderId');

@@ -11,12 +11,15 @@ Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**applyEnforcementAction**](AdminEnforcementApi.md#applyenforcementaction) | **POST** /admin/enforcement/{actionId}/apply |
 [**declineEnforcementAction**](AdminEnforcementApi.md#declineenforcementaction) | **POST** /admin/enforcement/{actionId}/decline |
+[**downloadEnforcementEvidence**](AdminEnforcementApi.md#downloadenforcementevidence) | **GET** /admin/enforcement/{actionId}/files/{fileId}/content |
 [**getEnforcementAction**](AdminEnforcementApi.md#getenforcementaction) | **GET** /admin/enforcement/{actionId} |
+[**getEnforcementEvidenceLink**](AdminEnforcementApi.md#getenforcementevidencelink) | **GET** /admin/enforcement/{actionId}/files/{fileId} |
 [**getEnforcementSubject**](AdminEnforcementApi.md#getenforcementsubject) | **GET** /admin/enforcement/subjects/{type}/{subjectId} |
 [**liftEnforcementAction**](AdminEnforcementApi.md#liftenforcementaction) | **POST** /admin/enforcement/{actionId}/lift |
 [**listEnforcementActions**](AdminEnforcementApi.md#listenforcementactions) | **GET** /admin/enforcement |
 [**recordEnforcementAction**](AdminEnforcementApi.md#recordenforcementaction) | **POST** /admin/enforcement |
 [**searchEnforcementSubjects**](AdminEnforcementApi.md#searchenforcementsubjects) | **GET** /admin/enforcement/subjects |
+[**uploadEnforcementEvidence**](AdminEnforcementApi.md#uploadenforcementevidence) | **POST** /admin/enforcement/subjects/{type}/{subjectId}/files |
 
 
 # **applyEnforcementAction**
@@ -125,6 +128,63 @@ Name | Type | Description  | Notes
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **downloadEnforcementEvidence**
+> Uint8List downloadEnforcementEvidence(actionId, fileId, expires, signature)
+
+
+
+enforcement.view and a valid signature. Reauthorizes the current Admin and checks that this record references the private clean file. Audited read.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getAdminEnforcementApi();
+final String actionId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String fileId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final int expires = 56; // int |
+final String signature = signature_example; // String |
+
+try {
+    final response = api.downloadEnforcementEvidence(actionId, fileId, expires, signature);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AdminEnforcementApi->downloadEnforcementEvidence: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **actionId** | **String**|  |
+ **fileId** | **String**|  |
+ **expires** | **int**|  |
+ **signature** | **String**|  |
+
+### Return type
+
+[**Uint8List**](Uint8List.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/octet-stream, application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **getEnforcementAction**
 > EnforcementDetailEnvelope getEnforcementAction(actionId)
 
@@ -164,6 +224,59 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**EnforcementDetailEnvelope**](EnforcementDetailEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **getEnforcementEvidenceLink**
+> EnforcementEvidenceLinkEnvelope getEnforcementEvidenceLink(actionId, fileId)
+
+
+
+enforcement.view. Get a five-minute signed link for proof attached to this exact enforcement record.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getAdminEnforcementApi();
+final String actionId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String fileId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+
+try {
+    final response = api.getEnforcementEvidenceLink(actionId, fileId);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AdminEnforcementApi->getEnforcementEvidenceLink: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **actionId** | **String**|  |
+ **fileId** | **String**|  |
+
+### Return type
+
+[**EnforcementEvidenceLinkEnvelope**](EnforcementEvidenceLinkEnvelope.md)
 
 ### Authorization
 
@@ -449,6 +562,61 @@ Name | Type | Description  | Notes
 ### HTTP request headers
 
  - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **uploadEnforcementEvidence**
+> EnforcementEvidenceEnvelope uploadEnforcementEvidence(type, subjectId, file)
+
+
+
+enforcement.view and enforcement.apply. Stage one private proof file for this subject before recording an action. JPG/PNG/PDF up to 10 MB; MP4/MOV up to 25 MB. Content validation and malware scanning fail closed.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getAdminEnforcementApi();
+final String type = type_example; // String |
+final String subjectId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final MultipartFile file = BINARY_DATA_HERE; // MultipartFile |
+
+try {
+    final response = api.uploadEnforcementEvidence(type, subjectId, file);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AdminEnforcementApi->uploadEnforcementEvidence: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **type** | **String**|  |
+ **subjectId** | **String**|  |
+ **file** | **MultipartFile**|  |
+
+### Return type
+
+[**EnforcementEvidenceEnvelope**](EnforcementEvidenceEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: multipart/form-data
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)

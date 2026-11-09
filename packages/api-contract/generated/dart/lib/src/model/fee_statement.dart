@@ -12,6 +12,8 @@ part 'fee_statement.g.dart';
 /// FeeStatement
 ///
 /// Properties:
+/// * [invoiceHeading] - Admin draft heading; frozen on issue.
+/// * [invoiceMessage] - Admin draft Vendor message; frozen on issue.
 /// * [id]
 /// * [reference]
 /// * [state]
@@ -29,6 +31,14 @@ part 'fee_statement.g.dart';
 /// * [sampleNotice]
 @BuiltValue()
 abstract class FeeStatement implements Built<FeeStatement, FeeStatementBuilder> {
+  /// Admin draft heading; frozen on issue.
+  @BuiltValueField(wireName: r'invoice_heading')
+  String? get invoiceHeading;
+
+  /// Admin draft Vendor message; frozen on issue.
+  @BuiltValueField(wireName: r'invoice_message')
+  String? get invoiceMessage;
+
   @BuiltValueField(wireName: r'id')
   String get id;
 
@@ -98,6 +108,20 @@ class _$FeeStatementSerializer implements PrimitiveSerializer<FeeStatement> {
     FeeStatement object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.invoiceHeading != null) {
+      yield r'invoice_heading';
+      yield serializers.serialize(
+        object.invoiceHeading,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.invoiceMessage != null) {
+      yield r'invoice_message';
+      yield serializers.serialize(
+        object.invoiceMessage,
+        specifiedType: const FullType(String),
+      );
+    }
     yield r'id';
     yield serializers.serialize(
       object.id,
@@ -196,6 +220,22 @@ class _$FeeStatementSerializer implements PrimitiveSerializer<FeeStatement> {
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'invoice_heading':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.invoiceHeading = valueDes;
+          break;
+        case r'invoice_message':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.invoiceMessage = valueDes;
+          break;
         case r'id':
           final valueDes = serializers.deserialize(
             value,

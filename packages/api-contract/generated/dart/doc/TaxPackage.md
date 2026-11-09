@@ -8,6 +8,7 @@ import 'package:materyalph_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
+**vendorNames** | **BuiltMap&lt;String, String&gt;** | Read-only current display names for retained snapshot payees. Snapshot IDs and monetary history stay unchanged. | [optional]
 **id** | **String** |  |
 **packageType** | **String** |  |
 **state** | **String** |  |

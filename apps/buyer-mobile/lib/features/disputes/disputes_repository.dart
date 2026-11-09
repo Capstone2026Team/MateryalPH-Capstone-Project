@@ -666,6 +666,14 @@ final class ApiDisputesRepository implements DisputesRepository {
                 reconciliationNote: record.reconciliationNote,
                 downloadUrl: record.download?.url,
                 buyerTotalUnchanged: record.buyerTotalUnchanged,
+                fileName: record.fileName,
+                contentType: record.contentType,
+                fileSizeBytes: record.fileSizeBytes,
+                sentAt: record.sentAt,
+                vatCentavos: record.vatCentavos,
+                sourceSystem: record.sourceSystem,
+                invoicingMethod: record.invoicingMethod,
+                orderSummary: _invoiceSummary(record.orderSummary),
               ),
             )
             .toList(),
@@ -703,4 +711,29 @@ final class ApiDisputesRepository implements DisputesRepository {
         canRequestCopy: value.canRequestCopy,
         canRequestCorrection: value.canRequestCorrection,
       );
+
+  static InvoiceOrderSnapshot? _invoiceSummary(
+    api.InvoiceOrderSummary? summary,
+  ) => summary == null
+      ? null
+      : InvoiceOrderSnapshot(
+          lines: summary.lines
+              .map(
+                (line) => InvoiceOrderLineItem(
+                  name: line.displayName,
+                  quantity: line.quantity ?? '',
+                  unit: line.unitName ?? '',
+                  unitPriceCentavos: line.unitPriceCentavos,
+                  totalCentavos: line.lineTotalCentavos,
+                ),
+              )
+              .toList(),
+          materialsCentavos: summary.materialsSubtotalCentavos,
+          discountCentavos: summary.discountCentavos,
+          deliveryCentavos: summary.deliveryCentavos,
+          vatCentavos: summary.includedVatCentavos,
+          totalCentavos: summary.totalCentavos,
+          billingName: summary.billingDetails?.billingName,
+          billingAddress: summary.billingDetails?.billingAddress,
+        );
 }

@@ -54,6 +54,32 @@ final class PhaseSixBuyerDiscoveryTest extends TestCase
         $this->app->instance(AddressGeocoder::class, $this->geocoder);
     }
 
+    public function test_discovery_exposes_only_active_unsuppressed_public_vendor_badges(): void
+    {
+        [$store, $owner] = $this->activeStore('Awarded Supplier');
+        $definitions = DB::table('badge_definitions')->whereIn('code', ['FAST_RESPONDER', 'ON_TIME', 'HIGHLY_RATED'])->pluck('id', 'code');
+        foreach ($definitions as $code => $definition) {
+            DB::table('vendor_badge_history')->insert([
+                'id' => (string) Str::uuid7(), 'vendor_organization_id' => $store->id, 'badge_definition_id' => $definition,
+                'earned_at' => now()->subDay(), 'revoked_at' => $code === 'ON_TIME' ? now() : null,
+                'revocation_reason' => $code === 'ON_TIME' ? 'CRITERIA_NOT_MET' : null,
+                'scope_key' => '', 'created_at' => now(), 'updated_at' => now(),
+            ]);
+        }
+        DB::table('badge_suppressions')->insert([
+            'id' => (string) Str::uuid7(), 'vendor_organization_id' => $store->id, 'badge_definition_id' => $definitions['HIGHLY_RATED'],
+            'reason_code' => 'FRAUD', 'case_reference' => 'PRIVATE-CASE', 'note' => 'Private documented review.',
+            'created_by_user_id' => $owner->id, 'created_role' => 'ADMIN_USER_MANAGEMENT', 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $this->buyer();
+        $rows = $this->search()->assertOk()->json('data');
+        $vendor = collect($rows)->firstWhere('result_id', $store->id);
+        self::assertSame(['FAST_RESPONDER'], array_column($vendor['vendor']['badges'], 'code'));
+        self::assertSame(['code', 'name', 'scope_label', 'description', 'earned_at'], array_keys($vendor['vendor']['badges'][0]));
+        self::assertStringNotContainsString('PRIVATE-CASE', json_encode($rows, JSON_THROW_ON_ERROR));
+        self::assertSame('NEW_VENDOR', $vendor['score_label']['kind'], 'An earned badge does not publish a VPS below its sample gate.');
+    }
+
     public function test_directory_google_rating_and_distance_filters_leave_verified_vendors_unchanged(): void
     {
         [$store] = $this->activeStore('Verified Supplier');

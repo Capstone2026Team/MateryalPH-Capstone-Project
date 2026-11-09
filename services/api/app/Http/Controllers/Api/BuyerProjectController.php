@@ -10,6 +10,7 @@ use App\Domain\Catalog\QuantityPolicy;
 use App\Domain\Geography\BuyerProfiles;
 use App\Domain\Geography\RadiusPolicy;
 use App\Domain\Identity\AuthenticationException;
+use App\Domain\Messaging\WorkPackageChatAttachment;
 use App\Domain\Projects\FulfillmentMatchScore;
 use App\Domain\Projects\ProjectArrangements;
 use App\Domain\Projects\ProjectEstimateService;
@@ -187,7 +188,10 @@ final class BuyerProjectController extends Controller
     {
         $input = $r->validate(['lock_version' => ['required', 'integer', 'min:1'], 'candidate_id' => ['required', 'uuid']] + self::SELECTION_RULES);
 
-        return ApiResponse::success(['id' => $inquiries->inquire($r, $packageId, $input)], [], 201);
+        $inquiry = $inquiries->inquire($r, $packageId, $input);
+        $store = app(WorkPackageChatAttachment::class)->share($r, $inquiry, (string) $r->header('Idempotency-Key'));
+
+        return ApiResponse::success(['id' => $inquiry, 'store_conversation_id' => $store], [], 201);
     }
 
     public function select(Request $r, string $packageId, ProjectInquiryService $inquiries): JsonResponse

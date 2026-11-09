@@ -59,7 +59,7 @@ final class DeliveryWorkspace
         }
         $ids = $query->orderBy('o.id')->forPage($page, 20)->pluck('o.id');
 
-        return ['items' => $ids->map(fn (string $id): array => $this->orders->vendorDetail($request, $id))->all(),
+        return ['items' => $ids->map(fn (string $id): array => $this->orders->vendorDetail($request, $id, includeLocation: false))->all(),
             'meta' => ['page' => $page, 'per_page' => 20, 'total' => $total, 'has_more' => $page * 20 < $total]];
     }
 
@@ -96,6 +96,16 @@ final class DeliveryWorkspace
     {
         $scope = $this->access->vendorScope($request);
         $this->access->require($scope, OrderAccess::RECORD_FULFILLMENT, 'Delivery directions are restricted to fulfillment personnel.');
+
+        return $this->orderRoute($request, $orderId);
+    }
+
+    /** Read-only route preview for a currently authorized order viewer.
+     * @return array<string, mixed>
+     */
+    public function orderRoute(Request $request, string $orderId): array
+    {
+        $scope = $this->access->vendorScope($request);
         $order = $this->access->vendorOrder($scope, $orderId);
         $endpoint = OrderDeliveryPlanner::endpoint($order);
         $store = DB::table('vendor_addresses as a')->join('vendor_address_versions as v', 'v.id', '=', 'a.current_version_id')

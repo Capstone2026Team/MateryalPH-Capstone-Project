@@ -17,6 +17,7 @@ use Carbon\CarbonImmutable;
 use Database\Seeders\SystemFoundationSeeder;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -848,6 +849,54 @@ final class PhaseEightOrdersTest extends TestCase
         $list = $this->getJson('/api/v1/vendor/orders?group=NEW')->assertOk();
         self::assertSame([$pending], array_column($list->json('data'), 'id'));
         self::assertSame(1, $list->json('meta.counts.NEW'));
+    }
+
+    public function test_vehicle_images_are_order_scoped_and_keep_the_accepted_photo_after_fleet_changes(): void
+    {
+        [$store, $owner] = $this->activeStore('Vehicle photo store', false, true);
+        $this->signInStoreMember($owner);
+        $listing = $this->orderListing('VEHICLE-PHOTO');
+        $vehicleId = $this->addVehicle($store->id);
+        DB::table('delivery_service_areas')->where('vendor_organization_id', $store->id)->update(['maximum_distance_km' => 10]);
+        $imageId = (string) DB::table('vendor_vehicles')->where('id', $vehicleId)->value('image_file_id');
+        $this->placeStore($store->id, 1000);
+        $this->connectOnlinePayments($store->id);
+        $buyer = $this->buyer();
+        $site = $this->savedLocation($buyer, 'Photo site', 0, 0, 'PROJECT_SITE', true);
+        $gate = $this->savedLocation($buyer, 'Photo drop-off', 1500, 0);
+        $this->addToCart($listing, '10', 'DELIVERY');
+        $lock = (int) $this->getJson('/api/v1/buyers/cart')->json('data.lock_version');
+        $this->putJson('/api/v1/buyers/cart/destination', ['lock_version' => $lock, 'intended_location_id' => $site, 'heavy_vehicle_restriction' => 'YES', 'alternate_drop_off_location_id' => $gate, 'access_instructions' => 'Unload at the gate with a forklift.'])->assertOk();
+        $orderId = (string) $this->submitCheckout([$store->id])->assertCreated()->json('data.orders.0.id');
+        $submitted = $this->buyerOrder($buyer, $orderId);
+        self::assertSame($imageId, $submitted['delivery']['estimate']['options'][0]['vehicle_details']['image_file_id']);
+        self::assertArrayNotHasKey('number_available', $submitted['delivery']['estimate']['options'][0]['vehicle_details']);
+        $this->get('/api/v1/buyers/orders/'.$orderId.'/files/'.$imageId)->assertOk()->assertHeader('Content-Type', 'image/png');
+
+        $this->signInStoreMember($owner);
+        $plan = $this->postJson('/api/v1/vendor/orders/'.$orderId.'/delivery-recommendations', [])->assertOk()->json('data');
+        self::assertSame($imageId, $plan['groups'][0]['candidates'][0]['vehicle_details']['image_file_id']);
+        $fee = $plan['groups'][0]['candidates'][0]['estimated_charge_centavos'];
+        $this->confirmOrder($owner, $orderId, [], ['delivery' => ['vehicles' => [['vehicle_id' => $vehicleId, 'number_of_vehicles' => 1, 'total_vehicle_trips' => 1]],
+            'final_fee_centavos' => $fee, 'fulfillment_date' => now('Asia/Manila')->addDay()->toDateString(), 'arrangement' => 'One truck to the confirmed site.', 'access_confirmed' => true, 'heavy_vehicle_access_confirmed' => true]])->assertOk();
+
+        $this->signInStoreMember($owner);
+        $replacement = (string) $this->post('/api/v1/vendor/fleet/vehicle-images', ['file' => UploadedFile::fake()->image('replacement.png')])->assertCreated()->json('data.file_id');
+        DB::table('vendor_vehicles')->where('id', $vehicleId)->update(['name' => 'Renamed vehicle', 'image_file_id' => $replacement]);
+        $detail = $this->buyerOrder($buyer, $orderId);
+        self::assertSame('Box truck', $detail['delivery']['confirmed']['vehicles'][0]['vehicle_details']['name']);
+        self::assertSame($imageId, $detail['delivery']['confirmed']['vehicles'][0]['vehicle_details']['image_file_id']);
+        $this->get('/api/v1/buyers/orders/'.$orderId.'/files/'.$imageId)->assertOk();
+        $this->get('/api/v1/buyers/orders/'.$orderId.'/files/'.$replacement)->assertNotFound();
+
+        $other = $this->buyer('other-vehicle-buyer@example.test');
+        $this->signInBuyer($other);
+        $this->get('/api/v1/buyers/orders/'.$orderId.'/files/'.$imageId)->assertNotFound();
+        $this->signInStoreMember($owner);
+        $this->get('/api/v1/vendor/orders/'.$orderId.'/files/'.$imageId)->assertOk();
+        DB::table('files')->where('id', $imageId)->update(['scan_state' => 'PENDING']);
+        $this->buyerOrder($buyer, $orderId);
+        $this->get('/api/v1/buyers/orders/'.$orderId.'/files/'.$imageId)->assertNotFound();
     }
 
     private function expectFeeNotEarnable(string $orderId): void

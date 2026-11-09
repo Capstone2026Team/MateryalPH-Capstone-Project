@@ -38,7 +38,8 @@ final class DocumentRenderer
             return $result;
         }
         // Large reports must not build thousands of HTML table layout trees in memory.
-        if (count($snapshot['rows']) > 100) {
+        $orderDocument = OrderDocumentLayout::kind($snapshot) !== null;
+        if (! $orderDocument && count($snapshot['rows']) > 100) {
             return app(TabularDocumentRenderer::class)->render($snapshot);
         }
         $options = new Options;
@@ -46,10 +47,15 @@ final class DocumentRenderer
         $options->set('isPhpEnabled', false);
         $options->set('defaultFont', 'DejaVu Sans');
         $pdf = new Dompdf($options);
-        $pdf->loadHtml(view('reports.document', ['document' => $snapshot, 'watermark' => self::WATERMARK])->render());
+        $pdf->loadHtml(view($orderDocument ? 'reports.order-document' : 'reports.document', [
+            'document' => $snapshot, 'watermark' => self::WATERMARK, 'layout' => $orderDocument ? OrderDocumentLayout::present($snapshot) : null,
+        ])->render());
         $columns = max(array_map(count(...), $snapshot['rows']) ?: [1]);
-        $pdf->setPaper('A4', $columns > 6 ? 'landscape' : 'portrait');
+        $pdf->setPaper('A4', ! $orderDocument && $columns > 6 ? 'landscape' : 'portrait');
         $pdf->render();
+        if ($orderDocument) {
+            $pdf->getCanvas()->page_text(505, 814, '{PAGE_NUM} / {PAGE_COUNT}', $pdf->getFontMetrics()->getFont('DejaVu Sans'), 7, [0.28, 0.33, 0.41]);
+        }
 
         return $pdf->output();
     }

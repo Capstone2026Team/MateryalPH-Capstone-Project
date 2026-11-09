@@ -738,6 +738,9 @@ final class ProjectArrangements
 
     private function assertMemberEditable(?object $m): void
     {
+        if ($m !== null && $m->order_id !== null && in_array(DB::table('orders')->where('id', $m->order_id)->value('order_state'), OrderStates::CLOSED_BEFORE_FULFILLMENT, true)) {
+            return;
+        }
         if ($m === null || ($m->order_id !== null && ! in_array(DB::table('orders')->where('id', $m->order_id)->value('order_state'), OrderStates::CLOSED_BEFORE_FULFILLMENT, true))
             || ($m->conversation_id !== null && DB::table('quotations')->where('conversation_id', $m->conversation_id)->whereIn('state', ['DRAFT', 'PUBLISHED', 'VIEWED', 'COUNTERED', 'ACCEPTED', 'STOCK_REVALIDATION_REQUIRED'])->exists())) {
             throw new AuthenticationException('PROJECT_MEMBER_LOCKED', 'This supplier already has a request or published terms. Use its quotation or order revision and cancellation flow.', 409);

@@ -3,6 +3,7 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:materyalph_api_client/src/model/invoice_order_summary.dart';
 import 'package:built_collection/built_collection.dart';
 import 'package:materyalph_api_client/src/model/dispute_file_link.dart';
 import 'package:built_value/built_value.dart';
@@ -41,6 +42,11 @@ part 'invoice_record_view.g.dart';
 /// * [vendorName]
 /// * [downloads]
 /// * [lastDownloadAt]
+/// * [fileName]
+/// * [contentType]
+/// * [fileSizeBytes]
+/// * [sentAt]
+/// * [orderSummary]
 @BuiltValue()
 abstract class InvoiceRecordView implements Built<InvoiceRecordView, InvoiceRecordViewBuilder> {
   @BuiltValueField(wireName: r'id')
@@ -131,6 +137,21 @@ abstract class InvoiceRecordView implements Built<InvoiceRecordView, InvoiceReco
 
   @BuiltValueField(wireName: r'last_download_at')
   DateTime? get lastDownloadAt;
+
+  @BuiltValueField(wireName: r'file_name')
+  String? get fileName;
+
+  @BuiltValueField(wireName: r'content_type')
+  String? get contentType;
+
+  @BuiltValueField(wireName: r'file_size_bytes')
+  int? get fileSizeBytes;
+
+  @BuiltValueField(wireName: r'sent_at')
+  DateTime? get sentAt;
+
+  @BuiltValueField(wireName: r'order_summary')
+  InvoiceOrderSummary? get orderSummary;
 
   InvoiceRecordView._();
 
@@ -319,6 +340,41 @@ class _$InvoiceRecordViewSerializer implements PrimitiveSerializer<InvoiceRecord
       yield serializers.serialize(
         object.lastDownloadAt,
         specifiedType: const FullType(DateTime),
+      );
+    }
+    if (object.fileName != null) {
+      yield r'file_name';
+      yield serializers.serialize(
+        object.fileName,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
+    if (object.contentType != null) {
+      yield r'content_type';
+      yield serializers.serialize(
+        object.contentType,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
+    if (object.fileSizeBytes != null) {
+      yield r'file_size_bytes';
+      yield serializers.serialize(
+        object.fileSizeBytes,
+        specifiedType: const FullType.nullable(int),
+      );
+    }
+    if (object.sentAt != null) {
+      yield r'sent_at';
+      yield serializers.serialize(
+        object.sentAt,
+        specifiedType: const FullType.nullable(DateTime),
+      );
+    }
+    if (object.orderSummary != null) {
+      yield r'order_summary';
+      yield serializers.serialize(
+        object.orderSummary,
+        specifiedType: const FullType(InvoiceOrderSummary),
       );
     }
   }
@@ -552,6 +608,46 @@ class _$InvoiceRecordViewSerializer implements PrimitiveSerializer<InvoiceRecord
           ) as DateTime?;
           if (valueDes == null) continue;
           result.lastDownloadAt = valueDes;
+          break;
+        case r'file_name':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.fileName = valueDes;
+          break;
+        case r'content_type':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.contentType = valueDes;
+          break;
+        case r'file_size_bytes':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.fileSizeBytes = valueDes;
+          break;
+        case r'sent_at':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(DateTime),
+          ) as DateTime?;
+          if (valueDes == null) continue;
+          result.sentAt = valueDes;
+          break;
+        case r'order_summary':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(InvoiceOrderSummary),
+          ) as InvoiceOrderSummary?;
+          if (valueDes == null) continue;
+          result.orderSummary.replace(valueDes);
           break;
         default:
           unhandled.add(key);

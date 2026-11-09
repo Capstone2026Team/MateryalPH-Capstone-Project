@@ -6,6 +6,7 @@ namespace App\Domain\Orders;
 
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Operations\OutboxPublisher;
+use App\Domain\Reporting\OrderDocumentService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -66,7 +67,20 @@ final class OrderTransitionService
             ]);
         }
 
-        return DB::table('orders')->where('id', $order->id)->first();
+        $updated = DB::table('orders')->where('id', $order->id)->first();
+        if (isset($update['order_state']) && $reasonCode !== 'QUOTATION_REPLACED' && in_array($updated->order_state, OrderStates::CLOSED_BEFORE_FULFILLMENT, true)) {
+            if ($updated->work_package_id !== null) {
+                // Order-derived reads reopen immediately. Persist selection cleanup after commit so an
+                // order -> inventory cancellation never inverts quotation's project -> package locks.
+                $this->outbox->publish('WORK_PACKAGE_REOPEN_REQUESTED', 'WORK_PACKAGE', (string) $updated->work_package_id,
+                    ['order_id' => $updated->id, 'correlation_id' => $actor->correlationId]);
+            }
+        }
+        if ($updated->accepted_snapshot_version !== null) {
+            app(OrderDocumentService::class)->prepare((string) $updated->id);
+        }
+
+        return $updated;
     }
 
     /** Records the initial AWAITING_VENDOR_CONFIRMATION state of a newly inserted order. */

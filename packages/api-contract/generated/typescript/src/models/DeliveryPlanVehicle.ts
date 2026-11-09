@@ -13,6 +13,13 @@
  */
 
 import { mapValues } from '../runtime';
+import type { DeliveryVehicleProfile } from './DeliveryVehicleProfile';
+import {
+    DeliveryVehicleProfileFromJSON,
+    DeliveryVehicleProfileFromJSONTyped,
+    DeliveryVehicleProfileToJSON,
+    DeliveryVehicleProfileToJSONTyped,
+} from './DeliveryVehicleProfile';
 import type { MixerVolumePlan } from './MixerVolumePlan';
 import {
     MixerVolumePlanFromJSON,
@@ -27,6 +34,10 @@ import {
  * @interface DeliveryPlanVehicle
  */
 export interface DeliveryPlanVehicle {
+    /**
+     * Frozen display details when available; older snapshots may omit them. Image bytes require the existing authorized order file endpoint.
+     */
+    vehicleDetails?: DeliveryVehicleProfile | null;
     /**
      * True for the lowest eligible formula-fee plan in this group
      */
@@ -178,6 +189,7 @@ export function DeliveryPlanVehicleFromJSONTyped(json: any, ignoreDiscriminator:
     }
     return {
 
+        'vehicleDetails': json['vehicle_details'] === undefined ? undefined : json['vehicle_details'] === null ? null : DeliveryVehicleProfileFromJSON(json['vehicle_details']),
         'recommended': json['recommended'] == null ? undefined : json['recommended'],
         'vehicleId': json['vehicle_id'],
         'name': json['name'],
@@ -218,6 +230,7 @@ export function DeliveryPlanVehicleToJSONTyped(value?: DeliveryPlanVehicle | nul
 
     return {
 
+        'vehicle_details': DeliveryVehicleProfileToJSON(value['vehicleDetails']),
         'recommended': value['recommended'],
         'vehicle_id': value['vehicleId'],
         'name': value['name'],

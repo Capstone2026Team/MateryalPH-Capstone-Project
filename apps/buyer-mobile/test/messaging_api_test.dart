@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:materyalph/features/messaging/messaging_repository.dart';
+import 'package:materyalph/features/projects/projects_repository.dart';
 import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 
 class MessagingAdapter implements HttpClientAdapter {
@@ -29,6 +30,38 @@ class MessagingAdapter implements HttpClientAdapter {
 }
 
 void main() {
+  test(
+    'Work Package and order Message buttons use the existing store chat transport',
+    () async {
+      final adapter = MessagingAdapter();
+      final client = api.MateryalphApiClient(
+        dio: Dio()..httpClientAdapter = adapter,
+      );
+      final projects = ProjectsRepository(
+        client: client,
+        onSessionExpired: () async =>
+            fail('Successful sharing retains the session'),
+      );
+      expect(
+        await projects.messageInquiry('package-inquiry', 'package-key'),
+        'thread',
+      );
+      expect(
+        adapter.requests.last.path,
+        '/buyers/conversations/package-inquiry/work-package-attachment',
+      );
+      expect(adapter.requests.last.headers['Idempotency-Key'], 'package-key');
+      expect(
+        await projects.messageOrder('pending-order', 'order-key'),
+        'thread',
+      );
+      expect(
+        adapter.requests.last.path,
+        '/buyers/orders/pending-order/work-package-message',
+      );
+      expect(adapter.requests.last.headers['Idempotency-Key'], 'order-key');
+    },
+  );
   test(
     'real generated inbox decodes profile identities and product-free creation uses bearer transport',
     () async {
@@ -63,13 +96,29 @@ void main() {
         containsPair('heavy_vehicle_restriction', 'NO'),
       );
       expect(adapter.requests.last.data, containsPair('lock_version', 4));
-      final projects = await repository.projectInquiries('thread', page: 2);
+      final projects = await repository.inbox(page: 2);
       expect(projects.items.single.id, 'thread');
+      expect(adapter.requests.last.path, '/buyers/conversations');
+      expect(adapter.requests.last.queryParameters, containsPair('page', 2));
+      await repository.chooseAutomatedResponse(
+        'thread',
+        'welcome',
+        1,
+        'choice',
+      );
       expect(
         adapter.requests.last.path,
-        '/buyers/conversations/thread/project-inquiries',
+        '/buyers/conversations/thread/automated-response',
       );
-      expect(adapter.requests.last.queryParameters, containsPair('page', 2));
+      expect(
+        adapter.requests.last.data,
+        containsPair('welcome_message_id', 'welcome'),
+      );
+      expect(adapter.requests.last.data, containsPair('option_index', 1));
+      expect(
+        adapter.requests.last.data,
+        containsPair('client_message_id', 'choice'),
+      );
     },
   );
 }

@@ -52,5 +52,11 @@ void main() {
       // TODO
     });
 
+    // Clean private proof files uploaded by this Admin for the same subject. Immutable once recorded.
+    // BuiltSet<String> evidenceFileIds
+    test('to test the property `evidenceFileIds`', () async {
+      // TODO
+    });
+
   });
 }

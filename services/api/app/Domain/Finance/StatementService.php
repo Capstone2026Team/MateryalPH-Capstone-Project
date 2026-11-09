@@ -14,8 +14,8 @@ use Illuminate\Support\Str;
 /**
  * FIN-03 monthly Vendor statements. At 00:05 Asia/Manila on the first day of each month an idempotent job drafts
  * one statement per Vendor for the previous calendar month from unbilled EARNED assessments and approved credits;
- * disputed (held) entries stay identified and uncollectible. A finance reviewer with finance.approve_statements
- * issues it (target: by the third). Due date = max(15th of the following month, issue date + 12 calendar days),
+ * disputed (held) entries stay identified and uncollectible. The scheduler issues each bill automatically.
+ * Manual support commands retain finance.approve_statements. Due date = max(15th of the following month, issue date + 12 calendar days),
  * end of that day in Asia/Manila. Overdue statements notify the Owner on the due date and seven days later, then
  * enter finance review; they never cancel orders or block refunds, tax records or invoices. A statement never
  * goes negative: excess credits carry to the next statement and are never a negative Xendit payment request.
@@ -175,6 +175,30 @@ final class StatementService
     /** Issues a DRAFT statement. Approval never edits earned source amounts; corrections are referenced credits. */
     public function approve(string $statementId, int $reviewerUserId, int $lockVersion): object
     {
+        return $this->issue($statementId, $reviewerUserId, $lockVersion);
+    }
+
+    /** Scheduled billing publishes every eligible Vendor bill without a per-Vendor approval queue. */
+    public function issuePending(): int
+    {
+        $issued = 0;
+        DB::table('fee_statements')->where('state', 'DRAFT')->where('environment', 'TEST')->orderBy('id')->eachById(function (object $row) use (&$issued): void {
+            $issued += DB::transaction(function () use ($row): int {
+                $statement = DB::table('fee_statements')->where('id', $row->id)->lockForUpdate()->first();
+                if ($statement === null || $statement->state !== 'DRAFT') {
+                    return 0;
+                }
+                $this->issue((string) $statement->id, null, (int) $statement->lock_version);
+
+                return 1;
+            }, 3);
+        });
+
+        return $issued;
+    }
+
+    private function issue(string $statementId, ?int $reviewerUserId, int $lockVersion): object
+    {
         return DB::transaction(function () use ($statementId, $reviewerUserId, $lockVersion): object {
             $statement = DB::table('fee_statements')->where('id', $statementId)->lockForUpdate()->first();
             if ($statement === null) {
@@ -190,13 +214,11 @@ final class StatementService
             $nominal = CarbonImmutable::parse((string) $statement->period_end, 'Asia/Manila')->startOfMonth()->addMonth()->day(15);
             $due = $nominal->max($issue->startOfDay()->addDays(12));
             $balance = (int) $statement->balance_centavos;
-            DB::table('fee_statements')->where('id', $statementId)->update(['state' => $balance === 0 ? 'PAID' : 'ISSUED', 'approved_by_user_id' => $reviewerUserId, 'approved_at' => now(),
+            DB::table('fee_statements')->where('id', $statementId)->update(['state' => $balance === 0 ? 'PAID' : 'ISSUED', 'issuance_origin' => $reviewerUserId === null ? 'SYSTEM' : 'MANUAL', 'approved_by_user_id' => $reviewerUserId, 'approved_at' => now(),
                 'issued_at' => now(), 'issued_on' => $issue->toDateString(), 'due_on' => $due->toDateString(), 'due_at' => $due->endOfDay()->utc(), 'lock_version' => $lockVersion + 1, 'updated_at' => now()]);
-            $this->notifier->owner((string) $statement->vendor_organization_id, 'Commission statement '.$statement->statement_reference.' issued',
-                'Your monthly commission statement for '.CarbonImmutable::parse((string) $statement->period_start)->format('F Y').' is issued: ₱'.WithholdingThresholdService::pesos($balance)
-                .' due by '.$due->format('M j, Y').' (end of day, Philippine time). TEST/DEMO statement — pay it from Finance with a Xendit TEST payment. No automatic debit is made.',
-                true, 'FEE_STATEMENT', $statementId);
-            $this->outbox->publish('FEE_STATEMENT_ISSUED', 'FEE_STATEMENT', $statementId, ['fee_statement_id' => $statementId]);
+            app(PlatformFeeInvoiceService::class)->capture($statementId);
+            app(CommissionEmails::class)->statement($statementId);
+            $this->outbox->publish('FEE_STATEMENT_ISSUED', 'FEE_STATEMENT', $statementId, ['fee_statement_id' => $statementId, 'issuance_origin' => $reviewerUserId === null ? 'SYSTEM' : 'MANUAL']);
 
             return DB::table('fee_statements')->where('id', $statementId)->first();
         });

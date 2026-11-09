@@ -154,9 +154,9 @@ final class PhaseNineMessagingTest extends TestCase
         }
     }
 
-    public function test_sales_inbox_groups_item_and_project_inquiries_with_paginated_history_and_separate_receipts(): void
+    public function test_sales_inbox_groups_work_packages_in_one_store_chat_and_archives_the_chat_together(): void
     {
-        [$store, $owner, $listing] = $this->pickupStore('Grouped inquiries');
+        [$store, $owner, $listing] = $this->pickupStore('Unified inquiries');
         [$buyer] = $this->pickupOrder($store, $listing);
         $main = $this->inquiry($store->id, $this->variantIds($listing)[0]);
         $projects = [];
@@ -166,34 +166,124 @@ final class PhaseNineMessagingTest extends TestCase
         $project = $projects[26];
         $this->signInStoreMember($owner);
         $mainMessage = $this->postJson('/api/v1/vendor/conversations/'.$main.'/messages', ['body' => 'Item reply', 'client_message_id' => (string) Str::uuid7()])->assertCreated()->json('data.id');
-        $projectMessage = $this->postJson('/api/v1/vendor/conversations/'.$project.'/messages', ['body' => 'Project reply', 'client_message_id' => (string) Str::uuid7()])->assertCreated()->json('data.id');
-        $this->getJson('/api/v1/vendor/conversations')->assertOk()->assertJsonCount(1, 'data.items')->assertJsonPath('data.items.0.id', $main);
+        $projectMessage = $this->postJson('/api/v1/vendor/conversations/'.$project.'/messages', ['body' => 'Package reply', 'client_message_id' => (string) Str::uuid7()])->assertCreated()->json('data.id');
+        $this->getJson('/api/v1/vendor/conversations')->assertOk()->assertJsonCount(1, 'data.items')->assertJsonPath('data.items.0.id', $main)->assertJsonPath('data.has_more', false);
+        $contextPage = $this->getJson('/api/v1/vendor/conversations/'.$main.'/buyer-thread/contexts')->assertOk()->assertJsonCount(25, 'data.items')->assertJsonPath('data.has_more', true)->json('data.items');
+        $contextTail = $this->getJson('/api/v1/vendor/conversations/'.$main.'/buyer-thread/contexts?page=2')->assertOk()->assertJsonPath('data.has_more', false)->json('data.items');
+        self::assertSame(DB::table('conversations')->where('buyer_profile_id', $this->buyerProfileId($buyer))->count(), count(array_unique(array_column([...$contextPage, ...$contextTail], 'id'))));
         $this->signInBuyer($buyer);
-        $this->getJson('/api/v1/buyers/conversations')->assertOk()->assertJsonCount(1, 'data.items')->assertJsonPath('data.items.0.id', $main)
-            ->assertJsonPath('data.items.0.last_message_preview', 'Project reply')->assertJsonPath('data.items.0.unread_count', 2);
+        $this->getJson('/api/v1/buyers/conversations')->assertOk()->assertJsonCount(1, 'data.items')->assertJsonPath('data.items.0.id', $main)->assertJsonPath('data.items.0.unread_count', 2)->assertJsonPath('data.has_more', false);
+        $this->getJson('/api/v1/buyers/conversations?page=2')->assertOk()->assertJsonCount(0, 'data.items');
         $this->postJson('/api/v1/buyers/conversations/'.$main.'/read', ['through_message_id' => $mainMessage])->assertOk();
-        $this->getJson('/api/v1/buyers/conversations/'.$main)->assertOk()->assertJsonPath('data.conversation.unread_count', 0)
-            ->assertJsonPath('data.conversation.project_unread_count', 1)->assertJsonPath('data.conversation.project_inquiry_count', 27);
-        $this->getJson('/api/v1/buyers/conversations')->assertOk()->assertJsonPath('data.items.0.unread_count', 1);
-        $endpoint = '/api/v1/buyers/conversations/'.$main.'/project-inquiries';
-        $first = $this->getJson($endpoint)->assertOk()->assertJsonCount(25, 'data.items')->assertJsonPath('data.has_more', true)->json('data.items');
-        $second = $this->getJson($endpoint.'?page=2')->assertOk()->assertJsonCount(2, 'data.items')->assertJsonPath('data.has_more', false)->json('data.items');
-        self::assertCount(27, array_unique(array_column([...$first, ...$second], 'id')));
-        $this->getJson($endpoint.'?page=0')->assertUnprocessable();
-        $this->getJson('/api/v1/buyers/conversations/'.$project)->assertOk()->assertJsonPath('data.conversation.main_conversation_id', $main)
-            ->assertJsonPath('data.conversation.inquiry_label', 'Foundation 26')->assertJsonCount(1, 'data.messages.items');
+        $this->getJson('/api/v1/buyers/conversations/'.$project)->assertOk()->assertJsonPath('data.conversation.unread_count', 1)
+            ->assertJsonPath('data.conversation.inquiry_label', 'Foundation 26');
         $this->putJson('/api/v1/buyers/conversations/'.$main.'/archive')->assertOk();
+        $this->getJson('/api/v1/buyers/conversations?archived=true')->assertOk()->assertJsonCount(1, 'data.items')->assertJsonPath('data.items.0.id', $main);
         $this->getJson('/api/v1/buyers/conversations')->assertOk()->assertJsonCount(0, 'data.items');
-        $this->getJson('/api/v1/buyers/conversations?archived=true')->assertOk()->assertJsonCount(1, 'data.items');
-        $this->deleteJson('/api/v1/buyers/conversations/'.$project.'/archive')->assertOk();
-        self::assertSame(0, DB::table('conversation_archives')->count());
-        $this->putJson('/api/v1/buyers/conversations/'.$main.'/archive')->assertOk();
         $this->signInStoreMember($owner);
-        $this->postJson('/api/v1/vendor/conversations/'.$project.'/messages', ['body' => 'Project update', 'client_message_id' => (string) Str::uuid7()])->assertCreated();
-        self::assertSame(0, DB::table('conversation_archives')->count());
+        $this->postJson('/api/v1/vendor/conversations/'.$project.'/messages', ['body' => 'Package update', 'client_message_id' => (string) Str::uuid7()])->assertCreated();
+        self::assertSame(0, DB::table('conversation_archives')->where('conversation_id', $main)->count());
+        $this->signInBuyer($buyer);
+        $this->getJson('/api/v1/buyers/conversations')->assertOk()->assertJsonCount(1, 'data.items')->assertJsonPath('data.items.0.id', $main);
+        $this->getJson('/api/v1/buyers/conversations?archived=true')->assertOk()->assertJsonCount(0, 'data.items');
         self::assertSame($project, DB::table('messages')->where('id', $projectMessage)->value('conversation_id'));
+    }
+
+    public function test_combined_buyer_timeline_includes_authorized_sales_packages_and_orders_without_moving_history(): void
+    {
+        [$store, $owner, $listing] = $this->pickupStore('Combined Buyer timeline');
+        [$buyer, $order] = $this->pickupOrder($store, $listing);
+        $main = $this->inquiry($store->id, $this->variantIds($listing)[0]);
+        $package = $this->projectInquiryThread($main, 'Foundation materials');
+        $fulfillment = app(FulfillmentThreadService::class)->ensureForOrder($order);
+        $sent = [];
+        foreach ([$main, $package, $fulfillment] as $id) {
+            $sent[$id] = $this->postJson('/api/v1/buyers/conversations/'.$id.'/messages', ['body' => 'About '.$id, 'client_message_id' => (string) Str::uuid7()])->assertCreated()->json('data.id');
+        }
         $this->buyer();
-        $this->getJson($endpoint)->assertNotFound();
+        $otherBuyer = $this->inquiry($store->id, $this->variantIds($listing)[0]);
+        $this->postJson('/api/v1/buyers/conversations/'.$otherBuyer.'/messages', ['body' => 'Private other Buyer', 'client_message_id' => (string) Str::uuid7()])->assertCreated();
+        $this->signInStoreMember($owner);
+        $this->publishQuote($main, $this->draftInput($this->variantIds($listing)[0]));
+        $url = '/api/v1/vendor/conversations/'.$fulfillment.'/buyer-thread';
+        $result = $this->getJson($url)->assertOk()->json('data');
+        self::assertSame([$main, $package, $fulfillment], array_values(array_unique(array_column($result['messages']['items'], 'conversation_id'))));
+        self::assertCount(3, $result['thread_contexts']);
+        self::assertSame($main, $result['quotations']['versions'][0]['conversation_id']);
+        self::assertTrue($result['quotations']['versions'][0]['latest']);
+        self::assertSame(['withdraw'], $result['quotations']['versions'][0]['actions']);
+        self::assertSame($main, $result['conversation']['id']);
+        self::assertSame('PUBLISHED', $result['quotations']['quotation']['state']);
+        $this->getJson($url.'/contexts')->assertOk()->assertJsonCount(3, 'data.items');
+        self::assertSame(0, DB::table('message_read_receipts')->whereIn('message_id', $sent)->where('user_id', $owner->id)->count());
+        $this->postJson('/api/v1/vendor/conversations/'.$package.'/read', ['through_message_id' => $sent[$package]])->assertOk();
+        self::assertSame(1, DB::table('message_read_receipts')->whereIn('message_id', $sent)->where('user_id', $owner->id)->count());
+        self::assertSame($order, DB::table('conversations')->where('id', $fulfillment)->value('order_id'));
+        $this->signInBuyer($buyer);
+        $this->getJson('/api/v1/buyers/conversations/'.$main.'/buyer-thread')->assertNotFound();
+    }
+
+    public function test_combined_buyer_timeline_paginates_across_contexts_and_drops_transferred_staff_history(): void
+    {
+        [$store, $owner, $listing] = $this->pickupStore('Authorized combined history');
+        $buyer = $this->buyer();
+        $main = $this->inquiry($store->id, $this->variantIds($listing)[0]);
+        $package = $this->projectInquiryThread($main, 'Masonry');
+        $this->signInStoreMember($owner);
+        $this->getJson('/api/v1/vendor/conversations/'.$package.'/buyer-thread/contexts')->assertOk()->assertJsonCount(2, 'data.items');
+        $this->signInBuyer($buyer);
+        $threads = DB::table('conversations')->whereIn('id', [$main, $package])->get()->keyBy('id');
+        foreach (range(1, 54) as $index) {
+            DB::transaction(fn () => app(ConversationService::class)->append($threads[$index % 2 ? $main : $package], $buyer, 'Combined '.$index, 'TEXT'));
+        }
+        $staff = $this->teamMember($store, 'STORE_STAFF');
+        foreach ([$main, $package] as $id) {
+            DB::table('conversations')->where('id', $id)->update(['handler_user_id' => $staff->id]);
+            app(ConversationService::class)->participant($id, (int) $staff->id, 'STORE_STAFF');
+        }
+        $this->signInStoreMember($staff);
+        $url = '/api/v1/vendor/conversations/'.$main.'/buyer-thread';
+        $first = $this->getJson($url)->assertOk()->assertJsonCount(50, 'data.messages.items')->assertJsonPath('data.messages.has_more', true)->json('data');
+        $older = $this->getJson($url.'?before='.$first['messages']['next_before'])->assertOk()->assertJsonCount(4, 'data.messages.items')->assertJsonPath('data.messages.has_more', false)->json('data');
+        self::assertCount(54, array_unique(array_column([...$older['messages']['items'], ...$first['messages']['items']], 'id')));
+        DB::table('conversations')->where('id', $package)->update(['handler_user_id' => $owner->id]);
+        $after = $this->getJson($url)->assertOk()->assertJsonCount(27, 'data.messages.items')->assertJsonCount(1, 'data.thread_contexts')->json('data');
+        self::assertNotSame($first['thread_authority'], $after['thread_authority']);
+        self::assertSame([$main], array_values(array_unique(array_column($after['messages']['items'], 'conversation_id'))));
+        $this->getJson('/api/v1/vendor/conversations/'.$package.'/buyer-thread')->assertNotFound();
+        $this->getJson($url.'/contexts')->assertOk()->assertJsonCount(1, 'data.items');
+    }
+
+    public function test_combined_buyer_thread_shares_the_welcome_cap_and_manual_takeover_across_packages(): void
+    {
+        Carbon::setTestNow(now()->startOfSecond());
+        [$store, $owner, $listing] = $this->pickupStore('Shared thread bot');
+        $this->putJson('/api/v1/vendor/messaging/automated-response', ['enabled' => true, 'welcome_message' => 'Welcome.', 'lock_version' => 0,
+            'options' => [['label' => 'Store hours', 'response' => '8 AM to 5 PM']]], ['Idempotency-Key' => (string) Str::uuid7()])->assertOk();
+        $buyer = $this->buyer();
+        $main = $this->inquiry($store->id, $this->variantIds($listing)[0]);
+        $package = $this->projectInquiryThread($main, 'Shared bot package');
+        foreach ([$main, $package] as $id) {
+            $this->postJson('/api/v1/buyers/conversations/'.$id.'/messages', ['body' => 'Hello', 'client_message_id' => (string) Str::uuid7()])->assertCreated();
+        }
+        self::assertSame(1, DB::table('messages')->whereIn('conversation_id', [$main, $package])->whereNotNull('automation')->count());
+        $welcome = DB::table('messages')->where('conversation_id', $main)->whereNotNull('automation')->value('id');
+        $this->signInStoreMember($owner);
+        $this->postJson('/api/v1/vendor/conversations/'.$package.'/messages', ['body' => 'I can help.', 'client_message_id' => (string) Str::uuid7()])->assertCreated();
+        $migration = require database_path('migrations/2026_11_05_123000_share_buyer_thread_automation_state.php');
+        $migration->down();
+        $migration->up();
+        self::assertFalse((bool) DB::table('buyer_thread_automation_states')->value('sequence_active'));
+        $this->signInBuyer($buyer);
+        $this->getJson('/api/v1/buyers/conversations/'.$main)->assertOk()->assertJsonPath('data.messages.items.1.automated_reply.options.0.available', false);
+        $this->postJson('/api/v1/buyers/conversations/'.$main.'/automated-response', ['welcome_message_id' => $welcome, 'option_index' => 0, 'client_message_id' => (string) Str::uuid7()])->assertConflict();
+        Carbon::setTestNow(now()->addHours(24));
+        $this->postJson('/api/v1/buyers/conversations/'.$package.'/messages', ['body' => 'Hello again', 'client_message_id' => (string) Str::uuid7()])->assertCreated();
+        self::assertSame(2, DB::table('messages')->whereIn('conversation_id', [$main, $package])->whereNotNull('automation')->count());
+        $packageWelcome = DB::table('messages')->where('conversation_id', $package)->whereNotNull('automation')->value('id');
+        $this->postJson('/api/v1/buyers/conversations/'.$package.'/automated-response', ['welcome_message_id' => $packageWelcome, 'option_index' => 0, 'client_message_id' => (string) Str::uuid7()])->assertCreated();
+        $combined = $this->getJson('/api/v1/buyers/conversations/'.$main.'?store_thread=true')->assertOk()->json('data.messages.items');
+        self::assertFalse(collect($combined)->firstWhere('id', $packageWelcome)['automated_reply']['options'][0]['available']);
     }
 
     public function test_buyer_can_read_a_thread_after_the_other_participant_is_deactivated(): void
@@ -317,7 +407,7 @@ final class PhaseNineMessagingTest extends TestCase
         self::assertTrue(Carbon::parse($activity)->equalTo(DB::table('conversations')->where('id', $main)->value('updated_at')));
         $this->getJson('/api/v1/buyers/conversations')->assertOk()->assertJsonCount(0, 'data.items');
         $this->getJson('/api/v1/buyers/conversations?archived=true')->assertOk()->assertJsonCount(1, 'data.items')->assertJsonPath('data.items.0.id', $main);
-        $this->deleteJson('/api/v1/buyers/conversations/'.$main.'/archive')->assertOk();
+        $this->deleteJson('/api/v1/buyers/conversations/'.$project.'/archive')->assertOk();
         $this->getJson('/api/v1/buyers/conversations')->assertOk()->assertJsonCount(1, 'data.items')->assertJsonPath('data.items.0.id', $main);
         $this->signInStoreMember($owner);
         $this->getJson('/api/v1/vendor/conversations/'.$main)->assertOk();

@@ -7,9 +7,12 @@ const wave = (index: number) => [3, 5, 6, 6, 5, 2, 1][index % 7]! + Math.floor(i
 
 export function vendorInsights(owner = true) {
   const series = Array.from({ length: 30 }, (_, index) => {
-    const orders = index === 17 ? 14 : wave(index)
+    const orders = index === 29 ? 0 : index === 17 ? 14 : wave(index)
+    const gross = index === 29 ? 0 : orders * 1_850_00 + (index % 4) * 320_00
+    const refunds = index % 5 === 0 ? Math.min(gross, 125_000) : 0
+    const cancellations = index === 10 ? gross - refunds : 0
     return { date: day(index), orders, order_requests: orders + (index % 3), orders_average: 4.2 + index * 0.03,
-      gross_sales_centavos: owner ? orders * 1_850_00 + (index % 4) * 320_00 : null, net_sales_centavos: owner ? orders * 1_790_00 : null, sales_average_centavos: owner ? 760_000 + index * 9_000 : null }
+      gross_sales_centavos: owner ? gross : null, net_sales_centavos: owner ? gross - refunds - cancellations : null, refunds_centavos: owner ? refunds : null, cancellation_deductions_centavos: owner ? cancellations : null, sales_average_centavos: owner ? 760_000 + index * 9_000 : null }
   })
   const points = (base: number, money: boolean) => Array.from({ length: 7 }, (_, index) => ({ date: day(30 + index), value: money ? base * 100 + index * 5_000 : base + index * 0.1, lower: money ? base * 60 : base * 0.6, upper: money ? base * 140 : base * 1.4 }))
   const forecast = (money: boolean) => ({ state: 'OK', observed_days: 90, direction: 'INCREASING', change_percent: 18.4, r_squared: 0.62, weekday_strength: 0.71, expected_total: money ? 5_600_000 : 41,
@@ -19,8 +22,8 @@ export function vendorInsights(owner = true) {
     access: { orders: true, sales_value: owner, performance: true, stock: true, disputes: true, assigned_fulfillment: false },
     definitions: {},
     orders: {
-      kpis: { order_volume: { value: 142, previous: 118, change_percent: 20.3 }, gross_sales_centavos: owner ? { value: 26_710_400, previous: 22_105_000, change_percent: 20.8 } : null,
-        net_sales_centavos: owner ? { value: 25_420_000, previous: 21_480_000, change_percent: 18.3 } : null, average_order_value_centavos: owner ? { value: 188_101, previous: 187_330 } : null,
+      kpis: { order_volume: { value: 142, previous: 118, change_percent: 20.3 }, gross_sales_centavos: owner ? { value: series.reduce((sum, point) => sum + (point.gross_sales_centavos ?? 0), 0), previous: 22_105_000, change_percent: 20.8 } : null,
+        net_sales_centavos: owner ? { value: series.reduce((sum, point) => sum + (point.net_sales_centavos ?? 0), 0), previous: 21_480_000, change_percent: 18.3 } : null, average_order_value_centavos: owner ? { value: 188_101, previous: 187_330 } : null,
         fulfillment_rate: { percent: '94.12', numerator: 128, denominator: 136 }, cancellation_rate: { percent: '2.82', numerator: 4, denominator: 142 }, dispute_rate: { percent: '1.41', numerator: 2, denominator: 142 },
         response_time: { mean_seconds: 6_120, median_seconds: 2_940, p90_seconds: 15_600, answered: 151, unanswered: 3 } },
       series,
@@ -36,6 +39,7 @@ export function vendorInsights(owner = true) {
       mix: { procurement: [{ key: 'ITEM_BASED', count: 118 }, { key: 'PROJECT_BASED', count: 24 }], fulfillment: [{ key: 'DELIVERY', count: 97 }, { key: 'PICKUP', count: 45 }],
         payment: [{ key: 'ONLINE', count: 88 }, { key: 'CASH_ON_DELIVERY', count: 39 }, { key: 'IN_STORE', count: 15 }] },
       products: {
+        sales_breakdown: owner ? { product_sales_centavos: 25_242_000, delivery_centavos: 90000, refunds_centavos: 10000, net_sales_centavos: 25_322_000 } : null,
         top: [['Portland Cement Type 1 (40 kg)', 'Cement', 61, 38, 9_820_000], ['Deformed Bar 10 mm × 6 m', 'Steel', 44, 27, 6_512_000], ['Washed Sand (per m³)', 'Aggregates', 39, 25, 4_290_000],
           ['Concrete Hollow Block 4"', 'Masonry', 33, 19, 2_640_000], ['Marine Plywood ¾"', 'Wood', 18, 12, 1_980_000]]
           .map(([name, category, orders, buyers, value]) => ({ name, category, orders, buyers, value_centavos: owner ? value : null })),

@@ -281,6 +281,8 @@ class _$VendorOrderInvoicesInvoicingMethodsEnumSerializer
 
 class _$VendorOrderInvoices extends VendorOrderInvoices {
   @override
+  final String? buyerName;
+  @override
   final String orderId;
   @override
   final String orderReference;
@@ -310,13 +312,22 @@ class _$VendorOrderInvoices extends VendorOrderInvoices {
   final BuiltList<VendorOrderInvoicesInvoicingMethodsEnum> invoicingMethods;
   @override
   final BuiltList<InvoiceOrderLine> lines;
+  @override
+  final bool? canSend;
+  @override
+  final InvoiceDraft? draft;
+  @override
+  final VendorInvoicePreset? preset;
+  @override
+  final InvoiceOrderSummary? orderSummary;
 
   factory _$VendorOrderInvoices(
           [void Function(VendorOrderInvoicesBuilder)? updates]) =>
       (VendorOrderInvoicesBuilder()..update(updates))._build();
 
   _$VendorOrderInvoices._(
-      {required this.orderId,
+      {this.buyerName,
+      required this.orderId,
       required this.orderReference,
       required this.status,
       required this.issuanceNotice,
@@ -330,7 +341,11 @@ class _$VendorOrderInvoices extends VendorOrderInvoices {
       required this.invoiceTypes,
       required this.sourceSystems,
       required this.invoicingMethods,
-      required this.lines})
+      required this.lines,
+      this.canSend,
+      this.draft,
+      this.preset,
+      this.orderSummary})
       : super._();
   @override
   VendorOrderInvoices rebuild(
@@ -345,6 +360,7 @@ class _$VendorOrderInvoices extends VendorOrderInvoices {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is VendorOrderInvoices &&
+        buyerName == other.buyerName &&
         orderId == other.orderId &&
         orderReference == other.orderReference &&
         status == other.status &&
@@ -359,12 +375,17 @@ class _$VendorOrderInvoices extends VendorOrderInvoices {
         invoiceTypes == other.invoiceTypes &&
         sourceSystems == other.sourceSystems &&
         invoicingMethods == other.invoicingMethods &&
-        lines == other.lines;
+        lines == other.lines &&
+        canSend == other.canSend &&
+        draft == other.draft &&
+        preset == other.preset &&
+        orderSummary == other.orderSummary;
   }
 
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, buyerName.hashCode);
     _$hash = $jc(_$hash, orderId.hashCode);
     _$hash = $jc(_$hash, orderReference.hashCode);
     _$hash = $jc(_$hash, status.hashCode);
@@ -380,6 +401,10 @@ class _$VendorOrderInvoices extends VendorOrderInvoices {
     _$hash = $jc(_$hash, sourceSystems.hashCode);
     _$hash = $jc(_$hash, invoicingMethods.hashCode);
     _$hash = $jc(_$hash, lines.hashCode);
+    _$hash = $jc(_$hash, canSend.hashCode);
+    _$hash = $jc(_$hash, draft.hashCode);
+    _$hash = $jc(_$hash, preset.hashCode);
+    _$hash = $jc(_$hash, orderSummary.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -387,6 +412,7 @@ class _$VendorOrderInvoices extends VendorOrderInvoices {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'VendorOrderInvoices')
+          ..add('buyerName', buyerName)
           ..add('orderId', orderId)
           ..add('orderReference', orderReference)
           ..add('status', status)
@@ -401,7 +427,11 @@ class _$VendorOrderInvoices extends VendorOrderInvoices {
           ..add('invoiceTypes', invoiceTypes)
           ..add('sourceSystems', sourceSystems)
           ..add('invoicingMethods', invoicingMethods)
-          ..add('lines', lines))
+          ..add('lines', lines)
+          ..add('canSend', canSend)
+          ..add('draft', draft)
+          ..add('preset', preset)
+          ..add('orderSummary', orderSummary))
         .toString();
   }
 }
@@ -409,6 +439,10 @@ class _$VendorOrderInvoices extends VendorOrderInvoices {
 class VendorOrderInvoicesBuilder
     implements Builder<VendorOrderInvoices, VendorOrderInvoicesBuilder> {
   _$VendorOrderInvoices? _$v;
+
+  String? _buyerName;
+  String? get buyerName => _$this._buyerName;
+  set buyerName(String? buyerName) => _$this._buyerName = buyerName;
 
   String? _orderId;
   String? get orderId => _$this._orderId;
@@ -494,6 +528,25 @@ class VendorOrderInvoicesBuilder
       _$this._lines ??= ListBuilder<InvoiceOrderLine>();
   set lines(ListBuilder<InvoiceOrderLine>? lines) => _$this._lines = lines;
 
+  bool? _canSend;
+  bool? get canSend => _$this._canSend;
+  set canSend(bool? canSend) => _$this._canSend = canSend;
+
+  InvoiceDraftBuilder? _draft;
+  InvoiceDraftBuilder get draft => _$this._draft ??= InvoiceDraftBuilder();
+  set draft(InvoiceDraftBuilder? draft) => _$this._draft = draft;
+
+  VendorInvoicePresetBuilder? _preset;
+  VendorInvoicePresetBuilder get preset =>
+      _$this._preset ??= VendorInvoicePresetBuilder();
+  set preset(VendorInvoicePresetBuilder? preset) => _$this._preset = preset;
+
+  InvoiceOrderSummaryBuilder? _orderSummary;
+  InvoiceOrderSummaryBuilder get orderSummary =>
+      _$this._orderSummary ??= InvoiceOrderSummaryBuilder();
+  set orderSummary(InvoiceOrderSummaryBuilder? orderSummary) =>
+      _$this._orderSummary = orderSummary;
+
   VendorOrderInvoicesBuilder() {
     VendorOrderInvoices._defaults(this);
   }
@@ -501,6 +554,7 @@ class VendorOrderInvoicesBuilder
   VendorOrderInvoicesBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _buyerName = $v.buyerName;
       _orderId = $v.orderId;
       _orderReference = $v.orderReference;
       _status = $v.status;
@@ -516,6 +570,10 @@ class VendorOrderInvoicesBuilder
       _sourceSystems = $v.sourceSystems.toBuilder();
       _invoicingMethods = $v.invoicingMethods.toBuilder();
       _lines = $v.lines.toBuilder();
+      _canSend = $v.canSend;
+      _draft = $v.draft?.toBuilder();
+      _preset = $v.preset?.toBuilder();
+      _orderSummary = $v.orderSummary?.toBuilder();
       _$v = null;
     }
     return this;
@@ -539,6 +597,7 @@ class VendorOrderInvoicesBuilder
     try {
       _$result = _$v ??
           _$VendorOrderInvoices._(
+            buyerName: buyerName,
             orderId: BuiltValueNullFieldError.checkNotNull(
                 orderId, r'VendorOrderInvoices', 'orderId'),
             orderReference: BuiltValueNullFieldError.checkNotNull(
@@ -561,6 +620,10 @@ class VendorOrderInvoicesBuilder
             sourceSystems: sourceSystems.build(),
             invoicingMethods: invoicingMethods.build(),
             lines: lines.build(),
+            canSend: canSend,
+            draft: _draft?.build(),
+            preset: _preset?.build(),
+            orderSummary: _orderSummary?.build(),
           );
     } catch (_) {
       late String _$failedField;
@@ -582,6 +645,13 @@ class VendorOrderInvoicesBuilder
         invoicingMethods.build();
         _$failedField = 'lines';
         lines.build();
+
+        _$failedField = 'draft';
+        _draft?.build();
+        _$failedField = 'preset';
+        _preset?.build();
+        _$failedField = 'orderSummary';
+        _orderSummary?.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
             r'VendorOrderInvoices', _$failedField, e.toString());

@@ -9,14 +9,73 @@ All URIs are relative to */api/v1*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
+[**approveRemittanceReconciliation**](AdminFinanceOperationsApi.md#approveremittancereconciliation) | **POST** /admin/finance/remittances/{assessmentId}/approve-reconciliation |
 [**getFinanceKpis**](AdminFinanceOperationsApi.md#getfinancekpis) | **GET** /admin/finance/kpis |
+[**getWithholdingRegister**](AdminFinanceOperationsApi.md#getwithholdingregister) | **GET** /admin/finance/withholding-register |
+[**getWithholdingVendor**](AdminFinanceOperationsApi.md#getwithholdingvendor) | **GET** /admin/finance/withholding-register/{vendorId} |
 [**listRemittanceQueue**](AdminFinanceOperationsApi.md#listremittancequeue) | **GET** /admin/finance/remittances |
 [**listTaxAdjustments**](AdminFinanceOperationsApi.md#listtaxadjustments) | **GET** /admin/finance/tax-adjustments |
 [**listTaxEvidenceQueue**](AdminFinanceOperationsApi.md#listtaxevidencequeue) | **GET** /admin/finance/evidence |
+[**listTaxIssues**](AdminFinanceOperationsApi.md#listtaxissues) | **GET** /admin/finance/tax-issues |
 [**postTaxAdjustment**](AdminFinanceOperationsApi.md#posttaxadjustment) | **POST** /admin/finance/tax-adjustments/{adjustmentId}/post |
 [**prepareTaxAdjustment**](AdminFinanceOperationsApi.md#preparetaxadjustment) | **POST** /admin/finance/tax-adjustments/{adjustmentId}/prepare |
 [**reviewTaxAdjustment**](AdminFinanceOperationsApi.md#reviewtaxadjustment) | **POST** /admin/finance/tax-adjustments/{adjustmentId}/review |
 
+
+# **approveRemittanceReconciliation**
+> RemittanceReconciliationDecisionEnvelope approveRemittanceReconciliation(assessmentId, idempotencyKey, remittanceReconciliationApproval)
+
+
+
+Backup approval of a recorded TEST platform remittance. Requires active ADMIN_SUPERADMIN or ADMIN_FINANCE membership, finance.view, finance.approve_remittance_reconciliation and recent authentication. The supplied source version must match the locked assessment. Collection, calculation and ledger checks must all pass; an approval cannot override a mismatch, open tax adjustment, fully refunded or voided collection. An immutable SIMULATED decision and audit event are recorded once. This never confirms a live settlement, BIR filing or BIR payment.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getAdminFinanceOperationsApi();
+final String assessmentId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String idempotencyKey = idempotencyKey_example; // String |
+final RemittanceReconciliationApproval remittanceReconciliationApproval = ; // RemittanceReconciliationApproval |
+
+try {
+    final response = api.approveRemittanceReconciliation(assessmentId, idempotencyKey, remittanceReconciliationApproval);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AdminFinanceOperationsApi->approveRemittanceReconciliation: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **assessmentId** | **String**|  |
+ **idempotencyKey** | **String**|  |
+ **remittanceReconciliationApproval** | [**RemittanceReconciliationApproval**](RemittanceReconciliationApproval.md)|  |
+
+### Return type
+
+[**RemittanceReconciliationDecisionEnvelope**](RemittanceReconciliationDecisionEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **getFinanceKpis**
 > FinanceKpiEnvelope getFinanceKpis(from, to)
@@ -59,6 +118,116 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**FinanceKpiEnvelope**](FinanceKpiEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **getWithholdingRegister**
+> WithholdingRegisterEnvelope getWithholdingRegister(month, page)
+
+
+
+finance.view. TEST withholding assessments across Vendors for one collection calendar month in Asia/Manila. Platform and provider obligations stay separate. When month is omitted, use the latest month with a non-voided TEST assessment and linked collection, or the current Manila month if none exist. An explicit month is always respected, including months without assessments. Totals cover all pages, exclude VOIDED assessments and include only POSTED tax. Original assessment amounts precede linked corrections; reviewed packages apply posted corrections. These amounts are not cash held, a BIR payable balance or evidence of deduction, filing or payment. Production assignment stays UNCONFIRMED.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getAdminFinanceOperationsApi();
+final String month = month_example; // String |
+final int page = 56; // int |
+
+try {
+    final response = api.getWithholdingRegister(month, page);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AdminFinanceOperationsApi->getWithholdingRegister: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **month** | **String**|  | [optional]
+ **page** | **int**|  | [optional]
+
+### Return type
+
+[**WithholdingRegisterEnvelope**](WithholdingRegisterEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **getWithholdingVendor**
+> WithholdingVendorDetailEnvelope getWithholdingVendor(vendorId, month, withholdingEntity, page)
+
+
+
+Read-only finance.view projection of saved TEST payment assessments for one Vendor, withholding entity and Manila collection month. Paginated payments retain original per-payment rounding and nullable unposted amounts. Declaration status is evaluated at month end or now, whichever is earlier. The yearly meter is returned only for approved in-period evidence and uses the saved full-taxpayer-year accumulator across stores and declared external remittances. No raw taxpayer identity, private evidence or provider payload is returned. No tax is recalculated.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getAdminFinanceOperationsApi();
+final String vendorId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String month = month_example; // String |
+final String withholdingEntity = withholdingEntity_example; // String |
+final int page = 56; // int |
+
+try {
+    final response = api.getWithholdingVendor(vendorId, month, withholdingEntity, page);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AdminFinanceOperationsApi->getWithholdingVendor: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **vendorId** | **String**|  |
+ **month** | **String**|  |
+ **withholdingEntity** | **String**|  |
+ **page** | **int**|  | [optional]
+
+### Return type
+
+[**WithholdingVendorDetailEnvelope**](WithholdingVendorDetailEnvelope.md)
 
 ### Authorization
 
@@ -234,6 +403,57 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**TaxEvidenceQueueEnvelope**](TaxEvidenceQueueEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **listTaxIssues**
+> FinanceReviewItemListEnvelope listTaxIssues(page)
+
+
+
+Read-only finance.view action queue across all periods. Combines OPEN finance work with non-voided TEST withholding source blockers that have no OPEN work item for the same assessment. WITHHOLDING_SOURCE rows link to source correction and cannot be resolved through the work-item mutation. This projection does not create, resolve or change any financial record.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getAdminFinanceOperationsApi();
+final int page = 56; // int |
+
+try {
+    final response = api.listTaxIssues(page);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AdminFinanceOperationsApi->listTaxIssues: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **page** | **int**|  | [optional]
+
+### Return type
+
+[**FinanceReviewItemListEnvelope**](FinanceReviewItemListEnvelope.md)
 
 ### Authorization
 

@@ -1,0 +1,10 @@
+.mp-analytics-activity { display: grid; gap: 16px; margin: 0; padding: 0; list-style: none; overflow-wrap: anywhere; }
+.mp-analytics-activity > li { display: flex; align-items: flex-start; gap: 12px; min-width: 0; }
+.mp-dashboard-activity-icon { display: grid; place-items: center; width: 36px; height: 36px; flex: 0 0 36px; border-radius: 50%; color: var(--mp-color-action-primary); background: var(--mp-color-brand-orange-50); }
+.mp-analytics-activity > li:nth-child(even) .mp-dashboard-activity-icon { color: var(--mp-color-surface-primary); background: var(--mp-color-action-primary); }
+.mp-dashboard-activity-content { min-width: 0; flex: 1; }
+.mp-dashboard-activity-content > strong { display: block; color: var(--mp-color-text-strong); font-size: 12px; line-height: 18px; font-weight: 600; }
+.mp-dashboard-activity-content > p { margin-top: 2px; color: var(--mp-color-text-secondary); font-size: 12px; line-height: 18px; }
+.mp-dashboard-activity-content .mp-activity-highlight { color: var(--mp-color-action-primary); font-weight: 500; }
+.mp-dashboard-activity-content > time { display: block; margin-top: 3px; color: var(--mp-color-text-secondary); font-size: 11px; line-height: 16px; font-variant-numeric: tabular-nums; }
+.mp-dashboard-activity-content > p.text-status-error { color: var(--mp-color-status-error); }

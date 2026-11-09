@@ -20,6 +20,13 @@ import {
     VendorDashboardOrdersProductsBasketRulesToJSON,
     VendorDashboardOrdersProductsBasketRulesToJSONTyped,
 } from './VendorDashboardOrdersProductsBasketRules';
+import type { VendorProductSalesBreakdown } from './VendorProductSalesBreakdown';
+import {
+    VendorProductSalesBreakdownFromJSON,
+    VendorProductSalesBreakdownFromJSONTyped,
+    VendorProductSalesBreakdownToJSON,
+    VendorProductSalesBreakdownToJSONTyped,
+} from './VendorProductSalesBreakdown';
 import type { VendorDashboardProduct } from './VendorDashboardProduct';
 import {
     VendorDashboardProductFromJSON,
@@ -49,6 +56,10 @@ import {
  */
 export interface VendorDashboardOrdersProducts {
     /**
+     * Owner-only reconciliation for the same surviving confirmed orders, latest financial snapshots and Manila dates as Finance and Product Analytics. Product/category values include discounts and VAT and are before partial refunds. Materials plus delivery less completed partial refunds equal Net sales.
+     */
+    salesBreakdown: VendorProductSalesBreakdown | null;
+    /**
      *
      */
     top: Array<VendorDashboardProduct>;
@@ -70,6 +81,7 @@ export interface VendorDashboardOrdersProducts {
  * Check if a given object implements the VendorDashboardOrdersProducts interface.
  */
 export function instanceOfVendorDashboardOrdersProducts(value: object): value is VendorDashboardOrdersProducts {
+    if ((!('salesBreakdown' in (value as Record<string, any>)) && !('sales_breakdown' in (value as Record<string, any>))) || ((value as Record<string, any>)['salesBreakdown'] === undefined && (value as Record<string, any>)['sales_breakdown'] === undefined)) return false;
     if (!('top' in value) || value['top'] === undefined) return false;
     if (!('categories' in value) || value['categories'] === undefined) return false;
     if (!('segments' in value) || value['segments'] === undefined) return false;
@@ -87,6 +99,7 @@ export function VendorDashboardOrdersProductsFromJSONTyped(json: any, ignoreDisc
     }
     return {
 
+        'salesBreakdown': VendorProductSalesBreakdownFromJSON(json['sales_breakdown']),
         'top': ((json['top'] as Array<any>).map(VendorDashboardProductFromJSON)),
         'categories': ((json['categories'] as Array<any>).map(VendorDashboardOrdersProductsCategoriesInnerFromJSON)),
         'segments': VendorDashboardOrdersProductsSegmentsFromJSON(json['segments']),
@@ -105,6 +118,7 @@ export function VendorDashboardOrdersProductsToJSONTyped(value?: VendorDashboard
 
     return {
 
+        'sales_breakdown': VendorProductSalesBreakdownToJSON(value['salesBreakdown']),
         'top': ((value['top'] as Array<any>).map(VendorDashboardProductToJSON)),
         'categories': ((value['categories'] as Array<any>).map(VendorDashboardOrdersProductsCategoriesInnerToJSON)),
         'segments': VendorDashboardOrdersProductsSegmentsToJSON(value['segments']),

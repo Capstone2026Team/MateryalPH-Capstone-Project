@@ -9,6 +9,7 @@ use App\Domain\Identity\AuthenticationException;
 use App\Domain\Inventory\InventoryLedgerWriter;
 use App\Domain\Inventory\InventoryLocks;
 use App\Domain\Inventory\StockAvailability;
+use App\Domain\Orders\CancellationFinalizer;
 use App\Domain\Orders\OrderAcceptance;
 use App\Domain\Orders\OrderActor;
 use App\Domain\Orders\OrderCommercial;
@@ -82,12 +83,27 @@ final class QuotationAcceptance
         if ($nrpc !== null && (! ($input['nrpc_acknowledged'] ?? false) || ($input['nrpc_terms_version_id'] ?? null) !== $nrpc['terms']['id'])) {
             throw new AuthenticationException('NRPC_ACCEPTANCE_REQUIRED', 'Review the NRPC amount, reason, affected lines and Terms, then acknowledge them.', 422);
         }
+        $previous = null;
+        if ($q->replaces_order_id !== null) {
+            $previous = DB::table('orders')->where('id', $q->replaces_order_id)->lockForUpdate()->first();
+            if (! PendingOrderQuotationService::eligible($previous) || $previous->buyer_profile_id !== $q->buyer_profile_id
+                || $previous->vendor_organization_id !== $q->vendor_organization_id || $previous->work_package_id !== $q->work_package_id
+                || DB::table('payments')->where('order_id', $previous->id)->exists()) {
+                throw new AuthenticationException('ORDER_QUOTATION_UNAVAILABLE', 'The original order is no longer pending and cannot be replaced. Its accepted terms are preserved.', 409);
+            }
+        }
         $locked = app(InventoryLocks::class)->lockForAcceptance(array_column($content['lines'], 'variant_id'));
         foreach ($content['lines'] as $line) {
             $item = $locked['inventory'][$line['variant_id']] ?? null;
             if ($item === null || bccomp($line['quantity'], StockAvailability::availableToSell((string) $item->quantity_on_hand, (string) $item->hard_reserved_quantity), 4) > 0) {
                 return null;
             }
+        }
+        if ($previous !== null) {
+            app(CancellationFinalizer::class)->finalize($previous, OrderActor::buyer($request), [
+                'cause' => 'BUYER', 'decided_by' => 'BUYER', 'decision_code' => 'QUOTATION_REPLACED', 'reason_code' => 'QUOTATION_REPLACED',
+                'reason' => 'Buyer accepted a replacement quotation for this pending request.', 'retain_nrpc' => false, 'request_id' => null, 'evidence_file_id' => null,
+            ]);
         }
         $id = (string) Str::uuid7();
         $money = $content['commercial'];

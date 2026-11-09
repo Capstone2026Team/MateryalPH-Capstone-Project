@@ -7,6 +7,9 @@ Recorded components of POSTED MERCHANT_CWT assessments for the same environment 
 
 Name | Type
 ------------ | -------------
+`assessedPayments` | number
+`paymentPrincipalCentavos` | number
+`buyerProcessingFeesCentavos` | number
 `collectionsCentavos` | number
 `refundsCentavos` | number
 `deliveryCentavos` | number
@@ -15,6 +18,7 @@ Name | Type
 `grossBasisCentavos` | number
 `withheldCentavos` | number
 `assessedCashCentavos` | number
+`withholdingBreakdown` | [WithholdingCalculationBreakdown](WithholdingCalculationBreakdown.md)
 
 ## Example
 
@@ -23,6 +27,9 @@ import type { WithholdingThresholdCalculation } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "assessedPayments": null,
+  "paymentPrincipalCentavos": null,
+  "buyerProcessingFeesCentavos": null,
   "collectionsCentavos": null,
   "refundsCentavos": null,
   "deliveryCentavos": null,
@@ -31,6 +38,7 @@ const example = {
   "grossBasisCentavos": null,
   "withheldCentavos": null,
   "assessedCashCentavos": null,
+  "withholdingBreakdown": null,
 } satisfies WithholdingThresholdCalculation
 
 console.log(example)

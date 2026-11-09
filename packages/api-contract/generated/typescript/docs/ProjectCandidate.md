@@ -6,6 +6,7 @@
 
 Name | Type
 ------------ | -------------
+`badges` | [Array&lt;PublicBadge&gt;](PublicBadge.md)
 `id` | string
 `estimateId` | string
 `vendorId` | string
@@ -59,6 +60,7 @@ import type { ProjectCandidate } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "badges": null,
   "id": null,
   "estimateId": null,
   "vendorId": null,

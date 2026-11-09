@@ -25,6 +25,8 @@ class _$ChatQuotation extends ChatQuotation {
   final bool canDraft;
   @override
   final bool canPublish;
+  @override
+  final String? replacesOrderId;
 
   factory _$ChatQuotation([void Function(ChatQuotationBuilder)? updates]) =>
       (ChatQuotationBuilder()..update(updates))._build();
@@ -38,7 +40,8 @@ class _$ChatQuotation extends ChatQuotation {
       this.responseDueAt,
       this.draft,
       required this.canDraft,
-      required this.canPublish})
+      required this.canPublish,
+      this.replacesOrderId})
       : super._();
   @override
   ChatQuotation rebuild(void Function(ChatQuotationBuilder) updates) =>
@@ -59,7 +62,8 @@ class _$ChatQuotation extends ChatQuotation {
         responseDueAt == other.responseDueAt &&
         draft == other.draft &&
         canDraft == other.canDraft &&
-        canPublish == other.canPublish;
+        canPublish == other.canPublish &&
+        replacesOrderId == other.replacesOrderId;
   }
 
   @override
@@ -74,6 +78,7 @@ class _$ChatQuotation extends ChatQuotation {
     _$hash = $jc(_$hash, draft.hashCode);
     _$hash = $jc(_$hash, canDraft.hashCode);
     _$hash = $jc(_$hash, canPublish.hashCode);
+    _$hash = $jc(_$hash, replacesOrderId.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -89,7 +94,8 @@ class _$ChatQuotation extends ChatQuotation {
           ..add('responseDueAt', responseDueAt)
           ..add('draft', draft)
           ..add('canDraft', canDraft)
-          ..add('canPublish', canPublish))
+          ..add('canPublish', canPublish)
+          ..add('replacesOrderId', replacesOrderId))
         .toString();
   }
 }
@@ -138,6 +144,11 @@ class ChatQuotationBuilder
   bool? get canPublish => _$this._canPublish;
   set canPublish(bool? canPublish) => _$this._canPublish = canPublish;
 
+  String? _replacesOrderId;
+  String? get replacesOrderId => _$this._replacesOrderId;
+  set replacesOrderId(String? replacesOrderId) =>
+      _$this._replacesOrderId = replacesOrderId;
+
   ChatQuotationBuilder() {
     ChatQuotation._defaults(this);
   }
@@ -154,6 +165,7 @@ class ChatQuotationBuilder
       _draft = $v.draft?.toBuilder();
       _canDraft = $v.canDraft;
       _canPublish = $v.canPublish;
+      _replacesOrderId = $v.replacesOrderId;
       _$v = null;
     }
     return this;
@@ -191,6 +203,7 @@ class ChatQuotationBuilder
                 canDraft, r'ChatQuotation', 'canDraft'),
             canPublish: BuiltValueNullFieldError.checkNotNull(
                 canPublish, r'ChatQuotation', 'canPublish'),
+            replacesOrderId: replacesOrderId,
           );
     } catch (_) {
       late String _$failedField;

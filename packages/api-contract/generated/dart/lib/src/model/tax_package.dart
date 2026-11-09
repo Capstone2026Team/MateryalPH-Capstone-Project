@@ -13,6 +13,7 @@ part 'tax_package.g.dart';
 /// TaxPackage
 ///
 /// Properties:
+/// * [vendorNames] - Read-only current display names for retained snapshot payees. Snapshot IDs and monetary history stay unchanged.
 /// * [id]
 /// * [packageType]
 /// * [state]
@@ -30,6 +31,10 @@ part 'tax_package.g.dart';
 /// * [submissionState]
 @BuiltValue()
 abstract class TaxPackage implements Built<TaxPackage, TaxPackageBuilder> {
+  /// Read-only current display names for retained snapshot payees. Snapshot IDs and monetary history stay unchanged.
+  @BuiltValueField(wireName: r'vendor_names')
+  BuiltMap<String, String>? get vendorNames;
+
   @BuiltValueField(wireName: r'id')
   String get id;
 
@@ -98,6 +103,13 @@ class _$TaxPackageSerializer implements PrimitiveSerializer<TaxPackage> {
     TaxPackage object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.vendorNames != null) {
+      yield r'vendor_names';
+      yield serializers.serialize(
+        object.vendorNames,
+        specifiedType: const FullType(BuiltMap, [FullType(String), FullType(String)]),
+      );
+    }
     yield r'id';
     yield serializers.serialize(
       object.id,
@@ -206,6 +218,14 @@ class _$TaxPackageSerializer implements PrimitiveSerializer<TaxPackage> {
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'vendor_names':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltMap, [FullType(String), FullType(String)]),
+          ) as BuiltMap<String, String>?;
+          if (valueDes == null) continue;
+          result.vendorNames.replace(valueDes);
+          break;
         case r'id':
           final valueDes = serializers.deserialize(
             value,

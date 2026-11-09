@@ -5,6 +5,9 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../generated/color_tokens.dart';
 import '../theme.dart';
+import 'async_state.dart';
+
+export 'async_state.dart';
 
 class BuyerDeliveryRecommendation extends StatelessWidget {
   const BuyerDeliveryRecommendation({super.key, required this.lines});
@@ -388,6 +391,20 @@ class StateMessage extends StatelessWidget {
       StateKind.forbidden => LucideIcons.lock,
       StateKind.empty => LucideIcons.searchX,
     };
+    if (kind == StateKind.offline ||
+        kind == StateKind.error ||
+        kind == StateKind.forbidden) {
+      return BuyerRequestState(
+        title: title,
+        message: message,
+        icon: icon,
+        actionLabel: actionLabel,
+        onAction: onAction,
+        secondaryLabel: secondaryLabel,
+        onSecondary: onSecondary,
+        compact: compact,
+      );
+    }
     final art =
         artwork ??
         switch (kind) {

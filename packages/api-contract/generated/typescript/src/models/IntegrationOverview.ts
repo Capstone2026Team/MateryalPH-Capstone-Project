@@ -20,6 +20,13 @@ import {
     ScheduledTaskHealthToJSON,
     ScheduledTaskHealthToJSONTyped,
 } from './ScheduledTaskHealth';
+import type { AutomaticRecoveryHealth } from './AutomaticRecoveryHealth';
+import {
+    AutomaticRecoveryHealthFromJSON,
+    AutomaticRecoveryHealthFromJSONTyped,
+    AutomaticRecoveryHealthToJSON,
+    AutomaticRecoveryHealthToJSONTyped,
+} from './AutomaticRecoveryHealth';
 import type { IntegrationStatus } from './IntegrationStatus';
 import {
     IntegrationStatusFromJSON,
@@ -29,7 +36,7 @@ import {
 } from './IntegrationStatus';
 
 /**
- * Configuration presence and masked labels only; credentials, payloads, recipients and exception messages never appear.
+ * Configuration presence and masked labels only; credentials, payloads, recipients and exception messages never appear. Hostinger VPS responses also include Backblaze B2, Cloudinary, Bouncer and reCAPTCHA checks, with Brevo SMTP and Firebase FCM configuration checked explicitly. Local or Render responses are not VPS provider health.
  * @export
  * @interface IntegrationOverview
  */
@@ -39,7 +46,7 @@ export interface IntegrationOverview {
      */
     generatedAt: Date;
     /**
-     *
+     * Safe app and commerce labels. deployment is HOSTINGER_VPS only for the staging API on the approved MateryalPH Duck DNS host pattern; OTHER responses must not be presented as VPS provider health.
      */
     environment: { [key: string]: any; };
     /**
@@ -50,6 +57,10 @@ export interface IntegrationOverview {
      *
      */
     queues: { [key: string]: any; };
+    /**
+     *
+     */
+    automaticRecovery?: AutomaticRecoveryHealth;
     /**
      *
      */
@@ -92,6 +103,7 @@ export function IntegrationOverviewFromJSONTyped(json: any, ignoreDiscriminator:
         'environment': json['environment'],
         'integrations': ((json['integrations'] as Array<any>).map(IntegrationStatusFromJSON)),
         'queues': json['queues'],
+        'automaticRecovery': json['automatic_recovery'] == null ? undefined : AutomaticRecoveryHealthFromJSON(json['automatic_recovery']),
         'scheduledTasks': ((json['scheduled_tasks'] as Array<any>).map(ScheduledTaskHealthFromJSON)),
         'analytics': json['analytics'],
         'canRetry': json['can_retry'],
@@ -113,6 +125,7 @@ export function IntegrationOverviewToJSONTyped(value?: IntegrationOverview | nul
         'environment': value['environment'],
         'integrations': ((value['integrations'] as Array<any>).map(IntegrationStatusToJSON)),
         'queues': value['queues'],
+        'automatic_recovery': AutomaticRecoveryHealthToJSON(value['automaticRecovery']),
         'scheduled_tasks': ((value['scheduledTasks'] as Array<any>).map(ScheduledTaskHealthToJSON)),
         'analytics': value['analytics'],
         'can_retry': value['canRetry'],

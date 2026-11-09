@@ -29,10 +29,44 @@ import {
     InvoiceLogEnvelopeToJSON,
 } from '../models/InvoiceLogEnvelope';
 import {
+    type InvoicePresetInput,
+    InvoicePresetInputFromJSON,
+    InvoicePresetInputToJSON,
+} from '../models/InvoicePresetInput';
+import {
+    type InvoiceSendInput,
+    InvoiceSendInputFromJSON,
+    InvoiceSendInputToJSON,
+} from '../models/InvoiceSendInput';
+import {
+    type VendorInvoicePresetEnvelope,
+    VendorInvoicePresetEnvelopeFromJSON,
+    VendorInvoicePresetEnvelopeToJSON,
+} from '../models/VendorInvoicePresetEnvelope';
+import {
     type VendorOrderInvoicesEnvelope,
     VendorOrderInvoicesEnvelopeFromJSON,
     VendorOrderInvoicesEnvelopeToJSON,
 } from '../models/VendorOrderInvoicesEnvelope';
+
+export interface DownloadVendorInvoiceDraftRequest {
+    /**
+     *
+     */
+    draftId: string;
+    /**
+     *
+     */
+    fileId: string;
+    /**
+     *
+     */
+    expires: number;
+    /**
+     *
+     */
+    signature: string;
+}
 
 export interface ExplainVendorInvoiceDifferenceRequest {
     /**
@@ -94,6 +128,32 @@ export interface ListVendorInvoicesRequest {
     to?: Date;
 }
 
+export interface SaveVendorInvoicePresetRequest {
+    /**
+     *
+     */
+    idempotencyKey: string;
+    /**
+     *
+     */
+    invoicePresetInput: InvoicePresetInput;
+}
+
+export interface SendVendorInvoiceRequest {
+    /**
+     *
+     */
+    orderId: string;
+    /**
+     *
+     */
+    idempotencyKey: string;
+    /**
+     *
+     */
+    invoiceSendInput: InvoiceSendInput;
+}
+
 export interface UploadVendorInvoiceRequest {
     /**
      *
@@ -132,9 +192,9 @@ export interface UploadVendorInvoiceRequest {
      */
     invoicingMethod: UploadVendorInvoiceInvoicingMethodEnum;
     /**
-     * PDF, JPG or PNG copy, validated and scanned fail-closed, stored privately.
+     * Current lock version; zero creates a new draft or preset.
      */
-    file: Blob;
+    lockVersion: number;
     /**
      *
      */
@@ -159,12 +219,95 @@ export interface UploadVendorInvoiceRequest {
      *
      */
     invoiceRequestId?: string;
+    /**
+     * PDF, JPG or PNG, validated and scanned fail-closed. Required for a new draft; omit to retain its current file.
+     */
+    file?: Blob;
 }
 
 /**
  *
  */
 export class VendorInvoicesApi extends runtime.BaseAPI {
+
+    /**
+     * Creates request options for downloadVendorInvoiceDraft without sending the request
+     */
+    async downloadVendorInvoiceDraftRequestOpts(requestParameters: DownloadVendorInvoiceDraftRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['draftId'] == null) {
+            throw new runtime.RequiredError(
+                'draftId',
+                'Required parameter "draftId" was null or undefined when calling downloadVendorInvoiceDraft().'
+            );
+        }
+
+        if (requestParameters['fileId'] == null) {
+            throw new runtime.RequiredError(
+                'fileId',
+                'Required parameter "fileId" was null or undefined when calling downloadVendorInvoiceDraft().'
+            );
+        }
+
+        if (requestParameters['expires'] == null) {
+            throw new runtime.RequiredError(
+                'expires',
+                'Required parameter "expires" was null or undefined when calling downloadVendorInvoiceDraft().'
+            );
+        }
+
+        if (requestParameters['signature'] == null) {
+            throw new runtime.RequiredError(
+                'signature',
+                'Required parameter "signature" was null or undefined when calling downloadVendorInvoiceDraft().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['expires'] != null) {
+            queryParameters['expires'] = requestParameters['expires'];
+        }
+
+        if (requestParameters['signature'] != null) {
+            queryParameters['signature'] = requestParameters['signature'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/vendor/invoice-drafts/{draftId}/files/{fileId}`;
+        urlPath = urlPath.replace('{draftId}', encodeURIComponent(String(requestParameters['draftId'])));
+        urlPath = urlPath.replace('{fileId}', encodeURIComponent(String(requestParameters['fileId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * invoices.upload. Authorized, short-lived private draft preview. Reauthorizes the current Vendor role, store, order and current file. A replaced file link fails closed. Never available to Buyers.
+     */
+    async downloadVendorInvoiceDraftRaw(requestParameters: DownloadVendorInvoiceDraftRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Blob>> {
+        const requestOptions = await this.downloadVendorInvoiceDraftRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.BlobApiResponse(response);
+    }
+
+    /**
+     * invoices.upload. Authorized, short-lived private draft preview. Reauthorizes the current Vendor role, store, order and current file. A replaced file link fails closed. Never available to Buyers.
+     */
+    async downloadVendorInvoiceDraft(requestParameters: DownloadVendorInvoiceDraftRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Blob> {
+        const response = await this.downloadVendorInvoiceDraftRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
 
     /**
      * Creates request options for explainVendorInvoiceDifference without sending the request
@@ -316,6 +459,47 @@ export class VendorInvoicesApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates request options for getVendorInvoicePreset without sending the request
+     */
+    async getVendorInvoicePresetRequestOpts(): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/vendor/invoices/preset`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * invoices.view. Returns the store invoice defaults and current lock_version. Invoice dates default to today in Asia/Manila.
+     */
+    async getVendorInvoicePresetRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorInvoicePresetEnvelope>> {
+        const requestOptions = await this.getVendorInvoicePresetRequestOpts();
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => VendorInvoicePresetEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * invoices.view. Returns the store invoice defaults and current lock_version. Invoice dates default to today in Asia/Manila.
+     */
+    async getVendorInvoicePreset(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorInvoicePresetEnvelope> {
+        const response = await this.getVendorInvoicePresetRaw(initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Creates request options for getVendorOrderInvoices without sending the request
      */
     async getVendorOrderInvoicesRequestOpts(requestParameters: GetVendorOrderInvoicesRequest): Promise<runtime.RequestOpts> {
@@ -404,7 +588,7 @@ export class VendorInvoicesApi extends runtime.BaseAPI {
     }
 
     /**
-     * invoices.view. Open requests, orders without an invoice copy yet, uploaded records and reconciliation items. Never Earnings or other protected finance.
+     * invoices.view. Open requests, orders without an invoice copy yet, uploaded records and reconciliation items. Never Earnings or other protected finance. Every Vendor list row includes its authorized order_id for opening the order invoice details.
      */
     async listVendorInvoicesRaw(requestParameters: ListVendorInvoicesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<InvoiceLogEnvelope>> {
         const requestOptions = await this.listVendorInvoicesRequestOpts(requestParameters);
@@ -414,10 +598,142 @@ export class VendorInvoicesApi extends runtime.BaseAPI {
     }
 
     /**
-     * invoices.view. Open requests, orders without an invoice copy yet, uploaded records and reconciliation items. Never Earnings or other protected finance.
+     * invoices.view. Open requests, orders without an invoice copy yet, uploaded records and reconciliation items. Never Earnings or other protected finance. Every Vendor list row includes its authorized order_id for opening the order invoice details.
      */
     async listVendorInvoices(requestParameters: ListVendorInvoicesRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<InvoiceLogEnvelope> {
         const response = await this.listVendorInvoicesRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for saveVendorInvoicePreset without sending the request
+     */
+    async saveVendorInvoicePresetRequestOpts(requestParameters: SaveVendorInvoicePresetRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['idempotencyKey'] == null) {
+            throw new runtime.RequiredError(
+                'idempotencyKey',
+                'Required parameter "idempotencyKey" was null or undefined when calling saveVendorInvoicePreset().'
+            );
+        }
+
+        if (requestParameters['invoicePresetInput'] == null) {
+            throw new runtime.RequiredError(
+                'invoicePresetInput',
+                'Required parameter "invoicePresetInput" was null or undefined when calling saveVendorInvoicePreset().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (requestParameters['idempotencyKey'] != null) {
+            headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
+        }
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/vendor/invoices/preset`;
+
+        return {
+            path: urlPath,
+            method: 'PUT',
+            headers: headerParameters,
+            query: queryParameters,
+            body: InvoicePresetInputToJSON(requestParameters['invoicePresetInput']),
+        };
+    }
+
+    /**
+     * invoices.upload. Saves the store invoice defaults with current lock_version and Idempotency-Key. Presets apply to future preparations only; sent records never change. Invoice dates default to today in Asia/Manila, while invoice numbers and amounts stay document-specific.
+     */
+    async saveVendorInvoicePresetRaw(requestParameters: SaveVendorInvoicePresetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorInvoicePresetEnvelope>> {
+        const requestOptions = await this.saveVendorInvoicePresetRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => VendorInvoicePresetEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * invoices.upload. Saves the store invoice defaults with current lock_version and Idempotency-Key. Presets apply to future preparations only; sent records never change. Invoice dates default to today in Asia/Manila, while invoice numbers and amounts stay document-specific.
+     */
+    async saveVendorInvoicePreset(requestParameters: SaveVendorInvoicePresetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorInvoicePresetEnvelope> {
+        const response = await this.saveVendorInvoicePresetRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for sendVendorInvoice without sending the request
+     */
+    async sendVendorInvoiceRequestOpts(requestParameters: SendVendorInvoiceRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['orderId'] == null) {
+            throw new runtime.RequiredError(
+                'orderId',
+                'Required parameter "orderId" was null or undefined when calling sendVendorInvoice().'
+            );
+        }
+
+        if (requestParameters['idempotencyKey'] == null) {
+            throw new runtime.RequiredError(
+                'idempotencyKey',
+                'Required parameter "idempotencyKey" was null or undefined when calling sendVendorInvoice().'
+            );
+        }
+
+        if (requestParameters['invoiceSendInput'] == null) {
+            throw new runtime.RequiredError(
+                'invoiceSendInput',
+                'Required parameter "invoiceSendInput" was null or undefined when calling sendVendorInvoice().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (requestParameters['idempotencyKey'] != null) {
+            headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
+        }
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/vendor/orders/{orderId}/invoices/send`;
+        urlPath = urlPath.replace('{orderId}', encodeURIComponent(String(requestParameters['orderId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: InvoiceSendInputToJSON(requestParameters['invoiceSendInput']),
+        };
+    }
+
+    /**
+     * invoices.upload. Sends the saved, clean draft exactly once, creates an immutable invoice version, fulfills the applicable Buyer request and notifies the Buyer after commit. The Buyer email includes the exact uploaded invoice file and a summary of the sent invoice. Delivery rechecks current Buyer access, clean private storage and attachment integrity. Requires the current lock_version. No file means no send. A sent version cannot be edited or resent with a new key until the Buyer returns it or requests a correction.
+     */
+    async sendVendorInvoiceRaw(requestParameters: SendVendorInvoiceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorOrderInvoicesEnvelope>> {
+        const requestOptions = await this.sendVendorInvoiceRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => VendorOrderInvoicesEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * invoices.upload. Sends the saved, clean draft exactly once, creates an immutable invoice version, fulfills the applicable Buyer request and notifies the Buyer after commit. The Buyer email includes the exact uploaded invoice file and a summary of the sent invoice. Delivery rechecks current Buyer access, clean private storage and attachment integrity. Requires the current lock_version. No file means no send. A sent version cannot be edited or resent with a new key until the Buyer returns it or requests a correction.
+     */
+    async sendVendorInvoice(requestParameters: SendVendorInvoiceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorOrderInvoicesEnvelope> {
+        const response = await this.sendVendorInvoiceRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -488,10 +804,10 @@ export class VendorInvoicesApi extends runtime.BaseAPI {
             );
         }
 
-        if (requestParameters['file'] == null) {
+        if (requestParameters['lockVersion'] == null) {
             throw new runtime.RequiredError(
-                'file',
-                'Required parameter "file" was null or undefined when calling uploadVendorInvoice().'
+                'lockVersion',
+                'Required parameter "lockVersion" was null or undefined when calling uploadVendorInvoice().'
             );
         }
 
@@ -579,6 +895,10 @@ export class VendorInvoicesApi extends runtime.BaseAPI {
             formParams.append('file', requestParameters['file'] as any);
         }
 
+        if (requestParameters['lockVersion'] != null) {
+            formParams.append('lock_version', requestParameters['lockVersion'] as any);
+        }
+
 
         let urlPath = `/vendor/orders/{orderId}/invoices`;
         urlPath = urlPath.replace('{orderId}', encodeURIComponent(String(requestParameters['orderId'])));
@@ -593,7 +913,7 @@ export class VendorInvoicesApi extends runtime.BaseAPI {
     }
 
     /**
-     * invoices.upload (Owner, Store Manager, Store Staff). Validates type and issuer; a total or VAT difference opens INVOICE_RECONCILIATION_REQUIRED without changing the accepted Buyer total.
+     * invoices.upload. Save or replace the private invoice draft with optimistic concurrency and Idempotency-Key. Uploading never sends to the Buyer. After Send, preparation is locked until the Buyer requests a correction or returns the latest copy. No accepted Buyer total changes.
      */
     async uploadVendorInvoiceRaw(requestParameters: UploadVendorInvoiceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorOrderInvoicesEnvelope>> {
         const requestOptions = await this.uploadVendorInvoiceRequestOpts(requestParameters);
@@ -603,7 +923,7 @@ export class VendorInvoicesApi extends runtime.BaseAPI {
     }
 
     /**
-     * invoices.upload (Owner, Store Manager, Store Staff). Validates type and issuer; a total or VAT difference opens INVOICE_RECONCILIATION_REQUIRED without changing the accepted Buyer total.
+     * invoices.upload. Save or replace the private invoice draft with optimistic concurrency and Idempotency-Key. Uploading never sends to the Buyer. After Send, preparation is locked until the Buyer requests a correction or returns the latest copy. No accepted Buyer total changes.
      */
     async uploadVendorInvoice(requestParameters: UploadVendorInvoiceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorOrderInvoicesEnvelope> {
         const response = await this.uploadVendorInvoiceRaw(requestParameters, initOverrides);

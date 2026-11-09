@@ -1,4 +1,4 @@
-import { ResponseError } from '@materyalph/api-client-ts'
+import { PublicFinanceApi, ResponseError } from '@materyalph/api-client-ts'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
@@ -112,14 +112,16 @@ describe('Vendor public portal', () => {
     expect(accept).not.toHaveBeenCalled()
   })
 
-  test('renders the approved opportunity, verification, and fee disclosures', () => {
+  test('renders the approved opportunity, verification, and current fee disclosures', async () => {
+    vi.spyOn(PublicFinanceApi.prototype, 'getPublicCommissionPolicy').mockResolvedValue({ data: { current: { id: 'policy-public', version: 2, commissionBasisPoints: 325, rateLabel: '3.25%', effectiveFrom: new Date(), status: 'CURRENT' } }, meta: {}, errors: [] })
     render(<App />)
 
     expect(screen.getByRole('heading', { name: 'Build your store’s next chapter.' })).toBeVisible()
     fireEvent.click(screen.getByRole('tab', { name: 'Your store and Buyers' }))
     fireEvent.click(screen.getByText('What does Vendor verification provide?'))
     expect(screen.getByText(/Tier 1 supplier is a directory presence only/i)).toBeVisible()
-    expect(screen.getByText('2% monthly example')).toBeVisible()
+    expect(await screen.findByText('3.25% monthly example')).toBeVisible()
+    expect(screen.getByText('₱4,550.00')).toBeVisible()
     expect(screen.queryByText(/TEST\/DEMO only/i)).not.toBeInTheDocument()
     expect(screen.getAllByRole('link', { name: /register your store/i }).at(0)).toHaveAttribute('href', '/register')
     expect(screen.getAllByRole('link', { name: 'Sign in' })[0]).toHaveAttribute('href', '/login')

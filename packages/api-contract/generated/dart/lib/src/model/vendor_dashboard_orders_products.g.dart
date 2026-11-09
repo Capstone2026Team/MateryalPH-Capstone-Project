@@ -8,6 +8,8 @@ part of 'vendor_dashboard_orders_products.dart';
 
 class _$VendorDashboardOrdersProducts extends VendorDashboardOrdersProducts {
   @override
+  final VendorProductSalesBreakdown? salesBreakdown;
+  @override
   final BuiltList<VendorDashboardProduct> top;
   @override
   final BuiltList<VendorDashboardOrdersProductsCategoriesInner> categories;
@@ -21,7 +23,8 @@ class _$VendorDashboardOrdersProducts extends VendorDashboardOrdersProducts {
       (VendorDashboardOrdersProductsBuilder()..update(updates))._build();
 
   _$VendorDashboardOrdersProducts._(
-      {required this.top,
+      {this.salesBreakdown,
+      required this.top,
       required this.categories,
       required this.segments,
       required this.basketRules})
@@ -39,6 +42,7 @@ class _$VendorDashboardOrdersProducts extends VendorDashboardOrdersProducts {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is VendorDashboardOrdersProducts &&
+        salesBreakdown == other.salesBreakdown &&
         top == other.top &&
         categories == other.categories &&
         segments == other.segments &&
@@ -48,6 +52,7 @@ class _$VendorDashboardOrdersProducts extends VendorDashboardOrdersProducts {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, salesBreakdown.hashCode);
     _$hash = $jc(_$hash, top.hashCode);
     _$hash = $jc(_$hash, categories.hashCode);
     _$hash = $jc(_$hash, segments.hashCode);
@@ -59,6 +64,7 @@ class _$VendorDashboardOrdersProducts extends VendorDashboardOrdersProducts {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'VendorDashboardOrdersProducts')
+          ..add('salesBreakdown', salesBreakdown)
           ..add('top', top)
           ..add('categories', categories)
           ..add('segments', segments)
@@ -72,6 +78,12 @@ class VendorDashboardOrdersProductsBuilder
         Builder<VendorDashboardOrdersProducts,
             VendorDashboardOrdersProductsBuilder> {
   _$VendorDashboardOrdersProducts? _$v;
+
+  VendorProductSalesBreakdownBuilder? _salesBreakdown;
+  VendorProductSalesBreakdownBuilder get salesBreakdown =>
+      _$this._salesBreakdown ??= VendorProductSalesBreakdownBuilder();
+  set salesBreakdown(VendorProductSalesBreakdownBuilder? salesBreakdown) =>
+      _$this._salesBreakdown = salesBreakdown;
 
   ListBuilder<VendorDashboardProduct>? _top;
   ListBuilder<VendorDashboardProduct> get top =>
@@ -107,6 +119,7 @@ class VendorDashboardOrdersProductsBuilder
   VendorDashboardOrdersProductsBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _salesBreakdown = $v.salesBreakdown?.toBuilder();
       _top = $v.top.toBuilder();
       _categories = $v.categories.toBuilder();
       _segments = $v.segments.toBuilder();
@@ -134,6 +147,7 @@ class VendorDashboardOrdersProductsBuilder
     try {
       _$result = _$v ??
           _$VendorDashboardOrdersProducts._(
+            salesBreakdown: _salesBreakdown?.build(),
             top: top.build(),
             categories: categories.build(),
             segments: segments.build(),
@@ -142,6 +156,8 @@ class VendorDashboardOrdersProductsBuilder
     } catch (_) {
       late String _$failedField;
       try {
+        _$failedField = 'salesBreakdown';
+        _salesBreakdown?.build();
         _$failedField = 'top';
         top.build();
         _$failedField = 'categories';

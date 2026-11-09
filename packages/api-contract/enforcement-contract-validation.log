@@ -1,0 +1,16 @@
+
+> @materyalph/api-contract@0.0.0 validate
+> openapi-generator-cli validate -i openapi.yaml
+
+Validating spec (openapi.yaml)
+Warnings: 
+	- Unused model: ActivationBlocker
+	- Unused model: FinancialSnapshot
+	- Unused model: FeeAssessment
+	- Unused model: VendorWorkstreams
+	- Unused model: MaterialPriceObservation
+	- Unused model: ActivationBlockerSource
+	- Unused model: ActivationRestrictions
+	- Unused model: AdminVendorVerificationDetail
+
+[info] Spec has 8 recommendation(s).

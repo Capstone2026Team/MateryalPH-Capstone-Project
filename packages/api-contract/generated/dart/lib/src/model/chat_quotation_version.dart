@@ -13,6 +13,7 @@ part 'chat_quotation_version.g.dart';
 /// ChatQuotationVersion
 ///
 /// Properties:
+/// * [conversationId] - Original inquiry for authorized quotation actions. The combined timeline never changes these commercial boundaries.
 /// * [requestedChanges] - Buyer's exact recorded counter-offer for this version, retained after revision. Omitted when no changes were requested. Only visible to authorized conversation participants.
 /// * [changeRequestedAt] - UTC ISO 8601 timestamp of the recorded counter-offer for this version.
 /// * [vendorResponseDueAt] - Exact recorded UTC ISO 8601 deadline for the Vendor to revise and republish. Historical requests retain their original deadline; it is active only while the version is current and COUNTERED.
@@ -30,8 +31,13 @@ part 'chat_quotation_version.g.dart';
 /// * [actions]
 /// * [quotationId]
 /// * [acceptedOrderId]
+/// * [replacesOrderId]
 @BuiltValue()
 abstract class ChatQuotationVersion implements Built<ChatQuotationVersion, ChatQuotationVersionBuilder> {
+  /// Original inquiry for authorized quotation actions. The combined timeline never changes these commercial boundaries.
+  @BuiltValueField(wireName: r'conversation_id')
+  String? get conversationId;
+
   /// Buyer's exact recorded counter-offer for this version, retained after revision. Omitted when no changes were requested. Only visible to authorized conversation participants.
   @BuiltValueField(wireName: r'requested_changes')
   String? get requestedChanges;
@@ -88,6 +94,9 @@ abstract class ChatQuotationVersion implements Built<ChatQuotationVersion, ChatQ
   @BuiltValueField(wireName: r'accepted_order_id')
   String? get acceptedOrderId;
 
+  @BuiltValueField(wireName: r'replaces_order_id')
+  String? get replacesOrderId;
+
   ChatQuotationVersion._();
 
   factory ChatQuotationVersion([void updates(ChatQuotationVersionBuilder b)]) = _$ChatQuotationVersion;
@@ -111,6 +120,13 @@ class _$ChatQuotationVersionSerializer implements PrimitiveSerializer<ChatQuotat
     ChatQuotationVersion object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.conversationId != null) {
+      yield r'conversation_id';
+      yield serializers.serialize(
+        object.conversationId,
+        specifiedType: const FullType(String),
+      );
+    }
     if (object.requestedChanges != null) {
       yield r'requested_changes';
       yield serializers.serialize(
@@ -210,6 +226,13 @@ class _$ChatQuotationVersionSerializer implements PrimitiveSerializer<ChatQuotat
         specifiedType: const FullType(String),
       );
     }
+    if (object.replacesOrderId != null) {
+      yield r'replaces_order_id';
+      yield serializers.serialize(
+        object.replacesOrderId,
+        specifiedType: const FullType(String),
+      );
+    }
   }
 
   @override
@@ -233,6 +256,14 @@ class _$ChatQuotationVersionSerializer implements PrimitiveSerializer<ChatQuotat
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'conversation_id':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.conversationId = valueDes;
+          break;
         case r'requested_changes':
           final valueDes = serializers.deserialize(
             value,
@@ -358,6 +389,14 @@ class _$ChatQuotationVersionSerializer implements PrimitiveSerializer<ChatQuotat
           ) as String?;
           if (valueDes == null) continue;
           result.acceptedOrderId = valueDes;
+          break;
+        case r'replaces_order_id':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.replacesOrderId = valueDes;
           break;
         default:
           unhandled.add(key);

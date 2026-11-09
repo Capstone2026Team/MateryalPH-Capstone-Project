@@ -3,6 +3,7 @@ import type { ReviewRatings } from '@materyalph/api-client-ts'
 import { StarRatingDisplay, StarRatingInput } from './analytics-patterns'
 import { Button } from './button'
 import { StatusMessage } from './status-message'
+import { Star } from 'lucide-react'
 
 export type BuyerRatingValues = {
   inquirySeriousness: number | null
@@ -73,9 +74,14 @@ export function BuyerRatingForm({ initialValues, editing = false, commentMax = 1
 }
 
 /** The same criterion labels for received reviews, store submissions and order summaries. */
-export function ReviewRatingSummary({ ratings: given }: { ratings: ReviewRatings | undefined | null }) {
+export function reviewRatingEntries(given: ReviewRatings | undefined | null): [string, number][] {
   const ratings = given ?? {}
   const entries: [string, number | undefined][] = [['Service Quality', ratings.serviceQuality], [ratings.speedKind === 'DELIVERY_SPEED' ? 'Delivery Speed' : 'Processing Speed', ratings.speedRating], ['Product Quality', ratings.productQuality],
     ['Inquiry Seriousness', ratings.inquirySeriousness], ['Communication Quality', ratings.communicationQuality], ['Payment Reliability', ratings.paymentReliability]]
-  return <span className="flex min-w-0 flex-wrap gap-x-6 gap-y-2">{entries.filter((entry): entry is [string, number] => typeof entry[1] === 'number').map(([label, value]) => <span key={label} className="inline-flex flex-wrap items-center gap-2 text-sm"><span className="text-text-secondary">{label}</span><StarRatingDisplay value={value} label={label} /></span>)}</span>
+  return entries.filter((entry): entry is [string, number] => typeof entry[1] === 'number' && Number.isFinite(entry[1]))
+}
+
+export function ReviewRatingSummary({ ratings, compact = false }: { ratings: ReviewRatings | undefined | null; compact?: boolean }) {
+  const entries = reviewRatingEntries(ratings)
+  return <span className={compact ? 'mp-review-card-criteria' : 'flex min-w-0 flex-wrap gap-x-6 gap-y-2'}>{entries.map(([label, value]) => <span key={label} className={compact ? 'mp-review-criterion' : 'inline-flex flex-wrap items-center gap-2 text-sm'}><span className="text-text-secondary">{label}</span>{compact ? <span className="inline-flex shrink-0 items-center gap-1 font-semibold tabular-nums"><Star size={13} className="fill-brand-orange-500 text-brand-orange-500" aria-hidden="true" />{value}<span className="font-normal text-text-secondary">/5</span></span> : <StarRatingDisplay value={value} label={label} />}</span>)}</span>
 }

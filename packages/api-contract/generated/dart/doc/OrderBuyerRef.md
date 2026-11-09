@@ -9,6 +9,7 @@ import 'package:materyalph_api_client/api.dart';
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **displayName** | **String** |  |
+**profilePhotoPath** | **String** | Private version-bound order-view photo path, including pickup and closed orders. Does not grant delivery phone/contact access. | [optional]
 **mobileE164** | **String** | Current Buyer phone for delivery coordination. Only Owner/Manager or current active assigned Fulfillment Staff on an accepted, open Site Delivery order receives it. Other roles and closed/pickup orders receive null. | [optional]
 **avatarPath** | **String** | Authorized order-scoped API photo path with the Buyer profile version. Uses the same delivery-contact authorization as mobile_e164; never a public storage URL. Null when the Buyer has no photo or contact is unavailable. | [optional]
 

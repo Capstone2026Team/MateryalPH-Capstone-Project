@@ -6,20 +6,14 @@ part of 'review_display_option.dart';
 // BuiltValueGenerator
 // **************************************************************************
 
-const ReviewDisplayOptionChoiceEnum
-    _$reviewDisplayOptionChoiceEnum_FIRST_NAME_LAST_INITIAL =
-    const ReviewDisplayOptionChoiceEnum._('FIRST_NAME_LAST_INITIAL');
-const ReviewDisplayOptionChoiceEnum
-    _$reviewDisplayOptionChoiceEnum_VERIFIED_BUYER =
-    const ReviewDisplayOptionChoiceEnum._('VERIFIED_BUYER');
+const ReviewDisplayOptionChoiceEnum _$reviewDisplayOptionChoiceEnum_FULL_NAME =
+    const ReviewDisplayOptionChoiceEnum._('FULL_NAME');
 
 ReviewDisplayOptionChoiceEnum _$reviewDisplayOptionChoiceEnumValueOf(
     String name) {
   switch (name) {
-    case 'FIRST_NAME_LAST_INITIAL':
-      return _$reviewDisplayOptionChoiceEnum_FIRST_NAME_LAST_INITIAL;
-    case 'VERIFIED_BUYER':
-      return _$reviewDisplayOptionChoiceEnum_VERIFIED_BUYER;
+    case 'FULL_NAME':
+      return _$reviewDisplayOptionChoiceEnum_FULL_NAME;
     default:
       throw ArgumentError(name);
   }
@@ -28,8 +22,7 @@ ReviewDisplayOptionChoiceEnum _$reviewDisplayOptionChoiceEnumValueOf(
 final BuiltSet<ReviewDisplayOptionChoiceEnum>
     _$reviewDisplayOptionChoiceEnumValues = BuiltSet<
         ReviewDisplayOptionChoiceEnum>(const <ReviewDisplayOptionChoiceEnum>[
-  _$reviewDisplayOptionChoiceEnum_FIRST_NAME_LAST_INITIAL,
-  _$reviewDisplayOptionChoiceEnum_VERIFIED_BUYER,
+  _$reviewDisplayOptionChoiceEnum_FULL_NAME,
 ]);
 
 Serializer<ReviewDisplayOptionChoiceEnum>
@@ -39,12 +32,10 @@ Serializer<ReviewDisplayOptionChoiceEnum>
 class _$ReviewDisplayOptionChoiceEnumSerializer
     implements PrimitiveSerializer<ReviewDisplayOptionChoiceEnum> {
   static const Map<String, Object> _toWire = const <String, Object>{
-    'FIRST_NAME_LAST_INITIAL': 'FIRST_NAME_LAST_INITIAL',
-    'VERIFIED_BUYER': 'VERIFIED_BUYER',
+    'FULL_NAME': 'FULL_NAME',
   };
   static const Map<Object, String> _fromWire = const <Object, String>{
-    'FIRST_NAME_LAST_INITIAL': 'FIRST_NAME_LAST_INITIAL',
-    'VERIFIED_BUYER': 'VERIFIED_BUYER',
+    'FULL_NAME': 'FULL_NAME',
   };
 
   @override

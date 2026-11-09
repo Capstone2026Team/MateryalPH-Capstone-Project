@@ -6,6 +6,7 @@
 
 Name | Type
 ------------ | -------------
+`orderId` | string
 `id` | string
 `orderReference` | string
 `vendorName` | string
@@ -25,6 +26,7 @@ import type { AdminReimbursementRow } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "orderId": null,
   "id": null,
   "orderReference": null,
   "vendorName": null,

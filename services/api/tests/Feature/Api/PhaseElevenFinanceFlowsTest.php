@@ -4,27 +4,42 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
+use App\Domain\Finance\CommissionEmails;
 use App\Domain\Finance\CommissionPolicyService;
 use App\Domain\Finance\FeeAssessmentService;
+use App\Domain\Finance\FinanceNotifier;
 use App\Domain\Finance\FinancialLedgerService;
+use App\Domain\Finance\PlatformFeeInvoiceService;
 use App\Domain\Finance\StatementService;
 use App\Domain\Geography\PlacesProvider;
 use App\Domain\Geography\RouteProvider;
 use App\Domain\Identity\TokenSessionService;
+use App\Domain\Notifications\MailProvider;
+use App\Domain\Notifications\NotificationDelivery;
+use App\Domain\Operations\OutboxProcessor;
 use App\Domain\Payments\RefundService;
+use App\Domain\Payments\XenditWebhookProcessor;
 use App\Domain\Reporting\DocumentExportService;
+use App\Domain\Reporting\DocumentSnapshot;
+use App\Domain\Reporting\ExportAccess;
 use App\Domain\Vendors\AddressGeocoder;
 use App\Domain\Vendors\VendorFileScanner;
+use App\Mail\CommissionPolicyMail;
+use App\Mail\PlatformFeeInvoiceMail;
 use App\Models\AuthSession;
 use App\Models\User;
+use App\Models\VendorOrganization;
 use Carbon\CarbonImmutable;
 use Database\Seeders\SystemFoundationSeeder;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Laravel\Passport\AccessToken;
@@ -52,6 +67,8 @@ final class PhaseElevenFinanceFlowsTest extends TestCase
     {
         parent::setUp();
         $this->seed(SystemFoundationSeeder::class);
+        // These existing accounting tests exercise configurable immediate publishing. Notice defaults are covered separately.
+        config()->set('finance.commission_min_notice_days', 0);
         config()->set('materyalph.files.disk', 'local');
         config()->set('services.cloudinary.cloud_name', '');
         Storage::fake('local');
@@ -180,11 +197,8 @@ final class PhaseElevenFinanceFlowsTest extends TestCase
         self::assertNotNull(DB::table('physical_payment_records')->where('id', $record['id'])->value('buyer_acknowledged_at'));
         self::assertSame([0, 0, 'NOT_REQUIRED'], [DB::table('payments')->count(), DB::table('remittance_assessments')->count(), (string) DB::table('orders')->where('id', $orderId)->value('payment_state')],
             'Direct cash never creates an online success or a platform CWT event.');
-        $export = $this->postJson('/api/v1/buyers/reports', ['type' => 'PAYMENT_CONFIRMATION', 'resource_id' => $orderId, 'format' => 'CSV', 'purpose' => 'Review recorded physical payment'], ['Idempotency-Key' => (string) Str::uuid7()])->assertAccepted()->json('data');
-        app(DocumentExportService::class)->process($export['id']);
-        $document = $this->get('/api/v1/buyers/reports/'.$export['id'].'/download')->assertOk()->streamedContent();
-        self::assertStringContainsString('Vendor-recorded physical payment', $document);
-        self::assertStringNotContainsString('receipt.png', $document);
+        $this->postJson('/api/v1/buyers/reports', ['type' => 'PAYMENT_CONFIRMATION', 'resource_id' => $orderId, 'format' => 'CSV', 'purpose' => 'Retired payment document request'], ['Idempotency-Key' => (string) Str::uuid7()])->assertUnprocessable();
+        self::assertSame(0, DB::table('order_documents')->where('order_id', $orderId)->where('kind', 'PAYMENT_CONFIRMATION')->count());
     }
 
     public function test_nrpc_assurance_and_online_balance_are_counted_once_and_assessed_separately(): void
@@ -247,6 +261,206 @@ final class PhaseElevenFinanceFlowsTest extends TestCase
         self::assertSame(0, collect($kpis['finance'])->firstWhere('key', 'net_collected')['value_centavos'], 'Buyer payments to the Vendor account are never platform-held funds.');
     }
 
+    public function test_publishing_a_statement_emails_one_immutable_private_platform_invoice_with_retry_and_owner_checks(): void
+    {
+        Queue::fake();
+        Mail::fake();
+        config()->set('mail.delivery_not_before', null);
+        CarbonImmutable::setTestNow(CarbonImmutable::create(2026, 10, 20, 10, 0, 0, 'Asia/Manila'));
+        Carbon::setTestNow(CarbonImmutable::now());
+        [$store, $owner, $buyer, $orderId] = $this->awaitingPayment('Platform Invoice Hardware');
+        $manager = $this->teamMember($store, 'STORE_MANAGER');
+        $attempt = $this->startPayment($buyer, $orderId);
+        $this->completePayment($attempt['id'])->assertOk();
+        DB::table('orders')->where('id', $orderId)->update(['order_state' => 'COMPLETED', 'fulfillment_state' => 'PICKED_UP', 'closed_at' => now()]);
+        app(FeeAssessmentService::class)->earnOnCompletion($orderId, (string) Str::uuid7());
+        CarbonImmutable::setTestNow(CarbonImmutable::create(2026, 11, 1, 0, 5, 0, 'Asia/Manila'));
+        Carbon::setTestNow(CarbonImmutable::now());
+        app(StatementService::class)->draftMonthly(CarbonImmutable::now());
+        $statement = DB::table('fee_statements')->where('vendor_organization_id', $store->id)->first();
+        self::assertNull($statement->issued_invoice_snapshot);
+        self::assertSame(0, DB::table('outbox_events')->where('event_type', PlatformFeeInvoiceService::TEMPLATE)->count());
+        Mail::assertNotSent(PlatformFeeInvoiceMail::class);
+
+        $reviewer = $this->admin('ADMIN_SUPERADMIN');
+        $invoiceUrl = '/api/v1/admin/finance/statements/'.$statement->id.'/invoice';
+        $input = ['lock_version' => 1, 'invoice_heading' => 'October commission invoice', 'invoice_message' => 'Thank you for your completed orders. <script>unsafe</script>'];
+        $this->signInAdmin($this->admin('ADMIN_SUPPORT'));
+        $this->putJson($invoiceUrl, $input, ['Idempotency-Key' => (string) Str::uuid7()])->assertForbidden();
+        $this->signInAdmin($reviewer);
+        $this->putJson($invoiceUrl, $input)->assertUnprocessable();
+        $key = (string) Str::uuid7();
+        $this->putJson($invoiceUrl, $input, ['Idempotency-Key' => $key])->assertOk()->assertJsonPath('data.lock_version', 2)->assertJsonPath('data.invoice_heading', 'October commission invoice')->assertJsonPath('data.charges_centavos', 20000);
+        $this->putJson($invoiceUrl, $input, ['Idempotency-Key' => $key])->assertOk()->assertJsonPath('data.lock_version', 2);
+        $this->putJson($invoiceUrl, $input, ['Idempotency-Key' => (string) Str::uuid7()])->assertConflict()->assertJsonPath('errors.0.code', 'VERSION_CONFLICT');
+        $this->putJson($invoiceUrl, [...$input, 'invoice_message' => str_repeat('x', 1001)], ['Idempotency-Key' => (string) Str::uuid7()])->assertUnprocessable();
+        self::assertNull(DB::table('fee_statements')->where('id', $statement->id)->value('issued_invoice_snapshot'));
+        Mail::assertNotSent(PlatformFeeInvoiceMail::class);
+        $issued = app(StatementService::class)->approve((string) $statement->id, (int) $reviewer->id, 2);
+        $this->putJson($invoiceUrl, [...$input, 'lock_version' => 3], ['Idempotency-Key' => (string) Str::uuid7()])->assertConflict()->assertJsonPath('errors.0.code', 'STATEMENT_NOT_DRAFT');
+        self::assertNotNull($issued->issued_invoice_snapshot);
+        self::assertSame(0, DB::table('invoice_records')->where('fee_statement_id', $statement->id)->count(), 'Publication captures the source; the worker generates the PDF after commit.');
+        $event = DB::table('outbox_events')->where('event_type', PlatformFeeInvoiceService::TEMPLATE)->sole();
+        app(OutboxProcessor::class)->process((string) $event->id);
+        app(OutboxProcessor::class)->process((string) $event->id);
+        $delivery = DB::table('notification_deliveries')->where('template', PlatformFeeInvoiceService::TEMPLATE)->where('channel', 'EMAIL')->sole();
+        $notice = DB::table('notifications')->where('id', $delivery->notification_id)->first();
+        self::assertSame((int) $owner->id, (int) $notice->user_id);
+        self::assertNull(app(PlatformFeeInvoiceService::class)->mail($manager, $notice));
+        $mail = app(PlatformFeeInvoiceService::class)->mail($owner, $notice);
+        self::assertInstanceOf(PlatformFeeInvoiceMail::class, $mail);
+        self::assertSame('Platform Invoice Hardware', $mail->invoice['billing_name']);
+        self::assertSame(20000, $mail->invoice['total_centavos']);
+        self::assertStringContainsString('Download', $mail->render());
+        self::assertStringContainsString('SAMPLE', $mail->render());
+        self::assertStringContainsString('/finance/commissions', $mail->render());
+        self::assertSame('October commission invoice', $mail->invoice['heading']);
+        self::assertSame($input['invoice_message'], $mail->invoice['message']);
+        self::assertStringContainsString('October commission invoice', $mail->render());
+        self::assertStringNotContainsString('<script>unsafe</script>', $mail->render());
+        $record = DB::table('invoice_records')->where('fee_statement_id', $statement->id)->sole();
+        $file = DB::table('files')->where('id', $record->file_id)->first();
+        self::assertSame(['PLATFORM_SERVICE_INVOICE', 'PLATFORM_SAMPLE', 'TEST', 'PRIVATE', 'FEE_STATEMENT'], [$record->invoice_type, $record->document_origin, $record->environment, $file->visibility, $file->owner_type]);
+        $bytes = Storage::disk('local')->get($file->object_key);
+        self::assertStringStartsWith('%PDF-', $bytes);
+        self::assertSame(hash('sha256', $bytes), $record->content_hash);
+        $mail->assertHasAttachedData($bytes, $file->original_name, ['mime' => 'application/pdf']);
+        DB::table('vendor_organizations')->where('id', $store->id)->update(['store_name' => 'Renamed after publication']);
+        self::assertSame('Platform Invoice Hardware', app(PlatformFeeInvoiceService::class)->mail($owner, $notice)->invoice['billing_name']);
+        try {
+            DB::transaction(fn () => DB::table('fee_statements')->where('id', $statement->id)->update(['issued_invoice_snapshot' => '{}']));
+            self::fail('Published invoice snapshots must be immutable.');
+        } catch (QueryException) {
+            self::assertSame($issued->issued_invoice_hash, DB::table('fee_statements')->where('id', $statement->id)->value('issued_invoice_hash'));
+        }
+        Storage::disk('local')->put($file->object_key, 'Corrupt attachment fixture');
+        try {
+            app(NotificationDelivery::class)->send((string) $delivery->id);
+            self::fail('Corrupt attachments must fail closed.');
+        } catch (\RuntimeException) {
+            self::assertSame('RETRY', DB::table('notification_deliveries')->where('id', $delivery->id)->value('state'));
+            Mail::assertNotSent(PlatformFeeInvoiceMail::class);
+        }
+        Storage::disk('local')->put($file->object_key, $bytes);
+        app(NotificationDelivery::class)->send((string) $delivery->id);
+        app(NotificationDelivery::class)->send((string) $delivery->id);
+        Mail::assertSent(PlatformFeeInvoiceMail::class, 1);
+        self::assertSame(1, DB::table('invoice_records')->where('fee_statement_id', $statement->id)->count());
+        self::assertSame('SENT', DB::table('notification_deliveries')->where('id', $delivery->id)->value('state'));
+        DB::table('vendor_memberships')->where('user_id', $owner->id)->update(['status' => 'SUSPENDED']);
+        self::assertNull(app(PlatformFeeInvoiceService::class)->mail($owner, $notice));
+    }
+
+    public function test_commission_transactions_exclude_buyer_pending_and_late_payments_and_use_paid_dates(): void
+    {
+        Queue::fake();
+        [$owner, $assessmentId, $statement, $preparer, $reviewer] = $this->issuedCommission();
+        $this->signInStoreMember($owner);
+        $attempt = $this->postJson('/api/v1/vendor/finance/statements/'.$statement->id.'/payments', ['channel_code' => 'GCASH', 'amount_centavos' => 10000], ['Idempotency-Key' => (string) Str::uuid7()])->assertCreated()->json('data');
+        $this->completePayment($attempt['id'])->assertOk();
+        $this->postJson('/api/v1/vendor/finance/statements/'.$statement->id.'/payments', ['channel_code' => 'GCASH'], ['Idempotency-Key' => (string) Str::uuid7()])->assertCreated();
+        DB::table('payments')->where('id', $attempt['id'])->update(['created_at' => '2026-10-31 15:59:00+00', 'paid_at' => '2026-11-02 16:01:00+00']);
+        $this->signInAdmin($reviewer);
+        $url = '/api/v1/admin/finance/commission-transactions';
+        $this->getJson($url.'?from=2026-11-03&to=2026-11-03')->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('data.0.id', $attempt['id'])->assertJsonPath('data.0.purpose', 'PLATFORM_FEE_PAYMENT')->assertJsonPath('data.0.account_scope', 'PLATFORM_ACCOUNT')
+            ->assertJsonPath('data.0.total_centavos', 10000)->assertJsonPath('data.0.evidence_origin', 'SIMULATED');
+        $this->getJson($url.'?from=2026-10-31&to=2026-10-31')->assertOk()->assertJsonCount(0, 'data');
+        $this->getJson($url.'?page=2')->assertOk()->assertJsonCount(0, 'data')->assertJsonPath('meta.total', 1);
+        $this->getJson($url.'?from=invalid')->assertUnprocessable();
+        $this->getJson($url.'?status=PAID')->assertOk()->assertJsonPath('meta.total', 1);
+        $this->getJson($url.'?status=PAID_REFUNDED')->assertOk()->assertJsonPath('meta.total', 0);
+        $this->getJson($url.'?status=PENDING')->assertUnprocessable();
+        $request = Request::create('/');
+        $request->setUserResolver(fn () => $reviewer);
+        self::assertTrue(app(ExportAccess::class)->allows($reviewer, 'TRANSACTION_HISTORY', null));
+        $report = app(DocumentSnapshot::class)->capture($request, 'TRANSACTION_HISTORY', null, ['from' => '2026-11-03', 'to' => '2026-11-03', 'status' => 'PAID']);
+        self::assertCount(3, $report['rows']);
+        self::assertSame('100.00', $report['rows'][2][5]);
+        self::assertSame('100.00', $report['rows'][2][7]);
+        $empty = app(DocumentSnapshot::class)->capture($request, 'TRANSACTION_HISTORY', null, ['from' => '2026-10-31', 'to' => '2026-10-31']);
+        self::assertCount(2, $empty['rows']);
+        $adjustmentId = $this->approveReturn($assessmentId, 600000, $preparer, $reviewer);
+        $refund = DB::table('refunds')->where('fee_adjustment_id', $adjustmentId)->first();
+        $this->getJson($url.'?status=PAID_REFUND_PENDING')->assertOk()->assertJsonPath('meta.total', 1);
+        app(RefundService::class)->send((string) $refund->id, (string) Str::uuid7());
+        $providerId = (string) DB::table('refunds')->where('id', $refund->id)->value('provider_reference');
+        $this->deliverWebhook($this->gateway->settleRefund($providerId), 'commission-filter-refund')->assertOk();
+        $eventId = DB::table('webhook_events')->where('provider_event_id', 'wh:commission-filter-refund')->value('id');
+        app(XenditWebhookProcessor::class)->process((string) $eventId);
+        $this->signInAdmin($reviewer);
+        $this->getJson($url.'?status=PAID_PARTIALLY_REFUNDED')->assertOk()->assertJsonPath('meta.total', 1)->assertJsonPath('data.0.net_collected_centavos', 8000);
+        $this->getJson($url.'?status=PAID')->assertOk()->assertJsonPath('meta.total', 0);
+        DB::table('payments')->where('id', $attempt['id'])->update(['late_capture' => true]);
+        $this->getJson($url)->assertOk()->assertJsonPath('meta.total', 0);
+        $support = $this->admin('ADMIN_SUPPORT');
+        self::assertFalse(app(ExportAccess::class)->allows($support, 'TRANSACTION_HISTORY', null));
+        $this->signInAdmin($support);
+        $this->getJson($url)->assertForbidden();
+        $this->signInStoreMember($owner);
+        $this->getJson($url)->assertForbidden();
+    }
+
+    public function test_paid_statement_history_filters_before_pagination_and_exports_with_owner_scope(): void
+    {
+        Queue::fake();
+        [$owner, , $statement] = $this->issuedCommission();
+        $original = (array) DB::table('fee_statements')->where('id', $statement->id)->first();
+        $make = function (string $state, int $version, string $issuedOn = '2026-11-02') use ($original): array {
+            $row = $original;
+            $row['id'] = (string) Str::uuid7();
+            $row['statement_reference'] = 'SAMPLE-HISTORY-'.$version;
+            $row['version'] = $version;
+            $row['state'] = $state;
+            $row['issued_on'] = $issuedOn;
+            $row['issued_invoice_snapshot'] = $row['issued_invoice_hash'] = null;
+            $row['paid_centavos'] = $state === 'PAID' ? $row['charges_centavos'] - $row['credits_centavos'] : ($state === 'PARTIALLY_PAID' ? 100 : 0);
+            $row['outstanding_centavos'] = $row['balance_centavos'] = $row['charges_centavos'] - $row['credits_centavos'] - $row['paid_centavos'];
+            if (in_array($state, ['DRAFT', 'VOIDED'], true)) {
+                $row['approved_at'] = $row['approved_by_user_id'] = $row['issued_at'] = null;
+            }
+
+            return $row;
+        };
+        for ($index = 2; $index <= 28; $index++) {
+            DB::table('fee_statements')->insert($make('PAID', $index));
+        }
+        DB::table('fee_statements')->insert($make('PAID', 29, '2026-09-30'));
+        DB::table('fee_statements')->insert($make('PARTIALLY_PAID', 30));
+        DB::table('fee_statements')->insert($make('VOIDED', 31));
+        DB::table('fee_statements')->insert($make('DRAFT', 32));
+        [$otherStore, $otherOwner] = $this->activeStore('Other History Store', false);
+        $foreign = $make('PAID', 33);
+        $foreign['vendor_organization_id'] = $otherStore->id;
+        DB::table('fee_statements')->insert($foreign);
+
+        $this->signInStoreMember($owner);
+        $query = '/api/v1/vendor/finance/transactions?tab=STATEMENTS&statement_state=PAID&from=2026-11-01&to=2026-11-30';
+        $first = $this->getJson($query)->assertOk()->assertJsonPath('meta.total', 27)->assertJsonPath('meta.has_more', true)->assertJsonCount(20, 'data')->json('data');
+        $second = $this->getJson($query.'&page=2')->assertOk()->assertJsonPath('meta.total', 27)->assertJsonPath('meta.has_more', false)->assertJsonCount(7, 'data')->json('data');
+        self::assertSame(['PAID'], collect([...$first, ...$second])->pluck('state')->unique()->all());
+        self::assertCount(27, collect([...$first, ...$second])->pluck('id')->unique());
+        $this->getJson('/api/v1/vendor/finance/transactions?tab=STATEMENTS&statement_state=NOT_PAID')->assertOk()->assertJsonPath('meta.total', 3);
+        $this->getJson('/api/v1/vendor/finance/transactions?tab=STATEMENTS&statement_state=UNKNOWN')->assertUnprocessable();
+        $csv = $this->get('/api/v1/vendor/finance/transactions/export?tab=STATEMENTS&statement_state=PAID&from=2026-11-01&to=2026-11-30')->assertOk()->streamedContent();
+        self::assertStringContainsString('SAMPLE-HISTORY-2', $csv);
+        foreach ([29, 30, 31, 32, 33] as $excluded) {
+            self::assertStringNotContainsString('SAMPLE-HISTORY-'.$excluded, $csv);
+        }
+        $export = $this->postJson('/api/v1/vendor/reports', ['type' => 'TRANSACTION_HISTORY', 'format' => 'CSV', 'purpose' => 'Review paid commission statement history',
+            'filters' => ['tab' => 'STATEMENTS', 'statement_state' => 'PAID', 'from' => '2026-11-01', 'to' => '2026-11-30']], ['Idempotency-Key' => (string) Str::uuid7()])->assertAccepted()->json('data');
+        app(DocumentExportService::class)->process($export['id']);
+        $report = $this->get('/api/v1/vendor/reports/'.$export['id'].'/download')->assertOk()->streamedContent();
+        self::assertStringContainsString('SAMPLE-HISTORY-2', $report);
+        self::assertStringNotContainsString('SAMPLE-HISTORY-29', $report);
+        self::assertStringNotContainsString('SAMPLE-HISTORY-30', $report);
+        $this->signInStoreMember($this->teamMember(VendorOrganization::query()->findOrFail($original['vendor_organization_id']), 'STORE_MANAGER'));
+        $this->getJson($query)->assertForbidden();
+        $this->get('/api/v1/vendor/finance/transactions/export?tab=STATEMENTS&statement_state=PAID')->assertForbidden();
+        $this->signInStoreMember($otherOwner);
+        $this->getJson($query)->assertOk()->assertJsonPath('meta.total', 1)->assertJsonPath('data.0.id', $foreign['id']);
+    }
+
     public function test_monthly_statement_is_drafted_approved_by_a_reviewer_and_paid_by_the_owner_in_installments(): void
     {
         CarbonImmutable::setTestNow(CarbonImmutable::create(2026, 10, 20, 10, 0, 0, 'Asia/Manila'));
@@ -289,6 +503,8 @@ final class PhaseElevenFinanceFlowsTest extends TestCase
         $this->signInStoreMember($owner);
         self::assertSame(0, collect($view['channels'])->firstWhere('code', 'GCASH')['fee_centavos'], 'The platform absorbs its own bill processing charge.');
         $first = $this->postJson('/api/v1/vendor/finance/statements/'.$statement->id.'/payments', ['channel_code' => 'GCASH', 'amount_centavos' => 5000], ['Idempotency-Key' => (string) Str::uuid7()])->assertCreated()->json('data');
+        $issuedNotice = DB::table('notifications')->where('user_id', $owner->id)->where('resource_type', 'FEE_STATEMENT')->where('resource_id', $statement->id)->sole();
+        self::assertContains($issuedNotice->id, array_column($this->getJson('/api/v1/vendor/finance')->assertOk()->json('data.notices'), 'id'), 'A pending payment does not clear the statement notice.');
         $payment = DB::table('payments')->where('id', $first['id'])->first();
         self::assertSame(['PLATFORM_FEE_PAYMENT', 'PLATFORM_ACCOUNT', null, 0, 5000], [$payment->purpose, $payment->account_scope, $payment->provider_account_id, (int) $payment->processing_fee_centavos, (int) $payment->total_centavos]);
         self::assertEqualsWithDelta(45, CarbonImmutable::parse((string) $payment->created_at)->diffInMinutes(CarbonImmutable::parse((string) $payment->expires_at)), 0.1);
@@ -296,19 +512,70 @@ final class PhaseElevenFinanceFlowsTest extends TestCase
             ->assertStatus(409)->assertJsonPath('errors.0.code', 'PAYMENT_ATTEMPT_IN_PROGRESS');
         $this->completePayment($first['id'])->assertOk();
         self::assertSame(['PARTIALLY_PAID', 15000], [(string) DB::table('fee_statements')->where('id', $statement->id)->value('state'), (int) DB::table('fee_statements')->where('id', $statement->id)->value('outstanding_centavos')]);
+        self::assertContains($issuedNotice->id, array_column($this->getJson('/api/v1/vendor/finance')->assertOk()->json('data.notices'), 'id'), 'A partial payment keeps the statement notice visible.');
+
+        CarbonImmutable::setTestNow(CarbonImmutable::create(2026, 11, 15, 10, 0, 0, 'Asia/Manila'));
+        Carbon::setTestNow(CarbonImmutable::now());
+        self::assertSame(1, app(StatementService::class)->overdueScan(CarbonImmutable::now()));
+        CarbonImmutable::setTestNow(CarbonImmutable::now()->addDays(7));
+        Carbon::setTestNow(CarbonImmutable::now());
+        self::assertSame(1, app(StatementService::class)->overdueScan(CarbonImmutable::now()));
+        $statementNotices = DB::table('notifications')->where('user_id', $owner->id)->where('resource_type', 'FEE_STATEMENT')->where('resource_id', $statement->id)->get();
+        self::assertCount(3, $statementNotices);
+        $this->signInStoreMember($owner);
+        $beforePayment = array_column($this->getJson('/api/v1/vendor/finance')->assertOk()->json('data.notices'), 'id');
+        foreach ($statementNotices as $notice) {
+            self::assertContains($notice->id, $beforePayment, 'Issued, due and overdue notices remain visible while money is owed.');
+        }
 
         $second = $this->postJson('/api/v1/vendor/finance/statements/'.$statement->id.'/payments', ['channel_code' => 'CARDS'], ['Idempotency-Key' => (string) Str::uuid7()])->assertCreated()->json('data');
         $this->completePayment($second['id'])->assertOk();
         self::assertSame(['PAID', 0, 20000], [(string) DB::table('fee_statements')->where('id', $statement->id)->value('state'), (int) DB::table('fee_statements')->where('id', $statement->id)->value('outstanding_centavos'),
             (int) DB::table('fee_payment_allocations')->where('fee_statement_id', $statement->id)->sum('amount_centavos')]);
+        $afterPayment = array_column($this->getJson('/api/v1/vendor/finance')->assertOk()->json('data.notices'), 'id');
+        foreach ($statementNotices as $notice) {
+            self::assertNotContains($notice->id, $afterPayment, 'Fully paid statements no longer appear in required finance notices.');
+            $this->assertDatabaseHas('notifications', ['id' => $notice->id, 'body' => $notice->body, 'read_at' => $notice->read_at]);
+        }
         self::assertSame(0, DB::table('remittance_assessments')->whereIn('payment_id', [$first['id'], $second['id']])->count(), 'A platform fee receipt is never a merchant remittance.');
         foreach (DB::table('financial_posting_batches')->where('ledger', 'PLATFORM_FEE')->get() as $batch) {
             self::assertSame((int) $batch->debit_total_centavos, (int) $batch->credit_total_centavos);
         }
         self::assertSame(20000, (int) DB::table('financial_ledger_entries')->where('ledger', 'PLATFORM_FEE')->where('account_code', 'FEE_RECEIVABLE')->where('direction', 'CREDIT')->sum('amount_centavos'));
         self::assertGreaterThan(0, (int) DB::table('financial_ledger_entries')->where('account_code', 'PLATFORM_PROCESSING_EXPENSE')->sum('amount_centavos'));
-        self::assertSame(1, DB::table('notifications')->where('user_id', $owner->id)->where('category', 'FINANCE_MANDATORY')->where('title', 'like', '%issued%')->count());
+        self::assertSame(1, DB::table('notifications')->where('user_id', $owner->id)->where('category', FinanceNotifier::MANDATORY)->where('title', 'like', '%issued%')->count());
         self::assertSame(0, DB::table('notifications')->where('user_id', $manager->id)->where('category', 'like', 'FINANCE%')->count());
+    }
+
+    public function test_paid_statement_notices_are_filtered_before_the_limit_without_hiding_other_finance_notices(): void
+    {
+        Queue::fake();
+        [$owner, , $statement] = $this->issuedCommission();
+        $paid = (array) DB::table('fee_statements')->where('id', $statement->id)->sole();
+        $paid['id'] = (string) Str::uuid7();
+        $paid['statement_reference'] = 'SAMPLE-PAID-NOTICES';
+        $paid['version'] = 2;
+        $paid['state'] = 'PAID';
+        $paid['paid_centavos'] = $paid['charges_centavos'] - $paid['credits_centavos'];
+        $paid['outstanding_centavos'] = $paid['balance_centavos'] = 0;
+        $paid['issued_invoice_snapshot'] = $paid['issued_invoice_hash'] = null;
+        DB::table('fee_statements')->insert($paid);
+
+        $notifier = app(FinanceNotifier::class);
+        $notifier->owner((string) $paid['vendor_organization_id'], 'Withholding status notice', 'This notice remains required.', true, 'VENDOR_ORGANIZATION', (string) $paid['vendor_organization_id']);
+        $notifier->owner((string) $paid['vendor_organization_id'], 'Fee credit notice', 'This advisory remains available.', false, 'FEE_ADJUSTMENT', null);
+        $retained = DB::table('notifications')->where('user_id', $owner->id)->whereIn('category', [FinanceNotifier::MANDATORY, FinanceNotifier::ADVISORY])->pluck('id')->all();
+        self::assertCount(3, $retained);
+        CarbonImmutable::setTestNow(CarbonImmutable::now()->addMinute());
+        Carbon::setTestNow(CarbonImmutable::now());
+        for ($index = 0; $index < 12; $index++) {
+            $notifier->owner((string) $paid['vendor_organization_id'], 'Historical paid statement notice '.$index, 'Retained in notification history.', true, 'FEE_STATEMENT', $paid['id']);
+        }
+
+        $this->signInStoreMember($owner);
+        $visible = array_column($this->getJson('/api/v1/vendor/finance')->assertOk()->json('data.notices'), 'id');
+        self::assertEqualsCanonicalizing($retained, $visible, 'Paid-statement notices cannot crowd out unpaid statements or unrelated mandatory/advisory notices.');
+        self::assertSame(12, DB::table('notifications')->where('resource_type', 'FEE_STATEMENT')->where('resource_id', $paid['id'])->count());
     }
 
     public function test_admin_fee_credit_needs_a_different_approver_and_the_finance_queue_is_permissioned(): void
@@ -472,7 +739,7 @@ final class PhaseElevenFinanceFlowsTest extends TestCase
         $this->postJson('/api/v1/admin/finance/commission-policies', array_replace($input, ['commission_basis_points' => 400]), ['Idempotency-Key' => (string) Str::uuid7()])->assertConflict();
         self::assertSame(2, CommissionPolicyService::policies()->count());
         self::assertSame(1, DB::table('audit_logs')->where('action', 'COMMISSION_POLICY_PUBLISHED')->count());
-        self::assertSame(1, DB::table('notifications')->where('user_id', $owner->id)->where('title', 'Commission rate update')->count());
+        self::assertSame(1, DB::table('commission_email_events')->where('vendor_organization_id', $store->id)->where('subject_id', $policy['id'])->count());
         $terms = DB::table('agreement_versions')->where('id', $policy['agreement_version_id'])->first();
         self::assertSame(hash('sha256', $terms->published_content), $terms->content_hash);
         self::assertStringContainsString('3.25%', $terms->published_content);
@@ -556,6 +823,16 @@ final class PhaseElevenFinanceFlowsTest extends TestCase
         self::assertSame(23250, (int) $statement->charges_centavos);
         self::assertNull($statement->fee_policy_version_id, 'A mixed-rate bill must not claim one policy for all orders.');
         self::assertSame(['Earned 2.00% commission on completed order', 'Earned 3.25% commission on completed order'], DB::table('fee_statement_lines')->where('fee_statement_id', $statement->id)->orderBy('description')->pluck('description')->all());
+        app(StatementService::class)->issuePending();
+        $snapshot = json_decode((string) DB::table('fee_statements')->where('id', $statement->id)->value('issued_invoice_snapshot'), true, flags: JSON_THROW_ON_ERROR);
+        $mail = new PlatformFeeInvoiceMail($snapshot, '%PDF-test-fixture', 'sample.pdf');
+        self::assertStringContainsString('2.00%', $mail->render());
+        self::assertStringContainsString('3.25%', $mail->render());
+        self::assertStringContainsString('P232.50', $mail->envelope()->subject);
+        $this->signInAdmin($admin);
+        $detail = $this->getJson('/api/v1/admin/finance/statements/'.$statement->id)->assertOk()->json('data');
+        self::assertCount(2, $detail['rate_breakdown']);
+        self::assertSame(23250, array_sum(array_column($detail['rate_breakdown'], 'commission_centavos')));
         $preparer = $admin;
         $approver = $this->admin('ADMIN_SUPERADMIN');
         $this->approveReturn((string) $oldAssessment->id, 200000, $preparer, $approver);
@@ -565,6 +842,214 @@ final class PhaseElevenFinanceFlowsTest extends TestCase
     }
 
     /** @return array{User, string, object, User, User} */
+    public function test_monthly_bills_are_issued_automatically_for_each_vendor_once_with_frozen_invoices(): void
+    {
+        CarbonImmutable::setTestNow(CarbonImmutable::create(2026, 10, 20, 10, 0, 0, 'Asia/Manila'));
+        Carbon::setTestNow(CarbonImmutable::now());
+        foreach (['Automatic Billing A', 'Automatic Billing B'] as $name) {
+            [, , $buyer, $orderId] = $this->awaitingPayment($name);
+            $attempt = $this->startPayment($buyer, $orderId);
+            $this->completePayment($attempt['id'])->assertOk();
+            DB::table('orders')->where('id', $orderId)->update(['order_state' => 'COMPLETED', 'fulfillment_state' => 'PICKED_UP', 'closed_at' => now()]);
+            app(FeeAssessmentService::class)->earnOnCompletion($orderId, (string) Str::uuid7());
+        }
+        CarbonImmutable::setTestNow(CarbonImmutable::create(2026, 11, 1, 0, 5, 0, 'Asia/Manila'));
+        Carbon::setTestNow(CarbonImmutable::now());
+        $this->artisan('materyalph:finance-process-commissions')->assertExitCode(0);
+        self::assertSame(2, DB::table('fee_statements')->count());
+        foreach (DB::table('fee_statements')->get() as $statement) {
+            self::assertSame(['ISSUED', 'SYSTEM', null, '2026-11-15'], [$statement->state, $statement->issuance_origin, $statement->approved_by_user_id, (string) $statement->due_on]);
+            self::assertNotNull($statement->issued_invoice_snapshot);
+            self::assertNotNull($statement->issued_invoice_hash);
+            self::assertSame(20000, (int) $statement->outstanding_centavos);
+        }
+        $snapshots = DB::table('fee_statements')->pluck('issued_invoice_hash', 'id')->all();
+        $this->artisan('materyalph:finance-draft-statements')->assertExitCode(0);
+        self::assertSame(0, app(StatementService::class)->issuePending());
+        self::assertSame($snapshots, DB::table('fee_statements')->pluck('issued_invoice_hash', 'id')->all());
+        self::assertSame(2, DB::table('fee_statements')->count());
+        self::assertSame(2, DB::table('notifications')->where('resource_type', 'FEE_STATEMENT')->where('category', 'FINANCE_MANDATORY')->count(), 'Retries do not duplicate Owner invoice notifications.');
+    }
+
+    public function test_rate_decrease_queues_one_verified_owner_email_per_vendor_and_public_terms_follow_policy(): void
+    {
+        Queue::fake();
+        Mail::fake();
+        config()->set('mail.delivery_not_before', null);
+        config()->set('finance.commission_min_notice_days', 30);
+        [$store, $owner] = $this->activeStore('Rate Notice Store', false);
+        $manager = $this->teamMember($store, 'STORE_MANAGER');
+        [$unverified, $unverifiedOwner] = $this->activeStore('Unverified Rate Notice Store', false);
+        DB::table('users')->where('id', $unverifiedOwner->id)->update(['email_verified_at' => null]);
+        $this->signInAdmin($this->admin('ADMIN_SUPERADMIN'));
+        $input = ['commission_basis_points' => 150, 'expected_version' => 1, 'reason' => 'Internal commercial review', 'vendor_message' => 'A lower rate for future transactions.'];
+        $key = (string) Str::uuid7();
+        $policy = $this->postJson('/api/v1/admin/finance/commission-policies', $input, ['Idempotency-Key' => $key])->assertOk()->assertJsonPath('data.status', 'CURRENT')
+            ->assertJsonPath('data.delivery.total', 2)->assertJsonPath('data.delivery.blocked', 1)->json('data');
+        $this->postJson('/api/v1/admin/finance/commission-policies', $input, ['Idempotency-Key' => $key])->assertOk();
+        self::assertSame(2, DB::table('commission_email_events')->where('subject_id', $policy['id'])->count());
+        self::assertSame(0, DB::table('notifications')->where('user_id', $manager->id)->count());
+        self::assertSame(1, DB::table('notifications')->where('user_id', $owner->id)->count());
+        $public = $this->getJson('/api/v1/commission-policy')->assertOk()->assertHeader('Cache-Control', 'no-store, private')->assertJsonPath('data.current.rate_label', '1.50%')->json('data.current');
+        self::assertArrayNotHasKey('reason', $public);
+        self::assertArrayNotHasKey('delivery', $public);
+        self::assertStringContainsString('no Admin approval', $public['terms_content']);
+        self::assertSame(hash('sha256', $public['terms_content']), DB::table('agreement_versions')->where('id', $public['agreement_version_id'])->value('content_hash'));
+        $event = DB::table('outbox_events')->where('event_type', 'COMMISSION_POLICY')->sole();
+        app(OutboxProcessor::class)->process((string) $event->id);
+        app(OutboxProcessor::class)->process((string) $event->id);
+        $delivery = DB::table('notification_deliveries')->where('template', 'COMMISSION_POLICY')->where('channel', 'EMAIL')->sole();
+        app(NotificationDelivery::class)->send((string) $delivery->id);
+        app(NotificationDelivery::class)->send((string) $delivery->id);
+        Mail::assertSent(CommissionPolicyMail::class, 1);
+        Mail::assertSent(CommissionPolicyMail::class, fn (CommissionPolicyMail $mail): bool => str_contains($mail->render(), 'P150.00') && str_contains($mail->render(), 'A lower rate') && str_contains($mail->render(), '/finance/commissions') && ! str_contains($mail->render(), 'Internal commercial review'));
+        self::assertSame(1, app(CommissionEmails::class)->summary('POLICY', $policy['id'])['sent']);
+        self::assertSame(0, DB::table('fee_statements')->where('vendor_organization_id', $unverified->id)->count());
+    }
+
+    public function test_notice_rule_scheduled_activation_and_reasoned_override_are_authoritative(): void
+    {
+        Queue::fake();
+        config()->set('finance.commission_min_notice_days', 30);
+        CarbonImmutable::setTestNow(CarbonImmutable::create(2026, 11, 1, 8, 0, 0, 'Asia/Manila'));
+        Carbon::setTestNow(CarbonImmutable::now());
+        $this->activeStore('Scheduled Notice Store', false);
+        $this->signInAdmin($this->admin('ADMIN_SUPERADMIN'));
+        $input = ['commission_basis_points' => 300, 'expected_version' => 1, 'reason' => 'Scheduled commercial review'];
+        $this->postJson('/api/v1/admin/finance/commission-policies', $input, ['Idempotency-Key' => (string) Str::uuid7()])->assertUnprocessable()->assertJsonPath('errors.0.code', 'COMMISSION_NOTICE_REQUIRED');
+        $future = CarbonImmutable::now()->addDays(31);
+        $policy = $this->postJson('/api/v1/admin/finance/commission-policies', $input + ['effective_from' => $future->toIso8601String()], ['Idempotency-Key' => (string) Str::uuid7()])->assertOk()->assertJsonPath('data.status', 'SCHEDULED')->json('data');
+        self::assertSame(1, DB::table('commission_email_events')->where('subject_id', $policy['id'])->count(), 'Scheduled notices are recorded at publish, without waiting for activation.');
+        $this->getJson('/api/v1/commission-policy')->assertOk()->assertJsonPath('data.current.rate_label', '2.00%')->assertJsonPath('data.next.rate_label', '3.00%');
+        CarbonImmutable::setTestNow($future);
+        Carbon::setTestNow(CarbonImmutable::now());
+        $this->getJson('/api/v1/commission-policy')->assertOk()->assertJsonPath('data.current.rate_label', '3.00%')->assertJsonPath('data.next', null);
+        $this->signInAdmin($this->admin('ADMIN_SUPERADMIN'));
+        $override = ['commission_basis_points' => 350, 'expected_version' => 2, 'reason' => 'Urgent commercial review', 'notice_override' => true];
+        $this->postJson('/api/v1/admin/finance/commission-policies', $override, ['Idempotency-Key' => (string) Str::uuid7()])->assertUnprocessable();
+        $this->postJson('/api/v1/admin/finance/commission-policies', $override + ['notice_override_reason' => 'Explicit exceptional notice decision'], ['Idempotency-Key' => (string) Str::uuid7()])->assertOk()->assertJsonPath('data.notice_hours', 0)->assertJsonPath('data.notice_override_reason', 'Explicit exceptional notice decision');
+        self::assertSame(2, DB::table('audit_logs')->where('action', 'COMMISSION_POLICY_PUBLISHED')->count());
+    }
+
+    public function test_scheduled_corrections_and_cancellation_append_terms_and_unique_notices(): void
+    {
+        Queue::fake();
+        config()->set('finance.commission_min_notice_days', 30);
+        $this->activeStore('Corrected Policy Store', false);
+        $this->signInAdmin($this->admin('ADMIN_SUPERADMIN'));
+        $url = '/api/v1/admin/finance/commission-policies';
+        $first = $this->postJson($url, ['commission_basis_points' => 300, 'expected_version' => 1, 'effective_from' => CarbonImmutable::now()->addDays(31)->toIso8601String(), 'reason' => 'Original scheduled change'], ['Idempotency-Key' => (string) Str::uuid7()])->assertOk()->json('data');
+        $second = $this->postJson($url, ['commission_basis_points' => 250, 'expected_version' => 2, 'supersedes_policy_id' => $first['id'], 'effective_from' => CarbonImmutable::now()->addDays(32)->toIso8601String(), 'reason' => 'Correct the scheduled change'], ['Idempotency-Key' => (string) Str::uuid7()])->assertOk()->json('data');
+        $cancel = $this->postJson($url, ['commission_basis_points' => 200, 'expected_version' => 3, 'supersedes_policy_id' => $second['id'], 'cancel_scheduled' => true, 'reason' => 'Cancel the scheduled change'], ['Idempotency-Key' => (string) Str::uuid7()])->assertOk()->assertJsonPath('data.rate_label', '2.00%')->json('data');
+        self::assertCount(3, array_unique([$first['agreement_version_id'], $second['agreement_version_id'], $cancel['agreement_version_id']]));
+        $this->getJson($url)->assertOk()->assertJsonPath('data.next', null)->assertJsonPath('data.versions.1.status', 'CANCELLED')->assertJsonPath('data.versions.2.status', 'SUPERSEDED');
+        self::assertSame(['RATE_CANCELLED', 'RATE_CORRECTED', 'RATE_PUBLISHED'], DB::table('commission_email_events')->orderBy('notification_type')->pluck('notification_type')->all());
+        self::assertSame(2, DB::table('commission_policy_revisions')->count());
+        self::assertSame(300, (int) CommissionPolicyService::policies()->where('id', $first['id'])->value('commission_basis_points'));
+        CarbonImmutable::setTestNow(CarbonImmutable::now()->addDays(40));
+        Carbon::setTestNow(CarbonImmutable::now());
+        self::assertSame(200, (int) CommissionPolicyService::current()->commission_basis_points, 'Cancelled versions never activate later.');
+    }
+
+    public function test_failed_rate_mail_retains_attempt_history_and_audited_resend_has_permission_and_throttle(): void
+    {
+        Queue::fake();
+        Mail::fake();
+        config()->set('mail.delivery_not_before', null);
+        [$store] = $this->activeStore('Retry Policy Store', false);
+        $admin = $this->admin('ADMIN_SUPERADMIN');
+        $this->signInAdmin($admin);
+        $policy = $this->postJson('/api/v1/admin/finance/commission-policies', ['commission_basis_points' => 100, 'expected_version' => 1, 'reason' => 'Reduced rate for future sales'], ['Idempotency-Key' => (string) Str::uuid7()])->assertOk()->json('data');
+        $event = DB::table('commission_email_events')->where('subject_id', $policy['id'])->where('vendor_organization_id', $store->id)->sole();
+        app(OutboxProcessor::class)->process((string) DB::table('outbox_events')->where('event_type', 'COMMISSION_POLICY')->value('id'));
+        $delivery = DB::table('notification_deliveries')->where('notification_id', $event->notification_id)->where('channel', 'EMAIL')->sole();
+        $provider = \Mockery::mock(MailProvider::class);
+        $provider->shouldReceive('send')->times(5)->andThrow(new \RuntimeException('Synthetic unavailable mail channel'));
+        $this->app->instance(MailProvider::class, $provider);
+        for ($attempt = 1; $attempt <= 5; $attempt++) {
+            try {
+                app(NotificationDelivery::class)->send((string) $delivery->id);
+            } catch (\RuntimeException) { /* Recorded retry. */
+            }
+        }
+        self::assertSame('FAILED', DB::table('notification_deliveries')->where('id', $delivery->id)->value('state'));
+        self::assertSame(5, DB::table('notification_delivery_attempts')->where('notification_delivery_id', $delivery->id)->count());
+        $this->signInAdmin($this->admin('ADMIN_SUPPORT'));
+        $this->postJson('/api/v1/admin/finance/commission-emails/'.$event->id.'/resend', [], ['Idempotency-Key' => (string) Str::uuid7()])->assertForbidden();
+        $this->signInAdmin($admin);
+        $key = (string) Str::uuid7();
+        $this->postJson('/api/v1/admin/finance/commission-policies/'.$policy['id'].'/resend-failed', [], ['Idempotency-Key' => $key])->assertOk()->assertJsonPath('data.queued', 1);
+        $this->postJson('/api/v1/admin/finance/commission-policies/'.$policy['id'].'/resend-failed', [], ['Idempotency-Key' => $key])->assertOk()->assertJsonPath('data.queued', 1);
+        $success = \Mockery::mock(MailProvider::class);
+        $success->shouldReceive('send')->once();
+        $this->app->instance(MailProvider::class, $success);
+        app(NotificationDelivery::class)->send((string) $delivery->id);
+        app(NotificationDelivery::class)->send((string) $delivery->id);
+        self::assertSame(6, DB::table('notification_delivery_attempts')->where('notification_delivery_id', $delivery->id)->count());
+        $this->postJson('/api/v1/admin/finance/commission-emails/'.$event->id.'/resend', [], ['Idempotency-Key' => (string) Str::uuid7()])->assertStatus(429);
+        self::assertSame(1, DB::table('audit_logs')->where('action', 'COMMISSION_EMAIL_RESENT')->count());
+    }
+
+    public function test_rate_impact_preview_is_read_only_and_escapes_vendor_copy(): void
+    {
+        Queue::fake();
+        $this->activeStore('Preview Rate Store', false);
+        $this->signInAdmin($this->admin('ADMIN_SUPERADMIN'));
+        $preview = $this->postJson('/api/v1/admin/finance/commission-policies/preview', ['commission_basis_points' => 150, 'expected_version' => 1, 'reason' => 'Private commercial rationale', 'vendor_message' => '<script>not executable</script>'])
+            ->assertOk()->assertJsonPath('data.vendor_count', 1)->assertJsonPath('data.example_commission_centavos', 15000)->assertJsonPath('data.notice_required', false)->json('data');
+        self::assertStringNotContainsString('<script>not executable</script>', $preview['email_html']);
+        self::assertStringNotContainsString('Private commercial rationale', $preview['email_html']);
+        self::assertStringContainsString('1.50%', $preview['new_terms']);
+        self::assertSame(1, CommissionPolicyService::policies()->count());
+        self::assertSame(0, DB::table('commission_email_events')->count());
+    }
+
+    public function test_fully_credited_statement_emails_no_payment_needed_once_and_no_activity_creates_no_bill(): void
+    {
+        Queue::fake();
+        Mail::fake();
+        config()->set('mail.delivery_not_before', null);
+        CarbonImmutable::setTestNow(CarbonImmutable::create(2026, 10, 20, 10, 0, 0, 'Asia/Manila'));
+        Carbon::setTestNow(CarbonImmutable::now());
+        [$store, $owner, , $order] = $this->awaitingPayment('Fully Credited Store');
+        DB::table('orders')->where('id', $order)->update(['order_state' => 'COMPLETED', 'fulfillment_state' => 'PICKED_UP', 'closed_at' => now()]);
+        app(FeeAssessmentService::class)->earnOnCompletion($order, (string) Str::uuid7());
+        $assessment = (string) DB::table('fee_assessments')->where('order_id', $order)->value('id');
+        $this->approveReturn($assessment, 1000000, $this->admin('ADMIN_SUPERADMIN'), $this->admin('ADMIN_SUPERADMIN'));
+        [$idle] = $this->activeStore('No Billable Activity Store', false);
+        CarbonImmutable::setTestNow(CarbonImmutable::create(2026, 11, 1, 0, 5, 0, 'Asia/Manila'));
+        Carbon::setTestNow(CarbonImmutable::now());
+        $this->artisan('materyalph:finance-process-commissions')->assertExitCode(0);
+        $this->artisan('materyalph:finance-process-commissions')->assertExitCode(0);
+        $statement = DB::table('fee_statements')->where('vendor_organization_id', $store->id)->sole();
+        self::assertSame('PAID', $statement->state);
+        self::assertSame(0, (int) $statement->outstanding_centavos);
+        self::assertSame(0, DB::table('fee_statements')->where('vendor_organization_id', $idle->id)->count());
+        self::assertSame(1, DB::table('commission_email_events')->where('subject_id', $statement->id)->where('notification_type', 'STATEMENT_ISSUED')->count());
+        $event = DB::table('commission_email_events')->where('subject_id', $statement->id)->sole();
+        $notice = DB::table('notifications')->where('id', $event->notification_id)->first();
+        $mail = app(PlatformFeeInvoiceService::class)->mail($owner, $notice);
+        self::assertNotNull($mail);
+        self::assertStringContainsString('No payment needed', $mail->render());
+        self::assertStringNotContainsString('Pay now (TEST)', $mail->render());
+        self::assertStringContainsString('P0.00', $mail->envelope()->subject);
+        $this->signInAdmin($this->admin('ADMIN_SUPPORT'));
+        $this->getJson('/api/v1/admin/finance/statements/'.$statement->id)->assertForbidden();
+        $this->postJson('/api/v1/admin/finance/commission-emails/'.$event->id.'/resend', [], ['Idempotency-Key' => (string) Str::uuid7()])->assertForbidden();
+    }
+
+    public function test_backfilled_initial_policy_keeps_original_consent_without_creating_a_new_acceptance(): void
+    {
+        $store = VendorOrganization::query()->create(['legal_name' => 'Legacy Initial Consent', 'store_name' => 'Legacy Initial Consent']);
+        $owner = $this->storeMember($store, 'OWNER');
+        $policy = CommissionPolicyService::current();
+        DB::table('agreement_acceptances')->insert(['id' => (string) Str::uuid7(), 'user_id' => $owner->id, 'agreement_version_id' => $policy->legacy_agreement_version_id,
+            'vendor_organization_id' => $store->id, 'source' => 'ACCOUNT_SETTINGS', 'accepted_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
+        CommissionPolicyService::assertAccepted($policy, (string) $store->id);
+        self::assertSame(1, DB::table('agreement_acceptances')->where('user_id', $owner->id)->count());
+        self::assertFalse(DB::table('agreement_acceptances')->where('user_id', $owner->id)->where('agreement_version_id', $policy->agreement_version_id)->exists());
+    }
+
     private function issuedCommission(): array
     {
         CarbonImmutable::setTestNow(CarbonImmutable::create(2026, 10, 20, 10, 0, 0, 'Asia/Manila'));

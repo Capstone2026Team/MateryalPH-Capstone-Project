@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AdminOrderAuditController;
 use App\Http\Controllers\Api\AdminOrderOperationsController;
 use App\Http\Controllers\Api\BuyerFulfillmentController;
 use App\Http\Controllers\Api\VendorFulfillmentController;
@@ -48,6 +49,9 @@ Route::prefix('admin/order-operations')->middleware([
     'auth.transport:WEB', 'auth.cookie', VerifyAccountCsrf::class, 'auth:api', 'account.access:ADMIN',
 ])->group(function (): void {
     Route::get('/summary', [AdminOrderOperationsController::class, 'summary']);
+    Route::get('/orders', [AdminOrderAuditController::class, 'index']);
+    Route::get('/orders/{orderId}', [AdminOrderAuditController::class, 'show'])->whereUuid('orderId');
+    Route::get('/orders/{orderId}/files/{fileId}', [AdminOrderAuditController::class, 'file'])->whereUuid('orderId')->whereUuid('fileId');
     Route::get('/refunds', [AdminOrderOperationsController::class, 'refunds']);
     Route::post('/refunds/{refundId}/retry', [AdminOrderOperationsController::class, 'retryRefund'])->whereUuid('refundId');
     Route::get('/reimbursements', [AdminOrderOperationsController::class, 'reimbursements']);

@@ -48,5 +48,42 @@ void main() {
       // TODO
     });
 
+    // int termsVersion
+    test('to test the property `termsVersion`', () async {
+      // TODO
+    });
+
+    // String termsContent
+    test('to test the property `termsContent`', () async {
+      // TODO
+    });
+
+    // String vendorMessage
+    test('to test the property `vendorMessage`', () async {
+      // TODO
+    });
+
+    // int noticeHours
+    test('to test the property `noticeHours`', () async {
+      // TODO
+    });
+
+    // Admin only.
+    // String noticeOverrideReason
+    test('to test the property `noticeOverrideReason`', () async {
+      // TODO
+    });
+
+    // Admin audit identity; omitted in public and Vendor projections.
+    // String publishedBy
+    test('to test the property `publishedBy`', () async {
+      // TODO
+    });
+
+    // CommissionEmailSummary delivery
+    test('to test the property `delivery`', () async {
+      // TODO
+    });
+
   });
 }

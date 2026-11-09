@@ -11,6 +11,7 @@ use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Inventory\StockAvailability;
 use App\Domain\Operations\AdminAccess;
+use App\Domain\Reviews\BuyerRatingSummary;
 use App\Domain\Reviews\ReviewPresenter;
 use App\Domain\Reviews\ReviewRules;
 use App\Domain\Scores\PublicScores;
@@ -56,6 +57,8 @@ final class UserDirectoryService
         private readonly AuditRecorder $audit,
         private readonly ReviewPresenter $presenter,
         private readonly CatalogFileStore $files,
+        private readonly BuyerRatingSummary $buyerRatings,
+        private readonly PublicScores $scores,
     ) {}
 
     /**
@@ -80,10 +83,15 @@ final class UserDirectoryService
             default => $query->orderByDesc('u.created_at'),
         };
         $rows = $query->orderBy('b.id')->forPage($page, self::PER_PAGE)
-            ->get(['b.id', 'b.buyer_type', 'b.company_name', 'u.email', 'u.account_status', 'u.created_at', 'u.last_authenticated_at', DB::raw('coalesce(up.full_name, u.name) AS display_name')]);
+            ->get(['b.id', 'b.buyer_type', 'b.company_name', 'u.email', 'u.account_status', 'u.created_at', 'u.last_authenticated_at',
+                'u.public_id', 'u.lock_version', 'u.profile_photo_key', 'u.profile_photo_disk', DB::raw('coalesce(up.full_name, u.name) AS display_name')]);
+
+        $ratings = $this->buyerRatings->forProfiles($rows->pluck('id')->map(static fn (mixed $id): string => (string) $id)->all());
 
         return ['items' => $rows->map(fn (object $row): array => [
             'id' => (string) $row->id, 'name' => (string) $row->display_name, 'email' => $this->buyerEmail($row), 'status' => (string) $row->account_status,
+            'avatar_url' => $this->buyerPhotoUrl($request, $row),
+            'rating' => $ratings[(string) $row->id],
             'buyer_type' => (string) $row->buyer_type, 'company_name' => $row->company_name, 'joined_at' => self::iso($row->created_at), 'last_active_at' => self::iso($row->last_authenticated_at),
         ])->all(), 'meta' => $this->meta($page, $total, ['status_counts' => (object) $counts])];
     }
@@ -104,9 +112,9 @@ final class UserDirectoryService
 
         return [
             'id' => $profileId, 'subject_type' => 'BUYER', 'name' => (string) $buyer->display_name, 'status' => (string) $buyer->account_status,
+            'rating' => $this->buyerRatings->forProfiles([$profileId])[$profileId],
             'profile' => [
-                'avatar_url' => $deleted || $buyer->profile_photo_key === null || $buyer->profile_photo_disk === null ? null : URL::temporarySignedRoute('admin.directory.buyer-photo', now()->addMinutes(5),
-                    ['buyerId' => $profileId, 'owner' => $buyer->public_id, 'version' => $buyer->lock_version, 'viewer' => $request->user()->public_id]),
+                'avatar_url' => $this->buyerPhotoUrl($request, $buyer),
                 'email' => $this->buyerEmail($buyer), 'email_verified' => $buyer->email_verified_at !== null, 'mobile' => $deleted ? null : $buyer->mobile_e164,
                 'buyer_type' => (string) $buyer->buyer_type, 'company_name' => $buyer->company_name, 'position_title' => $buyer->position_title,
                 'industry' => $buyer->industry_classification === 'OTHER' ? ($buyer->industry_other_label ?? 'Other') : $buyer->industry_classification,
@@ -225,7 +233,14 @@ final class UserDirectoryService
         $rows = $query->orderBy('o.id')->forPage($page, self::PER_PAGE)->get(['o.id', 'o.store_name', 'o.store_activation_status', 'o.store_verification_status', 'o.marketplace_discoverability_status', 'o.account_status', 'o.created_at',
             'address.province', 'address.city_municipality', DB::raw($this->ownerSql('name').' AS owner_name'), DB::raw($this->ownerSql('email').' AS owner_email')]);
 
-        return ['items' => $rows->map(static fn (object $row): array => [
+        $scores = $this->scores->forOrganizations($rows->pluck('id')->map(static fn (mixed $id): string => (string) $id)->all());
+        $logos = DB::table('store_profiles as p')->join('files as f', 'f.id', '=', 'p.logo_file_id')
+            ->whereIn('p.vendor_organization_id', $rows->pluck('id'))->where('f.scan_state', 'CLEAN')
+            ->get(['p.vendor_organization_id', 'f.*'])->keyBy('vendor_organization_id');
+
+        return ['items' => $rows->map(fn (object $row): array => [
+            'vps' => $scores[(string) $row->id]['vps'],
+            'logo_url' => isset($logos[$row->id]) ? $this->files->temporaryUrl($logos[$row->id])['url'] : null,
             'id' => (string) $row->id, 'store_name' => (string) $row->store_name, 'owner_name' => $row->owner_name, 'owner_email' => $row->owner_email, 'status' => (string) $row->store_activation_status,
             'verification_status' => (string) $row->store_verification_status, 'discoverability_status' => (string) $row->marketplace_discoverability_status, 'account_status' => (string) $row->account_status,
             'location' => implode(', ', array_filter([$row->city_municipality, $row->province])) ?: null, 'joined_at' => self::iso($row->created_at),
@@ -254,6 +269,7 @@ final class UserDirectoryService
         $this->audit->account($request, 'USER_DIRECTORY_VIEWED', 'VENDOR_ORGANIZATION', $id, [], ['subject_type' => 'VENDOR_ORGANIZATION', 'fields' => ['contact', 'ratings', 'activity', 'listings']]);
 
         return [
+            'can_view_scores' => in_array('scores.view', $actor['permissions'], true),
             'id' => $id, 'subject_type' => 'VENDOR_ORGANIZATION', 'store_name' => (string) $store->store_name, 'status' => (string) $store->store_activation_status,
             'store' => [
                 'legal_name' => $store->legal_business_name ?? $store->legal_name, 'registered_name' => $store->registered_name, 'business_type' => $store->business_type, 'description' => $profile?->description,
@@ -434,6 +450,13 @@ final class UserDirectoryService
         return DB::table('enforcement_actions')->where('subject_type', $type)->where('subject_id', $subjectId)->orderByDesc('created_at')->orderByDesc('id')->limit(5)
             ->get(['id', 'action', 'state', 'reason', 'created_at', 'expires_at'])->map(static fn (object $row): array => ['id' => (string) $row->id, 'action' => (string) $row->action, 'action_label' => EnforcementService::label((string) $row->action),
                 'state' => (string) $row->state, 'reason' => (string) $row->reason, 'created_at' => self::iso($row->created_at), 'expires_at' => self::iso($row->expires_at)])->all();
+    }
+
+    private function buyerPhotoUrl(Request $request, object $buyer): ?string
+    {
+        return $buyer->account_status === 'DELETED' || $buyer->profile_photo_key === null || $buyer->profile_photo_disk === null ? null
+            : URL::temporarySignedRoute('admin.directory.buyer-photo', now()->addMinutes(5),
+                ['buyerId' => $buyer->id, 'owner' => $buyer->public_id, 'version' => $buyer->lock_version, 'viewer' => $request->user()->public_id]);
     }
 
     private function buyerRow(string $id): object

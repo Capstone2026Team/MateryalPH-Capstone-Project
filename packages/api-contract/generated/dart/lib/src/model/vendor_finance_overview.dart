@@ -25,7 +25,7 @@ part 'vendor_finance_overview.g.dart';
 /// * [physicalPayments]
 /// * [refundCapability]
 /// * [statements]
-/// * [notices]
+/// * [notices] - Recent Owner finance notices, newest first, limited to 10 after excluding notices linked to this store's fully PAID fee statements. Issued, due and overdue notices remain visible while the linked statement is unpaid or partially paid. Notification history is retained.
 @BuiltValue()
 abstract class VendorFinanceOverview implements Built<VendorFinanceOverview, VendorFinanceOverviewBuilder> {
   @BuiltValueField(wireName: r'demo_label')
@@ -58,6 +58,7 @@ abstract class VendorFinanceOverview implements Built<VendorFinanceOverview, Ven
   @BuiltValueField(wireName: r'statements')
   BuiltMap<String, JsonObject?> get statements;
 
+  /// Recent Owner finance notices, newest first, limited to 10 after excluding notices linked to this store's fully PAID fee statements. Issued, due and overdue notices remain visible while the linked statement is unpaid or partially paid. Notification history is retained.
   @BuiltValueField(wireName: r'notices')
   BuiltList<VendorFinanceNotice> get notices;
 

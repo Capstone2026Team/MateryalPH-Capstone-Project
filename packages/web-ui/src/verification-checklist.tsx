@@ -69,7 +69,7 @@ export function ChecklistPanel({ title, items, children, renderDetails, renderAc
   renderDetails?: (item: ChecklistItem) => ReactNode
   renderAction?: (item: ChecklistItem) => ReactNode
 }) {
-  return <section aria-label={title} className={`min-w-0 rounded-surface border border-border-default bg-surface-primary ${compact ? 'p-4' : 'p-5 sm:p-6'}`}>
+  return <section aria-label={title} className={`min-w-0 mp-card ${compact ? 'p-4' : 'p-5 sm:p-6'}`}>
     <h3 className="text-lg font-semibold">{title}</h3>
     {children}
     {items.length ? <ul className={compact ? 'mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5' : 'mt-4 divide-y divide-border-default'}>{items.map(item => <li key={item.key} className={compact ? `min-w-0 rounded-control border p-3 ${selectedKey === item.key ? 'border-action-primary bg-brand-orange-50' : 'border-border-default'}` : 'min-w-0 py-4'}>

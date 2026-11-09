@@ -9,6 +9,7 @@ import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 
 class _DiscoveryAdapter implements HttpClientAdapter {
   final bodies = <Map<String, dynamic>>[];
+  List<Map<String, Object?>> items = [];
 
   @override
   Future<ResponseBody> fetch(
@@ -24,7 +25,7 @@ class _DiscoveryAdapter implements HttpClientAdapter {
     expect(options.path, '/buyers/discovery/search');
     return ResponseBody.fromString(
       jsonEncode({
-        'data': [],
+        'data': items,
         'meta': {
           'scope': {
             'audience': 'BUYER',
@@ -82,6 +83,78 @@ void main() {
     point: GeoPoint(14.6, 121),
     source: OriginSource.mapPin,
     label: 'Fixture origin',
+  );
+
+  test(
+    'discovery carries public badge codes, rule text and scope into selection',
+    () async {
+      final adapter = _DiscoveryAdapter()
+        ..items = [
+          {
+            'result_id': '01995000-0000-7000-8000-0000000000c1',
+            'tier': 'VERIFIED_VENDOR',
+            'tier_label': 'Verified Vendor',
+            'rank': 1,
+            'name': 'Sample Supplier',
+            'marker': {'latitude': 14.6, 'longitude': 121.0},
+            'distance_meters': 1000,
+            'score_label': {'kind': 'VPS', 'value': '4.6', 'text': 'VPS 4.6'},
+            'is_favorite': false,
+            'directory': null,
+            'vendor': {
+              'logo_url': null,
+              'supplier_type': null,
+              'niches': [],
+              'fulfillment_method': 'BOTH',
+              'vacation_mode': false,
+              'public_phone': null,
+              'address': {
+                'formatted_address': 'Manila',
+                'city_municipality': 'Manila',
+                'province': 'Metro Manila',
+              },
+              'open_status': {
+                'status': 'OPEN',
+                'opens_at': '08:00',
+                'closes_at': '17:00',
+                'basis': 'SAVED_SCHEDULE',
+              },
+              'serviceability': {
+                'pickup_available': true,
+                'delivery': 'WITHIN_STATED_AREA',
+                'delivery_maximum_km': 10,
+                'basis': 'STRAIGHT_LINE_ADVISORY',
+              },
+              'badges': [
+                {
+                  'code': 'MOST_ORDERED',
+                  'name': 'Most Ordered',
+                  'scope_label': 'Cement · Metro Manila',
+                  'description': 'Public rule from server.',
+                  'earned_at': '2026-11-06T00:00:00Z',
+                },
+              ],
+            },
+          },
+        ];
+      final dio = Dio()..httpClientAdapter = adapter;
+      addTearDown(() => dio.close(force: true));
+      final repository = ApiDiscoveryRepository(
+        client: api.MateryalphApiClient(dio: dio),
+        onSessionExpired: () async {},
+      );
+      final page = await repository.search(
+        origin: origin,
+        radiusKm: 5,
+        filters: const DiscoveryFilters(),
+      );
+      final supplier = page.items.single;
+      expect(supplier.scoreValue, '4.6');
+      expect(supplier.badges.single.code, 'MOST_ORDERED');
+      expect(supplier.badges.single.scopeLabel, 'Cement · Metro Manila');
+      expect(supplier.badges.single.description, 'Public rule from server.');
+      expect(supplier.withFavorite(true).badges.single.name, 'Most Ordered');
+    },
   );
 
   test(

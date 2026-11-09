@@ -1,3 +1,4 @@
+import '../../design_system/components/async_state.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -209,7 +210,7 @@ class _PlacePhotoImage extends StatelessWidget {
           : const Center(
               child: SizedBox.square(
                 dimension: 24,
-                child: CircularProgressIndicator(strokeWidth: 2.5),
+                child: BuyerLoadingIndicator(strokeWidth: 2.5),
               ),
             ),
       errorBuilder: (_, _, _) => const Center(

@@ -14,6 +14,11 @@
 
 import * as runtime from '../runtime';
 import {
+    type DeliveryNavigationRouteEnvelope,
+    DeliveryNavigationRouteEnvelopeFromJSON,
+    DeliveryNavigationRouteEnvelopeToJSON,
+} from '../models/DeliveryNavigationRouteEnvelope';
+import {
     type DeliveryPlanEnvelope,
     DeliveryPlanEnvelopeFromJSON,
     DeliveryPlanEnvelopeToJSON,
@@ -86,6 +91,17 @@ export interface GetVendorOrderRequest {
     orderId: string;
 }
 
+export interface GetVendorOrderBuyerPhotoRequest {
+    /**
+     *
+     */
+    orderId: string;
+    /**
+     *
+     */
+    version: number;
+}
+
 export interface GetVendorOrderDeliveryPlanRequest {
     /**
      *
@@ -95,6 +111,13 @@ export interface GetVendorOrderDeliveryPlanRequest {
      *
      */
     deliveryPlanRequest: DeliveryPlanRequest;
+}
+
+export interface GetVendorOrderRouteRequest {
+    /**
+     *
+     */
+    orderId: string;
 }
 
 export interface ListVendorOrdersRequest {
@@ -297,7 +320,7 @@ export class VendorOrdersApi extends runtime.BaseAPI {
     }
 
     /**
-     * Job-order detail with lines, authorized inventory, reservations, auto-accept outcome, confirmed delivery, NRPC, money breakdown, history, role-aware permissions and one primary action per state. Buyer coordinates are never returned.
+     * Job-order detail with lines, authorized inventory, reservations, auto-accept outcome, confirmed delivery, NRPC, money breakdown, history, role-aware permissions and one primary action per state. Location map points are limited to the registered store and the order\'s saved vehicle drop-off, available only to current authorized order viewers.
      */
     async getVendorOrderRaw(requestParameters: GetVendorOrderRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<OrderDetailEnvelope>> {
         const requestOptions = await this.getVendorOrderRequestOpts(requestParameters);
@@ -307,10 +330,66 @@ export class VendorOrdersApi extends runtime.BaseAPI {
     }
 
     /**
-     * Job-order detail with lines, authorized inventory, reservations, auto-accept outcome, confirmed delivery, NRPC, money breakdown, history, role-aware permissions and one primary action per state. Buyer coordinates are never returned.
+     * Job-order detail with lines, authorized inventory, reservations, auto-accept outcome, confirmed delivery, NRPC, money breakdown, history, role-aware permissions and one primary action per state. Location map points are limited to the registered store and the order\'s saved vehicle drop-off, available only to current authorized order viewers.
      */
     async getVendorOrder(requestParameters: GetVendorOrderRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<OrderDetailEnvelope> {
         const response = await this.getVendorOrderRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for getVendorOrderBuyerPhoto without sending the request
+     */
+    async getVendorOrderBuyerPhotoRequestOpts(requestParameters: GetVendorOrderBuyerPhotoRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['orderId'] == null) {
+            throw new runtime.RequiredError(
+                'orderId',
+                'Required parameter "orderId" was null or undefined when calling getVendorOrderBuyerPhoto().'
+            );
+        }
+
+        if (requestParameters['version'] == null) {
+            throw new runtime.RequiredError(
+                'version',
+                'Required parameter "version" was null or undefined when calling getVendorOrderBuyerPhoto().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['version'] != null) {
+            queryParameters['version'] = requestParameters['version'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/vendor/orders/{orderId}/buyer-photo`;
+        urlPath = urlPath.replace('{orderId}', encodeURIComponent(String(requestParameters['orderId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Current sanitized Buyer profile photo for an authorized order viewer, including Self-Pickup and closed orders. Rechecks membership, organization, assignment where applicable and photo version after storage access. Phone authorization is unchanged. Private, no-store PNG.
+     */
+    async getVendorOrderBuyerPhotoRaw(requestParameters: GetVendorOrderBuyerPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Blob>> {
+        const requestOptions = await this.getVendorOrderBuyerPhotoRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.BlobApiResponse(response);
+    }
+
+    /**
+     * Current sanitized Buyer profile photo for an authorized order viewer, including Self-Pickup and closed orders. Rechecks membership, organization, assignment where applicable and photo version after storage access. Phone authorization is unchanged. Private, no-store PNG.
+     */
+    async getVendorOrderBuyerPhoto(requestParameters: GetVendorOrderBuyerPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Blob> {
+        const response = await this.getVendorOrderBuyerPhotoRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -370,6 +449,51 @@ export class VendorOrdersApi extends runtime.BaseAPI {
      */
     async getVendorOrderDeliveryPlan(requestParameters: GetVendorOrderDeliveryPlanRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<DeliveryPlanEnvelope> {
         const response = await this.getVendorOrderDeliveryPlanRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for getVendorOrderRoute without sending the request
+     */
+    async getVendorOrderRouteRequestOpts(requestParameters: GetVendorOrderRouteRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['orderId'] == null) {
+            throw new runtime.RequiredError(
+                'orderId',
+                'Required parameter "orderId" was null or undefined when calling getVendorOrderRoute().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/vendor/orders/{orderId}/route`;
+        urlPath = urlPath.replace('{orderId}', encodeURIComponent(String(requestParameters['orderId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Read-only Google driving estimate from the registered store to this order\'s saved vehicle drop-off, including requests and closed orders. Current order-view authorization is rechecked after the provider call. No device location, live tracking or commercial recalculation.
+     */
+    async getVendorOrderRouteRaw(requestParameters: GetVendorOrderRouteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<DeliveryNavigationRouteEnvelope>> {
+        const requestOptions = await this.getVendorOrderRouteRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => DeliveryNavigationRouteEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * Read-only Google driving estimate from the registered store to this order\'s saved vehicle drop-off, including requests and closed orders. Current order-view authorization is rechecked after the provider call. No device location, live tracking or commercial recalculation.
+     */
+    async getVendorOrderRoute(requestParameters: GetVendorOrderRouteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<DeliveryNavigationRouteEnvelope> {
+        const response = await this.getVendorOrderRouteRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

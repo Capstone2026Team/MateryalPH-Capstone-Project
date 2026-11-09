@@ -108,7 +108,8 @@ class _ProjectSelectionCheckoutScreenState
         package = current;
         candidate = priced;
         previewReady = true;
-        primaryOrder = priced.primaryOrderId ?? primaryOrder;
+        primaryOrder = priced.primaryOrderId;
+        if (primaryOrder == null) requested.remove(primaryId);
         if (primaryOrder != null) {
           methods[primaryId] = projectText(priced.paymentMethod);
           requested[primaryId] = primaryOrder!;
@@ -129,6 +130,11 @@ class _ProjectSelectionCheckoutScreenState
     } finally {
       if (mounted) setState(() => loading = false);
     }
+  }
+
+  Future<void> _openOrder(String orderId) async {
+    await widget.links.openOrder(context, orderId);
+    if (mounted) await _refresh();
   }
 
   Future<void> _remove(api.ProjectSeparatePurchase item) async {
@@ -259,9 +265,7 @@ class _ProjectSelectionCheckoutScreenState
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
           child: primaryOrder != null && checkout
               ? FilledButton(
-                  onPressed: busy
-                      ? null
-                      : () => widget.links.openOrder(context, primaryOrder!),
+                  onPressed: busy ? null : () => _openOrder(primaryOrder!),
                   child: const Text('View primary request'),
                 )
               : FilledButton(
@@ -287,7 +291,7 @@ class _ProjectSelectionCheckoutScreenState
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
-          if (loading || busy) const LinearProgressIndicator(),
+          if (loading || busy) const BuyerLoadingProgress(),
           if (error != null) ...[
             StatusBand(
               tone: BandTone.danger,
@@ -403,7 +407,7 @@ class _ProjectSelectionCheckoutScreenState
               title: const Text('Supplementary request sent'),
               subtitle: const Text('Awaiting Vendor confirmation'),
               trailing: TextButton(
-                onPressed: () => widget.links.openOrder(context, entry.value),
+                onPressed: () => _openOrder(entry.value),
                 child: const Text('View'),
               ),
             ),

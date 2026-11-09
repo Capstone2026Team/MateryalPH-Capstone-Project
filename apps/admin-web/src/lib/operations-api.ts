@@ -3,11 +3,9 @@ import {
   AdminEnforcementApi,
   AdminIntegrationHealthApi,
   AdminPlatformSettingsApi,
-  ReportingApi,
   ResponseError,
   type AuditEvent,
   type AuditEventDetail,
-  type DocumentExportInputTypeEnum,
   type EnforcementApplyRequest,
   type EnforcementDetail,
   type EnforcementRecordRequest,
@@ -89,9 +87,9 @@ export async function updateSetting(key: string, value: unknown, expectedVersion
 }
 
 // Enforcement
-export async function listEnforcement(filters: ListEnforcementActionsRequest): Promise<Page<EnforcementSummary>> {
+export async function listEnforcement(filters: ListEnforcementActionsRequest): Promise<Page<EnforcementSummary> & { counts?: Record<string, number> }> {
   const response = await new AdminEnforcementApi(config()).listEnforcementActions(filters)
-  return pageOf(response.data, response.meta)
+  return { ...pageOf(response.data, { total: response.meta.total, per_page: response.meta.perPage }), counts: response.meta.counts }
 }
 export async function getEnforcement(actionId: string): Promise<EnforcementDetail> {
   return (await new AdminEnforcementApi(config()).getEnforcementAction({ actionId })).data
@@ -99,8 +97,14 @@ export async function getEnforcement(actionId: string): Promise<EnforcementDetai
 export async function searchSubjects(type: 'BUYER' | 'VENDOR_ORGANIZATION', q: string): Promise<EnforcementSubjectMatch[]> {
   return (await new AdminEnforcementApi(config()).searchEnforcementSubjects({ type, q })).data
 }
-export async function getSubject(type: 'BUYER' | 'VENDOR_ORGANIZATION', subjectId: string): Promise<SubjectReview & { sanctions: EnforcementSummary[] }> {
-  return (await new AdminEnforcementApi(config()).getEnforcementSubject({ type, subjectId })).data as SubjectReview & { sanctions: EnforcementSummary[] }
+export async function getSubject(type: 'BUYER' | 'VENDOR_ORGANIZATION', subjectId: string): Promise<SubjectReview & { sanctions: EnforcementSummary[]; recordableActions: string[] }> {
+  return (await new AdminEnforcementApi(config()).getEnforcementSubject({ type, subjectId })).data as SubjectReview & { sanctions: EnforcementSummary[]; recordableActions: string[] }
+}
+export async function uploadEnforcementEvidence(type: 'BUYER' | 'VENDOR_ORGANIZATION', subjectId: string, file: File) {
+  return (await new AdminEnforcementApi(config()).uploadEnforcementEvidence({ type, subjectId, file })).data
+}
+export async function getEnforcementEvidenceLink(actionId: string, fileId: string) {
+  return (await new AdminEnforcementApi(config()).getEnforcementEvidenceLink({ actionId, fileId })).data
 }
 export async function recordEnforcement(input: EnforcementRecordRequest, idempotencyKey: string): Promise<EnforcementDetail> {
   return (await new AdminEnforcementApi(config()).recordEnforcementAction({ idempotencyKey, enforcementRecordRequest: input })).data
@@ -128,8 +132,8 @@ export async function auditActions(): Promise<string[]> {
 }
 
 // Integration and job health
-export async function integrationOverview(): Promise<IntegrationOverview> {
-  return (await new AdminIntegrationHealthApi(config()).getIntegrationHealth()).data
+export async function integrationOverview(options: { localForbidden?: boolean } = {}): Promise<IntegrationOverview> {
+  return (await new AdminIntegrationHealthApi(createWebApiConfiguration(basePath, { refreshSession: true, localForbidden: Boolean(options.localForbidden) })).getIntegrationHealth()).data
 }
 export async function operationFailures(kind: 'OUTBOX' | 'JOBS', page = 1, range?: CalendarRange): Promise<Page<OperationFailure>> {
   const response = await new AdminIntegrationHealthApi(config()).listOperationFailures({ kind, page, ...dateQuery(range) })
@@ -150,30 +154,4 @@ export async function operationRetries(): Promise<OperationRetryRecord[]> {
 }
 export async function retryOperation(input: OperationRetryRequest, idempotencyKey: string): Promise<OperationRetryResult> {
   return (await new AdminIntegrationHealthApi(config()).retryOperation({ idempotencyKey, operationRetryRequest: input })).data
-}
-
-/**
- * Requests an authorized export snapshot and downloads it once generated. The server re-checks the export permission
- * and the filter allowlist; a slow job leaves the export listed for later download.
- */
-export async function requestExport(type: DocumentExportInputTypeEnum, filters: Record<string, unknown>, purpose: string, idempotencyKey: string): Promise<'DOWNLOADED' | 'QUEUED'> {
-  const api = new ReportingApi(config())
-  const created = await api.requestDocumentExport({ audience: 'admin', idempotencyKey, documentExportInput: { type, format: 'CSV', purpose, filters } })
-  for (let attempt = 0; attempt < 10; attempt++) {
-    const list = await api.listDocumentExports({ audience: 'admin', page: 1 })
-    const current = list.data.find(item => item.id === created.data.id)
-    if (current?.state === 'READY') {
-      const file = await api.downloadDocumentExportRaw({ audience: 'admin', exportId: current.id })
-      const url = URL.createObjectURL(await file.raw.blob())
-      const anchor = document.createElement('a')
-      anchor.href = url
-      anchor.download = `materyalph-${type.toLowerCase().replaceAll('_', '-')}.csv`
-      anchor.click()
-      URL.revokeObjectURL(url)
-      return 'DOWNLOADED'
-    }
-    if (current && current.state !== 'QUEUED') throw new Error(current.failureCode ? `The export failed (${current.failureCode}).` : 'The export could not be generated.')
-    await new Promise(resolve => window.setTimeout(resolve, 1500))
-  }
-  return 'QUEUED'
 }

@@ -101,6 +101,13 @@ final class ProjectInquiryService
             $existing = DB::table('conversations')->where('context_type', 'PROJECT_BASED')->where('context_id', $id)->where('vendor_organization_id', $candidate['snapshot']['vendor_id'])
                 ->whereRaw("locked_reference->>'version_id' = ?", [$w->current_version_id])->value('id');
             if ($existing !== null) {
+                $previous = DB::table('quotations')->where('conversation_id', $existing)->orderByDesc('id')->lockForUpdate()->first();
+                if ($previous !== null && $previous->state === 'ACCEPTED'
+                    && DB::table('orders')->where('id', $previous->accepted_order_id)->whereIn('order_state', ['CANCELLED', 'DECLINED', 'EXPIRED'])->exists()) {
+                    DB::table('quotations')->insert(['id' => (string) Str::uuid7(), 'conversation_id' => $existing, 'buyer_profile_id' => $previous->buyer_profile_id,
+                        'vendor_organization_id' => $previous->vendor_organization_id, 'procurement_type' => 'PROJECT_BASED', 'work_package_id' => $id,
+                        'state' => 'DRAFT', 'draft' => $previous->draft, 'created_at' => now(), 'updated_at' => now()]);
+                }
                 $this->keys->claim($request, 'PROJECT_INQUIRE', $key, $id, 201);
                 DB::table('idempotency_records')->where('actor_user_id', $request->user()->id)->where('endpoint', 'PROJECT_INQUIRE')->where('idempotency_key', $key)->update(['response_body' => json_encode(['id' => $existing], JSON_THROW_ON_ERROR)]);
 

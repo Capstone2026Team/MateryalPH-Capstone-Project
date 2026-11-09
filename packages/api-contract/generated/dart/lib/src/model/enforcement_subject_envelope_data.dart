@@ -26,8 +26,13 @@ part 'enforcement_subject_envelope_data.g.dart';
 /// * [disputesOpen]
 /// * [commerceRestrictedUntil]
 /// * [sanctions]
+/// * [recordableActions]
 @BuiltValue()
 abstract class EnforcementSubjectEnvelopeData implements SubjectReview, Built<EnforcementSubjectEnvelopeData, EnforcementSubjectEnvelopeDataBuilder> {
+  @BuiltValueField(wireName: r'recordable_actions')
+  BuiltList<EnforcementSubjectEnvelopeDataRecordableActionsEnum> get recordableActions;
+  // enum recordableActionsEnum {  WARNING,  TEMPORARY_RESTRICTION,  SUSPENSION,  PERMANENT_BAN,  };
+
   @BuiltValueField(wireName: r'sanctions')
   BuiltList<EnforcementSummary> get sanctions;
 
@@ -54,13 +59,6 @@ class _$EnforcementSubjectEnvelopeDataSerializer implements PrimitiveSerializer<
     EnforcementSubjectEnvelopeData object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
-    if (object.accountStatus != null) {
-      yield r'account_status';
-      yield serializers.serialize(
-        object.accountStatus,
-        specifiedType: const FullType(String),
-      );
-    }
     if (object.storeActivationStatus != null) {
       yield r'store_activation_status';
       yield serializers.serialize(
@@ -73,20 +71,6 @@ class _$EnforcementSubjectEnvelopeDataSerializer implements PrimitiveSerializer<
       yield serializers.serialize(
         object.displayName,
         specifiedType: const FullType(String),
-      );
-    }
-    if (object.ordersTotal != null) {
-      yield r'orders_total';
-      yield serializers.serialize(
-        object.ordersTotal,
-        specifiedType: const FullType(int),
-      );
-    }
-    if (object.maskedEmail != null) {
-      yield r'masked_email';
-      yield serializers.serialize(
-        object.maskedEmail,
-        specifiedType: const FullType.nullable(String),
       );
     }
     if (object.disputesOpen != null) {
@@ -103,18 +87,6 @@ class _$EnforcementSubjectEnvelopeDataSerializer implements PrimitiveSerializer<
         specifiedType: const FullType(int),
       );
     }
-    if (object.commerceRestrictedUntil != null) {
-      yield r'commerce_restricted_until';
-      yield serializers.serialize(
-        object.commerceRestrictedUntil,
-        specifiedType: const FullType.nullable(DateTime),
-      );
-    }
-    yield r'sanctions';
-    yield serializers.serialize(
-      object.sanctions,
-      specifiedType: const FullType(BuiltList, [FullType(EnforcementSummary)]),
-    );
     if (object.subjectType != null) {
       yield r'subject_type';
       yield serializers.serialize(
@@ -129,6 +101,44 @@ class _$EnforcementSubjectEnvelopeDataSerializer implements PrimitiveSerializer<
         specifiedType: const FullType(String),
       );
     }
+    if (object.accountStatus != null) {
+      yield r'account_status';
+      yield serializers.serialize(
+        object.accountStatus,
+        specifiedType: const FullType(String),
+      );
+    }
+    yield r'recordable_actions';
+    yield serializers.serialize(
+      object.recordableActions,
+      specifiedType: const FullType(BuiltList, [FullType(EnforcementSubjectEnvelopeDataRecordableActionsEnum)]),
+    );
+    if (object.ordersTotal != null) {
+      yield r'orders_total';
+      yield serializers.serialize(
+        object.ordersTotal,
+        specifiedType: const FullType(int),
+      );
+    }
+    if (object.maskedEmail != null) {
+      yield r'masked_email';
+      yield serializers.serialize(
+        object.maskedEmail,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
+    if (object.commerceRestrictedUntil != null) {
+      yield r'commerce_restricted_until';
+      yield serializers.serialize(
+        object.commerceRestrictedUntil,
+        specifiedType: const FullType.nullable(DateTime),
+      );
+    }
+    yield r'sanctions';
+    yield serializers.serialize(
+      object.sanctions,
+      specifiedType: const FullType(BuiltList, [FullType(EnforcementSummary)]),
+    );
     if (object.openOrders != null) {
       yield r'open_orders';
       yield serializers.serialize(
@@ -159,14 +169,6 @@ class _$EnforcementSubjectEnvelopeDataSerializer implements PrimitiveSerializer<
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
-        case r'account_status':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType.nullable(String),
-          ) as String?;
-          if (valueDes == null) continue;
-          result.accountStatus = valueDes;
-          break;
         case r'store_activation_status':
           final valueDes = serializers.deserialize(
             value,
@@ -182,22 +184,6 @@ class _$EnforcementSubjectEnvelopeDataSerializer implements PrimitiveSerializer<
           ) as String?;
           if (valueDes == null) continue;
           result.displayName = valueDes;
-          break;
-        case r'orders_total':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType.nullable(int),
-          ) as int?;
-          if (valueDes == null) continue;
-          result.ordersTotal = valueDes;
-          break;
-        case r'masked_email':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType.nullable(String),
-          ) as String?;
-          if (valueDes == null) continue;
-          result.maskedEmail = valueDes;
           break;
         case r'disputes_open':
           final valueDes = serializers.deserialize(
@@ -215,21 +201,6 @@ class _$EnforcementSubjectEnvelopeDataSerializer implements PrimitiveSerializer<
           if (valueDes == null) continue;
           result.disputesTotal = valueDes;
           break;
-        case r'commerce_restricted_until':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType.nullable(DateTime),
-          ) as DateTime?;
-          if (valueDes == null) continue;
-          result.commerceRestrictedUntil = valueDes;
-          break;
-        case r'sanctions':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(BuiltList, [FullType(EnforcementSummary)]),
-          ) as BuiltList<EnforcementSummary>;
-          result.sanctions.replace(valueDes);
-          break;
         case r'subject_type':
           final valueDes = serializers.deserialize(
             value,
@@ -245,6 +216,52 @@ class _$EnforcementSubjectEnvelopeDataSerializer implements PrimitiveSerializer<
           ) as String?;
           if (valueDes == null) continue;
           result.subjectId = valueDes;
+          break;
+        case r'account_status':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.accountStatus = valueDes;
+          break;
+        case r'recordable_actions':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(BuiltList, [FullType(EnforcementSubjectEnvelopeDataRecordableActionsEnum)]),
+          ) as BuiltList<EnforcementSubjectEnvelopeDataRecordableActionsEnum>;
+          result.recordableActions.replace(valueDes);
+          break;
+        case r'orders_total':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.ordersTotal = valueDes;
+          break;
+        case r'masked_email':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.maskedEmail = valueDes;
+          break;
+        case r'commerce_restricted_until':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(DateTime),
+          ) as DateTime?;
+          if (valueDes == null) continue;
+          result.commerceRestrictedUntil = valueDes;
+          break;
+        case r'sanctions':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(BuiltList, [FullType(EnforcementSummary)]),
+          ) as BuiltList<EnforcementSummary>;
+          result.sanctions.replace(valueDes);
           break;
         case r'open_orders':
           final valueDes = serializers.deserialize(
@@ -283,4 +300,23 @@ class _$EnforcementSubjectEnvelopeDataSerializer implements PrimitiveSerializer<
   }
 }
 
+
+class EnforcementSubjectEnvelopeDataRecordableActionsEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'WARNING')
+  static const EnforcementSubjectEnvelopeDataRecordableActionsEnum WARNING = _$enforcementSubjectEnvelopeDataRecordableActionsEnum_WARNING;
+  @BuiltValueEnumConst(wireName: r'TEMPORARY_RESTRICTION')
+  static const EnforcementSubjectEnvelopeDataRecordableActionsEnum TEMPORARY_RESTRICTION = _$enforcementSubjectEnvelopeDataRecordableActionsEnum_TEMPORARY_RESTRICTION;
+  @BuiltValueEnumConst(wireName: r'SUSPENSION')
+  static const EnforcementSubjectEnvelopeDataRecordableActionsEnum SUSPENSION = _$enforcementSubjectEnvelopeDataRecordableActionsEnum_SUSPENSION;
+  @BuiltValueEnumConst(wireName: r'PERMANENT_BAN')
+  static const EnforcementSubjectEnvelopeDataRecordableActionsEnum PERMANENT_BAN = _$enforcementSubjectEnvelopeDataRecordableActionsEnum_PERMANENT_BAN;
+
+  static Serializer<EnforcementSubjectEnvelopeDataRecordableActionsEnum> get serializer => _$enforcementSubjectEnvelopeDataRecordableActionsEnumSerializer;
+
+  const EnforcementSubjectEnvelopeDataRecordableActionsEnum._(String name): super(name);
+
+  static BuiltSet<EnforcementSubjectEnvelopeDataRecordableActionsEnum> get values => _$enforcementSubjectEnvelopeDataRecordableActionsEnumValues;
+  static EnforcementSubjectEnvelopeDataRecordableActionsEnum valueOf(String name) => _$enforcementSubjectEnvelopeDataRecordableActionsEnumValueOf(name);
+}
 

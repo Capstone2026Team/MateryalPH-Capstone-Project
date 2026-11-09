@@ -38,6 +38,34 @@ final class SupportRequestsTest extends TestCase
 
     private bool $scannerUnavailable = false;
 
+    public function test_admin_status_counts_follow_filters_and_ignore_status_and_cursor_without_exposing_counts_to_buyers(): void
+    {
+        $buyer = User::factory()->create();
+        $this->signIn($buyer);
+        $id = $this->createBuyerTicket();
+        $template = (array) DB::table('support_tickets')->where('id', $id)->first();
+        for ($index = 0; $index < 29; $index++) {
+            $row = array_replace($template, ['id' => (string) Str::uuid7(), 'ticket_number' => 'SUP-COUNT-'.$index,
+                'subject' => 'Count matching concern', 'status' => $index === 26 ? 'CLOSED' : 'OPEN',
+                'created_at' => $index === 27 ? '2026-09-01T04:00:00Z' : '2026-10-05T04:00:00Z']);
+            if ($index === 28) {
+                $row['category'] = 'OTHER';
+            }
+            DB::table('support_tickets')->insert($row);
+        }
+        $this->getJson('/api/v1/support/buyers/tickets')->assertOk()->assertJsonMissingPath('meta.counts');
+        $this->signIn($this->admin('ADMIN_SUPPORT'));
+        $base = '/api/v1/support/admin/tickets?from=2026-10-01&to=2026-10-31&q=matching&category=TECHNICAL_ISSUE&user_type=BUYER';
+        $first = $this->getJson($base.'&status=OPEN')->assertOk()->assertJsonCount(25, 'data')
+            ->assertJsonPath('meta.counts.OPEN', 26)->assertJsonPath('meta.counts.CLOSED', 1)->assertJsonPath('meta.counts.RESOLVED', 0);
+        $this->getJson($base.'&status=OPEN&cursor='.$first->json('meta.next_cursor'))->assertOk()->assertJsonCount(1, 'data')
+            ->assertJsonPath('meta.counts', $first->json('meta.counts'));
+        $this->getJson($base.'&status=CLOSED')->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('meta.counts', $first->json('meta.counts'));
+        $this->getJson($base.'&status=OPEN&q=absent')->assertOk()->assertJsonPath('meta.counts.OPEN', 0);
+        $this->signIn($this->admin('ADMIN_ORDER_DISPUTE'));
+        $this->getJson($base)->assertForbidden()->assertJsonMissingPath('meta.counts');
+    }
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -273,16 +301,20 @@ final class SupportRequestsTest extends TestCase
         $eventId = (string) DB::table('outbox_events')->where('event_type', 'NOTIFICATION_DELIVERY')->where('aggregate_id', $delivery->id)->value('id');
         $processor->process($eventId);
         $processor->process($eventId);
-        Mail::assertSent(SupportNoticeMail::class, function (SupportNoticeMail $mail) use ($user, $accountType, $reply, $notice): bool {
+        Mail::assertSent(SupportNoticeMail::class, function (SupportNoticeMail $mail) use ($user, $accountType, $reply, $id): bool {
             $rendered = $mail->render();
             self::assertStringContainsString('My Support Requests', $rendered);
             self::assertStringNotContainsString($reply['message'], $rendered);
             self::assertStringNotContainsString('Open the order', $rendered);
             if ($accountType === 'VENDOR') {
-                self::assertStringContainsString('https://vendor.example.test/notifications?notice='.$notice->id, $rendered);
+                self::assertStringContainsString('https://vendor.example.test/support/'.$id, $rendered);
+                self::assertStringContainsString('View support request', $rendered);
             } else {
                 self::assertStringContainsString('Profile → Help Center', $rendered);
             }
+
+            self::assertStringNotContainsString('Open notification', $rendered);
+            self::assertStringContainsString((string) DB::table('support_tickets')->where('id', $id)->value('ticket_number'), $rendered);
 
             return $mail->hasTo($user->email) && $mail->accountType === $accountType;
         });

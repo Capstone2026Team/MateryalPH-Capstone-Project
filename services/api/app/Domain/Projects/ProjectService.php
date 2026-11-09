@@ -43,7 +43,22 @@ final class ProjectService
             throw new AuthenticationException('PROJECT_CLOSED', 'This Project is read-only. Its procurement history remains available.', 409);
         }
 
-        return $lock ? DB::table('work_packages')->where('id', $id)->lockForUpdate()->first() : $row;
+        return $this->effectivePackage($lock ? DB::table('work_packages')->where('id', $id)->lockForUpdate()->first() : $row);
+    }
+
+    /** A closed order releases its selection immediately, including while durable cleanup is queued. */
+    public function effectivePackage(object $w): object
+    {
+        if ($w->selected_arrangement_id === null && $w->selected_vendor_organization_id !== null && ! in_array($w->status, ['DRAFT', 'CANCELLED'], true)) {
+            $order = $this->currentPackageOrder($w);
+            if ($order !== null && in_array($order->order_state, OrderStates::CLOSED_BEFORE_FULFILLMENT, true)) {
+                $w = clone $w;
+                $w->selected_vendor_organization_id = null;
+                $w->status = 'ACTIVE';
+            }
+        }
+
+        return $w;
     }
 
     public static function version(object $row, int $expected): void
@@ -97,7 +112,7 @@ final class ProjectService
             $vendorOrders = $all->map(static fn (object $o): array => ['id' => $o->id, 'vendor_id' => $o->vendor_organization_id, 'reference' => $o->reference, 'order_state' => $o->order_state])->all();
         } elseif ($order !== null) {
             $status = match (true) {
-                in_array($order->order_state, ['CANCELLED', 'DECLINED', 'EXPIRED'], true) => 'CANCELLED',
+                in_array($order->order_state, ['CANCELLED', 'DECLINED', 'EXPIRED'], true) => $w->status === 'CANCELLED' ? 'CANCELLED' : 'ACTIVE',
                 $order->order_state === 'COMPLETED' && $this->missingComplete((string) $w->current_version_id) => 'COMPLETED',
                 $order->order_state === 'AWAITING_PAYMENT' => 'AWAITING_PAYMENT',
                 $order->accepted_at !== null => 'IN_PROGRESS',
@@ -184,7 +199,7 @@ final class ProjectService
     private function currentPackageOrder(object $w): ?object
     {
         return DB::table('orders')->where('work_package_id', $w->id)->where('procurement_type', 'PROJECT_BASED')->where('work_package_version_id', $w->current_version_id)
-            ->orderByDesc('created_at')->orderByDesc('id')->first();
+            ->orderByRaw("CASE WHEN order_state IN ('CANCELLED','DECLINED','EXPIRED') THEN 1 ELSE 0 END")->orderByDesc('created_at')->orderByDesc('id')->first();
     }
 
     /** A closed order's historical Vendor pointer is not an active assignment. */

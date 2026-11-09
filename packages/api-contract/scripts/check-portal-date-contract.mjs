@@ -35,6 +35,13 @@ for (const name of ['confirmAdminReimbursement', 'receiveXenditPaymentWebhook'])
   assert.ok(!entry.operation.parameters?.some(parameter => ['from', 'to'].includes(parameter.name)), `${name} must not acquire unrelated date filters`)
 }
 const readFilter = spec.components.schemas.NotificationReadFilter
+for (const name of ['listVendorTransactions', 'exportVendorTransactions']) {
+  const operation = operations.get(name).operation
+  const reference = operation.parameters.find(parameter => parameter.$ref === '#/components/parameters/VendorStatementStateFilter')
+  assert.ok(reference, `${name} supports paid statement history before pagination/export`)
+}
+assert.deepEqual(spec.components.parameters.VendorStatementStateFilter.schema.enum, ['PAID', 'NOT_PAID'])
+assert.equal(spec.components.parameters.VendorStatementStateFilter.name, 'statement_state')
 assert.equal(readFilter.additionalProperties, false)
 for (const boundary of ['from', 'to']) assert.equal(readFilter.properties[boundary].format, 'date')
 const kpiPeriod = spec.components.schemas.FinanceKpis.properties.period.properties

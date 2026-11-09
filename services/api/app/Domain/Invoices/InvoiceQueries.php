@@ -8,6 +8,7 @@ use App\Domain\Catalog\CatalogAccess;
 use App\Domain\Disputes\DisputeRules;
 use App\Domain\Orders\OrderAccess;
 use App\Domain\Orders\OrderStates;
+use App\Domain\Reporting\OrderDocumentService;
 use App\Support\PortalDateRange;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Query\Builder;
@@ -43,10 +44,11 @@ final class InvoiceQueries
         $sale = ! in_array($order->order_state, self::NOT_YET_A_SALE, true);
 
         return $summary + [
+            'order_summary' => InvoiceOrderSummary::forOrder($orderId),
             'billing_details' => $details === null ? null : ['billing_name' => (string) $details->billing_name, 'billing_address' => (string) $details->billing_address,
                 'tin_masked' => $details->tin_last4 === null ? null : '•••• '.$details->tin_last4, 'lock_version' => (int) $details->lock_version],
             'can_edit_billing_details' => ! in_array($order->order_state, [OrderStates::DECLINED, OrderStates::EXPIRED], true),
-            'can_request_copy' => $sale && ! $open('COPY'),
+            'can_request_copy' => $sale && $summary['status'] !== 'ISSUED' && ! $open('COPY'),
             'can_request_correction' => $summary['records'] !== [] && ! $open('CORRECTION'),
         ];
     }
@@ -61,18 +63,50 @@ final class InvoiceQueries
         $summary = $this->summary($order, 'VENDOR', $files);
         $details = DB::table('order_invoice_details')->where('order_id', $order->id)->first();
         $upload = OrderAccess::allows($scope, InvoiceService::UPLOAD);
+        $draft = $upload ? DB::table('invoice_drafts')->where('order_id', $orderId)->first() : null;
+        $editable = $upload && $this->invoices->canPrepare($order);
 
         return $summary + [
+            'buyer_name' => self::buyerNames()->where('invoice_buyers.id', $order->buyer_profile_id)->value('invoice_buyer_profiles.full_name') ?? 'Buyer',
             'billing_details' => $details === null ? null : ['billing_name' => (string) $details->billing_name, 'billing_address' => (string) $details->billing_address,
                 // The full TIN is needed to issue the invoice; only the roles that upload it see it.
                 'tin' => $upload && $details->tin_encrypted !== null ? Crypt::decryptString((string) $details->tin_encrypted) : null,
                 'tin_masked' => $details->tin_last4 === null ? null : '•••• '.$details->tin_last4],
-            'can_upload' => $upload && ! in_array($order->order_state, self::NOT_YET_A_SALE, true), 'can_open_files' => $files,
+            'can_upload' => $editable, 'can_open_files' => $files,
+            'can_send' => $editable && $draft !== null && $draft->sent_record_id === null,
+            'draft' => $draft === null ? null : $this->draft($draft), 'preset' => $this->preset($request),
+            'order_summary' => InvoiceOrderSummary::forOrder($orderId),
             'issuer_name' => (string) (DB::table('vendor_organizations')->where('id', $order->vendor_organization_id)->value('legal_business_name') ?? ''),
             'invoice_types' => InvoiceService::VENDOR_TYPES, 'source_systems' => InvoiceService::SOURCE_SYSTEMS, 'invoicing_methods' => InvoiceService::INVOICING_METHODS,
             'lines' => DB::table('order_lines')->where('order_id', $order->id)->orderBy('line_number')->get(['id', 'snapshot'])
                 ->map(static fn (object $line): array => ['order_line_id' => (string) $line->id, 'display_name' => (string) ((json_decode((string) $line->snapshot, true) ?: [])['display_name'] ?? 'Line')])->all(),
         ];
+    }
+
+    /** @return array<string, mixed> */
+    public function preset(Request $request): array
+    {
+        $scope = $this->orders->vendorScope($request);
+        $this->orders->require($scope, InvoiceService::VIEW, 'Invoices are not available to your role.');
+        $preset = DB::table('vendor_invoice_presets')->where('vendor_organization_id', $scope['organization_id'])->first();
+        $defaults = $preset === null ? [] : json_decode((string) $preset->defaults, true, flags: JSON_THROW_ON_ERROR);
+
+        return $defaults + ['invoice_type' => 'VENDOR_GOODS_INVOICE',
+            'issuer_name' => (string) DB::table('vendor_organizations')->where('id', $scope['organization_id'])->value('legal_business_name'),
+            'source_system' => 'REGISTERED_CAS', 'invoicing_method' => 'COMPUTERIZED', 'date_mode' => 'TODAY',
+            'lock_version' => $preset === null ? 0 : (int) $preset->lock_version];
+    }
+
+    /** @return array<string, mixed> */
+    private function draft(object $draft): array
+    {
+        $payload = json_decode((string) $draft->payload, true, flags: JSON_THROW_ON_ERROR);
+        $file = DB::table('files')->where('id', $draft->file_id)->first();
+
+        return $payload + ['id' => (string) $draft->id, 'lock_version' => (int) $draft->lock_version,
+            'sent_record_id' => $draft->sent_record_id, 'sent_at' => self::iso($draft->sent_at), 'updated_at' => self::iso($draft->updated_at),
+            'file_name' => $file?->original_name, 'content_type' => $file?->content_type, 'file_size_bytes' => $file === null ? null : (int) $file->byte_size,
+            'download' => $this->invoices->draftLink((string) $draft->id, (string) $draft->file_id)];
     }
 
     /**
@@ -88,8 +122,7 @@ final class InvoiceQueries
         $assigned = $scope['role'] === 'FULFILLMENT' ? DB::table('order_fulfillment_assignments')->select('order_id')->where('user_id', $request->user()->getKey())->whereNull('ended_at') : null;
         $requests = DB::table('invoice_requests')->where('vendor_organization_id', $organization)->where('state', '<>', 'CLOSED');
         $records = DB::table('invoice_records')->where('vendor_organization_id', $organization)->whereNotNull('order_id');
-        $due = DB::table('orders as o')->where('o.vendor_organization_id', $organization)->whereNotIn('o.order_state', [...self::NOT_YET_A_SALE, OrderStates::CANCELLED])
-            ->whereNotExists(fn (Builder $query) => $query->selectRaw('1')->from('invoice_records as r')->whereColumn('r.order_id', 'o.id')->where('r.invoice_type', 'VENDOR_GOODS_INVOICE'));
+        $due = $this->ordersWithoutCopies($organization);
         if ($assigned !== null) {
             $requests->whereIn('order_id', $assigned);
             $records->whereIn('order_id', $assigned);
@@ -99,11 +132,11 @@ final class InvoiceQueries
             'RECONCILIATION' => (clone $records)->where('reconciliation_state', 'INVOICE_RECONCILIATION_REQUIRED')->count()];
         $page = max(1, (int) ($filters['page'] ?? 1));
         [$query, $present] = match ($view) {
-            'DUE' => [$due->select('o.*')->orderBy('o.accepted_at'), fn (object $order): array => $this->dueRow($order)],
-            'RECORDS' => [$records->orderByDesc('created_at'), fn (object $record): array => $this->recordRow($record, 'VENDOR', false) + ['order_reference' => self::orderReference((string) $record->order_id)]],
+            'DUE' => [$due->select('o.*')->selectSub(self::buyerNames()->whereColumn('invoice_buyers.id', 'o.buyer_profile_id'), 'buyer_name')->orderBy('o.accepted_at'), fn (object $order): array => $this->dueRow($order)],
+            'RECORDS' => [$records->orderByDesc('created_at'), fn (object $record): array => $this->recordRow($record, 'VENDOR', false) + ['order_id' => (string) $record->order_id, 'order_reference' => self::orderReference((string) $record->order_id)]],
             'RECONCILIATION' => [$records->where('reconciliation_state', 'INVOICE_RECONCILIATION_REQUIRED')->orderByDesc('created_at'),
-                fn (object $record): array => $this->recordRow($record, 'VENDOR', false) + ['order_reference' => self::orderReference((string) $record->order_id)]],
-            default => [$requests->orderBy('service_target_at'), fn (object $row): array => $this->requestRow($row, 'VENDOR') + ['order_reference' => self::orderReference((string) $row->order_id)]],
+                fn (object $record): array => $this->recordRow($record, 'VENDOR', false) + ['order_id' => (string) $record->order_id, 'order_reference' => self::orderReference((string) $record->order_id)]],
+            default => [$requests->orderBy('service_target_at'), fn (object $row): array => $this->requestRow($row, 'VENDOR') + ['order_id' => (string) $row->order_id, 'order_reference' => self::orderReference((string) $row->order_id)]],
         };
         if (in_array($view, ['RECORDS', 'RECONCILIATION'], true)) {
             PortalDateRange::apply($query, 'issued_on', $filters, true);
@@ -144,29 +177,45 @@ final class InvoiceQueries
             'notice' => 'Read-only. Admins never create or calculate a Vendor tax invoice, never mark a sample as official and never treat a PDF as structured e-invoicing compliance.']];
     }
 
+    /** Count each authorized order once, whether its missing copy was requested or not. */
+    public function pendingVendorCount(Request $request): int
+    {
+        $scope = $this->orders->vendorScope($request);
+        $this->orders->require($scope, InvoiceService::VIEW, 'Invoices are not available to your role.');
+        $requested = DB::table('invoice_requests')->where('vendor_organization_id', $scope['organization_id'])
+            ->whereIn('state', ['REQUESTED', 'RETURNED_FOR_CORRECTION'])->select('order_id');
+        $pending = $this->ordersWithoutCopies($scope['organization_id'])->select('o.id')->union($requested);
+
+        return DB::query()->fromSub($pending, 'invoice_attention')->count();
+    }
+
+    private function ordersWithoutCopies(string $organizationId): Builder
+    {
+        return DB::table('orders as o')->where('o.vendor_organization_id', $organizationId)->whereNotIn('o.order_state', [...self::NOT_YET_A_SALE, OrderStates::CANCELLED])
+            ->whereNotExists(fn (Builder $query) => $query->selectRaw('1')->from('invoice_records as r')->whereColumn('r.order_id', 'o.id')->where('r.invoice_type', 'VENDOR_GOODS_INVOICE'));
+    }
+
     /** @return array<string, mixed> */
     private function summary(object $order, string $audience, bool $files): array
     {
-        $records = DB::table('invoice_records')->where('order_id', $order->id)->orderBy('created_at')->get();
+        $records = DB::table('invoice_records')->where('order_id', $order->id)->orderBy('created_at')->orderBy('id')->get();
         $sale = ! in_array($order->order_state, self::NOT_YET_A_SALE, true);
 
         return [
             'order_id' => (string) $order->id, 'order_reference' => (string) $order->reference,
             'status' => $records->contains(static fn (object $record): bool => $record->invoice_type === 'VENDOR_GOODS_INVOICE') ? 'ISSUED' : ($sale ? 'NOT_YET_UPLOADED' : 'NOT_DUE'),
             'issuance_notice' => self::ISSUANCE_NOTICE,
-            'records' => $records->map(fn (object $record): array => $this->recordRow($record, $audience, $files))->values()->all(),
+            'records' => $records->map(fn (object $record): array => $this->recordRow($record, $audience, $files, true))->values()->all(),
             'requests' => DB::table('invoice_requests')->where('order_id', $order->id)->orderByDesc('created_at')->get()->map(fn (object $row): array => $this->requestRow($row, $audience))->values()->all(),
-            'platform_documents' => [
-                ['kind' => 'PURCHASE_ORDER', 'title' => 'MateryalPH Purchase Order', 'not_tax_invoice' => true, 'label' => 'Not a tax invoice', 'availability' => 'PHASE_15_PDF_PENDING'],
-                ['kind' => 'PAYMENT_CONFIRMATION', 'title' => 'MateryalPH payment confirmation', 'not_tax_invoice' => true, 'label' => 'Not a tax invoice', 'availability' => $order->payment_state === 'PAID' ? 'IN_ORDER_DETAILS' : 'AFTER_PAYMENT'],
-            ],
+            'platform_documents' => app(OrderDocumentService::class)->references($order, $audience, $files),
         ];
     }
 
     /** @return array<string, mixed> */
-    private function recordRow(object $record, string $audience, bool $files): array
+    private function recordRow(object $record, string $audience, bool $files, bool $detailed = false): array
     {
         $breakdown = json_decode((string) ($record->tax_breakdown ?? '{}'), true) ?: [];
+        $file = $detailed ? DB::table('files')->where('id', $record->file_id)->first() : null;
 
         return [
             'id' => (string) $record->id, 'invoice_type' => (string) $record->invoice_type, 'issuer' => (string) $record->issuer, 'invoice_number' => (string) ($record->invoice_number_display ?? ''),
@@ -180,6 +229,9 @@ final class InvoiceQueries
             'download' => $files ? $this->invoices->link($audience, (string) $record->id) : null,
             'can_explain' => $audience === 'VENDOR' && $files && $record->reconciliation_state === 'INVOICE_RECONCILIATION_REQUIRED',
             'buyer_total_unchanged' => true,
+            ...($detailed ? ['file_name' => $file?->original_name, 'content_type' => $file?->content_type, 'file_size_bytes' => $file === null ? null : (int) $file->byte_size,
+                'sent_at' => self::iso($record->created_at), 'order_summary' => $record->commercial_snapshot === null
+                    ? InvoiceOrderSummary::forOrder((string) $record->order_id) : json_decode((string) $record->commercial_snapshot, true, flags: JSON_THROW_ON_ERROR)] : []),
         ];
     }
 
@@ -187,6 +239,7 @@ final class InvoiceQueries
     private function requestRow(object $row, string $audience): array
     {
         $target = CarbonImmutable::parse((string) $row->service_target_at);
+        $latest = $audience === 'BUYER' ? DB::table('invoice_records')->where('order_id', $row->order_id)->orderByDesc('created_at')->orderByDesc('id')->value('id') : null;
 
         return [
             'id' => (string) $row->id, 'kind' => (string) $row->kind, 'state' => (string) $row->state, 'details' => $row->details, 'invoice_record_id' => $row->invoice_record_id,
@@ -194,7 +247,7 @@ final class InvoiceQueries
             'service_target_label' => $target->setTimezone(DisputeRules::TIMEZONE)->format('M j, Y g:i A').' (Asia/Manila)',
             'overdue' => in_array($row->state, ['REQUESTED', 'RETURNED_FOR_CORRECTION'], true) && $target->isPast(),
             'uploaded_at' => self::iso($row->uploaded_at), 'downloaded_at' => self::iso($row->downloaded_at), 'closed_at' => self::iso($row->closed_at),
-            'can_return' => $audience === 'BUYER' && in_array($row->state, ['UPLOADED', 'DOWNLOADED'], true), 'can_close' => $audience === 'BUYER' && $row->state !== 'CLOSED',
+            'can_return' => $audience === 'BUYER' && in_array($row->state, ['UPLOADED', 'DOWNLOADED'], true) && $row->fulfilled_invoice_record_id === $latest, 'can_close' => $audience === 'BUYER' && $row->state !== 'CLOSED',
         ];
     }
 
@@ -202,6 +255,7 @@ final class InvoiceQueries
     private function dueRow(object $order): array
     {
         return ['order_id' => (string) $order->id, 'order_reference' => (string) $order->reference, 'order_state' => (string) $order->order_state, 'payment_state' => (string) $order->payment_state,
+            'buyer_name' => $order->buyer_name ?? 'Buyer',
             'accepted_at' => self::iso($order->accepted_at), 'open_request' => DB::table('invoice_requests')->where('order_id', $order->id)->where('state', '<>', 'CLOSED')->exists(),
             'note' => 'No invoice copy is recorded yet. Issue it through your registered process when legally due; a Buyer request is not required.'];
     }
@@ -212,6 +266,13 @@ final class InvoiceQueries
         return $this->recordRow($record, 'ADMIN', true) + ['order_reference' => self::orderReference((string) $record->order_id), 'vendor_name' => self::vendorName((string) $record->vendor_organization_id),
             'downloads' => DB::table('invoice_record_downloads')->where('invoice_record_id', $record->id)->count(),
             'last_download_at' => self::iso(DB::table('invoice_record_downloads')->where('invoice_record_id', $record->id)->max('created_at'))];
+    }
+
+    private static function buyerNames(): Builder
+    {
+        return DB::table('buyer_profiles as invoice_buyers')
+            ->leftJoin('user_profiles as invoice_buyer_profiles', 'invoice_buyer_profiles.user_id', '=', 'invoice_buyers.user_id')
+            ->select('invoice_buyer_profiles.full_name');
     }
 
     private static function orderReference(string $orderId): string

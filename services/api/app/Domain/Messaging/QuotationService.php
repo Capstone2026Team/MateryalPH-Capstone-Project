@@ -14,9 +14,11 @@ use App\Domain\Identity\AuthenticationException;
 use App\Domain\Orders\OrderDeliveryPlanner;
 use App\Domain\Orders\OrderEligibility;
 use App\Domain\Payments\PaymentMethodPolicy;
+use App\Domain\Projects\ProjectService;
 use App\Domain\Settings\PlatformSettings;
 use App\Models\User;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -282,25 +284,27 @@ final class QuotationService
     }
 
     /** @return array<string, mixed> */
-    public function show(Request $request, string $conversationId): array
+    public function show(Request $request, string $conversationId, ?Builder $authorizedScope = null): array
     {
         $c = $this->access->require($request->user(), $conversationId);
-        if ($c->purpose !== 'SALES') {
+        if ($c->purpose !== 'SALES' && $authorizedScope === null) {
             return ['quotation' => null, 'versions' => [], 'has_more' => false];
         }
         $q = DB::table('quotations')->where('conversation_id', $conversationId)->orderByDesc('id')->first();
-        if ($q === null) {
+        if ($q === null && $authorizedScope === null) {
             return ['quotation' => null, 'versions' => [], 'has_more' => false];
         }
-        DB::transaction(function () use (&$q): void {
-            DB::table('conversations')->where('id', $q->conversation_id)->lockForUpdate()->first();
-            $q = DB::table('quotations')->where('id', $q->id)->lockForUpdate()->first();
-            $this->expireLocked($q);
-        });
+        if ($q !== null) {
+            DB::transaction(function () use (&$q): void {
+                DB::table('conversations')->where('id', $q->conversation_id)->lockForUpdate()->first();
+                $q = DB::table('quotations')->where('id', $q->id)->lockForUpdate()->first();
+                $this->expireLocked($q);
+            });
+        }
         $page = DB::table('quotation_versions as v')->join('quotations as q', 'q.id', '=', 'v.quotation_id')
             ->leftJoin('orders as accepted_order', 'accepted_order.id', '=', 'q.accepted_order_id')
-            ->where('q.conversation_id', $conversationId)->orderByDesc('v.id')
-            ->paginate(10, ['v.*', 'q.state as quotation_state', 'q.current_version_id as quotation_current_version_id', 'q.accepted_order_id', 'accepted_order.payment_method as selected_payment_method']);
+            ->when($authorizedScope === null, fn (Builder $query) => $query->where('q.conversation_id', $conversationId), fn (Builder $query) => $query->whereIn('q.conversation_id', (clone $authorizedScope)->select('c.id')))->orderByDesc('v.id')
+            ->paginate(10, ['v.*', 'q.conversation_id', 'q.state as quotation_state', 'q.response_due_at', 'q.current_version_id as quotation_current_version_id', 'q.accepted_order_id', 'q.replaces_order_id', 'accepted_order.payment_method as selected_payment_method']);
         $buyer = $request->user()->account_type === 'BUYER';
         $requests = DB::table('quotation_counter_offers')->whereIn('quotation_version_id', $page->pluck('id'))
             ->where('event_type', 'COUNTERED')->orderBy('id')->get()->keyBy('quotation_version_id');
@@ -311,25 +315,26 @@ final class QuotationService
             $methods[$fulfillment] = array_column(array_filter($payments->options((string) $c->vendor_organization_id, $fulfillment), static fn (array $option): bool => $option['available']), 'method');
         }
 
-        return ['quotation' => ['id' => $q->id, 'state' => $q->state, 'lock_version' => (int) $q->lock_version, 'current_version_id' => $q->current_version_id,
-            'accepted_order_id' => $q->accepted_order_id, 'response_due_at' => $q->response_due_at, 'draft' => $buyer ? null : $this->draftView($q->draft),
+        return ['quotation' => $q === null ? null : ['id' => $q->id, 'state' => $q->state, 'lock_version' => (int) $q->lock_version, 'current_version_id' => $q->current_version_id,
+            'accepted_order_id' => $q->accepted_order_id, 'replaces_order_id' => $q->replaces_order_id, 'response_due_at' => $q->response_due_at, 'draft' => $buyer ? null : $this->draftView($q->draft),
             'can_draft' => ! $buyer && $q->state !== 'ACCEPTED', 'can_publish' => $publish && $q->state !== 'ACCEPTED'],
-            'versions' => array_map(function (object $v) use ($q, $buyer, $publish, $methods, $requests): array {
-                $latest = $q->current_version_id === $v->id;
+            'versions' => array_map(function (object $v) use ($buyer, $publish, $methods, $requests): array {
+                $latest = $v->quotation_current_version_id === $v->id;
+                $state = in_array($v->quotation_state, [...self::OPEN, 'COUNTERED'], true) && $v->response_due_at !== null && CarbonImmutable::parse($v->response_due_at)->isPast() ? 'EXPIRED' : $v->quotation_state;
                 $content = json_decode($v->content, true);
                 $counter = $requests->get($v->id);
                 $requested = $counter === null ? null : json_decode($counter->payload, true);
 
                 return ($counter === null ? [] : ['requested_changes' => $requested['requested_changes'],
                     'change_requested_at' => CarbonImmutable::parse($counter->created_at)->toIso8601String(),
-                    'vendor_response_due_at' => CarbonImmutable::parse($requested['vendor_due_at'])->toIso8601String()]) + ['id' => $v->id, 'quotation_id' => $v->quotation_id,
-                        'accepted_order_id' => $v->id === $v->quotation_current_version_id ? $v->accepted_order_id : null,
-                        'version' => (int) $v->version, 'latest' => $latest, 'state' => $v->id === $v->quotation_current_version_id ? $v->quotation_state : 'SUPERSEDED', 'published_at' => $v->published_at,
+                    'vendor_response_due_at' => CarbonImmutable::parse($requested['vendor_due_at'])->toIso8601String()]) + ['id' => $v->id, 'conversation_id' => $v->conversation_id, 'quotation_id' => $v->quotation_id,
+                        'accepted_order_id' => $v->id === $v->quotation_current_version_id ? $v->accepted_order_id : null, 'replaces_order_id' => $v->replaces_order_id,
+                        'version' => (int) $v->version, 'latest' => $latest, 'state' => $latest ? $state : 'SUPERSEDED', 'published_at' => $v->published_at,
                         'expires_at' => $v->expires_at, 'content_hash' => $v->content_hash, 'content' => $content,
                         'available_payment_methods' => $methods[$content['fulfillment_method']] ?? [],
                         'selected_payment_method' => $v->id === $v->quotation_current_version_id ? $v->selected_payment_method : null,
                         'viewed' => DB::table('quotation_events')->where('quotation_version_id', $v->id)->where('event_type', 'VIEWED')->exists(),
-                        'actions' => $latest && in_array($q->state, self::OPEN, true) ? ($buyer ? ['view', 'accept', 'reject', 'counter'] : ($publish ? ['withdraw'] : [])) : []];
+                        'actions' => $latest && in_array($state, self::OPEN, true) ? ($buyer ? ['view', 'accept', 'reject', 'counter'] : ($publish ? ['withdraw'] : [])) : []];
             }, $page->items()), 'has_more' => $page->hasMorePages(), 'page' => $page->currentPage()];
     }
 
@@ -474,19 +479,26 @@ final class QuotationService
             throw new AuthenticationException('PROJECT_CLOSED', 'This Project is read-only. Quotation history remains available.', 409);
         }
         $package = DB::table('work_packages')->where('id', $c->context_id)->lockForUpdate()->first();
+        if ($package !== null) {
+            $package = app(ProjectService::class)->effectivePackage($package);
+        }
         DB::table('conversations')->where('context_type', 'PROJECT_BASED')->where('context_id', $c->context_id)->orderBy('id')->lockForUpdate()->get(['id']);
         $owned = $package !== null && DB::table('projects')->where('id', $package->project_id)->where('buyer_profile_id', $c->buyer_profile_id)->exists();
         if (! $owned) {
             throw new AuthenticationException('WORK_PACKAGE_NOT_FOUND', 'This Work Package is unavailable.', 404);
         }
         $reference = json_decode((string) $c->locked_reference, true);
+        $replacement = DB::table('quotations')->where('conversation_id', $c->id)->orderByDesc('id')->value('replaces_order_id');
+        $pending = $replacement === null ? null : DB::table('orders')->where('id', $replacement)->first();
+        $mayReplace = PendingOrderQuotationService::eligible($pending) && $pending->work_package_id === $package->id
+            && $pending->vendor_organization_id === $c->vendor_organization_id && $pending->work_package_version_id === $package->current_version_id;
         if (isset($reference['arrangement_id'])) {
             $member = DB::table('project_arrangement_vendors as m')->join('project_procurement_arrangements as a', 'a.id', '=', 'm.arrangement_id')
                 ->where('m.id', $reference['arrangement_vendor_id'])->where('m.arrangement_id', $reference['arrangement_id'])
                 ->where('m.vendor_organization_id', $c->vendor_organization_id)->where('m.conversation_id', $c->id)->where('a.work_package_version_id', $package->current_version_id)->first(['m.*']);
             if ($member === null || ($package->selected_arrangement_id === null && $package->selected_vendor_organization_id !== null)
                 || ($package->selected_arrangement_id !== null && $package->selected_arrangement_id !== $reference['arrangement_id'])
-                || ($requireUnassigned && $member->order_id !== null && ! DB::table('quotations')->where('conversation_id', $c->id)->where('accepted_order_id', $member->order_id)->exists())) {
+                || ($requireUnassigned && ! ($mayReplace && $member->order_id === $replacement) && $member->order_id !== null && ! DB::table('quotations')->where('conversation_id', $c->id)->where('accepted_order_id', $member->order_id)->exists())) {
                 throw new AuthenticationException('PROJECT_ALLOCATION_LOCKED', 'This supplier allocation belongs to another arrangement or already has an order.', 409);
             }
         }
@@ -494,7 +506,7 @@ final class QuotationService
             throw new AuthenticationException('WORK_PACKAGE_VERSION_CONFLICT', 'This inquiry belongs to an older or closed Work Package version. Its history remains readable.', 409);
         }
         if ((! isset($reference['arrangement_id']) && $package->selected_arrangement_id !== null)
-            || (! isset($reference['arrangement_id']) && $requireUnassigned && $package->selected_vendor_organization_id !== null && ! DB::table('quotations')->where('conversation_id', $c->id)->whereNotNull('accepted_order_id')->exists())) {
+            || (! isset($reference['arrangement_id']) && $requireUnassigned && ! $mayReplace && $package->selected_vendor_organization_id !== null && ! DB::table('quotations')->where('conversation_id', $c->id)->whereNotNull('accepted_order_id')->exists())) {
             throw new AuthenticationException('WORK_PACKAGE_ALREADY_ASSIGNED', 'This Work Package is unavailable or already assigned. Its quotation history remains readable.', 409);
         }
     }

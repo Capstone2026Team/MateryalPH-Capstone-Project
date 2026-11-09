@@ -12,6 +12,7 @@ Method | HTTP request | Description
 [**editVendorBuyerRating**](VendorReviewsApi.md#editvendorbuyerrating) | **PATCH** /vendor/reviews/{reviewId} |
 [**getVendorOrderReviews**](VendorReviewsApi.md#getvendororderreviews) | **GET** /vendor/orders/{orderId}/reviews |
 [**getVendorReview**](VendorReviewsApi.md#getvendorreview) | **GET** /vendor/reviews/{reviewId} |
+[**getVendorReviewBuyerPhoto**](VendorReviewsApi.md#getvendorreviewbuyerphoto) | **GET** /vendor/reviews/{reviewId}/buyer-photo |
 [**getVendorReviewPhoto**](VendorReviewsApi.md#getvendorreviewphoto) | **GET** /vendor/reviews/{reviewId}/media/{mediaId}/content |
 [**listVendorReviews**](VendorReviewsApi.md#listvendorreviews) | **GET** /vendor/reviews |
 [**reportVendorReview**](VendorReviewsApi.md#reportvendorreview) | **POST** /vendor/reviews/{reviewId}/flags |
@@ -170,6 +171,61 @@ Name | Type | Description  | Notes
 
  - **Content-Type**: Not defined
  - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **getVendorReviewBuyerPhoto**
+> Uint8List getVendorReviewBuyerPhoto(reviewId, expires, signature)
+
+
+
+reviews.view. Five-minute signed Buyer profile photo for a named received review in the current store. Rechecks blind reveal, dispute withholding, moderation, score exclusions and current membership on every fetch. Legacy anonymous reviews now show the actual Buyer identity. Store-authored Buyer ratings, missing photos and foreign reviews return 404. Returns only the sanitized PNG; no Buyer ID, contact or private storage key is exposed.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getVendorReviewsApi();
+final String reviewId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final int expires = 56; // int |
+final String signature = signature_example; // String |
+
+try {
+    final response = api.getVendorReviewBuyerPhoto(reviewId, expires, signature);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling VendorReviewsApi->getVendorReviewBuyerPhoto: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **reviewId** | **String**|  |
+ **expires** | **int**|  |
+ **signature** | **String**|  |
+
+### Return type
+
+[**Uint8List**](Uint8List.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: image/png, application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 

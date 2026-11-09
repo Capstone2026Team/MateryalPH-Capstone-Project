@@ -10,6 +10,7 @@ use App\Domain\Analytics\Mining\KMeans;
 use App\Domain\Analytics\Mining\VendorRiskClassifier;
 use App\Domain\Authorization\AccountAccess;
 use App\Domain\Disputes\DisputeRules;
+use App\Domain\Finance\SalesReporting;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Scores\ScoreQueries;
 use Carbon\CarbonImmutable;
@@ -25,7 +26,7 @@ use Illuminate\Support\Facades\DB;
  *
  * Money is integer centavos. Dates are Asia/Manila calendar days. A confirmed order is one that first reached CONFIRMED,
  * valued like the Admin GMV: Vendor child-order value (materials, NRPC, delivery) before cancellations and refunds,
- * excluding the Buyer processing fee. Scores, rates and badge metrics come from the Score service rather than a second
+ * excluding the E-wallet transaction fee. Scores, rates and badge metrics come from the Score service rather than a second
  * formula. Mining output (forecast, segments, unusual days, co-ordered materials) is descriptive and never changes a
  * score, a price, a ranking or an enforcement decision. Storefront visits are not recorded anywhere in the platform,
  * so no visit figure exists or is implied; product views live in VendorProductAnalytics.
@@ -44,7 +45,7 @@ final class VendorDashboardInsights
     /** Days with at least one order before a trend or forecast is offered. */
     private const MIN_ACTIVE_DAYS = 7;
 
-    public const POST_CONFIRMATION = ['CONFIRMED', 'PROCESSING', 'READY_FOR_PICKUP', 'OUT_FOR_DELIVERY', 'DELIVERED', 'PICKED_UP', 'COMPLETED', 'DISPUTED', 'CANCELLATION_REQUESTED'];
+    public const POST_CONFIRMATION = SalesReporting::POST_CONFIRMATION;
 
     private const OPEN_STATES = ['AWAITING_VENDOR_CONFIRMATION', 'AWAITING_BUYER_APPROVAL', 'AWAITING_NRPC_ACCEPTANCE', 'AWAITING_PAYMENT', 'CONFIRMED', 'PROCESSING', 'READY_FOR_PICKUP', 'OUT_FOR_DELIVERY', 'DELIVERED', 'PICKED_UP', 'DISPUTED', 'CANCELLATION_REQUESTED'];
 
@@ -108,8 +109,10 @@ final class VendorDashboardInsights
     }
 
     public const DEFINITIONS = [
-        'gross_sales' => 'Value of all Vendor child orders first confirmed in the period (materials, NRPC and delivery), before any deduction for cancellations, returns or refunds, and excluding the Buyer processing fee. Net sales shows what remains after them. An internal operational view, not a tax invoice or accounting record.',
-        'net_sales' => 'Gross sales less cancelled orders and refunds already paid back to Buyers (dispute conclusions and other completed refunds).',
+        'gross_sales' => 'Value of all Vendor child orders first confirmed in the period (materials, NRPC and delivery), before any deduction for cancellations, returns or refunds, and excluding the E-wallet transaction fee. Net sales shows what remains after them. An internal operational view, not a tax invoice or accounting record.',
+        'net_sales' => 'Displayed as Net sales: gross sales less completed online refund principal, confirmed physical reimbursements and the remaining cancelled-order value. Before commission, other charges and business costs; not profit.',
+        'refunds' => 'Completed online refund principal and confirmed physical reimbursements deducted from orders first confirmed on each Asia/Manila day, capped at each confirmed sale value. Includes cancellation refunds; excludes E-wallet transaction fees, late-capture compensation, pending and failed refunds.',
+        'cancellation_deductions' => 'Cancelled confirmed order value not already included in refund deductions. Gross sales minus refunds minus these other cancellation deductions equals Net sales.',
         'order_volume' => 'Count of Vendor child orders first confirmed in the period.',
         'fulfillment_rate' => 'Confirmed, non-cancelled orders whose expected fulfillment date falls in the period and that were completed by the end date, divided by all such orders.',
         'cancellation_rate' => 'Orders first confirmed in the period that were finalized as cancelled (any cause), divided by orders first confirmed in the period. The Vendor-caused rate used for scoring appears under Performance.',
@@ -131,21 +134,14 @@ final class VendorDashboardInsights
         /** @var CarbonImmutable $today */
         $today = $context['today'];
         $historyFrom = $today->subDays(max(self::HISTORY_DAYS, 2 * $context['days']) - 1);
-        $confirmed = DB::table('order_status_history')->where('state_family', 'ORDER')->where('to_state', 'CONFIRMED')->groupBy('order_id')->selectRaw('order_id, MIN(created_at) AS confirmed_at');
-        $confirmedOn = "(COALESCE(h.confirmed_at, o.accepted_at, o.created_at) AT TIME ZONE '".self::TIMEZONE."')::date";
-        $rows = DB::table('orders as o')->leftJoinSub($confirmed, 'h', 'h.order_id', '=', 'o.id')->where('o.vendor_organization_id', $context['organization'])
-            ->where(fn ($query) => $query->whereNotNull('h.confirmed_at')->orWhereIn('o.order_state', self::POST_CONFIRMATION))
+        $confirmedOn = '('.SalesReporting::CONFIRMED_AT." AT TIME ZONE '".self::TIMEZONE."')::date";
+        $rows = SalesReporting::orders()->where('o.vendor_organization_id', $context['organization'])
             ->whereRaw($confirmedOn.' >= ?', [$historyFrom->toDateString()])->whereRaw($confirmedOn.' <= ?', [$today->toDateString()])
             ->get(['o.id', 'o.buyer_profile_id', 'o.order_state', 'o.procurement_type', 'o.fulfillment_method', 'o.payment_method', 'o.commercial_total_centavos', 'o.expected_fulfillment_date', 'o.closed_at',
-                DB::raw($confirmedOn.' AS confirmed_on')]);
+                DB::raw($confirmedOn.' AS confirmed_on'), DB::raw('COALESCE(rf.refunded_centavos, 0) AS online_refunds'), DB::raw('COALESCE(rc.refunded_centavos, 0) AS cash_refunds')]);
         $ids = $rows->pluck('id')->map(static fn (mixed $id): string => (string) $id)->all();
-        $refunded = [];
         $disputed = [];
         foreach (array_chunk($ids, 1000) as $chunk) {
-            foreach (DB::table('refunds')->whereIn('order_id', $chunk)->where('target_type', 'ORDER')->where('state', 'REFUNDED')->where('trigger', '<>', 'CANCELLATION')
-                ->groupBy('order_id')->selectRaw('order_id, SUM(COALESCE(principal_centavos, amount_centavos)) AS total')->get() as $refund) {
-                $refunded[(string) $refund->order_id] = (int) $refund->total;
-            }
             foreach (DB::table('dispute_cases')->whereIn('order_id', $chunk)->distinct()->pluck('order_id') as $orderId) {
                 $disputed[(string) $orderId] = true;
             }
@@ -158,11 +154,14 @@ final class VendorDashboardInsights
             // Gross sales is the whole confirmed order value before any deduction for returns, refunds or cancellations
             // (approved by the project owner on 2026-10-16); Net sales is what remains after them.
             $gross = (int) $row->commercial_total_centavos;
-            $net = $cancelled ? 0 : $gross - min($gross, $refunded[(string) $row->id] ?? 0);
+            $amounts = DashboardSalesAmounts::forOrder($gross, $cancelled, (int) $row->online_refunds, (int) $row->cash_refunds);
+            $net = $amounts['net'];
             $day = (string) $row->confirmed_on;
             $byDay[$day]['orders'] = ($byDay[$day]['orders'] ?? 0) + 1;
             $byDay[$day]['gross'] = ($byDay[$day]['gross'] ?? 0) + $gross;
             $byDay[$day]['net'] = ($byDay[$day]['net'] ?? 0) + $net;
+            $byDay[$day]['refunds'] = ($byDay[$day]['refunds'] ?? 0) + $amounts['refunds'];
+            $byDay[$day]['cancellation_deductions'] = ($byDay[$day]['cancellation_deductions'] ?? 0) + $amounts['cancellation_deductions'];
             $byDay[$day]['buyers'][(string) $row->buyer_profile_id] = true;
             $facts[] = ['id' => (string) $row->id, 'day' => $day, 'gross' => $gross, 'net' => $net, 'cancelled' => $cancelled, 'disputed' => isset($disputed[(string) $row->id]), 'state' => (string) $row->order_state,
                 'procurement' => (string) $row->procurement_type, 'fulfillment' => (string) $row->fulfillment_method, 'payment' => (string) $row->payment_method, 'buyer' => (string) $row->buyer_profile_id,
@@ -193,6 +192,8 @@ final class VendorDashboardInsights
             $series[] = ['date' => $date, 'orders' => $byDay[$date]['orders'] ?? 0, 'order_requests' => $requests[$date] ?? 0,
                 'orders_average' => $orderTrend['moving_average'][$historyOffsets[$date] ?? -1] ?? null,
                 'gross_sales_centavos' => $sales ? ($byDay[$date]['gross'] ?? 0) : null, 'net_sales_centavos' => $sales ? ($byDay[$date]['net'] ?? 0) : null,
+                'refunds_centavos' => $sales ? ($byDay[$date]['refunds'] ?? 0) : null,
+                'cancellation_deductions_centavos' => $sales ? ($byDay[$date]['cancellation_deductions'] ?? 0) : null,
                 'sales_average_centavos' => $sales && $salesTrend !== null && ($salesTrend['moving_average'][$historyOffsets[$date] ?? -1] ?? null) !== null ? (int) round($salesTrend['moving_average'][$historyOffsets[$date]]) : null];
         }
 
@@ -323,7 +324,7 @@ final class VendorDashboardInsights
     private function products(array $context, array $current, array $facts): array
     {
         $sales = (bool) $context['sales'];
-        $lines = $this->lines(array_column($facts, 'id'));
+        $lines = $this->lines((string) $context['organization'], array_column($facts, 'id'));
         $currentIds = array_flip(array_column($current, 'id'));
         $historyFrom = $context['today']->subDays(self::HISTORY_DAYS - 1)->toDateString();
         $historyIds = array_flip(array_column(array_filter($facts, static fn (array $f): bool => $f['day'] >= $historyFrom && ! $f['cancelled']), 'id'));
@@ -356,7 +357,25 @@ final class VendorDashboardInsights
         }
         usort($categoryRows, static fn (array $a, array $b): int => $sales ? [$b['value_centavos'], $a['category']] <=> [$a['value_centavos'], $b['category']] : [$b['orders'], $a['category']] <=> [$a['orders'], $b['category']]);
 
-        return ['top' => array_map($strip, array_slice($ranked, 0, 5)), 'categories' => array_slice($categoryRows, 0, 6), 'segments' => $this->segments($ranked, $sales),
+        if (count($categoryRows) > 6) {
+            $otherRows = array_splice($categoryRows, 5);
+            $otherOrders = [];
+            foreach ($otherRows as $row) {
+                $otherOrders += $categories[$row['category']]['orders'];
+            }
+            $categoryRows[] = ['category' => 'Other categories', 'orders' => count($otherOrders),
+                'value_centavos' => $sales ? array_sum(array_column($otherRows, 'value_centavos')) : null];
+        }
+        $breakdown = null;
+        if ($sales) {
+            $totals = SalesReporting::sales((string) $context['organization'])->whereIn('o.id', array_keys($currentIds))
+                ->selectRaw('COALESCE(SUM(s.materials_payable_centavos), 0) AS products, COALESCE(SUM(s.delivery_centavos), 0) AS delivery,
+                    COALESCE(SUM('.SalesReporting::REFUNDS.'), 0) AS refunds, COALESCE(SUM('.SalesReporting::NET.'), 0) AS net')->first();
+            $breakdown = ['product_sales_centavos' => (int) $totals->products, 'delivery_centavos' => (int) $totals->delivery,
+                'refunds_centavos' => (int) $totals->refunds, 'net_sales_centavos' => (int) $totals->net];
+        }
+
+        return ['top' => array_map($strip, array_slice($ranked, 0, 5)), 'categories' => $categoryRows, 'sales_breakdown' => $breakdown, 'segments' => $this->segments($ranked, $sales),
             'basket_rules' => $this->basketRules(array_values($baskets))];
     }
 
@@ -375,13 +394,13 @@ final class VendorDashboardInsights
      * @param  list<string>  $orderIds
      * @return list<array{order: string, buyer: string, listing: string, name: string, category: string, value: int}>
      */
-    private function lines(array $orderIds): array
+    private function lines(string $organizationId, array $orderIds): array
     {
         $out = [];
         foreach (array_chunk($orderIds, 1000) as $chunk) {
-            $rows = DB::table('order_lines as l')->join('orders as o', 'o.id', '=', 'l.order_id')->leftJoin('listing_variants as lv', 'lv.id', '=', 'l.listing_variant_id')
-                ->leftJoin('vendor_listings as v', 'v.id', '=', DB::raw('COALESCE(l.vendor_listing_id, lv.vendor_listing_id)'))->leftJoin('material_categories as c', 'c.id', '=', 'v.material_category_id')
-                ->whereIn('l.order_id', $chunk)->get(['l.order_id', 'o.buyer_profile_id', 'l.payable_centavos', 'v.id as listing_id', 'v.display_name', 'c.name as category_name']);
+            $rows = SalesReporting::productLines($organizationId)->whereIn('o.id', $chunk)
+                ->get(['ol.order_id', 'o.buyer_profile_id', 'fl.ordinary_payable_centavos as payable_centavos',
+                    DB::raw(SalesReporting::LISTING_ID.' AS listing_id'), 'vl.display_name', 'c.name as category_name']);
             foreach ($rows as $row) {
                 $out[] = ['order' => (string) $row->order_id, 'buyer' => (string) $row->buyer_profile_id, 'listing' => (string) ($row->listing_id ?? 'unlisted'), 'name' => (string) ($row->display_name ?? 'Unlisted material'),
                     'category' => (string) ($row->category_name ?? 'Uncategorized'), 'value' => (int) $row->payable_centavos];

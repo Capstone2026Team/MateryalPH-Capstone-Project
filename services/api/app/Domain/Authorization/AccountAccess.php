@@ -72,7 +72,7 @@ final class AccountAccess
     {
         $permissions = match ($role) {
             // Materials Analytics (MAT-05) and store-wide scores stay with Owner/Manager; no flag, delegation or combined scope adds them elsewhere.
-            'OWNER', 'STORE_MANAGER' => ['quotations.publish', 'orders.set_nrpc', 'orders.confirm', 'orders.revise', 'orders.cancel', 'catalog.manage', 'inventory.view', 'inventory.manage', 'inventory.settings', 'compliance.submit', 'auto_accept.configure', 'fulfillment.record', 'fulfillment.assign', 'vehicles.manage', 'materials_analytics.view_competitors', 'payments.record_physical',
+            'OWNER', 'STORE_MANAGER' => ['messaging.automated_response.configure', 'quotations.publish', 'orders.set_nrpc', 'orders.confirm', 'orders.revise', 'orders.cancel', 'catalog.manage', 'inventory.view', 'inventory.manage', 'inventory.settings', 'compliance.submit', 'auto_accept.configure', 'fulfillment.record', 'fulfillment.assign', 'vehicles.manage', 'materials_analytics.view_competitors', 'payments.record_physical',
                 'disputes.respond', 'disputes.export', 'invoices.view', 'invoices.upload', 'reviews.view', 'reviews.rate_buyer', 'reviews.report', 'scores.view_store'],
             // Vendor cancellation by Store Staff was approved by the project owner on 2026-10-02.
             'STORE_STAFF' => ['quotations.publish', 'orders.set_nrpc', 'orders.confirm', 'orders.revise', 'orders.cancel', 'catalog.manage', 'inventory.view', 'inventory.manage', 'compliance.submit', 'auto_accept.view_outcomes', 'payments.record_physical',

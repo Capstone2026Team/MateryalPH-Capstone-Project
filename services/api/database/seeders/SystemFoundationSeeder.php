@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use App\Domain\Finance\CommissionTermsTemplate;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -23,6 +24,7 @@ final class SystemFoundationSeeder extends Seeder
         $this->agreements();
         $this->roles();
         $this->financePolicies();
+        app(CommissionTermsTemplate::class)->backfill();
         $this->taxRules();
         $this->passportClient();
     }

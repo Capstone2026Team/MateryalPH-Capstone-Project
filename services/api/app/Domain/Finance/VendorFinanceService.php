@@ -34,6 +34,8 @@ final class VendorFinanceService
 {
     public const TABS = ['PAYMENTS', 'PHYSICAL', 'REMITTANCES', 'STATEMENTS', 'REFUNDS', 'TAX_DOCUMENTS'];
 
+    public const STATEMENT_FILTERS = ['PAID', 'NOT_PAID'];
+
     /** Payments status filter; each value matches exactly the badge the Payments row shows. */
     public const PAYMENT_STATUSES = ['PAID', 'PAID_PARTIALLY_REFUNDED', 'PAID_REFUND_PENDING', 'PAID_REFUNDED', 'PAID_REFUND_FAILED', 'PENDING', 'FAILED', 'EXPIRED', 'LATE_CAPTURE',
         ...self::PHYSICAL_PAYMENT_STATUSES];
@@ -122,7 +124,7 @@ final class VendorFinanceService
                 'production_assignment' => 'UNCONFIRMED', 'production_assignment_label' => 'Production assignment unconfirmed',
                 'rate_label' => '0.5% of qualifying gross remittance (RR No. 5-2025); never an extra Buyer charge',
             ],
-            'threshold' => $taxpayer === null ? null : $this->threshold($taxpayer),
+            'threshold' => $taxpayer === null ? null : $this->threshold($taxpayer, $organizationId),
             'commission_terms' => $this->commissionTerms($organizationId, $scope['user_id']),
             'online_channels' => ['provider_ready' => $descriptor->configured && $connected, 'channels' => $channels,
                 'fee_note' => 'Buyers see the Payment Processing Fee before paying; it is the configured DEMO channel rate with no markup.'],
@@ -134,6 +136,11 @@ final class VendorFinanceService
             ],
             'statements' => ['outstanding_centavos' => (int) $outstanding->sum('outstanding_centavos'), 'next_due_on' => $outstanding->min('due_on')],
             'notices' => DB::table('notifications')->where('user_id', $scope['user_id'])->whereIn('category', [FinanceNotifier::MANDATORY, FinanceNotifier::ADVISORY])
+                ->whereNotExists(static function (Builder $query) use ($organizationId): void {
+                    $query->selectRaw('1')->from('fee_statements as statement')
+                        ->where('notifications.resource_type', 'FEE_STATEMENT')->whereColumn('statement.id', 'notifications.resource_id')
+                        ->where('statement.vendor_organization_id', $organizationId)->where('statement.state', 'PAID');
+                })
                 ->orderByDesc('created_at')->limit(10)->get(['id', 'category', 'title', 'body', 'created_at', 'read_at'])
                 ->map(static fn (object $row): array => ['id' => (string) $row->id, 'mandatory' => $row->category === FinanceNotifier::MANDATORY, 'title' => (string) $row->title,
                     'body' => (string) $row->body, 'created_at' => self::iso($row->created_at), 'read' => $row->read_at !== null])->all(),
@@ -193,13 +200,17 @@ final class VendorFinanceService
      * @param  array<string, mixed>  $taxpayer
      * @return array<string, mixed>
      */
-    private function threshold(array $taxpayer): array
+    private function threshold(array $taxpayer, string $organizationId): array
     {
         $accumulator = DB::table('vendor_withholding_accumulators')->where('environment', 'TEST')->where('taxpayer_key', $taxpayer['taxpayer_key'])->where('taxable_year', $taxpayer['taxable_year'])->first();
         $threshold = (int) ($accumulator->threshold_centavos ?? WithholdingThresholdEngine::DEFAULT_THRESHOLD_CENTAVOS);
         $effective = (int) ($accumulator->g_effective_centavos ?? $taxpayer['external_declared_centavos']);
         $status = (string) ($accumulator->withholding_status ?? 'NOT_STARTED');
         $crossed = $accumulator?->crossed_at === null ? null : CarbonImmutable::parse((string) $accumulator->crossed_at);
+        $calculation = $this->thresholdCalculation($accumulator);
+        if ($accumulator !== null && $calculation !== null) {
+            $calculation['withholding_breakdown'] = $this->withholdingBreakdown($accumulator, $organizationId, $calculation);
+        }
 
         return [
             'demo' => true, 'taxable_year' => (int) $taxpayer['taxable_year'], 'year_start_at' => $taxpayer['year_start_at']->toIso8601String(), 'year_end_at' => $taxpayer['year_end_at']->toIso8601String(),
@@ -210,7 +221,7 @@ final class VendorFinanceService
             'status' => $status, 'status_label' => self::statusLabel($status), 'status_icon' => self::statusIcon($status), 'reason_code' => $accumulator->status_reason_code ?? null,
             'crossed_at' => $crossed?->toIso8601String(), 'crossed_at_manila' => $crossed?->setTimezone('Asia/Manila')->format('F j, Y g:i A').($crossed === null ? '' : ' (Asia/Manila)'),
             'prior_year_total_centavos' => $accumulator?->prior_year_total_centavos === null ? null : (int) $accumulator->prior_year_total_centavos,
-            'calculation_breakdown' => $this->thresholdCalculation($accumulator),
+            'calculation_breakdown' => $calculation,
             'final_for_year_notice' => 'Crossing ₱500,000.00 is final for the taxable year: withholding then applies to the whole crossing remittance and every later remittance, and a refund or a newly uploaded declaration does not restore relief until the next taxable year.',
             'events' => $accumulator === null ? [] : DB::table('vendor_withholding_status_events')->where('accumulator_id', $accumulator->id)->orderByDesc('occurred_at')->limit(10)->get()
                 ->map(static fn (object $event): array => ['from_status' => $event->from_status, 'to_status' => (string) $event->to_status, 'reason_code' => (string) $event->reason_code,
@@ -232,6 +243,8 @@ final class VendorFinanceService
         }
         $components = self::sums(DB::table('remittance_assessments')->where('accumulator_id', $accumulator->id)
             ->where('environment', 'TEST')->where('obligation_type', RemittanceAssessmentService::OBLIGATION)->where('calculation_state', 'POSTED'), [
+                'assessed_payments' => '1', 'payment_principal_centavos' => 'principal_centavos',
+                'buyer_processing_fees_centavos' => 'collections_centavos - principal_centavos',
                 'collections_centavos' => 'collections_centavos', 'refunds_centavos' => 'refunds_centavos',
                 'delivery_centavos' => 'delivery_centavos', 'material_vat_centavos' => 'vat_centavos',
                 'provider_charges_centavos' => 'provider_charge_centavos', 'gross_basis_centavos' => 'gross_basis_centavos',
@@ -242,6 +255,87 @@ final class VendorFinanceService
 
         return $gross === (int) $accumulator->g_accumulated_centavos && $gross === $components['gross_basis_centavos'] && $cash === $components['assessed_cash_centavos']
             ? $components : null;
+    }
+
+    /**
+     * A bounded preview of this store's original tax calculations. All other assessments remain aggregate-only.
+     *
+     * @param  array<string, int>  $components
+     * @return array<string, mixed>|null
+     */
+    private function withholdingBreakdown(object $accumulator, string $organizationId, array $components): ?array
+    {
+        $payments = DB::table('remittance_assessments as a')->join('orders as o', 'o.id', '=', 'a.order_id')
+            ->where('a.accumulator_id', $accumulator->id)->where('a.environment', 'TEST')
+            ->where('a.obligation_type', RemittanceAssessmentService::OBLIGATION)->where('a.calculation_state', 'POSTED')
+            ->where('o.vendor_organization_id', $organizationId)->orderBy('a.created_at')->orderBy('a.id')->limit(5)
+            ->get(['a.id', 'o.reference as order_reference', 'a.gross_basis_centavos', 'a.effective_rate_basis_points', 'a.withheld_centavos'])
+            ->map(static fn (object $row): array => [
+                'id' => (string) $row->id, 'order_reference' => (string) $row->order_reference,
+                'gross_basis_centavos' => (int) $row->gross_basis_centavos, 'rate_basis_points' => (int) $row->effective_rate_basis_points,
+                'withheld_centavos' => (int) $row->withheld_centavos,
+            ])->all();
+        $remainingCount = $components['assessed_payments'] - count($payments);
+        $remainingBasis = $components['gross_basis_centavos'] - array_sum(array_column($payments, 'gross_basis_centavos'));
+        $remainingTax = $components['withheld_centavos'] - array_sum(array_column($payments, 'withheld_centavos'));
+        // A newly posted assessment can race this read; never present inconsistent components as a calculation.
+        if ($remainingCount < 0 || $remainingBasis < 0 || $remainingTax < 0
+            || ($remainingCount === 0 && ($remainingBasis !== 0 || $remainingTax !== 0))) {
+            return null;
+        }
+
+        return ['payments' => $payments, 'remaining_payments' => $remainingCount,
+            'remaining_basis_centavos' => $remainingBasis, 'remaining_withheld_centavos' => $remainingTax];
+    }
+
+    /** Current retained payments from the annual assessments, net of completed refunds. Posted tax stays unchanged.
+     * Other stores remain aggregate-only, including when their refunds affect the retained totals.
+     *
+     * @return array{data: array<string, mixed>, meta: array<string, mixed>}
+     */
+    public function thresholdPayments(Request $request, int $page): array
+    {
+        $scope = $this->access->owner($request);
+        $taxpayer = $this->taxpayers->forOrganization($scope['organization_id'], CarbonImmutable::now());
+        $accumulator = DB::table('vendor_withholding_accumulators')->where('environment', 'TEST')
+            ->where('taxpayer_key', $taxpayer['taxpayer_key'])->where('taxable_year', $taxpayer['taxable_year'])->first();
+        $calculation = $this->thresholdCalculation($accumulator);
+        if ($accumulator !== null && $calculation === null) {
+            throw new AuthenticationException('THRESHOLD_BREAKDOWN_UNAVAILABLE', 'The recorded annual total has no matching payment breakdown.', 409);
+        }
+        $principal = 'GREATEST(0, a.principal_centavos - COALESCE(r.principal_refunded_centavos, 0))';
+        $fees = 'GREATEST(0, a.collections_centavos - a.principal_centavos - COALESCE(r.fees_refunded_centavos, 0))';
+        $query = DB::table('remittance_assessments as a')->join('orders as o', 'o.id', '=', 'a.order_id')
+            ->leftJoinSub(RefundService::paymentTotals(), 'r', 'r.source_payment_id', '=', 'a.payment_id')
+            ->where('a.accumulator_id', $accumulator?->id)->where('a.environment', 'TEST')
+            ->where('a.obligation_type', RemittanceAssessmentService::OBLIGATION)->where('a.calculation_state', 'POSTED')
+            ->whereRaw($principal.' > 0');
+        if ($accumulator === null) {
+            $query->whereRaw('1 = 0');
+        }
+        $own = (clone $query)->where('o.vendor_organization_id', $scope['organization_id']);
+        $columns = ['assessed_payments' => '1', 'payment_principal_centavos' => $principal,
+            'buyer_processing_fees_centavos' => $fees, 'collections_centavos' => $principal.' + '.$fees, 'withheld_centavos' => 'a.withheld_centavos'];
+        $totals = self::sums(clone $query, $columns);
+        $other = self::sums((clone $query)->where('o.vendor_organization_id', '<>', $scope['organization_id']), $columns);
+        $total = (clone $own)->count();
+        $items = $own->orderBy('a.created_at')->orderBy('a.id')->forPage($page, self::PER_PAGE)
+            ->get(['a.id', 'o.reference as order_reference', DB::raw('COALESCE(a.posted_at, a.created_at) as assessed_at'),
+                'a.gross_basis_centavos', 'a.effective_rate_basis_points', 'a.withheld_centavos',
+                'a.collections_centavos', 'a.refunds_centavos', 'a.provider_charge_centavos', 'a.delivery_centavos', 'a.vat_centavos',
+                DB::raw($principal.' as retained_principal_centavos'), DB::raw($fees.' as retained_fees_centavos')])
+            ->map(static fn (object $row): array => ['id' => (string) $row->id, 'order_reference' => (string) $row->order_reference,
+                'assessed_at' => self::iso($row->assessed_at), 'payment_principal_centavos' => (int) $row->retained_principal_centavos,
+                'gross_basis_centavos' => (int) $row->gross_basis_centavos, 'rate_basis_points' => (int) $row->effective_rate_basis_points,
+                'withheld_centavos' => (int) $row->withheld_centavos,
+                'assessed_payment_centavos' => (int) $row->collections_centavos - (int) $row->refunds_centavos - (int) $row->provider_charge_centavos,
+                'delivery_centavos' => (int) $row->delivery_centavos, 'material_vat_centavos' => (int) $row->vat_centavos,
+                'buyer_processing_fees_centavos' => (int) $row->retained_fees_centavos,
+                'collections_centavos' => (int) $row->retained_principal_centavos + (int) $row->retained_fees_centavos])->all();
+
+        return ['data' => ['taxable_year' => (int) $taxpayer['taxable_year'], 'payments' => $items, 'totals' => $totals,
+            'other_store_totals' => $other['assessed_payments'] > 0 ? $other : null],
+            'meta' => ['page' => $page, 'per_page' => self::PER_PAGE, 'total' => $total, 'has_more' => $page * self::PER_PAGE < $total]];
     }
 
     /** @return array<string, mixed> */
@@ -262,12 +356,12 @@ final class VendorFinanceService
             ->where('d.code', 'VENDOR_COMMISSION_TEST')->where('a.vendor_organization_id', $organizationId)->orderByDesc('a.accepted_at')->first(['v.version', 'a.accepted_at', 'd.title']);
 
         return ['accepted' => app(StoreActivationGate::class)->commissionAccepted($organizationId, $ownerId), 'title' => $acceptance->title ?? 'Vendor Commission Terms — TEST/DEMO', 'version' => $acceptance === null ? null : (int) $acceptance->version,
-            'accepted_at' => self::iso($acceptance?->accepted_at), 'rate_label' => CommissionPolicyService::percent((int) (CommissionPolicyService::current()->commission_basis_points ?? 200)).' of completed, non-refunded materials value excluding VAT, billed monthly',
+            'accepted_at' => self::iso($acceptance?->accepted_at), 'rate_label' => (CommissionPolicyService::present(CommissionPolicyService::current())['rate_label'] ?? 'Not configured').' of completed, non-refunded materials value excluding VAT, billed monthly',
             'note' => 'Review versioned Commission Terms in Store Verification. Earlier transactions retain their saved rate. Commission is never deducted from Buyer payments.'];
     }
 
     /**
-     * @param  array{tab?: string, page?: int}  $filters
+     * @param  array<string, mixed>  $filters
      * @return array{items: list<array<string, mixed>>, meta: array<string, mixed>}
      */
     public function transactions(Request $request, array $filters): array
@@ -336,7 +430,8 @@ final class VendorFinanceService
             'physical_collections_centavos' => $totals['physical_collections_centavos'],
             'breakdown' => [
                 'sales' => ['orders' => $totals['sales_order_count'], 'materials_before_discount_centavos' => $totals['sales_materials_gross_centavos'], 'vendor_discounts_centavos' => $totals['sales_vendor_discount_centavos'],
-                    'materials_after_discount_centavos' => $totals['sales_materials_gross_centavos'] - $totals['sales_vendor_discount_centavos'], 'delivery_centavos' => $totals['sales_delivery_centavos']],
+                    'materials_after_discount_centavos' => $totals['sales_materials_gross_centavos'] - $totals['sales_vendor_discount_centavos'], 'delivery_centavos' => $totals['sales_delivery_centavos'],
+                    'refunds_centavos' => $totals['sales_refunds_centavos']],
                 'online' => ['payments' => $totals['online_payment_count'], 'principal_paid_centavos' => $totals['online_principal_paid_centavos'],
                     'refunded_principal_centavos' => $totals['online_principal_paid_centavos'] - $totals['online_collections_centavos']],
                 'physical' => ['records' => $totals['physical_record_count'], 'cash_on_delivery_centavos' => $totals['physical_cod_centavos'], 'in_store_centavos' => $totals['physical_in_store_centavos'],
@@ -365,9 +460,9 @@ final class VendorFinanceService
         return [
             // The breakdown figures (materials, discounts, delivery, order count) share this scope, so they always add up to commercial sales.
             ['query' => fn (): Builder => $this->commercialSales($organizationId),
-                'column' => 'o.accepted_at', 'sums' => ['commercial_sales_centavos' => 's.buyer_total_centavos', 'included_vat_centavos' => 's.materials_vat_centavos',
+                'column' => SalesReporting::CONFIRMED_AT, 'sums' => ['commercial_sales_centavos' => SalesReporting::NET, 'included_vat_centavos' => 's.materials_vat_centavos',
                     'sales_materials_gross_centavos' => 's.materials_gross_centavos', 'sales_vendor_discount_centavos' => 's.vendor_discount_centavos',
-                    'sales_delivery_centavos' => 's.delivery_centavos', 'sales_order_count' => '1']],
+                    'sales_delivery_centavos' => 's.delivery_centavos', 'sales_refunds_centavos' => SalesReporting::REFUNDS, 'sales_order_count' => '1']],
             ['query' => fn (): Builder => DB::table('payments as p')->leftJoinSub($this->paymentRefunds($organizationId), 'r', 'r.source_payment_id', '=', 'p.id')
                 ->where('p.vendor_organization_id', $organizationId)->where('p.purpose', '<>', 'PLATFORM_FEE_PAYMENT')->where('p.state', 'PAID')->where('p.late_capture', false),
                 'column' => 'p.paid_at', 'sums' => ['online_collections_centavos' => 'GREATEST(0, p.principal_centavos - COALESCE(r.principal_refunded_centavos, 0))',
@@ -398,32 +493,27 @@ final class VendorFinanceService
     }
 
     /**
-     * Commercial sales scope: the latest financial snapshot of every order the store has accepted, leaving out declined,
-     * expired, cancelled and unconfirmed orders and orders whose payment was fully refunded, so refunded money never
-     * counts as sold. Product sales value uses the same rule; the Dashboard's Gross sales deliberately does not (it is before refunds).
+     * Net sales use the same first-confirmation date and successful refund deductions as both dashboards.
+     * Snapshot components describe the sale before refunds; the explicit refund row reconciles them to net sales.
+     * Cancelled and fully refunded orders contribute zero and need no product rows.
      */
     private function commercialSales(string $organizationId): Builder
     {
-        return DB::table('financial_snapshots as s')
-            ->joinSub(DB::table('financial_snapshots')->selectRaw('order_id, max(version) as version')->groupBy('order_id'), 'latest', fn ($join) => $join->on('latest.order_id', '=', 's.order_id')->on('latest.version', '=', 's.version'))
-            ->join('orders as o', 'o.id', '=', 's.order_id')->where('o.vendor_organization_id', $organizationId)->whereNotIn('o.order_state', self::UNCONFIRMED_OR_CLOSED_UNSOLD)->where('o.refund_state', '<>', 'REFUNDED');
+        return SalesReporting::sales($organizationId);
     }
 
     /**
      * Sales value per product for the same orders and dates as commercial sales: each product's share of the latest
      * snapshot's line amounts (after vendor discount, VAT included). Delivery belongs to no product, so the products
-     * plus delivery equal commercial sales. Largest first; a bounded list, never the whole catalog.
+     * plus delivery less completed partial refunds equal net sales. Largest first; a bounded list, never the whole catalog.
      *
      * @param  array<string, mixed>  $filters
      * @return array{items: list<array<string, mixed>>, total: int, truncated: bool}
      */
     private function earningsProducts(string $organizationId, array $filters): array
     {
-        $listing = 'COALESCE(ol.vendor_listing_id, lv.vendor_listing_id)';
-        $query = PortalDateRange::apply($this->commercialSales($organizationId), DB::raw('o.accepted_at'), $filters)
-            ->join('financial_snapshot_lines as fl', 'fl.financial_snapshot_id', '=', 's.id')->join('order_lines as ol', 'ol.id', '=', 'fl.order_line_id')
-            ->leftJoin('listing_variants as lv', 'lv.id', '=', 'ol.listing_variant_id')->leftJoin('vendor_listings as vl', 'vl.id', '=', DB::raw($listing))
-            ->leftJoin('material_categories as c', 'c.id', '=', 'vl.material_category_id')->groupByRaw($listing);
+        $listing = SalesReporting::LISTING_ID;
+        $query = PortalDateRange::apply(SalesReporting::productLines($organizationId), DB::raw(SalesReporting::CONFIRMED_AT), $filters)->groupByRaw($listing);
         $total = (int) DB::query()->fromSub((clone $query)->selectRaw($listing.' AS listing_id'), 'products')->count();
         $rows = $query->selectRaw($listing.' AS listing_id, MAX(vl.display_name) AS name, MAX(c.name) AS category, MAX(vl.vendor_sku) AS sku, COUNT(DISTINCT o.id) AS orders,
             COALESCE(SUM(fl.ordinary_payable_centavos), 0) AS value_centavos, COALESCE(SUM(fl.vat_centavos), 0) AS vat_centavos')
@@ -571,7 +661,7 @@ final class VendorFinanceService
                 ->select(['r.*', 'o.reference as order_reference']),
             'REMITTANCES' => DB::table('remittance_assessments as a')->join('orders as o', 'o.id', '=', 'a.order_id')->where('o.vendor_organization_id', $organizationId)->orderByDesc('a.created_at')
                 ->select(['a.*', 'o.reference as order_reference']),
-            'STATEMENTS' => DB::table('fee_statements')->where('vendor_organization_id', $organizationId)->whereNot('state', 'DRAFT')->orderByDesc('period_start'),
+            'STATEMENTS' => DB::table('fee_statements')->where('vendor_organization_id', $organizationId)->whereNot('state', 'DRAFT')->orderByDesc('period_start')->orderByDesc('id'),
             'REFUNDS' => DB::table('refunds as f')->leftJoin('orders as o', 'o.id', '=', 'f.order_id')->where(fn ($q) => $q->where('o.vendor_organization_id', $organizationId)
                 ->orWhereIn('f.fee_statement_id', DB::table('fee_statements')->where('vendor_organization_id', $organizationId)->select('id')))->orderByDesc('f.created_at')->select(['f.*', 'o.reference as order_reference']),
             'TAX_DOCUMENTS' => DB::table('tax_certificates')->where('vendor_organization_id', $organizationId)->orderByDesc('period_end'),
@@ -585,6 +675,9 @@ final class VendorFinanceService
             'REFUNDS' => ['f.created_at', false],
             default => ['period_end', true],
         };
+        if ($tab === 'STATEMENTS' && isset($filters['statement_state'])) {
+            $query->where('state', $filters['statement_state'] === 'PAID' ? '=' : '<>', 'PAID');
+        }
 
         return PortalDateRange::apply($query, $column, $filters, $calendarDate);
     }
@@ -600,13 +693,17 @@ final class VendorFinanceService
             ->where('p.vendor_organization_id', $organizationId)->where('p.purpose', '<>', 'PLATFORM_FEE_PAYMENT')
             ->selectRaw("'ONLINE' AS row_kind, p.id AS row_id, COALESCE(p.paid_at, p.created_at) AS at");
         $physical = $this->physicalObligations($organizationId)->selectRaw("'PHYSICAL' AS row_kind, b.opened_id AS row_id, COALESCE(b.last_collected_at, b.opened_at) AS at");
+        $standalone = DB::table('remittance_assessments as a')->join('orders as o', 'o.id', '=', 'a.order_id')
+            ->where('o.vendor_organization_id', $organizationId)->where('a.obligation_type', RemittanceAssessmentService::OBLIGATION)
+            ->whereNull('a.payment_id')->selectRaw("'REMITTANCE' AS row_kind, a.id AS row_id, a.created_at AS at");
         if ($status !== null) {
             $isPhysical = in_array($status, self::PHYSICAL_PAYMENT_STATUSES, true);
             $isPhysical ? $online->whereRaw('false') : $this->applyPaymentStatus($online, $status);
             $isPhysical ? $physical->whereRaw(self::PHYSICAL_STATUS.' = ?', [$status]) : $physical->whereRaw('false');
+            $standalone->whereRaw('false');
         }
 
-        return DB::query()->fromSub($online->unionAll($physical), 'x')->orderByDesc('x.at')->orderByDesc('x.row_id');
+        return DB::query()->fromSub($online->unionAll($physical)->unionAll($standalone), 'x')->orderByDesc('x.at')->orderByDesc('x.row_id');
     }
 
     /**
@@ -625,7 +722,7 @@ final class VendorFinanceService
                 (ARRAY_AGG(r.id) FILTER (WHERE r.record_kind = 'OBLIGATION_OPENED'))[1] AS opened_id,
                 MAX(r.obligation_before_centavos) FILTER (WHERE r.record_kind = 'OBLIGATION_OPENED') AS obligation_centavos,
                 MIN(r.recorded_at) FILTER (WHERE r.record_kind = 'OBLIGATION_OPENED') AS opened_at,
-                MIN(r.remaining_obligation_centavos) AS remaining_centavos,
+                CASE WHEN BOOL_OR(r.record_kind = 'CANCELLATION_RELEASE') THEN 0 ELSE MIN(r.remaining_obligation_centavos) END AS remaining_centavos,
                 COALESCE(SUM(r.amount_centavos) FILTER (WHERE r.record_kind = 'COLLECTION'), 0) AS cash_collected_centavos,
                 COALESCE(SUM(r.amount_centavos) FILTER (WHERE r.record_kind = 'ONLINE_BALANCE_CREDIT'), 0) AS online_credited_centavos,
                 MAX(r.recorded_at) FILTER (WHERE r.record_kind = 'COLLECTION') AS last_collected_at,
@@ -635,7 +732,8 @@ final class VendorFinanceService
     }
 
     /**
-     * Turns a page of Payments index rows into full rows in index order, two queries per page. Other tabs already
+     * Hydrates one Payments page and its recorded merchant assessments in three scoped queries. Linked assessments
+     * stay on their payment row; historical assessments without a payment retain a standalone row. Other tabs already
      * select full rows.
      *
      * @param  Collection<int, \stdClass>  $rows
@@ -649,13 +747,27 @@ final class VendorFinanceService
         $ids = static fn (string $kind): array => $rows->where('row_kind', $kind)->pluck('row_id')->map(static fn (mixed $id): string => (string) $id)->all();
         $online = DB::table('payments as p')->leftJoin('orders as o', 'o.id', '=', 'p.order_id')->leftJoinSub($this->paymentRefunds($organizationId), 'r', 'r.source_payment_id', '=', 'p.id')
             ->where('p.vendor_organization_id', $organizationId)->whereIn('p.id', $ids('ONLINE'))
-            ->get(['p.*', 'o.reference as order_reference', 'r.refunded_centavos', 'r.pending_count', 'r.failed_count'])->keyBy(static fn (object $row): string => (string) $row->id);
+            ->get(['p.*', 'o.reference as order_reference', 'r.refunded_centavos', 'r.principal_refunded_centavos', 'r.pending_count', 'r.failed_count'])->keyBy(static fn (object $row): string => (string) $row->id);
         $physical = $this->physicalObligations($organizationId)->whereIn('b.opened_id', $ids('PHYSICAL'))
             ->get(['b.*', 'm.reimbursed_centavos', DB::raw(self::PHYSICAL_STATUS.' AS physical_status')])->keyBy(static fn (object $row): string => (string) $row->opened_id);
+        $assessments = DB::table('remittance_assessments as a')->join('orders as o', 'o.id', '=', 'a.order_id')
+            ->where('o.vendor_organization_id', $organizationId)->where('a.obligation_type', RemittanceAssessmentService::OBLIGATION)
+            ->where(fn (Builder $query) => $query->whereIn('a.payment_id', $ids('ONLINE'))->orWhereIn('a.id', $ids('REMITTANCE')))
+            ->get(['a.*', 'o.reference as order_reference']);
+        $byPayment = $assessments->whereNotNull('payment_id')->keyBy(static fn (object $row): string => (string) $row->payment_id);
+        $byAssessment = $assessments->keyBy(static fn (object $row): string => (string) $row->id);
 
-        return $rows->map(static function (object $row) use ($online, $physical): ?object {
-            $full = $row->row_kind === 'ONLINE' ? $online->get((string) $row->row_id) : $physical->get((string) $row->row_id);
+        return $rows->map(static function (object $row) use ($online, $physical, $byPayment, $byAssessment): ?object {
+            $full = match ($row->row_kind) {
+                'ONLINE' => $online->get((string) $row->row_id),
+                'PHYSICAL' => $physical->get((string) $row->row_id),
+                default => $byAssessment->get((string) $row->row_id),
+            };
             if ($full !== null) {
+                if ($row->row_kind === 'ONLINE') {
+                    $assessment = $byPayment->get((string) $row->row_id);
+                    $full->assessment = $assessment !== null && $assessment->order_id === $full->order_id && $assessment->environment === $full->environment ? $assessment : null;
+                }
                 $full->row_kind = $row->row_kind;
                 $full->at = $row->at;
             }
@@ -689,6 +801,45 @@ final class VendorFinanceService
         $query->whereRaw($condition);
     }
 
+    /** @return array<string, int|string|null> Recorded values only; current refunds never rewrite an assessment. */
+    private static function paymentAssessment(?object $assessment): array
+    {
+        return [
+            'assessment_id' => $assessment === null ? null : (string) $assessment->id,
+            'assessment_collected_centavos' => $assessment === null ? null : (int) $assessment->collections_centavos,
+            'assessment_refunds_centavos' => $assessment === null ? null : (int) $assessment->refunds_centavos,
+            'assessment_delivery_centavos' => $assessment === null ? null : (int) $assessment->delivery_centavos,
+            'assessment_vat_centavos' => $assessment === null ? null : (int) $assessment->vat_centavos,
+            'assessment_rate_basis_points' => $assessment === null ? null : (int) $assessment->effective_rate_basis_points,
+            'provider_charge_centavos' => $assessment === null ? null : (int) $assessment->provider_charge_centavos,
+            'gross_basis_centavos' => $assessment === null ? null : (int) $assessment->gross_basis_centavos,
+            'withheld_centavos' => $assessment === null ? null : (int) $assessment->withheld_centavos,
+            'expected_cash_centavos' => $assessment?->expected_vendor_cash_centavos === null ? null : (int) $assessment->expected_vendor_cash_centavos,
+            'calculation_state' => $assessment?->calculation_state,
+            'threshold_status_after' => $assessment?->threshold_status_after,
+            'deduction_evidence_state' => $assessment?->deduction_evidence_state,
+            'reconciliation_state' => $assessment?->reconciliation_state,
+            'assessment_at' => $assessment === null ? null : self::iso($assessment->created_at),
+        ];
+    }
+
+    /** @param array<string, mixed> $payment
+     * @return array<string, mixed> One column order for mixed Payments JSON, CSV and PDF rows. */
+    private static function paymentRow(array $payment, ?object $assessment): array
+    {
+        $columns = ['id', 'kind', 'order_id', 'reference', 'purpose', 'status', 'refund_state', 'refunded_centavos', 'net_collected_centavos', 'gross_centavos', 'principal_centavos',
+            'buyer_processing_fee_centavos', 'collected_centavos', 'online_credited_centavos',
+            'remaining_centavos', 'channel', 'environment', 'evidence_origin', 'at', 'order_after_refunds_centavos', 'net_remittance_centavos'];
+
+        if (($payment['kind'] ?? null) === 'ONLINE' && $assessment?->calculation_state === 'POSTED'
+            && isset($payment['order_after_refunds_centavos']) && $assessment->expected_vendor_cash_centavos !== null) {
+            $retained = (int) $payment['order_after_refunds_centavos'];
+            $payment['net_remittance_centavos'] = $retained === 0 ? 0 : $retained - (int) $assessment->withheld_centavos;
+        }
+
+        return array_replace(array_fill_keys($columns, null), $payment) + self::paymentAssessment($assessment);
+    }
+
     /** @return array<string, mixed> */
     private function row(string $tab, object $row): array
     {
@@ -697,17 +848,24 @@ final class VendorFinanceService
 
             // Cash owed directly to the Vendor: gross is the obligation, no Buyer fee, the cash recorded so far, and cash
             // reimbursements as refunds. A verified online balance credit closes the obligation but is its own online row.
-            return ['id' => (string) $row->opened_id, 'kind' => 'PHYSICAL', 'order_id' => (string) $row->order_id, 'reference' => (string) $row->order_reference,
+            return self::paymentRow(['id' => (string) $row->opened_id, 'kind' => 'PHYSICAL', 'order_id' => (string) $row->order_id, 'reference' => (string) $row->order_reference,
                 'purpose' => $row->payment_method === 'IN_STORE' ? 'IN_STORE_PAYMENT' : 'CASH_ON_DELIVERY', 'status' => (string) $row->physical_status,
                 'refund_state' => $reimbursed === 0 ? 'NOT_REQUESTED' : ($reimbursed >= (int) $row->cash_collected_centavos ? 'REFUNDED' : 'PARTIALLY_REFUNDED'),
                 'refunded_centavos' => $reimbursed, 'net_collected_centavos' => max(0, (int) $row->cash_collected_centavos - $reimbursed),
                 'gross_centavos' => (int) $row->obligation_centavos, 'principal_centavos' => (int) $row->obligation_centavos, 'buyer_processing_fee_centavos' => 0,
                 'collected_centavos' => (int) $row->cash_collected_centavos, 'online_credited_centavos' => (int) $row->online_credited_centavos, 'remaining_centavos' => (int) $row->remaining_centavos,
-                'channel' => (string) $row->payment_method, 'environment' => 'TEST', 'evidence_origin' => 'VENDOR_RECORD', 'at' => self::iso($row->at)];
+                'channel' => (string) $row->payment_method, 'environment' => 'TEST', 'evidence_origin' => 'VENDOR_RECORD', 'at' => self::iso($row->at)], null);
+        }
+        if ($tab === 'PAYMENTS' && $row->row_kind === 'REMITTANCE') {
+            return self::paymentRow(['id' => (string) $row->id, 'kind' => 'REMITTANCE', 'order_id' => (string) $row->order_id, 'reference' => (string) $row->order_reference,
+                'purpose' => 'REMITTANCE_ASSESSMENT', 'status' => 'ASSESSED', 'refund_state' => 'NOT_REQUESTED',
+                'gross_centavos' => (int) $row->principal_centavos, 'principal_centavos' => null, 'buyer_processing_fee_centavos' => null,
+                'refunded_centavos' => null, 'net_collected_centavos' => null, 'collected_centavos' => (int) $row->collections_centavos, 'remaining_centavos' => null,
+                'channel' => null, 'environment' => (string) $row->environment, 'evidence_origin' => 'SIMULATED', 'at' => self::iso($row->created_at)], $row);
         }
 
         return match ($tab) {
-            'PAYMENTS' => ['id' => (string) $row->id, 'kind' => 'ONLINE', 'order_id' => $row->order_id === null ? null : (string) $row->order_id, 'reference' => (string) ($row->order_reference ?? ''), 'purpose' => (string) $row->purpose, 'status' => $this->presenter->attempt($row, false)['status'],
+            'PAYMENTS' => self::paymentRow(['id' => (string) $row->id, 'kind' => 'ONLINE', 'order_id' => $row->order_id === null ? null : (string) $row->order_id, 'reference' => (string) ($row->order_reference ?? ''), 'purpose' => (string) $row->purpose, 'status' => $this->presenter->attempt($row, false)['status'],
                 'refund_state' => match (true) {
                     (int) ($row->refunded_centavos ?? 0) >= (int) $row->total_centavos => 'REFUNDED',
                     (int) ($row->pending_count ?? 0) > 0 => 'REFUND_PENDING',
@@ -715,11 +873,13 @@ final class VendorFinanceService
                     (int) ($row->failed_count ?? 0) > 0 => 'REFUND_FAILED',
                     default => 'NOT_REQUESTED',
                 },
-                'refunded_centavos' => min((int) $row->total_centavos, (int) ($row->refunded_centavos ?? 0)),
-                'net_collected_centavos' => $row->state === 'PAID' ? max(0, (int) $row->total_centavos - (int) ($row->refunded_centavos ?? 0)) : 0,
-                'gross_centavos' => (int) $row->total_centavos, 'principal_centavos' => (int) $row->principal_centavos, 'buyer_processing_fee_centavos' => (int) $row->processing_fee_centavos,
-                'collected_centavos' => $row->state === 'PAID' ? (int) $row->total_centavos : 0, 'remaining_centavos' => 0,
-                'channel' => $row->channel_code, 'environment' => (string) $row->environment, 'evidence_origin' => (string) $row->evidence_origin, 'at' => self::iso($row->paid_at ?? $row->created_at)],
+                'refunded_centavos' => min((int) $row->principal_centavos, (int) ($row->principal_refunded_centavos ?? 0)),
+                'net_collected_centavos' => $row->state === 'PAID' ? max(0, (int) $row->principal_centavos - (int) ($row->principal_refunded_centavos ?? 0)) : 0,
+                'gross_centavos' => (int) $row->principal_centavos, 'principal_centavos' => (int) $row->principal_centavos, 'buyer_processing_fee_centavos' => (int) $row->processing_fee_centavos,
+                'collected_centavos' => $row->state === 'PAID' ? (int) $row->principal_centavos : 0, 'remaining_centavos' => 0,
+                'order_after_refunds_centavos' => $row->state === 'PAID'
+                    ? max(0, (int) ($row->assessment->principal_centavos ?? $row->principal_centavos) - (int) ($row->principal_refunded_centavos ?? 0)) : null,
+                'channel' => $row->channel_code, 'environment' => (string) $row->environment, 'evidence_origin' => (string) $row->evidence_origin, 'at' => self::iso($row->paid_at ?? $row->created_at)], $row->assessment ?? null),
             'PHYSICAL' => ['id' => (string) $row->id, 'reference' => (string) $row->order_reference, 'kind' => (string) $row->record_kind, 'method' => (string) $row->method,
                 'amount_centavos' => (int) $row->amount_centavos, 'remaining_centavos' => (int) $row->remaining_obligation_centavos, 'state' => (string) $row->state,
                 'evidence_origin' => $row->record_kind === 'ONLINE_BALANCE_CREDIT' ? 'VERIFIED_ONLINE_PAYMENT' : 'VENDOR_RECORD', 'buyer_acknowledged' => $row->buyer_acknowledged_at !== null, 'at' => self::iso($row->recorded_at)],

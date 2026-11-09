@@ -34,6 +34,11 @@ import {
     CommissionPolicyEnvelopeToJSON,
 } from '../models/CommissionPolicyEnvelope';
 import {
+    type CommissionPolicyPreviewEnvelope,
+    CommissionPolicyPreviewEnvelopeFromJSON,
+    CommissionPolicyPreviewEnvelopeToJSON,
+} from '../models/CommissionPolicyPreviewEnvelope';
+import {
     type CommissionPolicyPublishRequest,
     CommissionPolicyPublishRequestFromJSON,
     CommissionPolicyPublishRequestToJSON,
@@ -69,6 +74,11 @@ import {
     FinanceReviewItemListEnvelopeToJSON,
 } from '../models/FinanceReviewItemListEnvelope';
 import {
+    type GenericDataEnvelope,
+    GenericDataEnvelopeFromJSON,
+    GenericDataEnvelopeToJSON,
+} from '../models/GenericDataEnvelope';
+import {
     type OverlapResolveRequest,
     OverlapResolveRequestFromJSON,
     OverlapResolveRequestToJSON,
@@ -83,6 +93,11 @@ import {
     StatementApproveRequestFromJSON,
     StatementApproveRequestToJSON,
 } from '../models/StatementApproveRequest';
+import {
+    type StatementInvoiceUpdateRequest,
+    StatementInvoiceUpdateRequestFromJSON,
+    StatementInvoiceUpdateRequestToJSON,
+} from '../models/StatementInvoiceUpdateRequest';
 import {
     type WithholdingAccumulatorDetailEnvelope,
     WithholdingAccumulatorDetailEnvelopeFromJSON,
@@ -110,6 +125,21 @@ export interface ApproveFeeStatementRequest {
      *
      */
     statementApproveRequest: StatementApproveRequest;
+}
+
+export interface GetAdminCommissionStatementRequest {
+    /**
+     *
+     */
+    statementId: string;
+    /**
+     *
+     */
+    page?: number;
+    /**
+     *
+     */
+    paymentsPage?: number;
 }
 
 export interface GetWithholdingAccumulatorRequest {
@@ -157,7 +187,42 @@ export interface ListCommissionPoliciesRequest {
     page?: number;
 }
 
+export interface ListCommissionTransactionsRequest {
+    /**
+     *
+     */
+    page?: number;
+    /**
+     *
+     */
+    from?: Date;
+    /**
+     *
+     */
+    to?: Date;
+    /**
+     *
+     */
+    status?: ListCommissionTransactionsStatusEnum;
+    /**
+     *
+     */
+    search?: string;
+    /**
+     * Comma-separated payment statuses combined with OR before pagination.
+     */
+    statuses?: string;
+}
+
 export interface ListFeeStatementsRequest {
+    /**
+     *
+     */
+    search?: string;
+    /**
+     * Comma-separated statement states combined with OR before pagination. Filter totals are returned in meta.totals.
+     */
+    states?: string;
     /**
      * Issued balances past their due date.
      */
@@ -218,6 +283,13 @@ export interface ListWithholdingAccumulatorsRequest {
     taxableYear?: number;
 }
 
+export interface PreviewCommissionPolicyRequest {
+    /**
+     *
+     */
+    commissionPolicyPublishRequest: CommissionPolicyPublishRequest;
+}
+
 export interface ProposeFeeCreditRequest {
     /**
      *
@@ -234,6 +306,28 @@ export interface PublishCommissionPolicyRequest {
      *
      */
     commissionPolicyPublishRequest: CommissionPolicyPublishRequest;
+}
+
+export interface ResendCommissionEmailRequest {
+    /**
+     *
+     */
+    eventId: string;
+    /**
+     *
+     */
+    idempotencyKey: string;
+}
+
+export interface ResendFailedCommissionEmailsRequest {
+    /**
+     *
+     */
+    policyId: string;
+    /**
+     *
+     */
+    idempotencyKey: string;
 }
 
 export interface ResolveFinanceReviewItemRequest {
@@ -256,6 +350,21 @@ export interface ResolveWithholdingOverlapRequest {
      *
      */
     overlapResolveRequest: OverlapResolveRequest;
+}
+
+export interface UpdateFeeStatementInvoiceRequest {
+    /**
+     *
+     */
+    statementId: string;
+    /**
+     *
+     */
+    idempotencyKey: string;
+    /**
+     *
+     */
+    statementInvoiceUpdateRequest: StatementInvoiceUpdateRequest;
 }
 
 /**
@@ -295,7 +404,7 @@ export class AdminFinanceApi extends runtime.BaseAPI {
     }
 
     /**
-     * finance.approve_statements by a user different from the preparer (403 PREPARER_REVIEWER_SAME).
+     * Manual corrections only: finance.approve_statements by a user different from the preparer (403 PREPARER_REVIEWER_SAME). Routine dispute credits and monthly statement issuance are automatic.
      */
     async approveFeeCreditRaw(requestParameters: ApproveFeeCreditRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<FinanceActionResultEnvelope>> {
         const requestOptions = await this.approveFeeCreditRequestOpts(requestParameters);
@@ -305,7 +414,7 @@ export class AdminFinanceApi extends runtime.BaseAPI {
     }
 
     /**
-     * finance.approve_statements by a user different from the preparer (403 PREPARER_REVIEWER_SAME).
+     * Manual corrections only: finance.approve_statements by a user different from the preparer (403 PREPARER_REVIEWER_SAME). Routine dispute credits and monthly statement issuance are automatic.
      */
     async approveFeeCredit(requestParameters: ApproveFeeCreditRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<FinanceActionResultEnvelope> {
         const response = await this.approveFeeCreditRaw(requestParameters, initOverrides);
@@ -409,6 +518,63 @@ export class AdminFinanceApi extends runtime.BaseAPI {
      */
     async draftFeeStatements(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<FinanceActionResultEnvelope> {
         const response = await this.draftFeeStatementsRaw(initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for getAdminCommissionStatement without sending the request
+     */
+    async getAdminCommissionStatementRequestOpts(requestParameters: GetAdminCommissionStatementRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['statementId'] == null) {
+            throw new runtime.RequiredError(
+                'statementId',
+                'Required parameter "statementId" was null or undefined when calling getAdminCommissionStatement().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['page'] != null) {
+            queryParameters['page'] = requestParameters['page'];
+        }
+
+        if (requestParameters['paymentsPage'] != null) {
+            queryParameters['payments_page'] = requestParameters['paymentsPage'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/admin/finance/statements/{statementId}`;
+        urlPath = urlPath.replace('{statementId}', encodeURIComponent(String(requestParameters['statementId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * finance.view. Read-only statement detail, all-rate aggregate breakdown, separately paginated lines and payments (25 per page), and Owner email delivery activity without recipient contacts. Includes can_resend and can_export permissions.
+     */
+    async getAdminCommissionStatementRaw(requestParameters: GetAdminCommissionStatementRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<GenericDataEnvelope>> {
+        const requestOptions = await this.getAdminCommissionStatementRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => GenericDataEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * finance.view. Read-only statement detail, all-rate aggregate breakdown, separately paginated lines and payments (25 per page), and Owner email delivery activity without recipient contacts. Includes can_resend and can_export permissions.
+     */
+    async getAdminCommissionStatement(requestParameters: GetAdminCommissionStatementRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<GenericDataEnvelope> {
+        const response = await this.getAdminCommissionStatementRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -617,10 +783,83 @@ export class AdminFinanceApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates request options for listCommissionTransactions without sending the request
+     */
+    async listCommissionTransactionsRequestOpts(requestParameters: ListCommissionTransactionsRequest): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        if (requestParameters['page'] != null) {
+            queryParameters['page'] = requestParameters['page'];
+        }
+
+        if (requestParameters['from'] != null) {
+            queryParameters['from'] = runtime.serializeDate(requestParameters['from'] as any);
+        }
+
+        if (requestParameters['to'] != null) {
+            queryParameters['to'] = runtime.serializeDate(requestParameters['to'] as any);
+        }
+
+        if (requestParameters['status'] != null) {
+            queryParameters['status'] = requestParameters['status'];
+        }
+
+        if (requestParameters['search'] != null) {
+            queryParameters['search'] = requestParameters['search'];
+        }
+
+        if (requestParameters['statuses'] != null) {
+            queryParameters['statuses'] = requestParameters['statuses'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/admin/finance/commission-transactions`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * finance.view. Paginated successful PLATFORM_FEE_PAYMENT captures to the platform account, excluding late captures. Dates and descending order use paid_at in Asia/Manila. Original captures remain visible after refunds; refunded_centavos and net_collected_centavos distinguish gross payments from retained collections. Gateway mode and evidence origin are retained. Optional status filters apply before pagination and exports.
+     */
+    async listCommissionTransactionsRaw(requestParameters: ListCommissionTransactionsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AdminPaymentListEnvelope>> {
+        const requestOptions = await this.listCommissionTransactionsRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => AdminPaymentListEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * finance.view. Paginated successful PLATFORM_FEE_PAYMENT captures to the platform account, excluding late captures. Dates and descending order use paid_at in Asia/Manila. Original captures remain visible after refunds; refunded_centavos and net_collected_centavos distinguish gross payments from retained collections. Gateway mode and evidence origin are retained. Optional status filters apply before pagination and exports.
+     */
+    async listCommissionTransactions(requestParameters: ListCommissionTransactionsRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AdminPaymentListEnvelope> {
+        const response = await this.listCommissionTransactionsRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Creates request options for listFeeStatements without sending the request
      */
     async listFeeStatementsRequestOpts(requestParameters: ListFeeStatementsRequest): Promise<runtime.RequestOpts> {
         const queryParameters: any = {};
+
+        if (requestParameters['search'] != null) {
+            queryParameters['search'] = requestParameters['search'];
+        }
+
+        if (requestParameters['states'] != null) {
+            queryParameters['states'] = requestParameters['states'];
+        }
 
         if (requestParameters['overdue'] != null) {
             queryParameters['overdue'] = requestParameters['overdue'];
@@ -721,7 +960,7 @@ export class AdminFinanceApi extends runtime.BaseAPI {
     }
 
     /**
-     * finance.view. Reconciliation exceptions, payment mismatches, late captures, unresolved overlap, threshold adjustments, base reviews, overdue statements and fee-credit proposals.
+     * finance.view. Reconciliation exceptions, payment mismatches, late captures, unresolved overlap, threshold adjustments, base reviews, overdue statements and manual fee-credit proposals. Executed dispute awards create automatic credits without review items.
      */
     async listFinanceReviewItemsRaw(requestParameters: ListFinanceReviewItemsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<FinanceReviewItemListEnvelope>> {
         const requestOptions = await this.listFinanceReviewItemsRequestOpts(requestParameters);
@@ -731,7 +970,7 @@ export class AdminFinanceApi extends runtime.BaseAPI {
     }
 
     /**
-     * finance.view. Reconciliation exceptions, payment mismatches, late captures, unresolved overlap, threshold adjustments, base reviews, overdue statements and fee-credit proposals.
+     * finance.view. Reconciliation exceptions, payment mismatches, late captures, unresolved overlap, threshold adjustments, base reviews, overdue statements and manual fee-credit proposals. Executed dispute awards create automatic credits without review items.
      */
     async listFinanceReviewItems(requestParameters: ListFinanceReviewItemsRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<FinanceReviewItemListEnvelope> {
         const response = await this.listFinanceReviewItemsRaw(requestParameters, initOverrides);
@@ -792,6 +1031,57 @@ export class AdminFinanceApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates request options for previewCommissionPolicy without sending the request
+     */
+    async previewCommissionPolicyRequestOpts(requestParameters: PreviewCommissionPolicyRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['commissionPolicyPublishRequest'] == null) {
+            throw new runtime.RequiredError(
+                'commissionPolicyPublishRequest',
+                'Required parameter "commissionPolicyPublishRequest" was null or undefined when calling previewCommissionPolicy().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/admin/finance/commission-policies/preview`;
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: CommissionPolicyPublishRequestToJSON(requestParameters['commissionPolicyPublishRequest']),
+        };
+    }
+
+    /**
+     * Read-only impact, rendered mail and terms preview. Requires finance.view and platform_settings.manage. Estimates use the last three complete Manila calendar months of recorded eligible basis, not a revenue forecast.
+     */
+    async previewCommissionPolicyRaw(requestParameters: PreviewCommissionPolicyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CommissionPolicyPreviewEnvelope>> {
+        const requestOptions = await this.previewCommissionPolicyRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => CommissionPolicyPreviewEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * Read-only impact, rendered mail and terms preview. Requires finance.view and platform_settings.manage. Estimates use the last three complete Manila calendar months of recorded eligible basis, not a revenue forecast.
+     */
+    async previewCommissionPolicy(requestParameters: PreviewCommissionPolicyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CommissionPolicyPreviewEnvelope> {
+        const response = await this.previewCommissionPolicyRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Creates request options for proposeFeeCredit without sending the request
      */
     async proposeFeeCreditRequestOpts(requestParameters: ProposeFeeCreditRequest): Promise<runtime.RequestOpts> {
@@ -825,7 +1115,7 @@ export class AdminFinanceApi extends runtime.BaseAPI {
     }
 
     /**
-     * finance.review_tax. Prepare a FIN-03 credit from returned exclusive value after completion.
+     * finance.review_tax. Prepare a manual FIN-03 correction from returned exclusive value after completion. Executed dispute awards are credited automatically.
      */
     async proposeFeeCreditRaw(requestParameters: ProposeFeeCreditRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<FinanceActionResultEnvelope>> {
         const requestOptions = await this.proposeFeeCreditRequestOpts(requestParameters);
@@ -835,7 +1125,7 @@ export class AdminFinanceApi extends runtime.BaseAPI {
     }
 
     /**
-     * finance.review_tax. Prepare a FIN-03 credit from returned exclusive value after completion.
+     * finance.review_tax. Prepare a manual FIN-03 correction from returned exclusive value after completion. Executed dispute awards are credited automatically.
      */
     async proposeFeeCredit(requestParameters: ProposeFeeCreditRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<FinanceActionResultEnvelope> {
         const response = await this.proposeFeeCreditRaw(requestParameters, initOverrides);
@@ -887,7 +1177,7 @@ export class AdminFinanceApi extends runtime.BaseAPI {
     }
 
     /**
-     * Requires finance.view, platform_settings.manage, recent authentication, CSRF, Idempotency-Key and expected_version. Publishes a new commercial rate with immutable, hash-verified Vendor terms and Owner notices. Existing quotations, orders, assessments and credits keep their saved rate. Statutory rates and provider mode are unchanged. No backdating or insertion before the latest scheduled policy.
+     * Requires finance.view, platform_settings.manage, recent authentication, CSRF, Idempotency-Key and expected_version. Publishes immutable policy and terms with unique queued verified-Owner emails per eligible Vendor (active account or unsettled bill). Increases need configured notice (default 30 days) or explicit reasoned audited override. Set supersedes_policy_id to edit the next scheduled change; cancel_scheduled appends a replacement at the current rate and cancellation notice. Earlier versions and saved transactions remain intact. No rate cache or scheduler flip is required.
      */
     async publishCommissionPolicyRaw(requestParameters: PublishCommissionPolicyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CommissionPolicyEnvelope>> {
         const requestOptions = await this.publishCommissionPolicyRequestOpts(requestParameters);
@@ -897,10 +1187,130 @@ export class AdminFinanceApi extends runtime.BaseAPI {
     }
 
     /**
-     * Requires finance.view, platform_settings.manage, recent authentication, CSRF, Idempotency-Key and expected_version. Publishes a new commercial rate with immutable, hash-verified Vendor terms and Owner notices. Existing quotations, orders, assessments and credits keep their saved rate. Statutory rates and provider mode are unchanged. No backdating or insertion before the latest scheduled policy.
+     * Requires finance.view, platform_settings.manage, recent authentication, CSRF, Idempotency-Key and expected_version. Publishes immutable policy and terms with unique queued verified-Owner emails per eligible Vendor (active account or unsettled bill). Increases need configured notice (default 30 days) or explicit reasoned audited override. Set supersedes_policy_id to edit the next scheduled change; cancel_scheduled appends a replacement at the current rate and cancellation notice. Earlier versions and saved transactions remain intact. No rate cache or scheduler flip is required.
      */
     async publishCommissionPolicy(requestParameters: PublishCommissionPolicyRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CommissionPolicyEnvelope> {
         const response = await this.publishCommissionPolicyRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for resendCommissionEmail without sending the request
+     */
+    async resendCommissionEmailRequestOpts(requestParameters: ResendCommissionEmailRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['eventId'] == null) {
+            throw new runtime.RequiredError(
+                'eventId',
+                'Required parameter "eventId" was null or undefined when calling resendCommissionEmail().'
+            );
+        }
+
+        if (requestParameters['idempotencyKey'] == null) {
+            throw new runtime.RequiredError(
+                'idempotencyKey',
+                'Required parameter "idempotencyKey" was null or undefined when calling resendCommissionEmail().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (requestParameters['idempotencyKey'] != null) {
+            headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
+        }
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/admin/finance/commission-emails/{eventId}/resend`;
+        urlPath = urlPath.replace('{eventId}', encodeURIComponent(String(requestParameters['eventId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * finance.view plus finance.approve_statements for a statement, or platform_settings.manage for a rate notice. Requeues a sent or failed email. One-minute per-email throttle, audit event and idempotency required. Does not change any financial record.
+     */
+    async resendCommissionEmailRaw(requestParameters: ResendCommissionEmailRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<GenericDataEnvelope>> {
+        const requestOptions = await this.resendCommissionEmailRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => GenericDataEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * finance.view plus finance.approve_statements for a statement, or platform_settings.manage for a rate notice. Requeues a sent or failed email. One-minute per-email throttle, audit event and idempotency required. Does not change any financial record.
+     */
+    async resendCommissionEmail(requestParameters: ResendCommissionEmailRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<GenericDataEnvelope> {
+        const response = await this.resendCommissionEmailRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for resendFailedCommissionEmails without sending the request
+     */
+    async resendFailedCommissionEmailsRequestOpts(requestParameters: ResendFailedCommissionEmailsRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['policyId'] == null) {
+            throw new runtime.RequiredError(
+                'policyId',
+                'Required parameter "policyId" was null or undefined when calling resendFailedCommissionEmails().'
+            );
+        }
+
+        if (requestParameters['idempotencyKey'] == null) {
+            throw new runtime.RequiredError(
+                'idempotencyKey',
+                'Required parameter "idempotencyKey" was null or undefined when calling resendFailedCommissionEmails().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (requestParameters['idempotencyKey'] != null) {
+            headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
+        }
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/admin/finance/commission-policies/{policyId}/resend-failed`;
+        urlPath = urlPath.replace('{policyId}', encodeURIComponent(String(requestParameters['policyId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Requires finance.view and platform_settings.manage. Requeues failed emails only, with per-email one-minute throttling, idempotency and an audit event. Existing immutable attempt history is retained.
+     */
+    async resendFailedCommissionEmailsRaw(requestParameters: ResendFailedCommissionEmailsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<GenericDataEnvelope>> {
+        const requestOptions = await this.resendFailedCommissionEmailsRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => GenericDataEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * Requires finance.view and platform_settings.manage. Requeues failed emails only, with per-email one-minute throttling, idempotency and an audit event. Existing immutable attempt history is retained.
+     */
+    async resendFailedCommissionEmails(requestParameters: ResendFailedCommissionEmailsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<GenericDataEnvelope> {
+        const response = await this.resendFailedCommissionEmailsRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -1063,6 +1473,76 @@ export class AdminFinanceApi extends runtime.BaseAPI {
         return await response.value();
     }
 
+    /**
+     * Creates request options for updateFeeStatementInvoice without sending the request
+     */
+    async updateFeeStatementInvoiceRequestOpts(requestParameters: UpdateFeeStatementInvoiceRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['statementId'] == null) {
+            throw new runtime.RequiredError(
+                'statementId',
+                'Required parameter "statementId" was null or undefined when calling updateFeeStatementInvoice().'
+            );
+        }
+
+        if (requestParameters['idempotencyKey'] == null) {
+            throw new runtime.RequiredError(
+                'idempotencyKey',
+                'Required parameter "idempotencyKey" was null or undefined when calling updateFeeStatementInvoice().'
+            );
+        }
+
+        if (requestParameters['statementInvoiceUpdateRequest'] == null) {
+            throw new runtime.RequiredError(
+                'statementInvoiceUpdateRequest',
+                'Required parameter "statementInvoiceUpdateRequest" was null or undefined when calling updateFeeStatementInvoice().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (requestParameters['idempotencyKey'] != null) {
+            headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
+        }
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/admin/finance/statements/{statementId}/invoice`;
+        urlPath = urlPath.replace('{statementId}', encodeURIComponent(String(requestParameters['statementId'])));
+
+        return {
+            path: urlPath,
+            method: 'PUT',
+            headers: headerParameters,
+            query: queryParameters,
+            body: StatementInvoiceUpdateRequestToJSON(requestParameters['statementInvoiceUpdateRequest']),
+        };
+    }
+
+    /**
+     * finance.approve_statements. Edit a DRAFT commission invoice heading and Vendor message with optimistic concurrency and idempotency. Does not send mail. Amounts, issuer, recipients and deadlines remain system controlled. Approval freezes the copy into the immutable SAMPLE/TEST PDF and Owner email. Issued statements reject editing.
+     */
+    async updateFeeStatementInvoiceRaw(requestParameters: UpdateFeeStatementInvoiceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<FeeStatementEnvelope>> {
+        const requestOptions = await this.updateFeeStatementInvoiceRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => FeeStatementEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * finance.approve_statements. Edit a DRAFT commission invoice heading and Vendor message with optimistic concurrency and idempotency. Does not send mail. Amounts, issuer, recipients and deadlines remain system controlled. Approval freezes the copy into the immutable SAMPLE/TEST PDF and Owner email. Issued statements reject editing.
+     */
+    async updateFeeStatementInvoice(requestParameters: UpdateFeeStatementInvoiceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<FeeStatementEnvelope> {
+        const response = await this.updateFeeStatementInvoiceRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
 }
 
 /**
@@ -1106,6 +1586,17 @@ export const ListAdminPaymentsReconciliationStateEnum = {
     Exception: 'EXCEPTION',
 } as const;
 export type ListAdminPaymentsReconciliationStateEnum = typeof ListAdminPaymentsReconciliationStateEnum[keyof typeof ListAdminPaymentsReconciliationStateEnum];
+/**
+ * @export
+ */
+export const ListCommissionTransactionsStatusEnum = {
+    Paid: 'PAID',
+    PaidPartiallyRefunded: 'PAID_PARTIALLY_REFUNDED',
+    PaidRefundPending: 'PAID_REFUND_PENDING',
+    PaidRefunded: 'PAID_REFUNDED',
+    PaidRefundFailed: 'PAID_REFUND_FAILED',
+} as const;
+export type ListCommissionTransactionsStatusEnum = typeof ListCommissionTransactionsStatusEnum[keyof typeof ListCommissionTransactionsStatusEnum];
 /**
  * @export
  */

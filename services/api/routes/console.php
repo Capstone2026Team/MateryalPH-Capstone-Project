@@ -12,17 +12,22 @@ use App\Domain\Compliance\ComplianceRegisterImporter;
 use App\Domain\Compliance\ComplianceRegisterSync;
 use App\Domain\Demo\DemoVendorMarketplace;
 use App\Domain\Disputes\DisputeAdminService;
+use App\Domain\Disputes\DisputeFeeCredits;
 use App\Domain\Enforcement\EnforcementService;
+use App\Domain\Finance\CommissionEmails;
+use App\Domain\Finance\RemittanceReconciliationService;
 use App\Domain\Finance\StatementService;
 use App\Domain\Finance\WithholdingThresholdService;
 use App\Domain\Fulfillment\ReceiptService;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Invoices\InvoiceService;
 use App\Domain\Messaging\QuotationService;
+use App\Domain\Operations\AutomaticOperationRecovery;
 use App\Domain\Orders\CancellationService;
 use App\Domain\Payments\PaymentGateway;
 use App\Domain\Payments\PaymentReconciliationService;
 use App\Domain\Payments\XenditWebhookInbox;
+use App\Domain\Reporting\OrderDocumentService;
 use App\Domain\Reporting\TaxReminderService;
 use App\Domain\Reviews\ReviewService;
 use App\Domain\Scores\ScoreSnapshotService;
@@ -39,6 +44,10 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote')->hourly();
 
+Artisan::command('materyalph:operations-recover', function (): void {
+    $this->info('Allowlisted operations recovered: '.app(AutomaticOperationRecovery::class)->sweep());
+})->purpose('Automatically recover allowlisted failed work with bounded cooldowns and an audit trail');
+Schedule::command('materyalph:operations-recover')->everyMinute()->withoutOverlapping();
 Schedule::command('materyalph:outbox-dispatch')->everyMinute()->withoutOverlapping();
 Artisan::command('materyalph:tax-reminders', function (): void {
     $this->info('Tax reminder recipients evaluated: '.app(TaxReminderService::class)->sweep());
@@ -53,12 +62,21 @@ Artisan::command('materyalph:quotations-sweep', function (): void {
     $this->info('Expired quotations: '.app(QuotationService::class)->sweep());
 })->purpose('Expire quotation deadlines, release soft holds and send reminders');
 Schedule::command('materyalph:quotations-sweep')->everyMinute()->withoutOverlapping();
+Artisan::command('materyalph:order-documents', function (): void {
+    $this->info('Order documents queued: '.app(OrderDocumentService::class)->sweep());
+})->purpose('Prepare missing Purchase Orders and their current layout from accepted orders');
+Schedule::command('materyalph:order-documents')->everyFiveMinutes()->withoutOverlapping();
 Schedule::command('materyalph:geography-cache-prune')->hourly()->withoutOverlapping();
 Artisan::command('materyalph:payments-reconcile', function (): void {
     $counts = app(PaymentReconciliationService::class)->sweep();
     $this->info('Payment reconciliation: '.json_encode($counts));
 })->purpose('Reconcile open payment attempts, stalled webhooks and compensation refunds with the provider');
 Schedule::command('materyalph:payments-reconcile')->everyFiveMinutes()->withoutOverlapping();
+
+Artisan::command('materyalph:remittances-reconcile', function (): void {
+    $this->info('Recorded TEST remittance reconciliation: '.json_encode(app(RemittanceReconciliationService::class)->sweep()));
+})->purpose('Reconcile matching TEST remittance collections and ledger entries without moving money or recording BIR payment');
+Schedule::command('materyalph:remittances-reconcile')->everyMinute()->withoutOverlapping();
 
 Artisan::command('materyalph:fulfillment-sweep', function (): void {
     $this->info('Cancellation requests finalized after the 24-hour Vendor window: '.app(CancellationService::class)->sweep());
@@ -72,8 +90,17 @@ Artisan::command('materyalph:disputes-sweep', function (): void {
 })->purpose('Dispute response, mutual-resolution, clarification and appeal timers; invoice-request reminders and overdue notices');
 Schedule::command('materyalph:disputes-sweep')->everyMinute()->withoutOverlapping();
 
+Artisan::command('materyalph:finance-process-commissions', function (): void {
+    app(CommissionEmails::class)->reminders();
+    $this->info('Commission credit orders processed: '.app(DisputeFeeCredits::class)->recover());
+    $this->info('Commission statements drafted: '.app(StatementService::class)->draftMonthly(CarbonImmutable::now()));
+    $this->info('Commission statements issued: '.app(StatementService::class)->issuePending());
+})->purpose('Recover automatic commission credits and create/issue missing monthly bills');
+Schedule::command('materyalph:finance-process-commissions')->everyFiveMinutes()->withoutOverlapping();
+
 Artisan::command('materyalph:finance-draft-statements', function (): void {
     $this->info('Statements drafted: '.app(StatementService::class)->draftMonthly(CarbonImmutable::now()));
+    $this->info('Statements issued: '.app(StatementService::class)->issuePending());
 })->purpose('Draft the previous month\'s Vendor commission statements (idempotent)');
 Schedule::command('materyalph:finance-draft-statements')->monthlyOn(1, '00:05')->timezone('Asia/Manila')->withoutOverlapping();
 

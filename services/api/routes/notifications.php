@@ -26,6 +26,8 @@ foreach (['buyers' => ['BUYER', 'MOBILE'], 'vendor' => ['VENDOR', 'WEB'], 'admin
         Route::get('/reports', [ReportingController::class, 'index']);
         Route::post('/reports', [ReportingController::class, 'request']);
         Route::get('/reports/{exportId}/download', [ReportingController::class, 'download'])->whereUuid('exportId');
+        Route::get('/orders/{orderId}/documents', [ReportingController::class, 'orderDocuments'])->whereUuid('orderId');
+        Route::get('/orders/{orderId}/documents/{kind}/download', [ReportingController::class, 'downloadOrderDocument'])->whereUuid('orderId')->whereIn('kind', ['PURCHASE_ORDER']);
         if ($portal === 'ADMIN') {
             Route::get('/notifications/failures', [NotificationController::class, 'failures']);
             Route::get('/reports/tax', [ReportingController::class, 'taxList']);

@@ -1,4 +1,4 @@
-import { AuthenticatorCodeField, Button, Field, GoogleButton, PasswordRecoveryFlow, PhoneField, StatusMessage } from '@materyalph/web-ui'
+import { BackNavigation, AuthenticatorCodeField, Button, Field, GoogleButton, PasswordRecoveryFlow, PhoneField, StatusMessage } from '@materyalph/web-ui'
 import { Copy, Download, LogOut, ShieldCheck } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { type FormEvent, useEffect, useState } from 'react'
@@ -112,7 +112,7 @@ export function VendorMfaPage() {
     {message && <StatusMessage tone="error">{message}</StatusMessage>}
     <div className="mfa-introduction"><ShieldCheck aria-hidden="true" /><p>Set up an authenticator app to continue. The setup key remains protected until you choose to begin.</p></div>
     <Button className="w-full" disabled={busy} onClick={() => void beginEnrollment()}>{busy ? 'Preparing setup…' : 'Set up authenticator'}</Button>
-    <Link className="auth-cancel" to="/login">Cancel and sign in again</Link>
+    <BackNavigation><Link className="auth-cancel" to="/login">Cancel and sign in again</Link></BackNavigation>
   </VendorAuthShell>
 
   return <VendorAuthShell title={mode === 'enrollment' ? 'Scan with your authenticator app' : 'Verify it is you'} description={mode === 'enrollment' ? 'Scan the code, then enter the current six-digit code from your authenticator app.' : 'Enter the current code from your authenticator app.'}>
@@ -125,7 +125,7 @@ export function VendorMfaPage() {
       {recoveryMode ? <Field error={message ?? ''} label="Recovery code" name="recovery_code" autoComplete="one-time-code" required /> : <AuthenticatorCodeField error={message ?? ''} label="Six-digit authenticator code" name="code" disabled={busy} required />}
       <Button className="w-full" type="submit" disabled={busy}>{busy ? 'Verifying…' : 'Verify and continue'}</Button>
       {mode === 'challenge' && <Button className="w-full" variant="quiet" onClick={() => { setRecoveryMode((value) => !value); setMessage(null) }}>{recoveryMode ? 'Use authenticator code' : 'Use a recovery code'}</Button>}
-      <Link className="auth-cancel" to="/login">Cancel and sign in again</Link>
+      <BackNavigation><Link className="auth-cancel" to="/login">Cancel and sign in again</Link></BackNavigation>
     </form>
   </VendorAuthShell>
 }
@@ -162,7 +162,7 @@ function VendorPasswordRecovery({ initialCodeEntry = false }: { initialCodeEntry
       }}
       completePassword={completePasswordRecovery} resendSecurityCode={resendRiskChallenge} readableError={readableApiError}
       onDownloadCodes={downloadRecoveryCodes} onComplete={() => navigate('/login?reset=success', { replace: true })} />
-    <Link className="auth-cancel" to="/login">Back to sign in</Link>
+    <BackNavigation><Link className="auth-cancel" to="/login">Back to sign in</Link></BackNavigation>
   </VendorAuthShell>
 }
 
@@ -232,7 +232,7 @@ export function VendorVerifyEmailPage() {
       <div className="grid gap-2 border-t border-border-default pt-4 text-center">
         <p className="text-sm text-text-secondary">Didn’t receive a code? Check your spam folder.</p>
         <Button className="w-full" variant="quiet" onClick={() => void resend()} disabled={busy || !email.trim()}>Request another code</Button>
-        <Link className="auth-cancel" to="/login">Return to sign in</Link>
+        <BackNavigation><Link className="auth-cancel" to="/login">Return to sign in</Link></BackNavigation>
       </div>
     </form>
   </VendorAuthShell>
@@ -277,7 +277,7 @@ export function VendorDashboardFoundation() {
       <img src="/brand/materyalph-logo.png" alt="MateryalPH Vendor Portal" />
       {ready && <Button variant="secondary" disabled={logoutBusy} onClick={() => void logout()}><LogOut aria-hidden="true" />{logoutBusy ? 'Signing out…' : 'Sign out'}</Button>}
     </header>
-    <div><ShieldCheck aria-hidden="true" /><h1>{ready ? 'Welcome to your Vendor account' : message ? 'Session could not be restored' : 'Checking your session…'}</h1><p>{ready ? 'You are securely signed in. Your account is ready; store verification and activation are separate steps and are not available in this workspace yet.' : message ? 'Your authenticated Vendor session could not be confirmed.' : 'Securely restoring your Vendor session.'}</p>{ready && <dl className="foundation-details"><div><dt>Account access</dt><dd>Signed in</dd></div><div><dt>Store verification</dt><dd>Not available here yet</dd></div></dl>}{logoutError && <StatusMessage tone="error">{logoutError}</StatusMessage>}{message && <><StatusMessage tone="error">{message}</StatusMessage><Link className="button button--primary" to="/login">Return to sign in</Link></>}</div>
+    <div><ShieldCheck aria-hidden="true" /><h1>{ready ? 'Welcome to your Vendor account' : message ? 'Session could not be restored' : 'Checking your session…'}</h1><p>{ready ? 'You are securely signed in. Your account is ready; store verification and activation are separate steps and are not available in this workspace yet.' : message ? 'Your authenticated Vendor session could not be confirmed.' : 'Securely restoring your Vendor session.'}</p>{ready && <dl className="foundation-details"><div><dt>Account access</dt><dd>Signed in</dd></div><div><dt>Store verification</dt><dd>Not available here yet</dd></div></dl>}{logoutError && <StatusMessage tone="error">{logoutError}</StatusMessage>}{message && <><StatusMessage tone="error">{message}</StatusMessage><BackNavigation><Link to="/login">Return to sign in</Link></BackNavigation></>}</div>
   </main>
 }
 
@@ -301,7 +301,7 @@ export function VendorAuthCallbackPage() {
   }, [callbackFailed, navigate])
 
   if (errorMessage) {
-    return <VendorAuthShell title="Google sign-in could not continue" description="Your existing MateryalPH identity is still protected."><StatusMessage tone="error">{errorMessage}</StatusMessage><div className="callback-actions"><Link className="button button--primary w-full" to="/login">Back to Vendor sign in</Link><Button variant="secondary" disabled={retryBusy} onClick={() => void retryGoogle()}>{retryBusy ? 'Opening Google…' : 'Use a different Google account'}</Button><Link className="auth-cancel" to="/register">Register a Vendor account</Link></div>{retryError && <StatusMessage tone="error">{retryError}</StatusMessage>}</VendorAuthShell>
+    return <VendorAuthShell title="Google sign-in could not continue" description="Your existing MateryalPH identity is still protected."><StatusMessage tone="error">{errorMessage}</StatusMessage><div className="callback-actions"><BackNavigation><Link to="/login">Back to Vendor sign in</Link></BackNavigation><Button variant="secondary" disabled={retryBusy} onClick={() => void retryGoogle()}>{retryBusy ? 'Opening Google…' : 'Use a different Google account'}</Button><Link className="auth-cancel" to="/register">Register a Vendor account</Link></div>{retryError && <StatusMessage tone="error">{retryError}</StatusMessage>}</VendorAuthShell>
   }
 
   return <VendorAuthShell title="Completing sign in" description="MateryalPH is validating your secure session."><StatusMessage>Finishing Google sign-in…</StatusMessage></VendorAuthShell>

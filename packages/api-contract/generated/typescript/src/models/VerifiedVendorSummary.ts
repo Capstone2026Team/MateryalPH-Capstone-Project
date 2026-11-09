@@ -34,6 +34,13 @@ import {
     SupplierServiceabilityToJSON,
     SupplierServiceabilityToJSONTyped,
 } from './SupplierServiceability';
+import type { PublicBadge } from './PublicBadge';
+import {
+    PublicBadgeFromJSON,
+    PublicBadgeFromJSONTyped,
+    PublicBadgeToJSON,
+    PublicBadgeToJSONTyped,
+} from './PublicBadge';
 
 /**
  *
@@ -41,6 +48,10 @@ import {
  * @interface VerifiedVendorSummary
  */
 export interface VerifiedVendorSummary {
+    /**
+     * Current active automatic awards; suppressed or revoked badges are omitted. Tier 2 only.
+     */
+    badges?: Array<PublicBadge>;
     /**
      *
      */
@@ -105,6 +116,7 @@ export function VerifiedVendorSummaryFromJSONTyped(json: any, ignoreDiscriminato
     }
     return {
 
+        'badges': json['badges'] == null ? undefined : ((json['badges'] as Array<any>).map(PublicBadgeFromJSON)),
         'logoUrl': json['logo_url'],
         'supplierType': json['supplier_type'],
         'niches': json['niches'],
@@ -128,6 +140,7 @@ export function VerifiedVendorSummaryToJSONTyped(value?: VerifiedVendorSummary |
 
     return {
 
+        'badges': value['badges'] == null ? undefined : ((value['badges'] as Array<any>).map(PublicBadgeToJSON)),
         'logo_url': value['logoUrl'],
         'supplier_type': value['supplierType'],
         'niches': value['niches'],

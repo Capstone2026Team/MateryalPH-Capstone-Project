@@ -27,6 +27,26 @@ export interface InvoiceOrderLine {
      *
      */
     displayName: string;
+    /**
+     *
+     */
+    category?: string | null;
+    /**
+     *
+     */
+    quantity?: string;
+    /**
+     *
+     */
+    unitName?: string;
+    /**
+     *
+     */
+    unitPriceCentavos?: number;
+    /**
+     *
+     */
+    lineTotalCentavos?: number | null;
 }
 
 /**
@@ -50,6 +70,11 @@ export function InvoiceOrderLineFromJSONTyped(json: any, ignoreDiscriminator: bo
 
         'orderLineId': json['order_line_id'],
         'displayName': json['display_name'],
+        'category': json['category'] === undefined ? undefined : json['category'] === null ? null : json['category'],
+        'quantity': json['quantity'] == null ? undefined : json['quantity'],
+        'unitName': json['unit_name'] == null ? undefined : json['unit_name'],
+        'unitPriceCentavos': json['unit_price_centavos'] == null ? undefined : json['unit_price_centavos'],
+        'lineTotalCentavos': json['line_total_centavos'] === undefined ? undefined : json['line_total_centavos'] === null ? null : json['line_total_centavos'],
     };
 }
 
@@ -66,6 +91,11 @@ export function InvoiceOrderLineToJSONTyped(value?: InvoiceOrderLine | null, ign
 
         'order_line_id': value['orderLineId'],
         'display_name': value['displayName'],
+        'category': value['category'],
+        'quantity': value['quantity'],
+        'unit_name': value['unitName'],
+        'unit_price_centavos': value['unitPriceCentavos'],
+        'line_total_centavos': value['lineTotalCentavos'],
     };
 }
 

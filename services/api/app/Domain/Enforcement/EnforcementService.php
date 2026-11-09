@@ -61,12 +61,18 @@ final class EnforcementService
     {
         $this->access->require($request, 'enforcement.view');
         $query = DB::table('enforcement_actions as e')->leftJoin('dispute_cases as c', 'c.id', '=', 'e.dispute_case_id')
-            ->when($filters['state'] ?? null, fn ($q, string $state) => $q->where('e.state', $state))
             ->when($filters['subject_type'] ?? null, fn ($q, string $type) => $q->where('e.subject_type', $type))
             ->when($filters['action'] ?? null, fn ($q, string $action) => $q->where('e.action', $action))
             ->when($filters['source'] ?? null, fn ($q, string $source) => $q->where('e.source', $source))
             ->when($filters['subject_id'] ?? null, fn ($q, string $id) => $q->where('e.subject_id', $id));
         PortalDateRange::apply($query, 'e.created_at', $filters);
+        $counts = array_fill_keys(['REFERRED', 'APPLIED', 'EFFECTIVE', 'LIFTED', 'DECLINED'], 0);
+        foreach ((clone $query)->selectRaw('e.state, count(*) as total')->groupBy('e.state')->get() as $row) {
+            $counts[$row->state] = (int) $row->total;
+        }
+        if (! empty($filters['state'])) {
+            $query->where('e.state', $filters['state']);
+        }
         $total = (clone $query)->count();
         $page = max(1, min(1000, (int) ($filters['page'] ?? 1)));
         // Oldest referral first: pending account decisions must not age silently.
@@ -74,7 +80,7 @@ final class EnforcementService
             ->offset(($page - 1) * self::PER_PAGE)->limit(self::PER_PAGE)->get(['e.*', 'c.reference as case_reference']);
 
         return ['items' => $rows->map(fn (object $row): array => $this->summary($row))->all(),
-            'meta' => ['page' => $page, 'per_page' => self::PER_PAGE, 'total' => $total, 'has_more' => $page * self::PER_PAGE < $total]];
+            'meta' => ['page' => $page, 'per_page' => self::PER_PAGE, 'total' => $total, 'has_more' => $page * self::PER_PAGE < $total, 'counts' => $counts]];
     }
 
     /** @return array<string, mixed> */
@@ -87,6 +93,7 @@ final class EnforcementService
             'scope' => (string) $row->scope, 'restoration_condition' => $row->restoration_condition, 'continuation_note' => $row->continuation_note,
             'prior_subject_state' => $row->prior_subject_state === null ? null : json_decode((string) $row->prior_subject_state, true),
             'subject_review' => $this->review((string) $row->subject_type, (string) $row->subject_id),
+            'evidence' => EnforcementFiles::summary($actionId),
             'events' => DB::table('enforcement_events as v')->leftJoin('users as u', 'u.id', '=', 'v.actor_user_id')->where('v.enforcement_action_id', $row->id)->orderBy('v.occurred_at')->orderBy('v.id')
                 ->get(['v.event', 'v.from_state', 'v.to_state', 'v.before', 'v.after', 'v.reason', 'v.actor_role', 'v.correlation_id', 'v.occurred_at', 'u.name as actor_name'])
                 ->map(static fn (object $event): array => ['event' => (string) $event->event, 'from_state' => $event->from_state, 'to_state' => (string) $event->to_state,
@@ -105,14 +112,16 @@ final class EnforcementService
      */
     public function subject(Request $request, string $type, string $id): array
     {
-        $this->access->require($request, 'enforcement.view');
+        $actor = $this->access->require($request, 'enforcement.view');
         if (! in_array($type, ['BUYER', 'VENDOR_ORGANIZATION'], true) || ! Str::isUuid($id)) {
             throw new AuthenticationException('SUBJECT_NOT_FOUND', 'This account is unavailable.', 404);
         }
 
-        return $this->review($type, $id) + ['sanctions' => DB::table('enforcement_actions as e')->leftJoin('dispute_cases as c', 'c.id', '=', 'e.dispute_case_id')
-            ->where('e.subject_type', $type)->where('e.subject_id', $id)->orderByDesc('e.created_at')->limit(50)->get(['e.*', 'c.reference as case_reference'])
-            ->map(fn (object $row): array => $this->summary($row))->all()];
+        return $this->review($type, $id) + ['recordable_actions' => in_array('enforcement.apply', $actor['permissions'], true)
+            ? (in_array('enforcement.ban', $actor['permissions'], true) ? self::ACTIONS : array_slice(self::ACTIONS, 0, 3)) : [],
+            'sanctions' => DB::table('enforcement_actions as e')->leftJoin('dispute_cases as c', 'c.id', '=', 'e.dispute_case_id')
+                ->where('e.subject_type', $type)->where('e.subject_id', $id)->orderByDesc('e.created_at')->limit(50)->get(['e.*', 'c.reference as case_reference'])
+                ->map(fn (object $row): array => $this->summary($row))->all()];
     }
 
     /**
@@ -182,10 +191,11 @@ final class EnforcementService
                 'duration_days' => $duration, 'restoration_condition' => $restoration === '' ? null : mb_substr($restoration, 0, 2000), 'effective_at' => $action === 'WARNING' ? now() : null,
                 'issued_by_user_id' => $actor['user_id'], 'issued_role' => $actor['role'], 'environment' => 'TEST', 'source' => 'DIRECT', 'correlation_id' => $correlation,
                 'created_at' => now(), 'updated_at' => now()]);
+            EnforcementFiles::attach($input['evidence_file_ids'] ?? [], $id, $type, $subjectId, $actor['user_id']);
             $this->event($id, 'RECORDED', null, $action === 'WARNING' ? 'EFFECTIVE' : 'REFERRED', null, ['action' => $action], $reason, $actor, $correlation);
             if ($action === 'WARNING') {
                 $this->audit->account($request, 'ENFORCEMENT_WARNING_RECORDED', 'ENFORCEMENT_ACTION', $id, [], ['subject_type' => $type, 'action' => $action], reason: $reason);
-                $this->notifySubject($type, $subjectId, 'Account warning', 'A warning was recorded on your account: '.$reason, $id);
+                $this->notifySubject($type, $subjectId, 'Account warning', 'A warning was recorded on your '.($type === 'BUYER' ? 'account' : 'store').'. Reason: '.$reason.' No access changes. Scope: '.($input['scope'] ?? 'Marketplace activity').'.', $id);
 
                 return $this->detail($request, $id);
             }
@@ -386,6 +396,9 @@ final class EnforcementService
     {
         if ($type === 'VENDOR_ORGANIZATION') {
             $organization = DB::table('vendor_organizations')->where('id', $subjectId)->first();
+            if ($organization->account_status === 'DELETED') {
+                return;
+            }
             $status = $action === 'TEMPORARY_RESTRICTION' ? 'RESTRICTED' : 'SUSPENDED';
             $update = ['store_activation_status' => $status, 'lock_version' => (int) $organization->lock_version + 1, 'updated_at' => now()];
             // Never overwrite a different existing hold: it keeps blocking under its own rule until resolved there.
@@ -416,6 +429,9 @@ final class EnforcementService
     {
         if ($type === 'VENDOR_ORGANIZATION') {
             $organization = DB::table('vendor_organizations')->where('id', $subjectId)->first();
+            if ($organization->account_status === 'DELETED') {
+                return;
+            }
             $update = ['updated_at' => now(), 'lock_version' => (int) $organization->lock_version + 1];
             if (str_starts_with((string) $organization->activation_hold_code, 'ENFORCEMENT_')) {
                 $update += ['activation_hold_code' => null, 'activation_hold_reason' => null];

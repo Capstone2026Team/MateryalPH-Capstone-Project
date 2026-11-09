@@ -13,12 +13,17 @@ class _$ReviewProduct extends ReviewProduct {
   final String name;
   @override
   final String? variantLabel;
+  @override
+  final String? imageUrl;
 
   factory _$ReviewProduct([void Function(ReviewProductBuilder)? updates]) =>
       (ReviewProductBuilder()..update(updates))._build();
 
   _$ReviewProduct._(
-      {required this.listingId, required this.name, this.variantLabel})
+      {required this.listingId,
+      required this.name,
+      this.variantLabel,
+      this.imageUrl})
       : super._();
   @override
   ReviewProduct rebuild(void Function(ReviewProductBuilder) updates) =>
@@ -33,7 +38,8 @@ class _$ReviewProduct extends ReviewProduct {
     return other is ReviewProduct &&
         listingId == other.listingId &&
         name == other.name &&
-        variantLabel == other.variantLabel;
+        variantLabel == other.variantLabel &&
+        imageUrl == other.imageUrl;
   }
 
   @override
@@ -42,6 +48,7 @@ class _$ReviewProduct extends ReviewProduct {
     _$hash = $jc(_$hash, listingId.hashCode);
     _$hash = $jc(_$hash, name.hashCode);
     _$hash = $jc(_$hash, variantLabel.hashCode);
+    _$hash = $jc(_$hash, imageUrl.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -51,7 +58,8 @@ class _$ReviewProduct extends ReviewProduct {
     return (newBuiltValueToStringHelper(r'ReviewProduct')
           ..add('listingId', listingId)
           ..add('name', name)
-          ..add('variantLabel', variantLabel))
+          ..add('variantLabel', variantLabel)
+          ..add('imageUrl', imageUrl))
         .toString();
   }
 }
@@ -72,6 +80,10 @@ class ReviewProductBuilder
   String? get variantLabel => _$this._variantLabel;
   set variantLabel(String? variantLabel) => _$this._variantLabel = variantLabel;
 
+  String? _imageUrl;
+  String? get imageUrl => _$this._imageUrl;
+  set imageUrl(String? imageUrl) => _$this._imageUrl = imageUrl;
+
   ReviewProductBuilder() {
     ReviewProduct._defaults(this);
   }
@@ -82,6 +94,7 @@ class ReviewProductBuilder
       _listingId = $v.listingId;
       _name = $v.name;
       _variantLabel = $v.variantLabel;
+      _imageUrl = $v.imageUrl;
       _$v = null;
     }
     return this;
@@ -108,6 +121,7 @@ class ReviewProductBuilder
           name: BuiltValueNullFieldError.checkNotNull(
               name, r'ReviewProduct', 'name'),
           variantLabel: variantLabel,
+          imageUrl: imageUrl,
         );
     replace(_$result);
     return _$result;

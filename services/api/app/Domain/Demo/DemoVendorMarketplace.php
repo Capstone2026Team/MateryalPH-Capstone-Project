@@ -10,6 +10,7 @@ use App\Domain\Catalog\MarketplaceDiscoverability;
 use App\Domain\Catalog\VendorCatalogService;
 use App\Domain\Compliance\ComplianceRegisterImporter;
 use App\Domain\Compliance\ProductComplianceService;
+use App\Domain\Finance\CommissionPolicyService;
 use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Identity\ManageProfilePhoto;
@@ -514,6 +515,9 @@ final class DemoVendorMarketplace
 
     private function agreementVersion(string $code): string
     {
+        if ($code === 'VENDOR_COMMISSION_TEST') {
+            return (string) CommissionPolicyService::current()->agreement_version_id;
+        }
         $id = DB::table('agreement_versions as v')->join('agreement_documents as d', 'd.id', '=', 'v.agreement_document_id')->where('d.code', $code)->whereNull('v.retired_at')->where('v.effective_at', '<=', now())->orderByDesc('v.version')->value('v.id');
         if ($id === null) {
             throw new RuntimeException('The published agreement '.$code.' is unavailable.');

@@ -8,6 +8,10 @@ import 'package:materyalph_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
+**ratingComponents** | [**BuiltMap&lt;String, JsonObject&gt;**](JsonObject.md) |  | [optional]
+**completedOrders** | [**BuiltMap&lt;String, JsonObject&gt;**](JsonObject.md) |  | [optional]
+**ohsCalculatedOn** | [**Date**](Date.md) |  | [optional]
+**nextOhsRecalculationOn** | [**Date**](Date.md) |  | [optional]
 **vendorId** | **String** |  | [optional]
 **storeName** | **String** |  | [optional]
 **calculated** | **bool** |  | [optional]

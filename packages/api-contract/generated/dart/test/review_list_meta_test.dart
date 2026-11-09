@@ -7,6 +7,12 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(ReviewListMeta, () {
+    // Admin moderation only. Full totals by moderation state, including ALL and NEEDS_ACTION, after submission date filters but before state selection and pagination. NEEDS_ACTION counts each review once using the queue's existing open-report or flagged/hidden criteria.
+    // BuiltMap<String, int> counts
+    test('to test the property `counts`', () async {
+      // TODO
+    });
+
     // int page
     test('to test the property `page`', () async {
       // TODO

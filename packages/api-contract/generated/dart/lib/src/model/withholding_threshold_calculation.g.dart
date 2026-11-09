@@ -9,6 +9,12 @@ part of 'withholding_threshold_calculation.dart';
 class _$WithholdingThresholdCalculation
     extends WithholdingThresholdCalculation {
   @override
+  final int assessedPayments;
+  @override
+  final int paymentPrincipalCentavos;
+  @override
+  final int buyerProcessingFeesCentavos;
+  @override
   final int collectionsCentavos;
   @override
   final int refundsCentavos;
@@ -24,20 +30,26 @@ class _$WithholdingThresholdCalculation
   final int withheldCentavos;
   @override
   final int assessedCashCentavos;
+  @override
+  final WithholdingCalculationBreakdown? withholdingBreakdown;
 
   factory _$WithholdingThresholdCalculation(
           [void Function(WithholdingThresholdCalculationBuilder)? updates]) =>
       (WithholdingThresholdCalculationBuilder()..update(updates))._build();
 
   _$WithholdingThresholdCalculation._(
-      {required this.collectionsCentavos,
+      {required this.assessedPayments,
+      required this.paymentPrincipalCentavos,
+      required this.buyerProcessingFeesCentavos,
+      required this.collectionsCentavos,
       required this.refundsCentavos,
       required this.deliveryCentavos,
       required this.materialVatCentavos,
       required this.providerChargesCentavos,
       required this.grossBasisCentavos,
       required this.withheldCentavos,
-      required this.assessedCashCentavos})
+      required this.assessedCashCentavos,
+      this.withholdingBreakdown})
       : super._();
   @override
   WithholdingThresholdCalculation rebuild(
@@ -52,6 +64,9 @@ class _$WithholdingThresholdCalculation
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is WithholdingThresholdCalculation &&
+        assessedPayments == other.assessedPayments &&
+        paymentPrincipalCentavos == other.paymentPrincipalCentavos &&
+        buyerProcessingFeesCentavos == other.buyerProcessingFeesCentavos &&
         collectionsCentavos == other.collectionsCentavos &&
         refundsCentavos == other.refundsCentavos &&
         deliveryCentavos == other.deliveryCentavos &&
@@ -59,12 +74,16 @@ class _$WithholdingThresholdCalculation
         providerChargesCentavos == other.providerChargesCentavos &&
         grossBasisCentavos == other.grossBasisCentavos &&
         withheldCentavos == other.withheldCentavos &&
-        assessedCashCentavos == other.assessedCashCentavos;
+        assessedCashCentavos == other.assessedCashCentavos &&
+        withholdingBreakdown == other.withholdingBreakdown;
   }
 
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, assessedPayments.hashCode);
+    _$hash = $jc(_$hash, paymentPrincipalCentavos.hashCode);
+    _$hash = $jc(_$hash, buyerProcessingFeesCentavos.hashCode);
     _$hash = $jc(_$hash, collectionsCentavos.hashCode);
     _$hash = $jc(_$hash, refundsCentavos.hashCode);
     _$hash = $jc(_$hash, deliveryCentavos.hashCode);
@@ -73,6 +92,7 @@ class _$WithholdingThresholdCalculation
     _$hash = $jc(_$hash, grossBasisCentavos.hashCode);
     _$hash = $jc(_$hash, withheldCentavos.hashCode);
     _$hash = $jc(_$hash, assessedCashCentavos.hashCode);
+    _$hash = $jc(_$hash, withholdingBreakdown.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -80,6 +100,9 @@ class _$WithholdingThresholdCalculation
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'WithholdingThresholdCalculation')
+          ..add('assessedPayments', assessedPayments)
+          ..add('paymentPrincipalCentavos', paymentPrincipalCentavos)
+          ..add('buyerProcessingFeesCentavos', buyerProcessingFeesCentavos)
           ..add('collectionsCentavos', collectionsCentavos)
           ..add('refundsCentavos', refundsCentavos)
           ..add('deliveryCentavos', deliveryCentavos)
@@ -87,7 +110,8 @@ class _$WithholdingThresholdCalculation
           ..add('providerChargesCentavos', providerChargesCentavos)
           ..add('grossBasisCentavos', grossBasisCentavos)
           ..add('withheldCentavos', withheldCentavos)
-          ..add('assessedCashCentavos', assessedCashCentavos))
+          ..add('assessedCashCentavos', assessedCashCentavos)
+          ..add('withholdingBreakdown', withholdingBreakdown))
         .toString();
   }
 }
@@ -97,6 +121,21 @@ class WithholdingThresholdCalculationBuilder
         Builder<WithholdingThresholdCalculation,
             WithholdingThresholdCalculationBuilder> {
   _$WithholdingThresholdCalculation? _$v;
+
+  int? _assessedPayments;
+  int? get assessedPayments => _$this._assessedPayments;
+  set assessedPayments(int? assessedPayments) =>
+      _$this._assessedPayments = assessedPayments;
+
+  int? _paymentPrincipalCentavos;
+  int? get paymentPrincipalCentavos => _$this._paymentPrincipalCentavos;
+  set paymentPrincipalCentavos(int? paymentPrincipalCentavos) =>
+      _$this._paymentPrincipalCentavos = paymentPrincipalCentavos;
+
+  int? _buyerProcessingFeesCentavos;
+  int? get buyerProcessingFeesCentavos => _$this._buyerProcessingFeesCentavos;
+  set buyerProcessingFeesCentavos(int? buyerProcessingFeesCentavos) =>
+      _$this._buyerProcessingFeesCentavos = buyerProcessingFeesCentavos;
 
   int? _collectionsCentavos;
   int? get collectionsCentavos => _$this._collectionsCentavos;
@@ -138,6 +177,13 @@ class WithholdingThresholdCalculationBuilder
   set assessedCashCentavos(int? assessedCashCentavos) =>
       _$this._assessedCashCentavos = assessedCashCentavos;
 
+  WithholdingCalculationBreakdownBuilder? _withholdingBreakdown;
+  WithholdingCalculationBreakdownBuilder get withholdingBreakdown =>
+      _$this._withholdingBreakdown ??= WithholdingCalculationBreakdownBuilder();
+  set withholdingBreakdown(
+          WithholdingCalculationBreakdownBuilder? withholdingBreakdown) =>
+      _$this._withholdingBreakdown = withholdingBreakdown;
+
   WithholdingThresholdCalculationBuilder() {
     WithholdingThresholdCalculation._defaults(this);
   }
@@ -145,6 +191,9 @@ class WithholdingThresholdCalculationBuilder
   WithholdingThresholdCalculationBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _assessedPayments = $v.assessedPayments;
+      _paymentPrincipalCentavos = $v.paymentPrincipalCentavos;
+      _buyerProcessingFeesCentavos = $v.buyerProcessingFeesCentavos;
       _collectionsCentavos = $v.collectionsCentavos;
       _refundsCentavos = $v.refundsCentavos;
       _deliveryCentavos = $v.deliveryCentavos;
@@ -153,6 +202,7 @@ class WithholdingThresholdCalculationBuilder
       _grossBasisCentavos = $v.grossBasisCentavos;
       _withheldCentavos = $v.withheldCentavos;
       _assessedCashCentavos = $v.assessedCashCentavos;
+      _withholdingBreakdown = $v.withholdingBreakdown?.toBuilder();
       _$v = null;
     }
     return this;
@@ -172,41 +222,67 @@ class WithholdingThresholdCalculationBuilder
   WithholdingThresholdCalculation build() => _build();
 
   _$WithholdingThresholdCalculation _build() {
-    final _$result = _$v ??
-        _$WithholdingThresholdCalculation._(
-          collectionsCentavos: BuiltValueNullFieldError.checkNotNull(
-              collectionsCentavos,
-              r'WithholdingThresholdCalculation',
-              'collectionsCentavos'),
-          refundsCentavos: BuiltValueNullFieldError.checkNotNull(
-              refundsCentavos,
-              r'WithholdingThresholdCalculation',
-              'refundsCentavos'),
-          deliveryCentavos: BuiltValueNullFieldError.checkNotNull(
-              deliveryCentavos,
-              r'WithholdingThresholdCalculation',
-              'deliveryCentavos'),
-          materialVatCentavos: BuiltValueNullFieldError.checkNotNull(
-              materialVatCentavos,
-              r'WithholdingThresholdCalculation',
-              'materialVatCentavos'),
-          providerChargesCentavos: BuiltValueNullFieldError.checkNotNull(
-              providerChargesCentavos,
-              r'WithholdingThresholdCalculation',
-              'providerChargesCentavos'),
-          grossBasisCentavos: BuiltValueNullFieldError.checkNotNull(
-              grossBasisCentavos,
-              r'WithholdingThresholdCalculation',
-              'grossBasisCentavos'),
-          withheldCentavos: BuiltValueNullFieldError.checkNotNull(
-              withheldCentavos,
-              r'WithholdingThresholdCalculation',
-              'withheldCentavos'),
-          assessedCashCentavos: BuiltValueNullFieldError.checkNotNull(
-              assessedCashCentavos,
-              r'WithholdingThresholdCalculation',
-              'assessedCashCentavos'),
-        );
+    _$WithholdingThresholdCalculation _$result;
+    try {
+      _$result = _$v ??
+          _$WithholdingThresholdCalculation._(
+            assessedPayments: BuiltValueNullFieldError.checkNotNull(
+                assessedPayments,
+                r'WithholdingThresholdCalculation',
+                'assessedPayments'),
+            paymentPrincipalCentavos: BuiltValueNullFieldError.checkNotNull(
+                paymentPrincipalCentavos,
+                r'WithholdingThresholdCalculation',
+                'paymentPrincipalCentavos'),
+            buyerProcessingFeesCentavos: BuiltValueNullFieldError.checkNotNull(
+                buyerProcessingFeesCentavos,
+                r'WithholdingThresholdCalculation',
+                'buyerProcessingFeesCentavos'),
+            collectionsCentavos: BuiltValueNullFieldError.checkNotNull(
+                collectionsCentavos,
+                r'WithholdingThresholdCalculation',
+                'collectionsCentavos'),
+            refundsCentavos: BuiltValueNullFieldError.checkNotNull(
+                refundsCentavos,
+                r'WithholdingThresholdCalculation',
+                'refundsCentavos'),
+            deliveryCentavos: BuiltValueNullFieldError.checkNotNull(
+                deliveryCentavos,
+                r'WithholdingThresholdCalculation',
+                'deliveryCentavos'),
+            materialVatCentavos: BuiltValueNullFieldError.checkNotNull(
+                materialVatCentavos,
+                r'WithholdingThresholdCalculation',
+                'materialVatCentavos'),
+            providerChargesCentavos: BuiltValueNullFieldError.checkNotNull(
+                providerChargesCentavos,
+                r'WithholdingThresholdCalculation',
+                'providerChargesCentavos'),
+            grossBasisCentavos: BuiltValueNullFieldError.checkNotNull(
+                grossBasisCentavos,
+                r'WithholdingThresholdCalculation',
+                'grossBasisCentavos'),
+            withheldCentavos: BuiltValueNullFieldError.checkNotNull(
+                withheldCentavos,
+                r'WithholdingThresholdCalculation',
+                'withheldCentavos'),
+            assessedCashCentavos: BuiltValueNullFieldError.checkNotNull(
+                assessedCashCentavos,
+                r'WithholdingThresholdCalculation',
+                'assessedCashCentavos'),
+            withholdingBreakdown: _withholdingBreakdown?.build(),
+          );
+    } catch (_) {
+      late String _$failedField;
+      try {
+        _$failedField = 'withholdingBreakdown';
+        _withholdingBreakdown?.build();
+      } catch (e) {
+        throw BuiltValueNestedFieldError(
+            r'WithholdingThresholdCalculation', _$failedField, e.toString());
+      }
+      rethrow;
+    }
     replace(_$result);
     return _$result;
   }

@@ -141,6 +141,7 @@ class FakeDisputesRepository implements DisputesRepository {
   final Map<String, Uint8List> files = {};
   final List<String> calls = [];
   final List<String> keys = [];
+  final List<String?> invoiceReturnReasons = [];
   final List<Map<String, Object?>> filings = [];
   DisputeDetailView Function(String action)? onAction;
 
@@ -307,6 +308,7 @@ class FakeDisputesRepository implements DisputesRepository {
     String? reason,
   }) {
     keys.add(idempotencyKey);
+    invoiceReturnReasons.add(reason);
     return _answer(
       'answerInvoice:$requestId:${close ? 'CLOSE' : 'RETURN'}',
       () => invoiceData!,

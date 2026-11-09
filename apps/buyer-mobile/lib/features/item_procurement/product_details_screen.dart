@@ -1,6 +1,7 @@
 import '../../design_system/quantity_policy.dart';
 import '../../design_system/components/buyer_cart_button.dart';
 import 'package:flutter/material.dart';
+import '../../core/vendor_score_display.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../design_system/components/buyer_overlays.dart';
@@ -788,7 +789,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
         if (_relatedProducts.loadingMore)
           const Padding(
             padding: EdgeInsets.all(16),
-            child: Center(child: CircularProgressIndicator()),
+            child: Center(child: BuyerLoadingIndicator()),
           )
         else if (_relatedProducts.hasMore && failure == null)
           OutlinedButton(
@@ -916,7 +917,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                             style: const TextStyle(fontWeight: FontWeight.w700),
                           ),
                           Text(
-                            '${detail.vendorScore} · ${formatDistance(detail.distanceMeters)} away · ${switch (detail.vendorOpenStatus) {
+                            '${vendorScoreDisplayText(detail.vendorScore)} · ${formatDistance(detail.distanceMeters)} away · ${switch (detail.vendorOpenStatus) {
                               'OPEN' => 'Open now',
                               'CLOSED' => 'Closed now',
                               _ => 'Hours unavailable',
@@ -998,7 +999,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                     ? const SizedBox(
                         width: 18,
                         height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child: BuyerLoadingIndicator(strokeWidth: 2),
                       )
                     : const Icon(LucideIcons.shoppingCart),
                 label: const Text('Add to Cart'),

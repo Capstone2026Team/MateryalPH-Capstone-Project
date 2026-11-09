@@ -251,20 +251,25 @@ final class ProductComplianceService
             ->leftJoin('materials as m', 'm.id', '=', 'p.material_id')->leftJoin('store_profiles as sp', 'sp.vendor_organization_id', '=', 'l.vendor_organization_id')
             ->leftJoin('regulated_material_rules as r', 'r.id', '=', 's.regulated_material_rule_id')
             ->leftJoin('compliance_reference_matches as rm', 'rm.compliance_submission_id', '=', 's.id');
-        if ($status !== 'ALL') {
-            $query->where('s.status', $status);
-        }
         if (! empty($filters['path'])) {
             $query->where('s.path', $filters['path']);
         }
         if (! empty($filters['reference_result'])) {
             $query->where('rm.result', $filters['reference_result']);
         }
-        $query->orderBy('s.submitted_at', ($filters['sort'] ?? 'oldest') === 'newest' ? 'desc' : 'asc')->orderBy('s.id');
         PortalDateRange::apply($query, 's.submitted_at', $filters);
+        $counts = array_fill_keys(['PENDING_ADMIN_REVIEW', 'CHANGES_REQUIRED', 'VERIFIED', 'REJECTED', 'SUPERSEDED'], 0);
+        foreach ((clone $query)->selectRaw('s.status, count(*) as total')->groupBy('s.status')->get() as $row) {
+            $counts[$row->status] = (int) $row->total;
+        }
+        $counts['ALL'] = array_sum($counts);
+        if ($status !== 'ALL') {
+            $query->where('s.status', $status);
+        }
+        $query->orderBy('s.submitted_at', ($filters['sort'] ?? 'oldest') === 'newest' ? 'desc' : 'asc')->orderBy('s.id');
         $page = $query->paginate(20, ['s.id', 's.version', 's.path', 's.status', 's.marking_type', 's.review_mode', 's.submitted_at', 'l.id as listing_id', 'l.display_name', 'l.vendor_sku', 'sp.public_store_name', 'm.name as material_name', 'r.product_name', 'r.reference_standard', 'rm.result as reference_result'], 'page', (int) ($filters['page'] ?? 1));
 
-        return ['items' => array_map(static fn (object $row): array => (array) $row, $page->items()), 'meta' => ['current_page' => $page->currentPage(), 'last_page' => $page->lastPage(), 'total' => $page->total()]];
+        return ['items' => array_map(static fn (object $row): array => (array) $row, $page->items()), 'meta' => ['current_page' => $page->currentPage(), 'last_page' => $page->lastPage(), 'total' => $page->total(), 'counts' => $counts]];
     }
 
     /** @return array<string, mixed> */

@@ -358,7 +358,7 @@ class _WorkPackageEditorState extends State<WorkPackageEditor> {
               CompactDensity.gapLarge,
             ),
             children: [
-              if (busy) const LinearProgressIndicator(),
+              if (busy) const BuyerLoadingProgress(),
               if (error != null) ...[
                 StatusBand(tone: BandTone.danger, title: error!),
                 const SizedBox(height: CompactDensity.gap),

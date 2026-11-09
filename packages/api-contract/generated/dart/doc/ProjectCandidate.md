@@ -8,6 +8,7 @@ import 'package:materyalph_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
+**badges** | [**BuiltList&lt;PublicBadge&gt;**](PublicBadge.md) | Current active public awards for this Vendor; suppressed or revoked badges are omitted. Never part of the saved commercial estimate. | [optional]
 **id** | **String** |  |
 **estimateId** | **String** |  |
 **vendorId** | **String** |  |

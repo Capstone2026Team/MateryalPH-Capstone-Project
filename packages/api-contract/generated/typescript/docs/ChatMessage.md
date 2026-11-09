@@ -6,6 +6,7 @@
 
 Name | Type
 ------------ | -------------
+`conversationId` | string
 `id` | string
 `clientMessageId` | string
 `body` | string
@@ -16,6 +17,8 @@ Name | Type
 `attachments` | [Array&lt;ChatAttachment&gt;](ChatAttachment.md)
 `readByRecipient` | boolean
 `product` | [ChatProduct](ChatProduct.md)
+`automatedReply` | [ChatAutomatedReply](ChatAutomatedReply.md)
+`workPackageAttachment` | [ChatWorkPackageAttachment](ChatWorkPackageAttachment.md)
 
 ## Example
 
@@ -24,6 +27,7 @@ import type { ChatMessage } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "conversationId": null,
   "id": null,
   "clientMessageId": null,
   "body": null,
@@ -34,6 +38,8 @@ const example = {
   "attachments": null,
   "readByRecipient": null,
   "product": null,
+  "automatedReply": null,
+  "workPackageAttachment": null,
 } satisfies ChatMessage
 
 console.log(example)

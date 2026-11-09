@@ -37,8 +37,15 @@ final class ConversationHeaders
             ->keyBy(fn ($p) => $p->conversation_id.'|'.$p->user_id.'|'.$p->participant_role);
         $assignments = DB::table('conversation_assignments')->whereIn('conversation_id', $ids)->whereNull('ended_at')->pluck('id', 'conversation_id');
         $fulfillmentAssignments = DB::table('order_fulfillment_assignments')->whereIn('order_id', array_column($rows, 'order_id'))->whereNull('ended_at')->get(['id', 'order_id', 'user_id'])->keyBy('order_id');
-        $orders = DB::table('orders')->whereIn('id', array_column($rows, 'order_id'))->get(['id', 'reference', 'order_state'])->keyBy('id');
-        $related = $this->pairs($sales, $rows)->get(['c.id', 'c.buyer_profile_id', 'c.vendor_organization_id', 'c.context_type']);
+        $acceptedOrderIds = DB::table('quotations')->whereIn('conversation_id', $ids)->whereNotNull('accepted_order_id')->orderBy('id')->pluck('accepted_order_id', 'conversation_id');
+        $orders = DB::table('orders')->whereIn('id', [...array_column($rows, 'order_id'), ...$acceptedOrderIds->values()->all()])->get()->keyBy('id');
+        $packageView = app(WorkPackageAttachmentView::class);
+        $orderTerms = $viewer->account_type === 'VENDOR' ? $packageView->orderTerms($orders->values()->all()) : [];
+        $packageVersions = DB::table('work_package_versions')->whereIn('id', $orders->pluck('work_package_version_id')->filter())->get()->keyBy('id');
+        $pendingOrders = DB::table('orders')->whereIn('work_package_id', array_column($rows, 'context_id'))
+            ->whereIn('buyer_profile_id', $buyerIds)->whereIn('vendor_organization_id', $orgIds)->where('order_state', 'AWAITING_VENDOR_CONFIRMATION')->whereNull('accepted_at')
+            ->orderBy('id')->get()->keyBy(fn (object $o): string => $o->work_package_id.'|'.$o->vendor_organization_id);
+        $related = $this->pairs($sales, $rows)->get(['c.id', 'c.buyer_profile_id', 'c.vendor_organization_id', 'c.context_type', 'c.needs_human_response']);
         $projectIds = $this->pairs($projects, $rows)->pluck('c.id')->flip();
         $threadIds = array_values(array_unique([...$ids, ...$related->pluck('id')->all()]));
         $latest = DB::table('messages')->whereIn('conversation_id', $threadIds)->selectRaw('DISTINCT ON (conversation_id) *')->orderBy('conversation_id')->orderByDesc('id')->get()->keyBy('conversation_id');
@@ -54,7 +61,7 @@ final class ConversationHeaders
         $legacy = DB::query()->fromSub($legacyQuery, 'legacy')->whereBetween('position', [($legacyPage - 1) * 25 + 1, $legacyPage * 25 + 1])->orderBy('position')->get()->groupBy('canonical_conversation_id');
         $pairs = $related->groupBy(fn ($c) => $this->pair($c));
 
-        return array_map(function (object $c) use ($viewer, $buyers, $users, $stores, $logos, $members, $participants, $assignments, $fulfillmentAssignments, $orders, $latest, $latestProducts, $unread, $supervisor, $fulfillmentUnread, $legacyPage, $legacy, $pairs, $projectIds, $grouped): array {
+        return array_map(function (object $c) use ($viewer, $buyers, $users, $stores, $logos, $members, $participants, $assignments, $fulfillmentAssignments, $orders, $packageVersions, $pendingOrders, $latest, $latestProducts, $unread, $supervisor, $fulfillmentUnread, $legacyPage, $legacy, $pairs, $projectIds, $grouped, $acceptedOrderIds, $packageView, $orderTerms): array {
             $store = $stores->get($c->vendor_organization_id);
             $logo = $logos->get($store?->logo_file_id);
             $logoData = is_string($logo) ? json_decode($logo, true) : [];
@@ -70,7 +77,7 @@ final class ConversationHeaders
             $activeProjects = $siblings->filter(fn ($s) => $projectIds->has($s->id));
             $last = $latest->get($c->id);
             $count = (int) $unread->get($c->id, 0);
-            if ($grouped && $c->purpose === 'SALES') {
+            if ($grouped) {
                 $count = 0;
                 foreach ($siblings as $sibling) {
                     $message = $latest->get($sibling->id);
@@ -83,24 +90,37 @@ final class ConversationHeaders
             $product = $last?->product_snapshot === null ? null : json_decode($last->product_snapshot, true);
             $legacyRows = $legacy->get($c->id, collect());
             $order = $orders->get($c->order_id);
+            $pendingOrder = $c->purpose === 'FULFILLMENT' ? $order : $pendingOrders->get($c->context_id.'|'.$c->vendor_organization_id);
             $readOnly = $c->purpose === 'FULFILLMENT' && ! in_array($order?->order_state, FulfillmentThreadService::WRITABLE_STATES, true);
             $reference = json_decode((string) $c->locked_reference, true);
+            $version = $order === null ? null : $packageVersions->get($order->work_package_version_id);
+            if ($c->purpose === 'FULFILLMENT' && $version !== null) {
+                $reference = ['version_id' => $version->id, 'version' => (int) $version->version, 'content_hash' => $version->content_hash, 'work_package' => json_decode($version->content, true)];
+            }
+            if ($viewer->account_type === 'VENDOR' && isset($reference['work_package'])) {
+                $terms = $orderTerms[$order === null ? ($acceptedOrderIds->get($c->id) ?? '') : $order->id] ?? null;
+                $reference = $terms === null ? $packageView->inquiry($reference) : $packageView->order($reference, $terms);
+            }
 
-            return ['id' => $c->id, 'purpose' => $c->purpose, 'context_type' => $c->context_type, 'order_id' => $c->order_id, 'lock_version' => (int) $c->lock_version,
+            return ['id' => $c->id, 'buyer_thread_id' => $c->buyer_profile_id, 'conversation_count' => $grouped ? $siblings->count() : 1, 'purpose' => $c->purpose, 'context_type' => $c->context_type, 'order_id' => $c->order_id, 'lock_version' => (int) $c->lock_version,
+                'can_configure_automated_response' => $supervisor,
+                'can_prepare_order_quotation' => $viewer->account_type === 'VENDOR' && ($supervisor || $members->get($c->vendor_organization_id.'|'.$viewer->id)?->role === 'STORE_STAFF') && PendingOrderQuotationService::eligible($pendingOrder),
+                'pending_order_id' => PendingOrderQuotationService::eligible($pendingOrder) ? $pendingOrder->id : null,
+                'order_lock_version' => $pendingOrder === null ? null : (int) $pendingOrder->lock_version,
                 'buyer' => $buyer === null ? null : $this->identity($buyer, $c, 'BUYER'),
                 'last_message_preview' => $product === null ? ($last->body ?? '') : 'Sent a product: '.$product['name'],
                 'latest_product_id' => $latestProducts->get($c->id), 'canonical_conversation_id' => $c->canonical_conversation_id,
                 'legacy_conversation_ids' => $legacyRows->take(25)->pluck('id')->all(), 'legacy_has_more' => $legacyRows->count() > 25, 'legacy_page' => $legacyPage,
                 'store' => ['id' => $c->vendor_organization_id, 'name' => $store->public_store_name ?? 'Store', 'logo_url' => $logoData['public_url'] ?? null, 'verified' => $store?->store_verification_status === 'APPROVED'],
-                'handler' => $handlerAllowed ? $this->identity($handler, $c, $member->role) : null, 'unread_count' => $count,
+                'handler' => $handlerAllowed ? $this->identity($handler, $c, $member->role) : null, 'unread_count' => $count, 'needs_human_response' => $grouped ? $siblings->contains(fn (object $s): bool => (bool) $s->needs_human_response) : (bool) $c->needs_human_response,
                 'channel' => app(ConversationAccess::class)->channelWithEpoch($viewer, $c, $members->get($c->vendor_organization_id.'|'.$viewer->id), $c->purpose === 'FULFILLMENT' ? $fulfillmentAssignments->get($c->order_id)?->id : $assignments->get($c->id)),
                 'locked_reference' => (object) $reference, 'updated_at' => Carbon::parse($grouped ? $c->inbox_updated_at : $c->updated_at)->toIso8601String(),
                 'can_transfer' => $viewer->account_type === 'VENDOR' && $c->purpose === 'SALES', 'can_list_fulfillment_conversations' => $supervisor && $c->purpose === 'SALES',
                 'main_conversation_id' => $c->purpose === 'SALES' ? $siblings->firstWhere('context_type', 'ITEM_BASED')?->id : null,
                 'project_inquiry_count' => $c->purpose === 'SALES' ? $activeProjects->count() : 0,
                 'project_unread_count' => $c->purpose === 'SALES' ? $activeProjects->sum(fn ($s) => (int) $unread->get($s->id, 0)) : 0,
-                'inquiry_label' => $c->context_type === 'PROJECT_BASED' ? ($reference['work_package']['name'] ?? 'Project inquiry') : 'Inquiry',
-                'fulfillment_unread_count' => $supervisor && $c->purpose === 'SALES' ? (int) ($fulfillmentUnread->get($this->pair($c))->total ?? 0) : 0,
+                'inquiry_label' => $c->context_type === 'PROJECT_BASED' ? ($reference['work_package']['name'] ?? 'Work Package inquiry') : 'Inquiry',
+                'fulfillment_unread_count' => ! $grouped && $supervisor && $c->purpose === 'SALES' ? (int) ($fulfillmentUnread->get($this->pair($c))->total ?? 0) : 0,
                 'fulfillment_entry_enabled' => $c->purpose === 'FULFILLMENT', 'order_reference' => $c->purpose === 'FULFILLMENT' ? $order?->reference : null,
                 'read_only' => $readOnly, 'read_only_reason' => ! $readOnly ? null : match ($order?->order_state) {
                     'COMPLETED' => 'ORDER_COMPLETED', 'CANCELLED' => 'ORDER_CANCELLED', default => 'ORDER_NOT_IN_FULFILLMENT'

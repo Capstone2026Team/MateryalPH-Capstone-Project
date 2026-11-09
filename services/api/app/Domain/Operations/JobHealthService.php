@@ -8,6 +8,7 @@ use App\Domain\Analytics\AnalyticsDataset;
 use App\Domain\Compliance\ComplianceTextExtractor;
 use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
+use App\Domain\Reporting\OrderDocumentService;
 use App\Jobs\ProcessOutboxEvent;
 use App\Jobs\RunOperationalRetry;
 use App\Support\PortalDateRange;
@@ -19,19 +20,20 @@ use Illuminate\Support\Str;
 use Throwable;
 
 /**
- * Integration and Job Health (Admin Workflow §17). Shows safe operational status for Xendit, Google services, email,
+ * Platform Monitoring (Admin Workflow §16). Shows safe operational status for Xendit, Google services, email,
  * push, file storage, Reverb, queues, scheduled tasks, geographic aggregation, the Materials Analytics snapshot, PSGC
  * and OCR. Credentials are never read into the response: only whether a value is configured, a masked environment
  * label, counts, timestamps and correlation-safe references. Failed jobs and dead-lettered outbox events show their
  * type and failure class — never payloads, recipients or exception messages. Retries are limited to allowlisted
- * idempotent work and need jobs.retry plus a recorded reason; payment and refund work is owned by reconciliation.
+ * idempotent work. Scheduled recovery is bounded and audited as SYSTEM; existing authorized commands still require
+ * jobs.retry plus a recorded reason. Payment and refund work is owned by reconciliation.
  */
 final class JobHealthService
 {
     /** Outbox deliveries that are safe to replay: each is deduplicated by its notification, delivery or export key. */
     public const RETRYABLE_OUTBOX = ['NOTIFICATION_READY', 'NOTIFICATION_DELIVERY', 'ORDER_NOTICE', 'DISPUTE_NOTICE', 'FINANCE_NOTICE', 'VENDOR_ONBOARDING_NOTICE', 'PRODUCT_COMPLIANCE_NOTICE',
         'VENDOR_INVENTORY_NOTICE', 'ACCOUNT_SECURITY_NOTICE', 'CONVERSATION_CHANGED', 'DISPUTE_CASE_CHANGED', 'DOCUMENT_EXPORT_REQUESTED', 'DISPUTE_EXPORT_REQUESTED',
-        'MARKETPLACE_ELIGIBILITY_CHANGED', 'VENDOR_FLEET_CHANGED', 'VENDOR_TEAM_ACTIVITY_CHANGED', 'ORDER_STATE_CHANGED', 'NOTIFICATIONS_CHANGED'];
+        'MARKETPLACE_ELIGIBILITY_CHANGED', 'VENDOR_FLEET_CHANGED', 'VENDOR_TEAM_ACTIVITY_CHANGED', 'ORDER_STATE_CHANGED', 'NOTIFICATIONS_CHANGED', 'ORDER_DOCUMENT_REQUESTED'];
 
     public const RETRYABLE_JOBS = [ProcessOutboxEvent::class];
 
@@ -39,6 +41,7 @@ final class JobHealthService
     private const SCHEDULE = [
         'materyalph:outbox-dispatch' => 5, 'materyalph:orders-expire' => 5, 'materyalph:quotations-sweep' => 5, 'materyalph:disputes-sweep' => 5,
         'materyalph:payments-reconcile' => 15, 'materyalph:fulfillment-sweep' => 15, 'materyalph:reviews-sweep' => 45, 'materyalph:enforcement-sweep' => 45,
+        'materyalph:order-documents' => 15, AutomaticOperationRecovery::COMMAND => 3,
         'analytics:capture-material-prices' => 1500, 'analytics:aggregate-marketplace' => 1500, 'materyalph:scores-daily' => 1500, 'materyalph:finance-daily' => 1500,
     ];
 
@@ -52,8 +55,9 @@ final class JobHealthService
         $actor = $this->access->require($request, 'integrations.view');
         $since = now()->subDay();
 
-        return ['generated_at' => now()->toIso8601String(), 'environment' => ['app' => self::label((string) app()->environment()), 'commerce' => 'TEST — LIVE commerce disabled'],
-            'integrations' => $this->integrations($since), 'queues' => $this->queues(), 'scheduled_tasks' => $this->scheduled(), 'analytics' => $this->analytics(),
+        return ['generated_at' => now()->toIso8601String(), 'environment' => ['app' => self::label((string) app()->environment()), 'commerce' => 'TEST — LIVE commerce disabled',
+            'deployment' => $this->isVpsDeployment() ? 'HOSTINGER_VPS' : 'OTHER'],
+            'integrations' => $this->integrations($since), 'queues' => $this->queues(), 'automatic_recovery' => $this->recoveryHealth(), 'scheduled_tasks' => $this->scheduled(), 'analytics' => $this->analytics(),
             'can_retry' => in_array('jobs.retry', $actor['permissions'], true)];
     }
 
@@ -78,17 +82,19 @@ final class JobHealthService
 
                     return ['kind' => 'FAILED_JOB', 'reference' => (string) $row->uuid, 'label' => class_basename($job), 'queue' => (string) $row->queue,
                         'failure' => self::failureClass((string) $row->exception), 'attempts' => null, 'failed_at' => CarbonImmutable::parse((string) $row->failed_at)->toIso8601String(),
-                        'retryable' => $retryable, 'retry_note' => $retryable ? null : 'Not an allowlisted idempotent delivery. Use its own reconciliation or a new request.'];
+                        'retryable' => $retryable, 'retry_note' => $retryable ? null : 'Not an allowlisted idempotent delivery. Use its own reconciliation or a new request.',
+                        ...AutomaticOperationRecovery::state($event)];
                 })->all();
         } else {
             $query = DB::table('outbox_events')->whereNull('processed_at')->where('attempts', '>=', OutboxProcessor::MAX_ATTEMPTS);
             PortalDateRange::apply($query, 'updated_at', $filters);
             $total = (clone $query)->count();
-            $items = $query->orderByDesc('updated_at')->offset(($page - 1) * self::PER_PAGE)->limit(self::PER_PAGE)->get(['id', 'event_type', 'aggregate_type', 'attempts', 'updated_at'])
+            $items = $query->orderByDesc('updated_at')->offset(($page - 1) * self::PER_PAGE)->limit(self::PER_PAGE)->get(['id', 'event_type', 'aggregate_type', 'attempts', 'updated_at', 'processed_at', 'automatic_recovery_count', 'dispatched_until'])
                 ->map(static fn (object $row): array => ['kind' => 'OUTBOX_EVENT', 'reference' => (string) $row->id, 'label' => (string) $row->event_type, 'queue' => (string) $row->aggregate_type,
                     'failure' => 'Delivery attempts exhausted', 'attempts' => (int) $row->attempts, 'failed_at' => CarbonImmutable::parse((string) $row->updated_at)->toIso8601String(),
                     'retryable' => in_array($row->event_type, self::RETRYABLE_OUTBOX, true),
-                    'retry_note' => in_array($row->event_type, self::RETRYABLE_OUTBOX, true) ? null : 'Payment, refund, credential and invitation work is retried only by its own reconciliation or a new request.'])->all();
+                    'retry_note' => in_array($row->event_type, self::RETRYABLE_OUTBOX, true) ? null : 'Automatic replay is not supported for this event. Investigate it in its owning workflow.',
+                    ...AutomaticOperationRecovery::state($row)])->all();
         }
 
         return ['items' => $items, 'meta' => ['page' => $page, 'per_page' => self::PER_PAGE, 'total' => $total, 'has_more' => $page * self::PER_PAGE < $total]];
@@ -118,10 +124,10 @@ final class JobHealthService
     {
         $this->access->require($request, 'integrations.view');
 
-        return DB::table('operation_retries as r')->join('users as u', 'u.id', '=', 'r.actor_user_id')->orderByDesc('r.created_at')->limit(25)
+        return DB::table('operation_retries as r')->leftJoin('users as u', 'u.id', '=', 'r.actor_user_id')->orderByDesc('r.created_at')->limit(25)
             ->get(['r.target_type', 'r.target_label', 'r.reason', 'r.outcome', 'r.actor_role', 'r.correlation_id', 'r.created_at', 'u.name'])
             ->map(static fn (object $row): array => ['target_type' => (string) $row->target_type, 'label' => (string) $row->target_label, 'reason' => (string) $row->reason, 'outcome' => (string) $row->outcome,
-                'actor' => (string) $row->name, 'actor_role' => (string) $row->actor_role, 'correlation_id' => (string) $row->correlation_id,
+                'actor' => $row->name === null ? 'Automatic recovery' : (string) $row->name, 'actor_role' => (string) $row->actor_role, 'correlation_id' => (string) $row->correlation_id,
                 'created_at' => CarbonImmutable::parse((string) $row->created_at)->toIso8601String()])->all();
     }
 
@@ -154,7 +160,7 @@ final class JobHealthService
         });
     }
 
-    private function failedOutboxEvent(string $payload, bool $lock = false): ?object
+    public function failedOutboxEvent(string $payload, bool $lock = false): ?object
     {
         $data = json_decode($payload, true);
         if (! is_array($data) || ! in_array($data['displayName'] ?? null, self::RETRYABLE_JOBS, true) || ! is_string($data['data']['command'] ?? null)) {
@@ -173,16 +179,19 @@ final class JobHealthService
             $query->lockForUpdate();
         }
 
-        return $query->first(['id', 'event_type', 'aggregate_id', 'attempts', 'processed_at']);
+        return $query->first(['id', 'event_type', 'aggregate_id', 'attempts', 'processed_at', 'updated_at', 'automatic_recovery_count', 'dispatched_until']);
     }
 
-    private function resetOutbox(object $event): void
+    public function resetOutbox(object $event): void
     {
         DB::table('outbox_events')->where('id', $event->id)->update(['attempts' => 0, 'available_at' => now(), 'dispatched_until' => null, 'updated_at' => now()]);
         if ($event->event_type === 'DOCUMENT_EXPORT_REQUESTED') {
             // Retry the original immutable snapshot; processing rechecks the requester's current access.
             DB::table('data_exports')->where('id', $event->aggregate_id)->where('state', 'FAILED')->where('failure_code', 'GENERATION_FAILED')
                 ->update(['state' => 'QUEUED', 'failure_code' => null, 'updated_at' => now()]);
+        }
+        if ($event->event_type === OrderDocumentService::EVENT) {
+            DB::table('order_documents')->where('id', $event->aggregate_id)->where('state', 'FAILED')->update(['state' => 'QUEUED', 'updated_at' => now()]);
         }
     }
 
@@ -221,6 +230,19 @@ final class JobHealthService
     private function integrations(\DateTimeInterface $since): array
     {
         $configured = static fn (mixed $value): bool => is_string($value) && trim($value) !== '';
+        $vps = $this->isVpsDeployment();
+        $smtpHost = strtolower((string) config('mail.mailers.smtp.host'));
+        $brevo = config('mail.default') === 'smtp' && (str_ends_with($smtpHost, '.brevo.com') || str_ends_with($smtpHost, '.sendinblue.com'))
+            && $configured(config('mail.mailers.smtp.username')) && $configured(config('mail.mailers.smtp.password'));
+        $firebase = config('notifications.push_driver') === 'fcm' && $configured(config('notifications.firebase_project_id'))
+            && ($configured(config('notifications.firebase_credentials_base64')) || $configured(config('notifications.firebase_credentials')));
+        $cloudinary = $configured(config('services.cloudinary.cloud_name')) && $configured(config('services.cloudinary.api_key')) && $configured(config('services.cloudinary.api_secret'));
+        $bouncer = config('malware.driver') === 'bouncer' && $configured(config('malware.bouncer_api_key'));
+        $storageHost = parse_url((string) config('filesystems.disks.s3.endpoint'), PHP_URL_HOST);
+        $backblaze = is_string($storageHost) && str_ends_with(strtolower($storageHost), '.backblazeb2.com')
+            && $configured(config('filesystems.disks.s3.key')) && $configured(config('filesystems.disks.s3.secret')) && $configured(config('filesystems.disks.s3.bucket'));
+        $recaptcha = config('materyalph.bot_protection.enabled') && $configured(config('services.recaptcha.project_id')) && $configured(config('services.recaptcha.api_key'))
+            && $configured(config('materyalph.bot_protection.site_keys.WEB')) && $configured(config('materyalph.bot_protection.site_keys.ADMIN_WEB'));
         $lastWebhook = DB::table('webhook_events')->where('provider', 'XENDIT')->max('received_at');
         $failedWebhooks = DB::table('webhook_events')->where('provider', 'XENDIT')->where('received_at', '>=', $since)->where('verification', '<>', 'TOKEN_VERIFIED')->count();
         $stalledWebhooks = DB::table('webhook_events')->where('provider', 'XENDIT')->where('state', 'RECEIVED')->where('received_at', '<', now()->subMinutes(10))->count();
@@ -249,8 +271,10 @@ final class JobHealthService
             $item('google_maps', 'Google Maps, Places and Routes', $configured(config('services.google_maps.server_api_key')) ? 'HEALTHY' : 'NOT_CONFIGURED', $configured(config('services.google_maps.server_api_key'))
                 ? 'Server key configured (value hidden). Places '.(config('services.google_maps.places.enabled') ? 'enabled' : 'disabled').'.' : 'No server key configured; geocoding and routes use manual fallbacks.'),
             $item('google_oidc', 'Google sign-in', $configured(config('services.google_oidc.client_id')) ? 'HEALTHY' : 'NOT_CONFIGURED', 'Client configuration '.($configured(config('services.google_oidc.client_id')) ? 'present' : 'absent').' (values hidden).'),
-            $item('email', 'Email delivery', $emailFailures > 0 ? 'DEGRADED' : 'HEALTHY', $emailFailures.' failed email deliveries in 24 h.', 'Mailer: '.self::label((string) config('mail.default'))),
-            $item('push', 'Push notifications', $pushFailures > 0 ? 'DEGRADED' : 'HEALTHY', $pushFailures.' failed push deliveries in 24 h.', 'Driver: '.self::label((string) config('notifications.push_driver'))),
+            $item('email', $vps ? 'Brevo transactional email' : 'Email delivery', $vps && ! $brevo ? 'NOT_CONFIGURED' : ($emailFailures > 0 ? 'DEGRADED' : 'HEALTHY'),
+                $vps && ! $brevo ? 'Brevo SMTP configuration is incomplete (values hidden).' : $emailFailures.' failed email deliveries in 24 h.', $vps ? 'Brevo SMTP' : 'Mailer: '.self::label((string) config('mail.default'))),
+            $item('push', $vps ? 'Firebase Cloud Messaging' : 'Push notifications', $vps && ! $firebase ? 'NOT_CONFIGURED' : ($pushFailures > 0 ? 'DEGRADED' : 'HEALTHY'),
+                $vps && ! $firebase ? 'Firebase push configuration is incomplete (values hidden).' : $pushFailures.' failed push deliveries in 24 h.', $vps ? 'Firebase FCM' : 'Driver: '.self::label((string) config('notifications.push_driver'))),
             $item('file_storage', 'Private file storage and scanning', $scanBacklog > 0 ? 'DEGRADED' : 'HEALTHY', $scanBacklog.' file(s) waiting for a malware scan over 1 hour; '.$quarantined.' rejected or quarantined in 24 h. Pending files never satisfy a requirement.',
                 'Disk: '.self::label((string) config('filesystems.default'))),
             $item('reverb', 'Laravel Reverb realtime', config('broadcasting.default') === 'reverb' && $configured(config('broadcasting.connections.reverb.key')) ? 'HEALTHY' : 'NOT_CONFIGURED',
@@ -261,7 +285,21 @@ final class JobHealthService
                     : 'The local OCR engine or English language data is unavailable. Vendors can still enter PS/ICC values manually.')),
             $item('dti_bps_registers', 'DTI-BPS PS and ICC registers', $registers->isEmpty() ? 'NOT_CONFIGURED' : ($registersStale ? 'DEGRADED' : 'HEALTHY'),
                 $registerState('PS_LICENSE', 'PS licensees:').'; '.$registerState('ICC_CERTIFICATE', 'ICC certificate holders:').'. Without a current snapshot, Vendors can still request manual review.'),
+            ...($vps ? [
+                $item('backblaze', 'Backblaze B2 private storage', $backblaze ? 'HEALTHY' : 'NOT_CONFIGURED', $backblaze ? 'Private S3-compatible storage configured; values hidden. Backup completion is reviewed in the server console.' : 'Backblaze B2 configuration is incomplete (values hidden).'),
+                $item('cloudinary', 'Cloudinary images and media', $cloudinary ? 'HEALTHY' : 'NOT_CONFIGURED', $cloudinary ? 'Media provider configuration present (values hidden).' : 'Cloudinary configuration is incomplete (values hidden).'),
+                $item('bouncer', 'Bouncer malware scanning', ! $bouncer ? 'NOT_CONFIGURED' : ($scanBacklog > 0 ? 'DEGRADED' : 'HEALTHY'), ! $bouncer ? 'Bouncer scanning configuration is incomplete (values hidden).' : $scanBacklog.' file(s) waiting for a scan over 1 hour; '.$quarantined.' rejected or quarantined in 24 h. Pending files never satisfy a requirement.'),
+                $item('recaptcha', 'Google reCAPTCHA Enterprise', $recaptcha ? 'HEALTHY' : 'NOT_CONFIGURED', $recaptcha ? 'Bot-protection configuration present for both portals (values hidden).' : 'reCAPTCHA Enterprise is disabled or its portal configuration is incomplete (values hidden).'),
+            ] : []),
         ];
+    }
+
+    private function isVpsDeployment(): bool
+    {
+        $host = parse_url((string) config('app.url'), PHP_URL_HOST);
+
+        return app()->environment('staging') && is_string($host)
+            && preg_match('/\Amateryalph[0-9]+-(?:api|vendor|admin)\.duckdns\.org\z/', strtolower($host)) === 1;
     }
 
     /** @return array<string, mixed> */
@@ -272,6 +310,17 @@ final class JobHealthService
 
         return ['connection' => self::label((string) config('queue.default')), 'outbox_backlog' => $backlog, 'dead_letters' => $counts['dead_letters'], 'failed_jobs' => $counts['failed_jobs'],
             'status' => $counts['dead_letters'] > 0 || $counts['failed_jobs'] > 0 ? 'DEGRADED' : ($backlog > 0 ? 'DELAYED' : 'HEALTHY')];
+    }
+
+    /** @return array<string, mixed> */
+    private function recoveryHealth(): array
+    {
+        $run = DB::table('scheduled_task_runs')->where('task', AutomaticOperationRecovery::COMMAND)->orderByDesc('started_at')->first();
+        $status = $run === null ? 'NO_RUN_RECORDED' : ($run->outcome === 'FAILED' ? 'FAILED'
+            : (CarbonImmutable::parse((string) $run->started_at)->lessThan(now()->subMinutes(3)) ? 'OVERDUE' : ($run->outcome === 'RUNNING' ? 'RUNNING' : 'HEALTHY')));
+
+        return ['status' => $status, 'max_cycles' => count(AutomaticOperationRecovery::DELAYS_MINUTES),
+            'delays_minutes' => AutomaticOperationRecovery::DELAYS_MINUTES, 'last_started_at' => $run === null ? null : CarbonImmutable::parse((string) $run->started_at)->toIso8601String()];
     }
 
     /** @return list<array<string, mixed>> */

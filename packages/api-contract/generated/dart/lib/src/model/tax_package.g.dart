@@ -8,6 +8,8 @@ part of 'tax_package.dart';
 
 class _$TaxPackage extends TaxPackage {
   @override
+  final BuiltMap<String, String>? vendorNames;
+  @override
   final String id;
   @override
   final String packageType;
@@ -42,7 +44,8 @@ class _$TaxPackage extends TaxPackage {
       (TaxPackageBuilder()..update(updates))._build();
 
   _$TaxPackage._(
-      {required this.id,
+      {this.vendorNames,
+      required this.id,
       required this.packageType,
       required this.state,
       required this.periodStart,
@@ -69,6 +72,7 @@ class _$TaxPackage extends TaxPackage {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is TaxPackage &&
+        vendorNames == other.vendorNames &&
         id == other.id &&
         packageType == other.packageType &&
         state == other.state &&
@@ -89,6 +93,7 @@ class _$TaxPackage extends TaxPackage {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, vendorNames.hashCode);
     _$hash = $jc(_$hash, id.hashCode);
     _$hash = $jc(_$hash, packageType.hashCode);
     _$hash = $jc(_$hash, state.hashCode);
@@ -111,6 +116,7 @@ class _$TaxPackage extends TaxPackage {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'TaxPackage')
+          ..add('vendorNames', vendorNames)
           ..add('id', id)
           ..add('packageType', packageType)
           ..add('state', state)
@@ -132,6 +138,12 @@ class _$TaxPackage extends TaxPackage {
 
 class TaxPackageBuilder implements Builder<TaxPackage, TaxPackageBuilder> {
   _$TaxPackage? _$v;
+
+  MapBuilder<String, String>? _vendorNames;
+  MapBuilder<String, String> get vendorNames =>
+      _$this._vendorNames ??= MapBuilder<String, String>();
+  set vendorNames(MapBuilder<String, String>? vendorNames) =>
+      _$this._vendorNames = vendorNames;
 
   String? _id;
   String? get id => _$this._id;
@@ -209,6 +221,7 @@ class TaxPackageBuilder implements Builder<TaxPackage, TaxPackageBuilder> {
   TaxPackageBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _vendorNames = $v.vendorNames?.toBuilder();
       _id = $v.id;
       _packageType = $v.packageType;
       _state = $v.state;
@@ -247,6 +260,7 @@ class TaxPackageBuilder implements Builder<TaxPackage, TaxPackageBuilder> {
     try {
       _$result = _$v ??
           _$TaxPackage._(
+            vendorNames: _vendorNames?.build(),
             id: BuiltValueNullFieldError.checkNotNull(id, r'TaxPackage', 'id'),
             packageType: BuiltValueNullFieldError.checkNotNull(
                 packageType, r'TaxPackage', 'packageType'),
@@ -272,6 +286,9 @@ class TaxPackageBuilder implements Builder<TaxPackage, TaxPackageBuilder> {
     } catch (_) {
       late String _$failedField;
       try {
+        _$failedField = 'vendorNames';
+        _vendorNames?.build();
+
         _$failedField = 'snapshot';
         _snapshot?.build();
       } catch (e) {

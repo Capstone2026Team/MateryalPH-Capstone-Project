@@ -8,6 +8,7 @@ use App\Domain\Identity\AuthenticationException;
 use App\Domain\Inventory\StockAvailability;
 use App\Domain\Procurement\DeliveryPreviewService;
 use App\Domain\Vendors\DeliveryRecommendationService;
+use App\Domain\Vendors\DeliveryVehicleProfile;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -125,6 +126,7 @@ final class OrderDeliveryPlanner
         }
         $distance = (int) $load['distance_meters'];
         $vehicleView = static fn (array $vehicle): array => [
+            'vehicle_details' => DeliveryVehicleProfile::from($vehicle),
             'vehicle_id' => (string) $vehicle['id'], 'name' => (string) $vehicle['name'], 'vehicle_category' => $vehicle['vehicle_category'] ?? null, 'vehicle_type' => (string) $vehicle['vehicle_type'],
             'custom_type_name' => $vehicle['custom_type_name'] ?? null, 'brand' => $vehicle['brand'] ?? null, 'number_available' => (int) $vehicle['number_available'],
             'capacity_kg' => (string) $vehicle['capacity_kg'], 'mixer_capacity_m3' => $vehicle['mixer_capacity_m3'] === null ? null : (string) $vehicle['mixer_capacity_m3'],

@@ -15,6 +15,8 @@ part 'conversation_view.g.dart';
 /// ConversationView
 ///
 /// Properties:
+/// * [buyerThreadId] - Stable opaque Buyer identifier within the current store. Vendor inbox pagination groups on this identifier before selecting rows.
+/// * [conversationCount] - Number of currently authorized contexts represented by a grouped Vendor inbox row; one for an individual context.
 /// * [id]
 /// * [purpose]
 /// * [contextType]
@@ -24,7 +26,7 @@ part 'conversation_view.g.dart';
 /// * [handler]
 /// * [unreadCount]
 /// * [channel]
-/// * [lockedReference]
+/// * [lockedReference] - Locked reference for this conversation. Vendor Work Package views include only the store allocation or its order snapshot items; the complete immutable Buyer original stays retained internally and available to its Buyer.
 /// * [updatedAt]
 /// * [canTransfer]
 /// * [canListFulfillmentConversations] - Current vendor Owner or Store Manager may list this sales inquiry buyer's fulfillment conversations. False for other roles and fulfillment threads.
@@ -44,8 +46,21 @@ part 'conversation_view.g.dart';
 /// * [legacyConversationIds]
 /// * [legacyHasMore]
 /// * [legacyPage]
+/// * [needsHumanResponse] - Buyer activity awaiting a manual store reply. Automated replies never clear it.
+/// * [canConfigureAutomatedResponse]
+/// * [canPrepareOrderQuotation]
+/// * [orderLockVersion]
+/// * [pendingOrderId]
 @BuiltValue()
 abstract class ConversationView implements Built<ConversationView, ConversationViewBuilder> {
+  /// Stable opaque Buyer identifier within the current store. Vendor inbox pagination groups on this identifier before selecting rows.
+  @BuiltValueField(wireName: r'buyer_thread_id')
+  String? get buyerThreadId;
+
+  /// Number of currently authorized contexts represented by a grouped Vendor inbox row; one for an individual context.
+  @BuiltValueField(wireName: r'conversation_count')
+  int? get conversationCount;
+
   @BuiltValueField(wireName: r'id')
   String get id;
 
@@ -75,6 +90,7 @@ abstract class ConversationView implements Built<ConversationView, ConversationV
   @BuiltValueField(wireName: r'channel')
   String get channel;
 
+  /// Locked reference for this conversation. Vendor Work Package views include only the store allocation or its order snapshot items; the complete immutable Buyer original stays retained internally and available to its Buyer.
   @BuiltValueField(wireName: r'locked_reference')
   BuiltMap<String, JsonObject?> get lockedReference;
 
@@ -141,6 +157,22 @@ abstract class ConversationView implements Built<ConversationView, ConversationV
   @BuiltValueField(wireName: r'legacy_page')
   int? get legacyPage;
 
+  /// Buyer activity awaiting a manual store reply. Automated replies never clear it.
+  @BuiltValueField(wireName: r'needs_human_response')
+  bool? get needsHumanResponse;
+
+  @BuiltValueField(wireName: r'can_configure_automated_response')
+  bool? get canConfigureAutomatedResponse;
+
+  @BuiltValueField(wireName: r'can_prepare_order_quotation')
+  bool? get canPrepareOrderQuotation;
+
+  @BuiltValueField(wireName: r'order_lock_version')
+  int? get orderLockVersion;
+
+  @BuiltValueField(wireName: r'pending_order_id')
+  String? get pendingOrderId;
+
   ConversationView._();
 
   factory ConversationView([void updates(ConversationViewBuilder b)]) = _$ConversationView;
@@ -164,6 +196,20 @@ class _$ConversationViewSerializer implements PrimitiveSerializer<ConversationVi
     ConversationView object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.buyerThreadId != null) {
+      yield r'buyer_thread_id';
+      yield serializers.serialize(
+        object.buyerThreadId,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.conversationCount != null) {
+      yield r'conversation_count';
+      yield serializers.serialize(
+        object.conversationCount,
+        specifiedType: const FullType(int),
+      );
+    }
     yield r'id';
     yield serializers.serialize(
       object.id,
@@ -343,6 +389,41 @@ class _$ConversationViewSerializer implements PrimitiveSerializer<ConversationVi
         specifiedType: const FullType(int),
       );
     }
+    if (object.needsHumanResponse != null) {
+      yield r'needs_human_response';
+      yield serializers.serialize(
+        object.needsHumanResponse,
+        specifiedType: const FullType(bool),
+      );
+    }
+    if (object.canConfigureAutomatedResponse != null) {
+      yield r'can_configure_automated_response';
+      yield serializers.serialize(
+        object.canConfigureAutomatedResponse,
+        specifiedType: const FullType(bool),
+      );
+    }
+    if (object.canPrepareOrderQuotation != null) {
+      yield r'can_prepare_order_quotation';
+      yield serializers.serialize(
+        object.canPrepareOrderQuotation,
+        specifiedType: const FullType(bool),
+      );
+    }
+    if (object.orderLockVersion != null) {
+      yield r'order_lock_version';
+      yield serializers.serialize(
+        object.orderLockVersion,
+        specifiedType: const FullType(int),
+      );
+    }
+    if (object.pendingOrderId != null) {
+      yield r'pending_order_id';
+      yield serializers.serialize(
+        object.pendingOrderId,
+        specifiedType: const FullType(String),
+      );
+    }
   }
 
   @override
@@ -366,6 +447,22 @@ class _$ConversationViewSerializer implements PrimitiveSerializer<ConversationVi
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'buyer_thread_id':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.buyerThreadId = valueDes;
+          break;
+        case r'conversation_count':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.conversationCount = valueDes;
+          break;
         case r'id':
           final valueDes = serializers.deserialize(
             value,
@@ -585,6 +682,46 @@ class _$ConversationViewSerializer implements PrimitiveSerializer<ConversationVi
           ) as int?;
           if (valueDes == null) continue;
           result.legacyPage = valueDes;
+          break;
+        case r'needs_human_response':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.needsHumanResponse = valueDes;
+          break;
+        case r'can_configure_automated_response':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.canConfigureAutomatedResponse = valueDes;
+          break;
+        case r'can_prepare_order_quotation':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.canPrepareOrderQuotation = valueDes;
+          break;
+        case r'order_lock_version':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.orderLockVersion = valueDes;
+          break;
+        case r'pending_order_id':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.pendingOrderId = valueDes;
           break;
         default:
           unhandled.add(key);

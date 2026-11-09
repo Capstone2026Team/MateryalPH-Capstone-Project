@@ -8,6 +8,11 @@ Name | Type
 ------------ | -------------
 `orderLineId` | string
 `displayName` | string
+`category` | string
+`quantity` | string
+`unitName` | string
+`unitPriceCentavos` | number
+`lineTotalCentavos` | number
 
 ## Example
 
@@ -18,6 +23,11 @@ import type { InvoiceOrderLine } from '@materyalph/api-client-ts'
 const example = {
   "orderLineId": null,
   "displayName": null,
+  "category": null,
+  "quantity": null,
+  "unitName": null,
+  "unitPriceCentavos": null,
+  "lineTotalCentavos": null,
 } satisfies InvoiceOrderLine
 
 console.log(example)

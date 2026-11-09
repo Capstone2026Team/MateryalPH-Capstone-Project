@@ -27,6 +27,21 @@ void main() {
       // TODO
     });
 
+    // int minNoticeDays
+    test('to test the property `minNoticeDays`', () async {
+      // TODO
+    });
+
+    // int eligibleVendorCount
+    test('to test the property `eligibleVendorCount`', () async {
+      // TODO
+    });
+
+    // bool canExport
+    test('to test the property `canExport`', () async {
+      // TODO
+    });
+
     // BuiltList<CommissionPolicy> versions
     test('to test the property `versions`', () async {
       // TODO

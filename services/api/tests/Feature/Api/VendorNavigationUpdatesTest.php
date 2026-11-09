@@ -60,6 +60,8 @@ final class VendorNavigationUpdatesTest extends TestCase
         DB::table('orders')->insert(['id' => $id, 'reference' => 'NAV-'.$id,
             'buyer_profile_id' => DB::table('buyer_profiles')->where('user_id', $buyer->id)->value('id'),
             'vendor_organization_id' => $store->id, 'procurement_type' => 'ITEM_BASED', 'order_state' => $state,
+            'payment_state' => $state === 'AWAITING_PAYMENT' ? 'PENDING' : 'NOT_REQUIRED',
+            'payment_expires_at' => $state === 'AWAITING_PAYMENT' ? now()->addMinutes(45) : null,
             'fulfillment_method' => 'PICKUP', 'payment_method' => 'ONLINE', 'commercial_total_centavos' => 0,
             'closed_at' => in_array($state, OrderQueries::VENDOR_GROUPS['CLOSED'], true) ? now() : null,
             'created_at' => now(), 'updated_at' => now()]);
@@ -93,6 +95,37 @@ final class VendorNavigationUpdatesTest extends TestCase
             ->assertJsonPath('data.sections./orders', 26)->assertJsonPath('data.sections./notifications', 25);
         DB::table('orders')->whereIn('id', $active)->update(['order_state' => 'COMPLETED', 'closed_at' => now()]);
         $this->getJson('/api/v1/vendor/navigation-updates')->assertOk()->assertJsonPath('data.sections./orders', 0);
+    }
+
+    public function test_invoice_badge_counts_missing_copies_without_requests_and_deduplicates_requested_orders(): void
+    {
+        [$store, $owner] = $this->activeStore('Invoice navigation', false);
+        [$otherStore] = $this->activeStore('Foreign invoice navigation', false);
+        $buyer = $this->buyer();
+        $confirmed = $this->order($store, $buyer, 'CONFIRMED');
+        $this->order($store, $buyer, 'COMPLETED');
+        $this->order($otherStore, $buyer, 'CONFIRMED');
+        foreach (['AWAITING_VENDOR_CONFIRMATION', 'AWAITING_BUYER_APPROVAL', 'AWAITING_NRPC_ACCEPTANCE', 'AWAITING_PAYMENT', 'DECLINED', 'EXPIRED', 'CANCELLED'] as $state) {
+            $this->order($store, $buyer, $state);
+        }
+        $this->signInStoreMember($owner);
+        $this->getJson('/api/v1/vendor/navigation-updates')->assertOk()->assertJsonPath('data.sections./invoices', 2);
+        $this->getJson('/api/v1/vendor/invoices?view=DUE')->assertOk()->assertJsonPath('meta.counts.DUE', 2);
+        // Viewing the invoice workspace does not fulfill the pending tasks.
+        $this->getJson('/api/v1/vendor/navigation-updates')->assertOk()->assertJsonPath('data.sections./invoices', 2);
+
+        DB::table('invoice_requests')->insert(['id' => (string) Str::uuid7(), 'order_id' => $confirmed,
+            'vendor_organization_id' => $store->id, 'buyer_profile_id' => DB::table('buyer_profiles')->where('user_id', $buyer->id)->value('id'),
+            'kind' => 'COPY', 'state' => 'REQUESTED', 'requested_by_user_id' => $buyer->id,
+            'service_target_at' => now()->addDays(3), 'created_at' => now(), 'updated_at' => now()]);
+        foreach ([$owner, $this->teamMember($store, 'STORE_MANAGER'), $this->teamMember($store, 'STORE_STAFF'), $this->teamMember($store, 'CUSTOMER_SERVICE')] as $viewer) {
+            $this->signInStoreMember($viewer);
+            $this->getJson('/api/v1/vendor/navigation-updates')->assertOk()->assertJsonPath('data.sections./invoices', 2);
+        }
+        foreach (['INVENTORY', 'FULFILLMENT'] as $role) {
+            $this->signInStoreMember($this->teamMember($store, $role));
+            $this->getJson('/api/v1/vendor/navigation-updates')->assertOk()->assertJsonMissingPath('data.sections./invoices');
+        }
     }
 
     public function test_fulfillment_active_order_count_requires_a_current_assignment_and_visible_state(): void

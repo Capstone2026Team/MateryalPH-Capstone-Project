@@ -12,6 +12,10 @@ const CommissionPolicyStatusEnum _$commissionPolicyStatusEnum_SCHEDULED =
     const CommissionPolicyStatusEnum._('SCHEDULED');
 const CommissionPolicyStatusEnum _$commissionPolicyStatusEnum_PREVIOUS =
     const CommissionPolicyStatusEnum._('PREVIOUS');
+const CommissionPolicyStatusEnum _$commissionPolicyStatusEnum_SUPERSEDED =
+    const CommissionPolicyStatusEnum._('SUPERSEDED');
+const CommissionPolicyStatusEnum _$commissionPolicyStatusEnum_CANCELLED =
+    const CommissionPolicyStatusEnum._('CANCELLED');
 
 CommissionPolicyStatusEnum _$commissionPolicyStatusEnumValueOf(String name) {
   switch (name) {
@@ -21,6 +25,10 @@ CommissionPolicyStatusEnum _$commissionPolicyStatusEnumValueOf(String name) {
       return _$commissionPolicyStatusEnum_SCHEDULED;
     case 'PREVIOUS':
       return _$commissionPolicyStatusEnum_PREVIOUS;
+    case 'SUPERSEDED':
+      return _$commissionPolicyStatusEnum_SUPERSEDED;
+    case 'CANCELLED':
+      return _$commissionPolicyStatusEnum_CANCELLED;
     default:
       throw ArgumentError(name);
   }
@@ -31,6 +39,8 @@ final BuiltSet<CommissionPolicyStatusEnum> _$commissionPolicyStatusEnumValues =
   _$commissionPolicyStatusEnum_CURRENT,
   _$commissionPolicyStatusEnum_SCHEDULED,
   _$commissionPolicyStatusEnum_PREVIOUS,
+  _$commissionPolicyStatusEnum_SUPERSEDED,
+  _$commissionPolicyStatusEnum_CANCELLED,
 ]);
 
 Serializer<CommissionPolicyStatusEnum> _$commissionPolicyStatusEnumSerializer =
@@ -42,11 +52,15 @@ class _$CommissionPolicyStatusEnumSerializer
     'CURRENT': 'CURRENT',
     'SCHEDULED': 'SCHEDULED',
     'PREVIOUS': 'PREVIOUS',
+    'SUPERSEDED': 'SUPERSEDED',
+    'CANCELLED': 'CANCELLED',
   };
   static const Map<Object, String> _fromWire = const <Object, String>{
     'CURRENT': 'CURRENT',
     'SCHEDULED': 'SCHEDULED',
     'PREVIOUS': 'PREVIOUS',
+    'SUPERSEDED': 'SUPERSEDED',
+    'CANCELLED': 'CANCELLED',
   };
 
   @override
@@ -84,6 +98,20 @@ class _$CommissionPolicy extends CommissionPolicy {
   final String? reason;
   @override
   final CommissionPolicyStatusEnum status;
+  @override
+  final int? termsVersion;
+  @override
+  final String? termsContent;
+  @override
+  final String? vendorMessage;
+  @override
+  final int? noticeHours;
+  @override
+  final String? noticeOverrideReason;
+  @override
+  final String? publishedBy;
+  @override
+  final CommissionEmailSummary? delivery;
 
   factory _$CommissionPolicy(
           [void Function(CommissionPolicyBuilder)? updates]) =>
@@ -97,7 +125,14 @@ class _$CommissionPolicy extends CommissionPolicy {
       required this.effectiveFrom,
       this.agreementVersionId,
       this.reason,
-      required this.status})
+      required this.status,
+      this.termsVersion,
+      this.termsContent,
+      this.vendorMessage,
+      this.noticeHours,
+      this.noticeOverrideReason,
+      this.publishedBy,
+      this.delivery})
       : super._();
   @override
   CommissionPolicy rebuild(void Function(CommissionPolicyBuilder) updates) =>
@@ -118,7 +153,14 @@ class _$CommissionPolicy extends CommissionPolicy {
         effectiveFrom == other.effectiveFrom &&
         agreementVersionId == other.agreementVersionId &&
         reason == other.reason &&
-        status == other.status;
+        status == other.status &&
+        termsVersion == other.termsVersion &&
+        termsContent == other.termsContent &&
+        vendorMessage == other.vendorMessage &&
+        noticeHours == other.noticeHours &&
+        noticeOverrideReason == other.noticeOverrideReason &&
+        publishedBy == other.publishedBy &&
+        delivery == other.delivery;
   }
 
   @override
@@ -132,6 +174,13 @@ class _$CommissionPolicy extends CommissionPolicy {
     _$hash = $jc(_$hash, agreementVersionId.hashCode);
     _$hash = $jc(_$hash, reason.hashCode);
     _$hash = $jc(_$hash, status.hashCode);
+    _$hash = $jc(_$hash, termsVersion.hashCode);
+    _$hash = $jc(_$hash, termsContent.hashCode);
+    _$hash = $jc(_$hash, vendorMessage.hashCode);
+    _$hash = $jc(_$hash, noticeHours.hashCode);
+    _$hash = $jc(_$hash, noticeOverrideReason.hashCode);
+    _$hash = $jc(_$hash, publishedBy.hashCode);
+    _$hash = $jc(_$hash, delivery.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -146,7 +195,14 @@ class _$CommissionPolicy extends CommissionPolicy {
           ..add('effectiveFrom', effectiveFrom)
           ..add('agreementVersionId', agreementVersionId)
           ..add('reason', reason)
-          ..add('status', status))
+          ..add('status', status)
+          ..add('termsVersion', termsVersion)
+          ..add('termsContent', termsContent)
+          ..add('vendorMessage', vendorMessage)
+          ..add('noticeHours', noticeHours)
+          ..add('noticeOverrideReason', noticeOverrideReason)
+          ..add('publishedBy', publishedBy)
+          ..add('delivery', delivery))
         .toString();
   }
 }
@@ -190,6 +246,38 @@ class CommissionPolicyBuilder
   CommissionPolicyStatusEnum? get status => _$this._status;
   set status(CommissionPolicyStatusEnum? status) => _$this._status = status;
 
+  int? _termsVersion;
+  int? get termsVersion => _$this._termsVersion;
+  set termsVersion(int? termsVersion) => _$this._termsVersion = termsVersion;
+
+  String? _termsContent;
+  String? get termsContent => _$this._termsContent;
+  set termsContent(String? termsContent) => _$this._termsContent = termsContent;
+
+  String? _vendorMessage;
+  String? get vendorMessage => _$this._vendorMessage;
+  set vendorMessage(String? vendorMessage) =>
+      _$this._vendorMessage = vendorMessage;
+
+  int? _noticeHours;
+  int? get noticeHours => _$this._noticeHours;
+  set noticeHours(int? noticeHours) => _$this._noticeHours = noticeHours;
+
+  String? _noticeOverrideReason;
+  String? get noticeOverrideReason => _$this._noticeOverrideReason;
+  set noticeOverrideReason(String? noticeOverrideReason) =>
+      _$this._noticeOverrideReason = noticeOverrideReason;
+
+  String? _publishedBy;
+  String? get publishedBy => _$this._publishedBy;
+  set publishedBy(String? publishedBy) => _$this._publishedBy = publishedBy;
+
+  CommissionEmailSummaryBuilder? _delivery;
+  CommissionEmailSummaryBuilder get delivery =>
+      _$this._delivery ??= CommissionEmailSummaryBuilder();
+  set delivery(CommissionEmailSummaryBuilder? delivery) =>
+      _$this._delivery = delivery;
+
   CommissionPolicyBuilder() {
     CommissionPolicy._defaults(this);
   }
@@ -205,6 +293,13 @@ class CommissionPolicyBuilder
       _agreementVersionId = $v.agreementVersionId;
       _reason = $v.reason;
       _status = $v.status;
+      _termsVersion = $v.termsVersion;
+      _termsContent = $v.termsContent;
+      _vendorMessage = $v.vendorMessage;
+      _noticeHours = $v.noticeHours;
+      _noticeOverrideReason = $v.noticeOverrideReason;
+      _publishedBy = $v.publishedBy;
+      _delivery = $v.delivery?.toBuilder();
       _$v = null;
     }
     return this;
@@ -224,25 +319,45 @@ class CommissionPolicyBuilder
   CommissionPolicy build() => _build();
 
   _$CommissionPolicy _build() {
-    final _$result = _$v ??
-        _$CommissionPolicy._(
-          id: BuiltValueNullFieldError.checkNotNull(
-              id, r'CommissionPolicy', 'id'),
-          version: BuiltValueNullFieldError.checkNotNull(
-              version, r'CommissionPolicy', 'version'),
-          commissionBasisPoints: BuiltValueNullFieldError.checkNotNull(
-              commissionBasisPoints,
-              r'CommissionPolicy',
-              'commissionBasisPoints'),
-          rateLabel: BuiltValueNullFieldError.checkNotNull(
-              rateLabel, r'CommissionPolicy', 'rateLabel'),
-          effectiveFrom: BuiltValueNullFieldError.checkNotNull(
-              effectiveFrom, r'CommissionPolicy', 'effectiveFrom'),
-          agreementVersionId: agreementVersionId,
-          reason: reason,
-          status: BuiltValueNullFieldError.checkNotNull(
-              status, r'CommissionPolicy', 'status'),
-        );
+    _$CommissionPolicy _$result;
+    try {
+      _$result = _$v ??
+          _$CommissionPolicy._(
+            id: BuiltValueNullFieldError.checkNotNull(
+                id, r'CommissionPolicy', 'id'),
+            version: BuiltValueNullFieldError.checkNotNull(
+                version, r'CommissionPolicy', 'version'),
+            commissionBasisPoints: BuiltValueNullFieldError.checkNotNull(
+                commissionBasisPoints,
+                r'CommissionPolicy',
+                'commissionBasisPoints'),
+            rateLabel: BuiltValueNullFieldError.checkNotNull(
+                rateLabel, r'CommissionPolicy', 'rateLabel'),
+            effectiveFrom: BuiltValueNullFieldError.checkNotNull(
+                effectiveFrom, r'CommissionPolicy', 'effectiveFrom'),
+            agreementVersionId: agreementVersionId,
+            reason: reason,
+            status: BuiltValueNullFieldError.checkNotNull(
+                status, r'CommissionPolicy', 'status'),
+            termsVersion: termsVersion,
+            termsContent: termsContent,
+            vendorMessage: vendorMessage,
+            noticeHours: noticeHours,
+            noticeOverrideReason: noticeOverrideReason,
+            publishedBy: publishedBy,
+            delivery: _delivery?.build(),
+          );
+    } catch (_) {
+      late String _$failedField;
+      try {
+        _$failedField = 'delivery';
+        _delivery?.build();
+      } catch (e) {
+        throw BuiltValueNestedFieldError(
+            r'CommissionPolicy', _$failedField, e.toString());
+      }
+      rethrow;
+    }
     replace(_$result);
     return _$result;
   }

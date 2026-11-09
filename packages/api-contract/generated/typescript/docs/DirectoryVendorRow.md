@@ -16,6 +16,8 @@ Name | Type
 `accountStatus` | string
 `location` | string
 `joinedAt` | Date
+`vps` | string
+`logoUrl` | string
 
 ## Example
 
@@ -34,6 +36,8 @@ const example = {
   "accountStatus": null,
   "location": null,
   "joinedAt": null,
+  "vps": null,
+  "logoUrl": null,
 } satisfies DirectoryVendorRow
 
 console.log(example)

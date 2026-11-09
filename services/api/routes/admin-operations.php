@@ -24,7 +24,10 @@ Route::prefix('admin')->middleware($web('ADMIN'))->group(function (): void {
     Route::post('/enforcement', [O::class, 'recordEnforcement']);
     Route::get('/enforcement/subjects', [O::class, 'enforcementSubjects']);
     Route::get('/enforcement/subjects/{type}/{subjectId}', [O::class, 'enforcementSubject'])->whereIn('type', ['BUYER', 'VENDOR_ORGANIZATION'])->whereUuid('subjectId');
+    Route::post('/enforcement/subjects/{type}/{subjectId}/files', [O::class, 'uploadEnforcementEvidence'])->whereIn('type', ['BUYER', 'VENDOR_ORGANIZATION'])->whereUuid('subjectId');
     Route::get('/enforcement/{actionId}', [O::class, 'enforcementDetail'])->whereUuid('actionId');
+    Route::get('/enforcement/{actionId}/files/{fileId}', [O::class, 'enforcementEvidenceLink'])->whereUuid('actionId')->whereUuid('fileId');
+    Route::get('/enforcement/{actionId}/files/{fileId}/content', [O::class, 'enforcementEvidenceContent'])->whereUuid('actionId')->whereUuid('fileId')->middleware('signed')->name('admin.enforcement.file');
     Route::post('/enforcement/{actionId}/apply', [O::class, 'applyEnforcement'])->whereUuid('actionId');
     Route::post('/enforcement/{actionId}/decline', [O::class, 'declineEnforcement'])->whereUuid('actionId');
     Route::post('/enforcement/{actionId}/lift', [O::class, 'liftEnforcement'])->whereUuid('actionId');
@@ -57,7 +60,11 @@ Route::prefix('admin')->middleware($web('ADMIN'))->group(function (): void {
     Route::get('/geo-analytics/boundaries', [G::class, 'boundaries']);
 
     Route::get('/finance/kpis', [F::class, 'kpis']);
+    Route::get('/finance/withholding-register', [F::class, 'withholding']);
+    Route::get('/finance/tax-issues', [F::class, 'taxIssues']);
+    Route::get('/finance/withholding-register/{vendorId}', [F::class, 'withholdingVendor'])->whereUuid('vendorId');
     Route::get('/finance/remittances', [F::class, 'remittances']);
+    Route::post('/finance/remittances/{assessmentId}/approve-reconciliation', [F::class, 'approveRemittanceReconciliation'])->whereUuid('assessmentId');
     Route::get('/finance/evidence', [F::class, 'evidence']);
     Route::get('/finance/tax-adjustments', [F::class, 'taxAdjustments']);
     Route::post('/finance/tax-adjustments/{adjustmentId}/prepare', [F::class, 'prepareTaxAdjustment'])->whereUuid('adjustmentId');

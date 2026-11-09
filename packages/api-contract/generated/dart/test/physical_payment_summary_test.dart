@@ -22,6 +22,7 @@ void main() {
       // TODO
     });
 
+    // Current collectible physical balance. A CANCELLATION_RELEASE resolves to zero and state CANCELLED_UNPAID; historical records retain the amount released.
     // int remainingCentavos
     test('to test the property `remainingCentavos`', () async {
       // TODO

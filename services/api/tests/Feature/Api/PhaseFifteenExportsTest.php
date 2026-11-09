@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
+use App\Domain\Finance\RemittanceAssessmentService;
 use App\Domain\Geography\PlacesProvider;
 use App\Domain\Geography\RouteProvider;
 use App\Domain\Identity\TokenSessionService;
@@ -30,6 +31,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Support\CreatesDiscoveryFixtures;
 use Tests\Support\CreatesOrderFixtures;
 use Tests\Support\CreatesPaymentFixtures;
+use Tests\Support\CreatesWithholdingFixtures;
 use Tests\Support\FakeAddressGeocoder;
 use Tests\Support\FakePlacesProvider;
 use Tests\Support\FakeRouteProvider;
@@ -37,7 +39,7 @@ use Tests\TestCase;
 
 final class PhaseFifteenExportsTest extends TestCase
 {
-    use CreatesDiscoveryFixtures, CreatesOrderFixtures, CreatesPaymentFixtures, RefreshDatabase;
+    use CreatesDiscoveryFixtures, CreatesOrderFixtures, CreatesPaymentFixtures, CreatesWithholdingFixtures, RefreshDatabase;
 
     protected function setUp(): void
     {
@@ -133,7 +135,7 @@ final class PhaseFifteenExportsTest extends TestCase
         $this->signInBuyer($buyer);
         DB::table('data_exports')->where('id', $export['id'])->update(['expires_at' => now()->subMinute()]);
         $this->getJson('/api/v1/buyers/reports?type=PURCHASE_ORDER&resource_id='.$order.'&format=CSV')->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.state', 'EXPIRED');
-        $this->getJson('/api/v1/buyers/reports?type=PAYMENT_CONFIRMATION&resource_id='.$order)->assertOk()->assertJsonCount(0, 'data');
+        $this->getJson('/api/v1/buyers/reports?type=PAYMENT_CONFIRMATION&resource_id='.$order)->assertUnprocessable();
         $this->getJson('/api/v1/buyers/reports/'.$export['id'].'/download')->assertGone()->assertJsonPath('errors.0.code', 'EXPORT_EXPIRED');
     }
 
@@ -194,6 +196,14 @@ final class PhaseFifteenExportsTest extends TestCase
         foreach (['TRANSACTION_HISTORY', 'EARNINGS'] as $type) {
             $input = ['type' => $type, 'format' => 'PDF', 'purpose' => 'Internal operational review', 'filters' => $type === 'TRANSACTION_HISTORY' ? ['tab' => 'PAYMENTS'] : []];
             $export = $this->postJson('/api/v1/vendor/reports', $input, ['Idempotency-Key' => (string) Str::uuid7()])->assertAccepted()->json('data');
+            if ($type === 'EARNINGS') {
+                $snapshot = json_decode(DB::table('data_exports')->where('id', $export['id'])->value('source_snapshot'), true, flags: JSON_THROW_ON_ERROR);
+                $labels = array_column($snapshot['rows'], 0);
+                self::assertContains('Net sales PHP', $labels);
+                self::assertContains('Platform commission charges PHP', $labels);
+                self::assertContains('Creditable withholding tax PHP', $labels);
+                self::assertContains('Expected online payout PHP', $labels);
+            }
             app(DocumentExportService::class)->process($export['id']);
             self::assertStringStartsWith('%PDF-', $this->get('/api/v1/vendor/reports/'.$export['id'].'/download')->assertOk()->streamedContent());
         }
@@ -245,9 +255,8 @@ final class PhaseFifteenExportsTest extends TestCase
         $payment = $this->startPayment($buyer, $order);
         $this->completePayment($payment['id'])->assertOk();
         Queue::fake();
-        $export = $this->export('buyers', 'PAYMENT_CONFIRMATION', $order);
-        app(DocumentExportService::class)->process($export['id']);
-        self::assertStringContainsString($payment['id'], $this->get('/api/v1/buyers/reports/'.$export['id'].'/download')->assertOk()->streamedContent());
+        $this->postJson('/api/v1/buyers/reports', ['type' => 'PAYMENT_CONFIRMATION', 'resource_id' => $order, 'format' => 'PDF', 'purpose' => 'Retired payment document request'], ['Idempotency-Key' => (string) Str::uuid7()])->assertUnprocessable();
+        self::assertNotNull(DB::table('payments')->where('id', $payment['id'])->value('paid_at'));
         $assessment = DB::table('remittance_assessments')->where('order_id', $order)->sole();
         self::assertNotNull($assessment->tax_profile_version_id);
         self::assertContains($assessment->reporting_atc, ['WI820', 'WC820', 'WI830', 'WC830']);
@@ -274,6 +283,186 @@ final class PhaseFifteenExportsTest extends TestCase
             self::assertStringContainsString('1250.01', $csv);
             self::assertSame($project['lock_version'], $export['source_versions']->version ?? $export['source_versions']['version']);
         }
+    }
+
+    public function test_withholding_register_separates_responsibility_months_and_pagination_and_denies_support(): void
+    {
+        config()->set('finance.withholding_scenario', 'DEMO_PLATFORM_WITHHOLDER');
+        [, , $buyer, $order] = $this->awaitingPayment('Register platform');
+        $payment = $this->startPayment($buyer, $order);
+        $this->completePayment($payment['id'])->assertOk();
+        $platform = DB::table('remittance_assessments')->where('order_id', $order)->sole();
+        config()->set('finance.withholding_scenario', 'DEMO_PROVIDER_WITHHOLDER');
+        [, , $buyer, $order] = $this->awaitingPayment('Register provider');
+        $payment = $this->startPayment($buyer, $order);
+        $this->completePayment($payment['id'])->assertOk();
+        $provider = DB::table('remittance_assessments')->where('order_id', $order)->sole();
+        self::assertSame('DEMO_PROVIDER_WITHHOLDER', $provider->assigned_withholding_entity);
+        $before = DB::table('remittance_assessments')->orderBy('id')->get()->toJson();
+        $admin = $this->admin();
+        $this->signInAdmin($admin);
+        $url = '/api/v1/admin/finance/withholding-register?month='.now('Asia/Manila')->format('Y-m');
+        $response = $this->getJson($url)->assertOk()
+            ->assertJsonPath('data.platform_withheld_centavos', (int) $platform->withheld_centavos)
+            ->assertJsonPath('data.provider_withheld_centavos', (int) $provider->withheld_centavos)
+            ->assertJsonPath('data.vendor_count', 2)->assertJsonPath('data.assessment_count', 2)
+            ->assertJsonPath('data.environment', 'TEST')->assertJsonPath('data.assignment_status', 'UNCONFIRMED')
+            ->assertJsonCount(2, 'data.vendors')->assertJsonPath('meta.total', 2)->json('data');
+        self::assertArrayNotHasKey('tin', $response['vendors'][0]);
+        self::assertArrayNotHasKey('bir_paid_centavos', $response);
+        foreach ([$platform, $provider] as $assessment) {
+            $vendor = collect($response['vendors'])->firstWhere('withholding_entity', $assessment->assigned_withholding_entity);
+            foreach (['collections_centavos', 'refunds_centavos', 'delivery_centavos', 'vat_centavos', 'provider_charge_centavos', 'gross_basis_centavos'] as $component) {
+                self::assertSame((int) $assessment->{$component}, $vendor['calculation'][$component]);
+            }
+            self::assertSame((int) $assessment->gross_basis_centavos, $vendor['calculation']['taxable_basis_centavos']);
+            self::assertSame(0, $vendor['calculation']['relieved_basis_centavos']);
+            self::assertSame([], $vendor['filing_issues']);
+        }
+        $this->getJson($url.'&page=2')->assertOk()->assertJsonCount(0, 'data.vendors')
+            ->assertJsonPath('data.platform_withheld_centavos', (int) $platform->withheld_centavos);
+        $this->getJson('/api/v1/admin/finance/withholding-register?month='.now('Asia/Manila')->addMonth()->format('Y-m'))->assertOk()
+            ->assertJsonPath('data.platform_withheld_centavos', 0)->assertJsonPath('data.assessment_count', 0);
+        $this->getJson('/api/v1/admin/finance/withholding-register?month=2026-13')->assertUnprocessable();
+        self::assertSame($before, DB::table('remittance_assessments')->orderBy('id')->get()->toJson());
+        DB::table('admin_memberships')->where('user_id', $admin->id)->update(['platform_role_id' => DB::table('platform_roles')->where('code', 'ADMIN_SUPPORT')->value('id')]);
+        $this->getJson($url)->assertForbidden();
+    }
+
+    public function test_tax_issues_include_unqueued_blockers_deduplicate_open_work_and_exclude_resolved_history(): void
+    {
+        config()->set('finance.withholding_scenario', 'DEMO_PLATFORM_WITHHOLDER');
+        [, , $buyer, $order] = $this->awaitingPayment('Tax issue projection');
+        $payment = $this->startPayment($buyer, $order);
+        $this->completePayment($payment['id'])->assertOk();
+        $assessment = DB::table('remittance_assessments')->where('order_id', $order)->sole();
+        $vendorId = DB::table('orders')->where('id', $order)->value('vendor_organization_id');
+        $admin = $this->admin();
+        $this->signInAdmin($admin);
+        $url = '/api/v1/admin/finance/tax-issues';
+        $this->getJson($url)->assertOk()->assertJsonPath('meta.total', 0);
+        DB::table('remittance_assessments')->where('id', $assessment->id)->update(['reconciliation_state' => 'RECONCILIATION_EXCEPTION']);
+        $this->getJson($url)->assertOk()->assertJsonPath('meta.total', 1)->assertJsonPath('data.0.source_type', 'WITHHOLDING_SOURCE')->assertJsonPath('data.0.source_id', $assessment->id);
+        $workId = (string) Str::uuid7();
+        DB::table('finance_review_items')->insert(['id' => $workId, 'dedupe_key' => hash('sha256', $workId), 'kind' => 'RECONCILIATION_EXCEPTION', 'state' => 'OPEN', 'reason_code' => 'AMOUNT_MISMATCH', 'summary' => 'Compare the recorded amounts.',
+            'vendor_organization_id' => $vendorId, 'source_type' => 'REMITTANCE_ASSESSMENT', 'source_id' => $assessment->id, 'expected' => '{}', 'reported' => '{}', 'created_at' => now(), 'updated_at' => now()]);
+        $this->getJson($url)->assertOk()->assertJsonPath('meta.total', 1)->assertJsonPath('data.0.id', $workId);
+        $this->getJson($url.'?page=2')->assertOk()->assertJsonCount(0, 'data')->assertJsonPath('meta.total', 1);
+        DB::table('finance_review_items')->where('id', $workId)->update(['state' => 'RESOLVED', 'resolved_by_user_id' => $admin->id, 'resolved_at' => now(), 'resolution' => 'Recorded source review.']);
+        $this->getJson($url)->assertOk()->assertJsonPath('meta.total', 1)->assertJsonPath('data.0.source_type', 'WITHHOLDING_SOURCE');
+        DB::table('remittance_assessments')->where('id', $assessment->id)->update(['calculation_state' => 'VOIDED']);
+        $this->getJson($url)->assertOk()->assertJsonPath('meta.total', 0);
+        self::assertSame((int) $assessment->withheld_centavos, (int) DB::table('remittance_assessments')->where('id', $assessment->id)->value('withheld_centavos'));
+        DB::table('admin_memberships')->where('user_id', $admin->id)->update(['platform_role_id' => DB::table('platform_roles')->where('code', 'ADMIN_SUPPORT')->value('id')]);
+        $this->getJson($url)->assertForbidden();
+    }
+
+    public function test_vendor_tax_drawer_reads_saved_payments_and_only_exposes_approved_yearly_meter(): void
+    {
+        config()->set('finance.withholding_scenario', 'DEMO_PLATFORM_WITHHOLDER');
+        [, , $buyer, $order] = $this->awaitingPayment('Tax drawer');
+        $payment = $this->startPayment($buyer, $order);
+        $this->completePayment($payment['id'])->assertOk();
+        $assessment = DB::table('remittance_assessments')->where('order_id', $order)->sole();
+        $vendorId = (string) DB::table('orders')->where('id', $order)->value('vendor_organization_id');
+        $admin = $this->admin();
+        $this->signInAdmin($admin);
+        $url = '/api/v1/admin/finance/withholding-register/'.$vendorId.'?month='.now('Asia/Manila')->format('Y-m').'&withholding_entity=DEMO_PLATFORM_WITHHOLDER';
+        $response = $this->getJson($url)->assertOk()->assertJsonPath('data.declaration_state', 'MISSING')->assertJsonPath('data.threshold', null)
+            ->assertJsonPath('data.payments.0.taxable_centavos', (int) $assessment->gross_basis_centavos)
+            ->assertJsonPath('data.payments.0.tax_centavos', (int) $assessment->withheld_centavos)->assertJsonPath('meta.total', 1)->json();
+        self::assertStringNotContainsString($assessment->taxpayer_key_hash, json_encode($response, JSON_THROW_ON_ERROR));
+        $this->getJson($url.'&page=2')->assertOk()->assertJsonCount(0, 'data.payments')->assertJsonPath('meta.total', 1);
+        $this->getJson(str_replace('DEMO_PLATFORM_WITHHOLDER', 'DEMO_PROVIDER_WITHHOLDER', $url))->assertOk()->assertJsonCount(0, 'data.payments');
+        $evidenceId = $this->declaration($vendorId, 'PENDING');
+        $this->getJson($url)->assertOk()->assertJsonPath('data.declaration_state', 'PENDING')->assertJsonPath('data.threshold', null);
+        DB::table('tax_evidence')->where('id', $evidenceId)->update(['review_state' => 'APPROVED', 'reviewed_by_user_id' => $admin->id, 'reviewed_at' => now()->subMinute()]);
+        $this->getJson($url)->assertOk()->assertJsonPath('data.declaration_state', 'APPROVED')
+            ->assertJsonPath('data.threshold.limit_centavos', 50000000)->assertJsonPath('data.threshold.total_centavos', (int) $assessment->g_effective_after_centavos);
+        DB::table('tax_evidence')->where('id', $evidenceId)->update(['valid_until' => now('Asia/Manila')->subDay()->toDateString()]);
+        $this->getJson($url)->assertOk()->assertJsonPath('data.declaration_state', 'EXPIRED')->assertJsonPath('data.threshold', null);
+        DB::table('tax_evidence')->where('id', $evidenceId)->update(['review_state' => 'REJECTED']);
+        $this->getJson($url)->assertOk()->assertJsonPath('data.declaration_state', 'REJECTED')->assertJsonPath('data.threshold', null);
+        self::assertEquals($assessment, DB::table('remittance_assessments')->where('id', $assessment->id)->sole());
+        $this->getJson(str_replace('month=', 'month=invalid', $url))->assertUnprocessable();
+        $this->getJson(str_replace($vendorId, (string) Str::uuid7(), $url))->assertNotFound();
+        DB::table('admin_memberships')->where('user_id', $admin->id)->update(['platform_role_id' => DB::table('platform_roles')->where('code', 'ADMIN_SUPPORT')->value('id')]);
+        $this->getJson($url)->assertForbidden();
+    }
+
+    public function test_withholding_register_defaults_to_latest_non_voided_collection_month_and_respects_explicit_months(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-12-08 12:00:00', 'Asia/Manila'));
+        $admin = $this->admin();
+        $this->signInAdmin($admin);
+        $url = '/api/v1/admin/finance/withholding-register';
+        $this->getJson($url)->assertOk()->assertJsonPath('data.month', '2026-12')->assertJsonPath('data.assessment_count', 0);
+
+        config()->set('finance.withholding_scenario', 'DEMO_PLATFORM_WITHHOLDER');
+        // 1 November in Manila is still 31 October in UTC.
+        $this->travelTo(CarbonImmutable::parse('2026-11-01 00:01:00', 'Asia/Manila'));
+        [, , $buyer, $order] = $this->awaitingPayment('Previous month withholding');
+        $payment = $this->startPayment($buyer, $order);
+        $this->completePayment($payment['id'])->assertOk();
+        $posted = DB::table('remittance_assessments')->where('order_id', $order)->sole();
+        self::assertGreaterThan(0, (int) $posted->withheld_centavos);
+
+        $this->travelTo(CarbonImmutable::parse('2026-12-08 12:00:00', 'Asia/Manila'));
+        [, , $buyer, $order] = $this->awaitingPayment('Voided current month withholding');
+        $payment = $this->startPayment($buyer, $order);
+        $this->completePayment($payment['id'])->assertOk();
+        DB::table('remittance_assessments')->where('order_id', $order)->update(['calculation_state' => 'VOIDED']);
+        $before = DB::table('remittance_assessments')->orderBy('id')->get()->toJson();
+        $this->signInAdmin($admin);
+        $this->getJson($url)->assertOk()->assertJsonPath('data.month', '2026-11')
+            ->assertJsonPath('data.period_start', '2026-11-01')->assertJsonPath('data.period_end', '2026-11-30')
+            ->assertJsonPath('data.platform_withheld_centavos', (int) $posted->withheld_centavos)->assertJsonPath('data.assessment_count', 1);
+        $this->getJson($url.'?month=2026-12')->assertOk()->assertJsonPath('data.month', '2026-12')
+            ->assertJsonPath('data.platform_withheld_centavos', 0)->assertJsonPath('data.assessment_count', 0);
+        $this->getJson($url.'?month=2026-10')->assertOk()->assertJsonPath('data.month', '2026-10')->assertJsonPath('data.assessment_count', 0);
+        $this->getJson($url.'?month=')->assertUnprocessable();
+        self::assertSame($before, DB::table('remittance_assessments')->orderBy('id')->get()->toJson());
+        DB::table('admin_memberships')->where('user_id', $admin->id)->update(['platform_role_id' => DB::table('platform_roles')->where('code', 'ADMIN_SUPPORT')->value('id')]);
+        $this->getJson($url)->assertForbidden();
+        $this->travelBack();
+    }
+
+    public function test_withholding_calculations_remain_readable_with_specific_source_issues_and_preserve_history(): void
+    {
+        config()->set('finance.withholding_scenario', 'DEMO_PLATFORM_WITHHOLDER');
+        [, , $buyer, $order] = $this->awaitingPayment('Tax calculation with filing issues');
+        $payment = $this->startPayment($buyer, $order);
+        $this->completePayment($payment['id'])->assertOk();
+        $assessment = DB::table('remittance_assessments')->where('order_id', $order)->sole();
+        app(RemittanceAssessmentService::class)->openAdjustmentForRefund((string) $assessment->id, null, 100, 'Synthetic refund requires a tax correction.');
+        DB::table('remittance_assessments')->where('id', $assessment->id)->update([
+            'reconciliation_state' => 'RECONCILIATION_EXCEPTION',
+        ]);
+        $before = DB::table('remittance_assessments')->orderBy('id')->get()->toJson();
+        $this->signInAdmin($this->admin());
+        $this->getJson('/api/v1/admin/finance/withholding-register?month='.now('Asia/Manila')->format('Y-m'))->assertOk()
+            ->assertJsonPath('data.review_required', 1)
+            ->assertJsonPath('data.vendors.0.withheld_centavos', (int) $assessment->withheld_centavos)
+            ->assertJsonPath('data.vendors.0.calculation.gross_basis_centavos', (int) $assessment->gross_basis_centavos)
+            ->assertJsonPath('data.vendors.0.filing_issues', ['RECONCILIATION_EXCEPTION', 'TAX_ADJUSTMENT_OPEN']);
+        self::assertSame($before, DB::table('remittance_assessments')->orderBy('id')->get()->toJson());
+    }
+
+    public function test_withholding_calculation_separates_relieved_basis_from_taxable_basis(): void
+    {
+        config()->set('finance.withholding_scenario', 'DEMO_PLATFORM_WITHHOLDER');
+        [$store, , $buyer, $order] = $this->awaitingPayment('Tax relief calculation');
+        $this->grantRelief((string) $store->id);
+        $payment = $this->startPayment($buyer, $order);
+        $this->completePayment($payment['id'])->assertOk();
+        $assessment = DB::table('remittance_assessments')->where('order_id', $order)->sole();
+        self::assertSame(0, (int) $assessment->withheld_centavos);
+        self::assertGreaterThan(0, (int) $assessment->gross_basis_centavos);
+        $this->signInAdmin($this->admin());
+        $this->getJson('/api/v1/admin/finance/withholding-register?month='.now('Asia/Manila')->format('Y-m'))->assertOk()
+            ->assertJsonPath('data.vendors.0.calculation.taxable_basis_centavos', 0)
+            ->assertJsonPath('data.vendors.0.calculation.relieved_basis_centavos', (int) $assessment->gross_basis_centavos)
+            ->assertJsonPath('data.vendors.0.withheld_centavos', 0);
     }
 
     public function test_tax_reminders_keep_fifteen_seven_one_day_and_overdue_cadence_and_deduplicate(): void

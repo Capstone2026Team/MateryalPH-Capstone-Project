@@ -307,6 +307,29 @@ class NotificationsRepository
       )).data,
     ),
   );
+  Future<List<api.PlatformDocumentRef>> orderDocuments(String orderId) =>
+      _guard.call(
+        () async => _guard
+            .required(
+              (await _reports.listOrderDocuments(
+                audience: 'buyers',
+                orderId: orderId,
+              )).data,
+            )
+            .data
+            .toList(),
+      );
+
+  Future<Uint8List> downloadOrderDocument(String orderId, String kind) =>
+      _guard.call(
+        () async => _guard.required(
+          (await _reports.downloadOrderDocument(
+            audience: 'buyers',
+            orderId: orderId,
+            kind: kind,
+          )).data,
+        ),
+      );
   String newKey() => newIdempotencyKey();
 }
 

@@ -8,6 +8,10 @@ part of 'conversation_detail.dart';
 
 class _$ConversationDetail extends ConversationDetail {
   @override
+  final String? threadAuthority;
+  @override
+  final BuiltList<ConversationView>? threadContexts;
+  @override
   final ConversationView conversation;
   @override
   final ChatMessagePage messages;
@@ -21,7 +25,9 @@ class _$ConversationDetail extends ConversationDetail {
       (ConversationDetailBuilder()..update(updates))._build();
 
   _$ConversationDetail._(
-      {required this.conversation,
+      {this.threadAuthority,
+      this.threadContexts,
+      required this.conversation,
       required this.messages,
       required this.quotations,
       this.siteInspections})
@@ -39,6 +45,8 @@ class _$ConversationDetail extends ConversationDetail {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is ConversationDetail &&
+        threadAuthority == other.threadAuthority &&
+        threadContexts == other.threadContexts &&
         conversation == other.conversation &&
         messages == other.messages &&
         quotations == other.quotations &&
@@ -48,6 +56,8 @@ class _$ConversationDetail extends ConversationDetail {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, threadAuthority.hashCode);
+    _$hash = $jc(_$hash, threadContexts.hashCode);
     _$hash = $jc(_$hash, conversation.hashCode);
     _$hash = $jc(_$hash, messages.hashCode);
     _$hash = $jc(_$hash, quotations.hashCode);
@@ -59,6 +69,8 @@ class _$ConversationDetail extends ConversationDetail {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'ConversationDetail')
+          ..add('threadAuthority', threadAuthority)
+          ..add('threadContexts', threadContexts)
           ..add('conversation', conversation)
           ..add('messages', messages)
           ..add('quotations', quotations)
@@ -70,6 +82,17 @@ class _$ConversationDetail extends ConversationDetail {
 class ConversationDetailBuilder
     implements Builder<ConversationDetail, ConversationDetailBuilder> {
   _$ConversationDetail? _$v;
+
+  String? _threadAuthority;
+  String? get threadAuthority => _$this._threadAuthority;
+  set threadAuthority(String? threadAuthority) =>
+      _$this._threadAuthority = threadAuthority;
+
+  ListBuilder<ConversationView>? _threadContexts;
+  ListBuilder<ConversationView> get threadContexts =>
+      _$this._threadContexts ??= ListBuilder<ConversationView>();
+  set threadContexts(ListBuilder<ConversationView>? threadContexts) =>
+      _$this._threadContexts = threadContexts;
 
   ConversationViewBuilder? _conversation;
   ConversationViewBuilder get conversation =>
@@ -101,6 +124,8 @@ class ConversationDetailBuilder
   ConversationDetailBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _threadAuthority = $v.threadAuthority;
+      _threadContexts = $v.threadContexts?.toBuilder();
       _conversation = $v.conversation.toBuilder();
       _messages = $v.messages.toBuilder();
       _quotations = $v.quotations.toBuilder();
@@ -128,6 +153,8 @@ class ConversationDetailBuilder
     try {
       _$result = _$v ??
           _$ConversationDetail._(
+            threadAuthority: threadAuthority,
+            threadContexts: _threadContexts?.build(),
             conversation: conversation.build(),
             messages: messages.build(),
             quotations: quotations.build(),
@@ -136,6 +163,8 @@ class ConversationDetailBuilder
     } catch (_) {
       late String _$failedField;
       try {
+        _$failedField = 'threadContexts';
+        _threadContexts?.build();
         _$failedField = 'conversation';
         conversation.build();
         _$failedField = 'messages';

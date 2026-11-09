@@ -6,6 +6,7 @@
 
 Name | Type
 ------------ | -------------
+`buyerName` | string
 `orderId` | string
 `orderReference` | string
 `status` | string
@@ -21,6 +22,10 @@ Name | Type
 `sourceSystems` | Array&lt;string&gt;
 `invoicingMethods` | Array&lt;string&gt;
 `lines` | [Array&lt;InvoiceOrderLine&gt;](InvoiceOrderLine.md)
+`canSend` | boolean
+`draft` | [InvoiceDraft](InvoiceDraft.md)
+`preset` | [VendorInvoicePreset](VendorInvoicePreset.md)
+`orderSummary` | [InvoiceOrderSummary](InvoiceOrderSummary.md)
 
 ## Example
 
@@ -29,6 +34,7 @@ import type { VendorOrderInvoices } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "buyerName": null,
   "orderId": null,
   "orderReference": null,
   "status": null,
@@ -44,6 +50,10 @@ const example = {
   "sourceSystems": null,
   "invoicingMethods": null,
   "lines": null,
+  "canSend": null,
+  "draft": null,
+  "preset": null,
+  "orderSummary": null,
 } satisfies VendorOrderInvoices
 
 console.log(example)

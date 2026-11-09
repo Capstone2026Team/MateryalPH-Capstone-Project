@@ -6,6 +6,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../design_system/components/buyer_app_bar.dart';
 import '../../design_system/components/procurement_components.dart';
 import '../../design_system/theme.dart';
+import '../../core/vendor_score_display.dart';
 import '../map_discovery/discovery_models.dart';
 import '../orders/order_models.dart' show formatManilaDateTime;
 import '../../design_system/components/specification_chips.dart';
@@ -405,7 +406,7 @@ class _VendorQuotationScreenState extends State<VendorQuotationScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
-          if (busy || pricing) const LinearProgressIndicator(),
+          if (busy || pricing) const BuyerLoadingProgress(),
           if (error != null) ...[
             StatusBand(
               tone: BandTone.danger,
@@ -829,7 +830,9 @@ class _StoreHeader extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${kilometres(candidate.distanceMeters)} · ${projectText(candidate.scoreLabel)} · ${fulfillmentLabel(candidate.fulfillmentMethod)}',
+                      '${kilometres(candidate.distanceMeters)} · ${vendorScoreDisplayText(candidate.scoreLabel, value: candidate.vps)} · ${fulfillmentLabel(candidate.fulfillmentMethod)}',
+                      semanticsLabel:
+                          '${kilometres(candidate.distanceMeters)} · ${candidate.scoreLabel} · ${fulfillmentLabel(candidate.fulfillmentMethod)}',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: BuyerTheme.muted,
                       ),
@@ -1039,7 +1042,7 @@ class _MissingItem extends StatelessWidget {
             ],
           )
         else if (offers == null)
-          const LinearProgressIndicator()
+          const BuyerLoadingProgress()
         else if (unlisted)
           Text(
             'Unlisted materials have no comparable listings. Buy it from any store, then record a waiver on the Work Package.',

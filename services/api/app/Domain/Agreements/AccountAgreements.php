@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Agreements;
 
+use App\Domain\Finance\CommissionPolicyService;
 use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
 use Illuminate\Http\Request;
@@ -21,6 +22,7 @@ final class AccountAgreements
 
         return DB::table('agreement_versions as v')->join('agreement_documents as d', 'd.id', '=', 'v.agreement_document_id')
             ->whereIn('d.audience', ['ALL', $request->user()->account_type])->whereNull('v.retired_at')->where('v.effective_at', '<=', now())
+            ->where(fn ($query) => $query->where('d.code', '<>', 'VENDOR_COMMISSION_TEST')->orWhere('v.id', CommissionPolicyService::current()?->agreement_version_id))
             ->orderBy('d.code')->orderByDesc('v.version')->get(['v.*', 'd.code', 'd.title', 'd.audience'])->unique('agreement_document_id')->values()
             ->map(fn (object $row): array => $this->present($row, $request, $organization))->all();
     }

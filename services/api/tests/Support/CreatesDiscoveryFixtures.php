@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Support;
 
+use App\Domain\Finance\CommissionPolicyService;
 use App\Domain\Identity\TokenSessionService;
 use App\Domain\Vendors\StoreOperatingSchedule;
 use App\Models\AuthSession;
@@ -41,6 +42,13 @@ trait CreatesDiscoveryFixtures
         DB::table('vendor_classifications')->insert(['id' => (string) Str::uuid7(), 'vendor_organization_id' => $organization->id, 'supplier_type' => 'RETAIL_HARDWARE_STORE', 'niches' => json_encode(['Cement']), 'custom_labels' => '[]', 'version' => 1, 'lock_version' => 1, 'created_at' => now(), 'updated_at' => now()]);
         app(StoreOperatingSchedule::class)->replaceWeekly($profileId, array_map(static fn (int $day): array => ['day_of_week' => $day, 'status' => 'OPEN', 'opens_at' => '08:00', 'closes_at' => '17:00'], range(1, 7)));
         $owner = $this->storeMember($organization, 'OWNER');
+        // This synthetic already-active store includes initial policy consent. Later publications still require reacceptance.
+        $initialPolicy = CommissionPolicyService::current();
+        if ($initialPolicy !== null && (int) $initialPolicy->version === 1 && $initialPolicy->agreement_version_id !== null) {
+            DB::table('agreement_acceptances')->insert(['id' => (string) Str::uuid7(), 'user_id' => $owner->id,
+                'agreement_version_id' => $initialPolicy->agreement_version_id, 'vendor_organization_id' => $organization->id,
+                'source' => 'ACCOUNT_SETTINGS', 'accepted_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
+        }
         if ($delivery) {
             $this->storeMember($organization, 'FULFILLMENT');
         }

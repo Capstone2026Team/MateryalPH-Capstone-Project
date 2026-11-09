@@ -1,4 +1,4 @@
-import { MessagingApi, type ChatDraftContent, type QuotationLocationSearch, type SiteInspectionDecision } from '@materyalph/api-client-ts'
+import { MessagingApi, type AutomatedResponseSettings, type ChatDraftContent, type QuotationLocationSearch, type SiteInspectionDecision } from '@materyalph/api-client-ts'
 import { createWebApiConfiguration } from '@materyalph/web-ui'
 export { readableOnboardingError as readableChatError } from './onboarding-api'
 
@@ -6,11 +6,15 @@ const basePath = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api
 const api = () => new MessagingApi(createWebApiConfiguration(basePath, { refreshSession: true }))
 const scope = { messagingPortal: 'vendor' as const }
 export const chatApi = {
-  projectInquiries: async (conversationId: string, page = 1) => (await api().listChatProjectInquiries({ ...scope, conversationId, page })).data,
+  automatedSettings: async () => (await api().getAutomatedResponseSettings()).data,
+  saveAutomatedSettings: async (settings: AutomatedResponseSettings, idempotencyKey: string) => (await api().saveAutomatedResponseSettings({ automatedResponseSettings: settings, idempotencyKey })).data,
+  pendingOrderQuotation: async (orderId: string, lockVersion: number, idempotencyKey: string) => (await api().openPendingOrderQuotation({ orderId, idempotencyKey, pendingOrderQuotationInput: { lockVersion } })).data.id,
   fulfillmentConversations: async (conversationId: string, page = 1) => (await api().listVendorFulfillmentConversations({ conversationId, page })).data,
   forOrder: async (orderId: string, idempotencyKey: string) => (await api().openVendorOrderConversation({ orderId, idempotencyKey })).data.id,
   list: async (page = 1) => (await api().listConversations({ ...scope, page })).data,
   get: async (conversationId: string, before?: string, page = 1, legacyPage = 1) => (await api().getConversation({ ...scope, conversationId, ...(before ? { before } : {}), page, legacyPage })).data,
+  buyerThread: async (conversationId: string, before?: string, page = 1) => (await api().getVendorBuyerThread({ conversationId, ...(before ? { before } : {}), page })).data,
+  buyerThreadContexts: async (conversationId: string, page = 1) => (await api().listVendorBuyerThreadContexts({ conversationId, page })).data,
   send: (conversationId: string, body: string, clientMessageId: string, productId?: string) => api().sendChatMessage({ ...scope, conversationId, chatSend: { ...(body ? { body } : {}), clientMessageId, ...(productId ? { productId } : {}) } }),
   products: async (conversationId: string, q = '', page = 1) => (await api().listChatProducts({ ...scope, conversationId, q, page })).data,
   typing: (conversationId: string, typing: boolean) => api().sendChatTyping({ ...scope, conversationId, chatTyping: { typing } }),

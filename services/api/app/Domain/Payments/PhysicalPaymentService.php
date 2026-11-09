@@ -11,6 +11,7 @@ use App\Domain\Identity\AuthenticationException;
 use App\Domain\Orders\OrderAccess;
 use App\Domain\Orders\OrderNotifier;
 use App\Domain\Orders\OrderStates;
+use App\Domain\Reporting\OrderDocumentService;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -59,7 +60,7 @@ final class PhysicalPaymentService
         if ($latest === null || DB::table('physical_payment_records')->where('online_payment_id', $payment->id)->exists()) {
             return;
         }
-        $amount = min((int) $payment->principal_centavos, (int) $latest->remaining_obligation_centavos);
+        $amount = min((int) $payment->principal_centavos, $this->remaining($latest));
         if ($amount <= 0) {
             return;
         }
@@ -68,6 +69,7 @@ final class PhysicalPaymentService
             'method' => 'ONLINE', 'obligation_before_centavos' => (int) $latest->remaining_obligation_centavos, 'amount_centavos' => $amount, 'remaining_obligation_centavos' => $remaining,
             'state' => $remaining === 0 ? 'PHYSICAL_PAYMENT_RECORDED' : 'PARTIALLY_RECORDED', 'online_payment_id' => $payment->id, 'idempotency_key' => 'balance-credit:'.$payment->id,
             'recorded_at' => now(), 'recorded_role' => 'SYSTEM', 'created_at' => now(), 'updated_at' => now()]);
+        app(OrderDocumentService::class)->prepare((string) $order->id);
     }
 
     /**
@@ -168,7 +170,7 @@ final class PhysicalPaymentService
     /** The outstanding physical balance of a handover-stage order, for validating the cash reported with the milestone. */
     public function outstanding(object $order): int
     {
-        return $order->payment_method === 'ONLINE' ? 0 : (int) ($this->latest((string) $order->id)->remaining_obligation_centavos ?? 0);
+        return $order->payment_method === 'ONLINE' ? 0 : $this->remaining($this->latest((string) $order->id));
     }
 
     /**
@@ -218,13 +220,13 @@ final class PhysicalPaymentService
     public function summary(object $order, bool $forVendor = false): array
     {
         $records = DB::table('physical_payment_records')->where('order_id', $order->id)->orderBy('recorded_at')->orderBy('id')->get();
-        // The current record is the lowest remaining amount (see latest()); a back-dated collection must not hide it.
-        $latest = $records->sortBy([['remaining_obligation_centavos', 'asc'], ['recorded_at', 'desc']])->first();
+        // A cancellation release closes the balance; its stored amount is historical, not current debt.
+        $latest = $records->firstWhere('record_kind', 'CANCELLATION_RELEASE') ?? $records->sortBy([['remaining_obligation_centavos', 'asc'], ['recorded_at', 'desc']])->first();
         $handover = $forVendor && $order->payment_method !== 'ONLINE' ? $this->pendingHandover((string) $order->id) : null;
 
         return [
             'applicable' => $order->payment_method !== 'ONLINE', 'method' => (string) $order->payment_method,
-            'state' => $latest->state ?? 'NOT_OPEN', 'remaining_centavos' => $latest === null ? null : (int) $latest->remaining_obligation_centavos,
+            'state' => $latest->state ?? 'NOT_OPEN', 'remaining_centavos' => $latest === null ? null : $this->remaining($latest),
             'online_balance_approved' => $order->online_balance_approved_at !== null,
             'handover_cash' => $handover === null ? null : [
                 'reported_centavos' => $handover->cash_centavos, 'confirmable_centavos' => min($handover->cash_centavos, (int) ($latest->remaining_obligation_centavos ?? 0)),
@@ -249,7 +251,7 @@ final class PhysicalPaymentService
     {
         $proof = DB::table('fulfillment_proofs')->where('order_id', $orderId)->whereIn('event_type', OrderStates::AWAITING_RECEIPT)
             ->whereRaw("COALESCE((payload->>'cash_received_centavos')::bigint, 0) > 0")->orderByDesc('occurred_at')->orderByDesc('id')->first();
-        if ($proof === null || (int) ($this->latest($orderId)->remaining_obligation_centavos ?? 0) <= 0
+        if ($proof === null || $this->remaining($this->latest($orderId)) <= 0
             || DB::table('physical_payment_records')->where('order_id', $orderId)->where('record_kind', 'COLLECTION')->where('created_at', '>=', $proof->created_at)->exists()) {
             return null;
         }
@@ -265,7 +267,7 @@ final class PhysicalPaymentService
             || in_array($order->order_state, [...OrderStates::PENDING_ACCEPTANCE, OrderStates::AWAITING_PAYMENT], true)) {
             throw new AuthenticationException('PHYSICAL_PAYMENT_NOT_OPEN', 'This order has no open Cash on Delivery or In-Store Payment balance.', 409);
         }
-        $remaining = (int) ($this->latest((string) $order->id)->remaining_obligation_centavos ?? 0);
+        $remaining = $this->remaining($this->latest((string) $order->id));
         if ($remaining <= 0) {
             throw new AuthenticationException('PHYSICAL_PAYMENT_NOT_OPEN', 'This order has no outstanding physical balance.', 409);
         }
@@ -283,6 +285,7 @@ final class PhysicalPaymentService
             'state' => $after === 0 ? 'PHYSICAL_PAYMENT_RECORDED' : 'PARTIALLY_RECORDED', 'evidence_file_id' => $evidenceId, 'idempotency_key' => $idempotencyKey,
             'recorded_at' => $receivedAt, 'recorded_role' => $role, 'note' => $note, 'created_at' => now(), 'updated_at' => now()]);
         $this->audit->account($request, 'PHYSICAL_PAYMENT_RECORDED', 'ORDER', (string) $order->id, after: ['record_id' => $id, 'amount_centavos' => $amount, 'remaining_centavos' => $after, 'method' => $order->payment_method]);
+        app(OrderDocumentService::class)->prepare((string) $order->id);
         $this->notifier->buyer($order, 'Payment recorded for order '.$order->reference, 'The Vendor recorded ₱'.number_format($amount / 100, 2).' received directly. Remaining balance: ₱'.number_format($after / 100, 2).'. Open the order to acknowledge the record. This is a Vendor record, not an online payment confirmation.');
     }
 
@@ -299,7 +302,13 @@ final class PhysicalPaymentService
 
     private function latest(string $orderId): ?object
     {
-        // Corrections that increase a balance are not supported, so the current record is the lowest remaining amount.
-        return DB::table('physical_payment_records')->where('order_id', $orderId)->orderBy('remaining_obligation_centavos')->orderByDesc('recorded_at')->first();
+        // A release takes precedence over earlier records, including back-dated collections.
+        return DB::table('physical_payment_records')->where('order_id', $orderId)->orderByRaw("CASE WHEN record_kind = 'CANCELLATION_RELEASE' THEN 0 ELSE 1 END")
+            ->orderBy('remaining_obligation_centavos')->orderByDesc('recorded_at')->first();
+    }
+
+    private function remaining(?object $record): int
+    {
+        return $record === null || $record->record_kind === 'CANCELLATION_RELEASE' ? 0 : (int) $record->remaining_obligation_centavos;
     }
 }

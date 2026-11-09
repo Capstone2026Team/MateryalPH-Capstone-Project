@@ -11,6 +11,8 @@ import 'trust_models.dart';
 /// Verified-purchase reviews for the Buyer's own completed orders, public listing reviews and Report
 /// Review — all through `/api/v1`. Nothing here deletes a review.
 abstract interface class ReviewsRepository {
+  Future<BuyerReceivedRatingsView> receivedRatings({int page = 1});
+
   Future<OrderReviewsView> orderReviews(String orderId);
 
   Future<OrderReviewsView> submit({
@@ -70,6 +72,40 @@ final class ApiReviewsRepository implements ReviewsRepository {
   final ApiGuard _api;
 
   api.BuyerReviewsApi get _reviews => _client.getBuyerReviewsApi();
+
+  @override
+  Future<BuyerReceivedRatingsView> receivedRatings({int page = 1}) =>
+      _api(() async {
+        final response = await _reviews.listBuyerReceivedRatings(page: page);
+        final envelope = _api.required(response.data);
+        final summary = envelope.meta.summary;
+        return BuyerReceivedRatingsView(
+          summary: BuyerRatingSummaryView(
+            score: summary.score?.toDouble(),
+            count: summary.count,
+            minimumCount: summary.minimumCount,
+            windowDays: summary.windowDays,
+            inquirySeriousness: summary.inquirySeriousness?.toDouble(),
+            communicationQuality: summary.communicationQuality?.toDouble(),
+            paymentReliability: summary.paymentReliability?.toDouble(),
+          ),
+          items: envelope.data
+              .map(
+                (row) => BuyerReceivedRatingView(
+                  id: row.id,
+                  storeName: row.storeName,
+                  orderReference: row.orderReference,
+                  ratings: _ratings(row.ratings),
+                  comment: row.comment,
+                  submittedAt: row.submittedAt,
+                ),
+              )
+              .toList(growable: false),
+          total: envelope.meta.total,
+          page: envelope.meta.page,
+          perPage: envelope.meta.perPage,
+        );
+      });
 
   @override
   Future<OrderReviewsView> orderReviews(String orderId) => _api(() async {

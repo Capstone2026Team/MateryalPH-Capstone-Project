@@ -8,6 +8,7 @@ use App\Domain\Finance\FinanceAccess;
 use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Reporting\DocumentExportService;
+use App\Domain\Reporting\OrderDocumentService;
 use App\Domain\Reporting\TaxCalendar;
 use App\Domain\Reporting\TaxPackageService;
 use App\Http\ApiResponse;
@@ -47,7 +48,7 @@ final class ReportingController extends Controller
     {
         $input = $request->validate(['type' => ['required', Rule::in(DocumentExportService::TYPES)], 'format' => ['required', Rule::in(['PDF', 'CSV'])],
             'resource_id' => ['nullable', 'uuid', 'required_unless:type,MATERIALS_ANALYTICS,AUDIT_LOG,GEO_ANALYTICS,TRANSACTION_HISTORY,EARNINGS'], 'purpose' => ['required', 'string', 'min:10', 'max:500'],
-            'filters' => ['sometimes', 'array:preset_days,start_date,end_date,radius_km,category_id,q,psgc_code,psgc_version_id,actor,actor_role,action,resource_type,organization_id,result,correlation_id,reason,from,to,dataset,area,granularity,procurement_type,material_id,fulfillment_method,payment_method,order_state,tab,status'],
+            'filters' => ['sometimes', 'array:preset_days,start_date,end_date,radius_km,category_id,q,psgc_code,psgc_version_id,actor,actor_role,action,resource_type,organization_id,result,correlation_id,reason,from,to,dataset,area,granularity,procurement_type,material_id,fulfillment_method,payment_method,order_state,tab,status,statement_state'],
             'filters.preset_days' => ['sometimes', 'integer', Rule::in([7, 30, 90])], 'filters.start_date' => ['sometimes', 'date_format:Y-m-d'], 'filters.end_date' => ['sometimes', 'date_format:Y-m-d'],
             'filters.radius_km' => ['sometimes', 'integer', 'between:1,50'], 'filters.category_id' => ['sometimes', 'uuid'], 'filters.q' => ['sometimes', 'string', 'max:100'],
             'filters.psgc_code' => ['sometimes', 'string', 'max:16'], 'filters.psgc_version_id' => ['sometimes', 'uuid']]);
@@ -60,13 +61,25 @@ final class ReportingController extends Controller
         return $service->download($request, $exportId);
     }
 
+    public function orderDocuments(Request $request, string $orderId, OrderDocumentService $documents): JsonResponse
+    {
+        $order = $documents->authorize($request, $orderId);
+
+        return ApiResponse::success($documents->references($order, $request->user()->account_type));
+    }
+
+    public function downloadOrderDocument(Request $request, string $orderId, string $kind, OrderDocumentService $documents): StreamedResponse
+    {
+        return $documents->download($request, $orderId, $kind);
+    }
+
     public function taxList(Request $request): JsonResponse
     {
         app(FinanceAccess::class)->admin($request, 'finance.view');
         $input = $request->validate(['page' => ['sometimes', 'integer', 'min:1']] + PortalDateRange::rules($request));
         $query = DB::table('tax_report_packages')->orderByDesc('id');
         PortalDateRange::apply($query, 'created_at', $input);
-        $page = $query->paginate(25, ['id', 'package_type', 'state', 'period_start', 'period_end', 'withholding_entity', 'nominal_due_date', 'actual_due_date', 'due_date_reviewer_id', 'lock_version'], 'page', $input['page'] ?? 1);
+        $page = $query->paginate(25, ['id', 'package_type', 'state', 'submission_state', 'period_start', 'period_end', 'withholding_entity', 'nominal_due_date', 'actual_due_date', 'due_date_reviewer_id', 'lock_version'], 'page', $input['page'] ?? 1);
 
         return ApiResponse::success($page->items(), ['has_more' => $page->hasMorePages()]);
     }

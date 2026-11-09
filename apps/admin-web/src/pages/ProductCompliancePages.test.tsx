@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, expect, test, vi } from 'vitest'
-import { ResponseError } from '@materyalph/api-client-ts'
+import { ResponseError, parseDate } from '@materyalph/api-client-ts'
 import * as api from '../lib/product-compliance-api'
 import { AdminProductComplianceCasePage, AdminProductComplianceQueuePage } from './ProductCompliancePages'
 
@@ -28,6 +28,31 @@ beforeEach(() => {
 function open(path: string) {
   return render(<MemoryRouter initialEntries={[path]}><Routes><Route path="/product-compliance" element={<AdminProductComplianceQueuePage />} /><Route path="/product-compliance/:submissionId" element={<AdminProductComplianceCasePage />} /></Routes></MemoryRouter>)
 }
+
+test('compliance tab badges use full server totals, including empty statuses', async () => {
+  vi.mocked(api.listComplianceQueue).mockResolvedValue({ items: [], meta: { total: 27, last_page: 2, counts: { PENDING_ADMIN_REVIEW: 27, CHANGES_REQUIRED: 0, VERIFIED: 9, REJECTED: 0, SUPERSEDED: 2, ALL: 38 } } })
+  open('/product-compliance?page=2')
+  expect(await screen.findByRole('tab', { name: 'Pending Admin Review 27' })).toHaveAttribute('aria-selected', 'true')
+  expect(screen.getByRole('tab', { name: 'Changes Required 0' })).toBeInTheDocument()
+  expect(screen.getByRole('tab', { name: 'Verified 9' })).toBeInTheDocument()
+  expect(screen.getByRole('tab', { name: 'All submissions 38' })).toBeInTheDocument()
+})
+
+test('status sections switch immediately while draft filters apply explicitly and preserve submission dates', async () => {
+  vi.mocked(api.listComplianceQueue).mockResolvedValue({ items: [], meta: { total: 0, last_page: 1 } })
+  open('/product-compliance?path=MANUAL&reference=UNMATCHED&from=2026-10-01&to=2026-10-31&page=2')
+  await screen.findByText('No submissions on this page.')
+  expect(screen.queryByRole('combobox', { name: 'Status' })).not.toBeInTheDocument()
+  const calls = vi.mocked(api.listComplianceQueue).mock.calls.length
+  fireEvent.change(screen.getByRole('combobox', { name: 'Input path' }), { target: { value: 'QR' } })
+  expect(api.listComplianceQueue).toHaveBeenCalledTimes(calls)
+  fireEvent.click(screen.getByRole('tab', { name: 'Verified' }))
+  await waitFor(() => expect(api.listComplianceQueue).toHaveBeenLastCalledWith(expect.objectContaining({ status: 'VERIFIED', path: 'MANUAL', referenceResult: 'UNMATCHED', page: 1, from: parseDate('2026-10-01'), to: parseDate('2026-10-31') })))
+  expect(screen.getByRole('combobox', { name: 'Input path' })).toHaveValue('QR')
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Apply filters' })).toBeEnabled())
+  fireEvent.click(screen.getByRole('button', { name: 'Apply filters' }))
+  await waitFor(() => expect(api.listComplianceQueue).toHaveBeenLastCalledWith(expect.objectContaining({ status: 'VERIFIED', path: 'QR', page: 1 })))
+})
 
 test('queue loads oldest pending submissions with register result text', async () => {
   vi.mocked(api.listComplianceQueue).mockResolvedValue({ items: [{ id: 'submission-1', version: 2, path: 'MANUAL', status: 'PENDING_ADMIN_REVIEW', reviewMode: 'MANUAL_REVIEW', listingId: 'listing-1', displayName: 'Portland cement 40 kg', vendorSku: 'CEM-40', publicStoreName: 'Test Supply', productName: 'PORTLAND CEMENT', referenceStandard: 'PNS 07:2018', referenceResult: 'UNCERTAIN', submittedAt: '2026-09-27T01:00:00Z' }], meta: { total: 1, last_page: 1 } })

@@ -1,3 +1,4 @@
+import { AsyncLoading } from './async-state'
 import { useEffect, useId, useRef, useState } from 'react'
 import type { CatalogListing, CatalogListingSummary, CatalogVariant } from '@materyalph/api-client-ts'
 import { ChevronDown, List, Search } from 'lucide-react'
@@ -123,7 +124,7 @@ export function CatalogProductPicker({ active = true, disabled = false, selected
       <Button type="submit" variant="secondary" disabled={disabled}>Search</Button>
     </form>}
     <div id={resultsId} aria-busy={catalog.loading} className="space-y-3">
-      {catalog.loading ? <p role="status" className="py-3 text-sm text-text-secondary">{term ? 'Searching store products…' : 'Loading store products…'}</p> : catalog.error ? <>
+      {catalog.loading ? <AsyncLoading compact label={term ? 'Searching store products…' : 'Loading store products…'} /> : catalog.error ? <>
         <StatusMessage tone="error">{catalog.error}</StatusMessage>
         <Button variant="secondary" disabled={disabled} onClick={search}>Retry products</Button>
       </> : catalog.items.length === 0 ? <p role="status" className="py-3 text-sm text-text-secondary">{term ? 'No products match your search. Try another product name or SKU.' : 'No active products are available. Publish a product in My Products to add it here.'}</p> : <>

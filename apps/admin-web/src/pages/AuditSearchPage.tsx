@@ -1,8 +1,10 @@
 import { DocumentExportButton } from '@materyalph/web-ui'
-import { ActiveFilters, Button, DateFilter, FactList, InfoNote, SearchInput, SidePanel, StatusBadge } from '@materyalph/web-ui'
+import { ActiveFilters, Button, DateFilter, dateFilterPreset, FactList, InfoNote, SearchInput, SidePanel, StatusBadge } from '@materyalph/web-ui'
 import { dateQuery } from '../lib/admin-format'
 import { Search, X } from 'lucide-react'
 import { useEffect, useState, type FormEvent } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { AdminOrderAuditBrowser, AuditNavigation } from './OrderAuditPages'
 import { control, labelClass, manilaDateTime, useLoad } from '../lib/operations-hooks'
 import { apiProblem, auditActions, getAudit, problemText, searchAudit, type AuditEvent } from '../lib/operations-api'
 import { AdminShell, ErrorState, LoadingState, PageHeader } from './PhaseThreeAdminPages'
@@ -32,9 +34,15 @@ function exportFilters(filters: Filters): Record<string, string> {
 
 /** Read-only, append-only audit search. There is deliberately no edit, delete or annotate control anywhere on this page. */
 export function AdminAuditSearchPage() {
-  const [draft, setDraft] = useState<Filters>(EMPTY)
-  const [applied, setApplied] = useState<Filters>(EMPTY)
-  const [dateLabel, setDateLabel] = useState('All dates')
+  const [params] = useSearchParams()
+  if (params.get('view') === 'transactions') return <AdminShell activeHref="/audit"><div className="grid min-w-0 gap-6"><PageHeader eyebrow="Tracking" title="Audit Log" description="Review platform orders and refunds in view mode. Commercial history remains unchanged." /><AuditNavigation /><AdminOrderAuditBrowser /></div></AdminShell>
+  return <AuditEvents />
+}
+
+function AuditEvents() {
+  const [draft, setDraft] = useState<Filters>(() => { const range = dateFilterPreset(30); return { ...EMPTY, from: range.from, to: range.to } })
+  const [applied, setApplied] = useState<Filters>(draft)
+  const [dateLabel, setDateLabel] = useState('Last 30 days')
   const [items, setItems] = useState<AuditEvent[]>([])
   const [cursor, setCursor] = useState<string | null>(null)
   const [flags, setFlags] = useState({ canViewDetail: false, canExport: false })
@@ -65,8 +73,9 @@ export function AdminAuditSearchPage() {
   return <AdminShell activeHref="/audit"><div className="space-y-6">
     <PageHeader eyebrow="Tracking" title="Audit Log" description="Search the append-only record of authentication, authorization and every Admin, Vendor and system decision. Entries cannot be edited or deleted."
       actions={flags.canExport ? <ExportButton filters={applied} /> : undefined} />
+    <AuditNavigation />
     <InfoNote>Credentials, tokens, OTPs and payment details are never stored in audit entries. Opening an entry's before/after detail is itself audited.</InfoNote>
-    <form onSubmit={apply} role="search" aria-label="Audit search" className="grid gap-4 rounded-surface border border-border-default bg-surface-primary p-4">
+    <form onSubmit={apply} role="search" aria-label="Audit search" className="grid gap-4 mp-card mp-card-padded">
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <div className={labelClass}><span>Actor name or email</span><SearchInput label="Actor name or email" value={draft.actor} maxLength={120} onChange={value => setDraft(current => ({ ...current, actor: value }))} /></div>
         <label className={labelClass}>Actor role<input className={control} value={draft.actorRole} maxLength={48} onChange={set('actorRole')} placeholder="e.g. SUPER_ADMIN" /></label>
@@ -77,12 +86,12 @@ export function AdminAuditSearchPage() {
         <label className={labelClass}>Correlation ID<input className={control} value={draft.correlationId} maxLength={80} onChange={set('correlationId')} /></label>
         <div className={labelClass}><span>Reason contains</span><SearchInput label="Reason contains" value={draft.reason} maxLength={120} onChange={value => setDraft(current => ({ ...current, reason: value }))} /></div>
       </div>
-      <div className="flex flex-wrap items-center gap-2"><DateFilter title="Audit event dates" value={{ label: dateLabel, from: applied.from, to: applied.to }} onChange={range => { setDateLabel(range.label); setDraft(current => ({ ...current, from: range.from, to: range.to })); setApplied(current => ({ ...current, from: range.from, to: range.to })) }} /><Button type="submit"><Search size={16} aria-hidden="true" />Search</Button><Button variant="secondary" onClick={() => { setDraft(EMPTY); setApplied(EMPTY); setDateLabel('All dates') }}><X size={16} aria-hidden="true" />Reset filters</Button></div>
+      <div className="flex flex-wrap items-center gap-2"><DateFilter title="Audit event dates" value={{ label: dateLabel, from: applied.from, to: applied.to }} onChange={range => { setDateLabel(range.label); setDraft(current => ({ ...current, from: range.from, to: range.to })); setApplied(current => ({ ...current, from: range.from, to: range.to })) }} /><Button type="submit"><Search size={16} aria-hidden="true" />Search</Button><Button variant="secondary" onClick={() => { const range = dateFilterPreset(30); const reset = { ...EMPTY, from: range.from, to: range.to }; setDraft(reset); setApplied(reset); setDateLabel(range.label) }}><X size={16} aria-hidden="true" />Reset filters</Button></div>
     </form>
-    <ActiveFilters filters={Object.entries(applied).filter(([key, value]) => value && !['from', 'to'].includes(key)).map(([key, value]) => ({ key, label: `${key.replace(/([A-Z])/g, ' $1')}: ${value}`, onRemove: () => { setDraft(current => ({ ...current, [key]: '' })); setApplied(current => ({ ...current, [key]: '' })) } }))} onClear={() => { setDraft(EMPTY); setApplied(EMPTY); setDateLabel('All dates') }} />
+    <ActiveFilters filters={Object.entries(applied).filter(([key, value]) => value && !['from', 'to'].includes(key)).map(([key, value]) => ({ key, label: `${key.replace(/([A-Z])/g, ' $1')}: ${value}`, onRemove: () => { setDraft(current => ({ ...current, [key]: '' })); setApplied(current => ({ ...current, [key]: '' })) } }))} onClear={() => { const range = dateFilterPreset(30); const reset = { ...EMPTY, from: range.from, to: range.to }; setDraft(reset); setApplied(reset); setDateLabel(range.label) }} />
     {error && <ErrorState message={error} onRetry={() => setAttempt(value => value + 1)} />}
     {state === 'loading' ? <LoadingState /> : items.length === 0 && !error ? <p className="rounded-surface border border-dashed border-border-default bg-surface-primary px-6 py-10 text-center text-sm text-text-secondary">No audit entries match these filters.</p> : items.length > 0 && <>
-      <div className="overflow-x-auto rounded-surface border border-border-default bg-surface-primary"><table className="w-full min-w-[980px] text-left text-sm">
+      <div className="overflow-x-auto mp-card"><table className="w-full min-w-[980px] text-left text-sm">
         <caption className="sr-only">Audit entries, newest first</caption>
         <thead className="bg-surface-canvas text-[13px] text-text-secondary"><tr>{['Recorded (Manila)', 'Actor', 'Action', 'Resource', 'Result', 'Reason', 'Correlation ID'].map(head => <th key={head} scope="col" className="px-3 py-3 font-semibold">{head}</th>)}</tr></thead>
         <tbody className="divide-y divide-border-default">{items.map(item => <tr key={item.id} className="align-top">

@@ -170,3 +170,16 @@ assert.equal(staffAcceptance.responses['403'].$ref, '#/components/responses/BotS
 assert.ok(staffAcceptance.responses['503'])
 assert.match(staffAcceptance.description, /vendor_invitation_accept/)
 console.log('Staff acceptance contract passed: pending identity reconnection, existing credentials, email verification and atomic OTP cooldown.')
+
+const vendorDeletion = spec.paths['/vendors/account/deletion']
+assert.equal(vendorDeletion.get.operationId, 'getVendorAccountDeletionPreview')
+assert.equal(vendorDeletion.post.operationId, 'deleteVendorAccount')
+assert.ok(vendorDeletion.post.parameters.some(parameter => parameter.name === 'Idempotency-Key' && parameter.required))
+assert.deepEqual(spec.components.schemas.VendorAccountDeletionRequest.properties.confirmation.enum, ['DELETE'])
+assert.deepEqual(spec.components.schemas.VendorAccountDeletionBlockers.required, [
+  'active_orders', 'pending_payments', 'unresolved_disputes', 'pending_refunds', 'uncollected_payments',
+  'outstanding_statements', 'unbilled_commissions', 'finance_reviews',
+])
+assert.equal(spec.components.schemas.VendorAccountDeletionResult.properties.sign_in_required.const, true)
+for (const status of ['401', '403', '409', '422', '429']) assert.ok(vendorDeletion.post.responses[status])
+console.log('Vendor deletion contract passed: Owner closure, explicit confirmation, obligation counters, cookie/CSRF guards and final sign-out result.')

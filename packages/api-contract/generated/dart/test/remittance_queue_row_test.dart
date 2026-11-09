@@ -77,6 +77,33 @@ void main() {
       // TODO
     });
 
+    // Version of the assessment source and current reconciliation state for backup approval.
+    // String sourceVersion
+    test('to test the property `sourceVersion`', () async {
+      // TODO
+    });
+
+    // Current caller has the restricted role and permission and this assessment can be submitted for fresh validation.
+    // bool canApproveReconciliation
+    test('to test the property `canApproveReconciliation`', () async {
+      // TODO
+    });
+
+    // String reconciliationMethod
+    test('to test the property `reconciliationMethod`', () async {
+      // TODO
+    });
+
+    // String reconciliationActorRole
+    test('to test the property `reconciliationActorRole`', () async {
+      // TODO
+    });
+
+    // DateTime reconciledAt
+    test('to test the property `reconciledAt`', () async {
+      // TODO
+    });
+
     // String reviewItemId
     test('to test the property `reviewItemId`', () async {
       // TODO

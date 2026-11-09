@@ -3,6 +3,9 @@
 declare(strict_types=1);
 
 return [
+    'commission_min_notice_days' => max(0, (int) env('COMMISSION_MIN_NOTICE_DAYS', 30)),
+    'commission_reminder_enabled' => filter_var(env('COMMISSION_REMINDER_ENABLED', false), FILTER_VALIDATE_BOOL),
+    'commission_reminder_days' => max(1, (int) env('COMMISSION_REMINDER_DAYS', 3)),
     'mode' => env('FINANCE_MODE'),
     'withholding_scenario' => env('WITHHOLDING_SCENARIO'),
     'platform_tax_profile' => env('PLATFORM_TAX_PROFILE'),

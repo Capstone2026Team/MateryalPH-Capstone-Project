@@ -983,13 +983,12 @@ Phase 1 platform foundation record.
 - `business_document_reviews_business_document_version_id_foreign` — FOREIGN KEY: `FOREIGN KEY (business_document_version_id) REFERENCES vendor_document_versions(id) ON DELETE RESTRICT`
 - `business_document_reviews_reviewer_user_id_foreign` — FOREIGN KEY: `FOREIGN KEY (reviewer_user_id) REFERENCES users(id) ON DELETE RESTRICT`
 - `business_document_reviews_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
-- `business_document_reviews_business_document_version_id_reviewed` — UNIQUE: `UNIQUE (business_document_version_id, reviewed_at)`
 
 **Indexes**
 
-- `business_document_reviews_business_document_version_id_reviewed` — `CREATE UNIQUE INDEX business_document_reviews_business_document_version_id_reviewed ON public.business_document_reviews USING btree (business_document_version_id, reviewed_at)`
 - `business_document_reviews_decision_reviewed_at_index` — `CREATE INDEX business_document_reviews_decision_reviewed_at_index ON public.business_document_reviews USING btree (decision, reviewed_at)`
 - `business_document_reviews_pkey` — `CREATE UNIQUE INDEX business_document_reviews_pkey ON public.business_document_reviews USING btree (id)`
+- `business_document_reviews_version_reviewed_index` — `CREATE INDEX business_document_reviews_version_reviewed_index ON public.business_document_reviews USING btree (business_document_version_id, reviewed_at, id)`
 
 ## `business_document_versions`
 
@@ -1167,6 +1166,31 @@ Buyer identity, profile, or saved-context record.
 
 - `buyer_ranking_preferences_buyer_profile_id_procurement_type_uni` — `CREATE UNIQUE INDEX buyer_ranking_preferences_buyer_profile_id_procurement_type_uni ON public.buyer_ranking_preferences USING btree (buyer_profile_id, procurement_type)`
 - `buyer_ranking_preferences_pkey` — `CREATE UNIQUE INDEX buyer_ranking_preferences_pkey ON public.buyer_ranking_preferences USING btree (id)`
+
+## `buyer_thread_automation_states`
+
+Buyer identity, profile, or saved-context record.
+
+| Column | Database type | Null | Default | Key / meaning |
+| --- | --- | --- | --- | --- |
+| `buyer_profile_id` | `uuid` | No | — | Primary key. Buyer profile id. |
+| `vendor_organization_id` | `uuid` | No | — | Primary key. Vendor organization id. |
+| `last_automated_response_at` | `timestamp with time zone` | Yes | — | Last automated response at. |
+| `active_welcome_message_id` | `uuid` | Yes | — | Active welcome message id. |
+| `sequence_active` | `boolean` | No | `false` | Sequence active. |
+| `created_at` | `timestamp with time zone` | Yes | — | Created at. |
+| `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+
+**Constraints**
+
+- `buyer_thread_automation_states_active_welcome_message_id_foreig` — FOREIGN KEY: `FOREIGN KEY (active_welcome_message_id) REFERENCES messages(id) ON DELETE RESTRICT`
+- `buyer_thread_automation_states_buyer_profile_id_foreign` — FOREIGN KEY: `FOREIGN KEY (buyer_profile_id) REFERENCES buyer_profiles(id) ON DELETE RESTRICT`
+- `buyer_thread_automation_states_vendor_organization_id_foreign` — FOREIGN KEY: `FOREIGN KEY (vendor_organization_id) REFERENCES vendor_organizations(id) ON DELETE RESTRICT`
+- `buyer_thread_automation_states_pkey` — PRIMARY KEY: `PRIMARY KEY (buyer_profile_id, vendor_organization_id)`
+
+**Indexes**
+
+- `buyer_thread_automation_states_pkey` — `CREATE UNIQUE INDEX buyer_thread_automation_states_pkey ON public.buyer_thread_automation_states USING btree (buyer_profile_id, vendor_organization_id)`
 
 ## `cache`
 
@@ -1884,6 +1908,34 @@ Phase 1 platform foundation record.
 - `conversation_assignments_pkey` — `CREATE UNIQUE INDEX conversation_assignments_pkey ON public.conversation_assignments USING btree (id)`
 - `conversation_one_handler` — `CREATE UNIQUE INDEX conversation_one_handler ON public.conversation_assignments USING btree (conversation_id) WHERE (ended_at IS NULL)`
 
+## `conversation_automated_selections`
+
+Phase 1 platform foundation record.
+
+| Column | Database type | Null | Default | Key / meaning |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | No | — | Primary key. Id. |
+| `conversation_id` | `uuid` | No | — | Conversation id. |
+| `welcome_message_id` | `uuid` | No | — | Welcome message id. |
+| `option_index` | `smallint` | No | — | Option index. |
+| `buyer_message_id` | `uuid` | No | — | Buyer message id. |
+| `created_at` | `timestamp with time zone` | Yes | — | Created at. |
+| `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+
+**Constraints**
+
+- `automated_option_index_check` — CHECK: `CHECK (option_index >= 0 AND option_index <= 2)`
+- `conversation_automated_selections_buyer_message_id_foreign` — FOREIGN KEY: `FOREIGN KEY (buyer_message_id) REFERENCES messages(id) ON DELETE RESTRICT`
+- `conversation_automated_selections_conversation_id_foreign` — FOREIGN KEY: `FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE RESTRICT`
+- `conversation_automated_selections_welcome_message_id_foreign` — FOREIGN KEY: `FOREIGN KEY (welcome_message_id) REFERENCES messages(id) ON DELETE RESTRICT`
+- `conversation_automated_selections_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
+- `conversation_automated_selections_welcome_message_id_option_ind` — UNIQUE: `UNIQUE (welcome_message_id, option_index)`
+
+**Indexes**
+
+- `conversation_automated_selections_pkey` — `CREATE UNIQUE INDEX conversation_automated_selections_pkey ON public.conversation_automated_selections USING btree (id)`
+- `conversation_automated_selections_welcome_message_id_option_ind` — `CREATE UNIQUE INDEX conversation_automated_selections_welcome_message_id_option_ind ON public.conversation_automated_selections USING btree (welcome_message_id, option_index)`
+
 ## `conversation_participants`
 
 Phase 1 platform foundation record.
@@ -1930,6 +1982,10 @@ Phase 1 platform foundation record.
 | `locked_reference` | `jsonb` | No | `'{}'::jsonb` | Locked reference. |
 | `lock_version` | `integer` | No | `1` | Lock version. |
 | `canonical_conversation_id` | `uuid` | Yes | — | Canonical conversation id. |
+| `last_automated_response_at` | `timestamp with time zone` | Yes | — | Last automated response at. |
+| `automated_welcome_id` | `uuid` | Yes | — | Automated welcome id. |
+| `automated_sequence_active` | `boolean` | No | `false` | Automated sequence active. |
+| `needs_human_response` | `boolean` | No | `false` | Needs human response. |
 
 **Constraints**
 
@@ -3742,6 +3798,40 @@ Phase 1 platform foundation record.
 - `inventory_movements_inventory_item_id_created_at_index` — `CREATE INDEX inventory_movements_inventory_item_id_created_at_index ON public.inventory_movements USING btree (inventory_item_id, created_at)`
 - `inventory_movements_pkey` — `CREATE UNIQUE INDEX inventory_movements_pkey ON public.inventory_movements USING btree (id)`
 
+## `invoice_drafts`
+
+FIN-01–FIN-12 financial control and evidence record.
+
+| Column | Database type | Null | Default | Key / meaning |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | No | — | Primary key. Id. |
+| `order_id` | `uuid` | No | — | Order id. |
+| `vendor_organization_id` | `uuid` | No | — | Vendor organization id. |
+| `payload` | `jsonb` | No | — | Payload. |
+| `file_id` | `uuid` | No | — | File id. |
+| `sent_record_id` | `uuid` | Yes | — | Sent record id. |
+| `sent_at` | `timestamp with time zone` | Yes | — | Sent at. |
+| `lock_version` | `integer` | No | `1` | Lock version. |
+| `updated_by_user_id` | `bigint` | No | — | Updated by user id. |
+| `created_at` | `timestamp with time zone` | Yes | — | Created at. |
+| `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+
+**Constraints**
+
+- `invoice_draft_sent_check` — CHECK: `CHECK ((sent_record_id IS NULL) = (sent_at IS NULL) AND lock_version > 0)`
+- `invoice_drafts_file_id_foreign` — FOREIGN KEY: `FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE RESTRICT`
+- `invoice_drafts_order_id_foreign` — FOREIGN KEY: `FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE RESTRICT`
+- `invoice_drafts_sent_record_id_foreign` — FOREIGN KEY: `FOREIGN KEY (sent_record_id) REFERENCES invoice_records(id) ON DELETE RESTRICT`
+- `invoice_drafts_updated_by_user_id_foreign` — FOREIGN KEY: `FOREIGN KEY (updated_by_user_id) REFERENCES users(id) ON DELETE RESTRICT`
+- `invoice_drafts_vendor_organization_id_foreign` — FOREIGN KEY: `FOREIGN KEY (vendor_organization_id) REFERENCES vendor_organizations(id) ON DELETE RESTRICT`
+- `invoice_drafts_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
+- `invoice_drafts_order_id_unique` — UNIQUE: `UNIQUE (order_id)`
+
+**Indexes**
+
+- `invoice_drafts_order_id_unique` — `CREATE UNIQUE INDEX invoice_drafts_order_id_unique ON public.invoice_drafts USING btree (order_id)`
+- `invoice_drafts_pkey` — `CREATE UNIQUE INDEX invoice_drafts_pkey ON public.invoice_drafts USING btree (id)`
+
 ## `invoice_record_downloads`
 
 FIN-01–FIN-12 financial control and evidence record.
@@ -3812,6 +3902,7 @@ FIN-01–FIN-12 financial control and evidence record.
 | `reconciliation_noted_at` | `timestamp with time zone` | Yes | — | Reconciliation noted at. |
 | `invoice_request_id` | `uuid` | Yes | — | Invoice request id. |
 | `lock_version` | `integer` | No | `1` | Lock version. |
+| `commercial_snapshot` | `jsonb` | Yes | — | Commercial snapshot. |
 
 **Constraints**
 
@@ -4602,12 +4693,21 @@ Phase 1 platform foundation record.
 | `public_sender` | `jsonb` | No | `'{}'::jsonb` | Public sender. |
 | `product_id` | `uuid` | Yes | — | Product id. |
 | `product_snapshot` | `jsonb` | Yes | — | Product snapshot. |
+| `automation` | `jsonb` | Yes | — | Automation. |
+| `work_package_inquiry_id` | `uuid` | Yes | — | Work package inquiry id. |
+| `work_package_order_id` | `uuid` | Yes | — | Work package order id. |
+| `work_package_snapshot` | `jsonb` | Yes | — | Work package snapshot. |
 
 **Constraints**
 
 - `message_product_snapshot_pair` — CHECK: `CHECK ((product_id IS NULL) = (product_snapshot IS NULL))`
+- `message_work_package_single_source` — CHECK: `CHECK (work_package_inquiry_id IS NULL OR work_package_order_id IS NULL)`
+- `message_work_package_snapshot_object` — CHECK: `CHECK (work_package_snapshot IS NULL OR jsonb_typeof(work_package_snapshot) = 'object'::text)`
+- `message_work_package_snapshot_pair` — CHECK: `CHECK ((work_package_snapshot IS NULL) = (work_package_inquiry_id IS NULL AND work_package_order_id IS NULL))`
 - `messages_conversation_id_foreign` — FOREIGN KEY: `FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE RESTRICT`
 - `messages_sender_user_id_foreign` — FOREIGN KEY: `FOREIGN KEY (sender_user_id) REFERENCES users(id) ON DELETE RESTRICT`
+- `messages_work_package_inquiry_id_foreign` — FOREIGN KEY: `FOREIGN KEY (work_package_inquiry_id) REFERENCES conversations(id) ON DELETE RESTRICT`
+- `messages_work_package_order_id_foreign` — FOREIGN KEY: `FOREIGN KEY (work_package_order_id) REFERENCES orders(id) ON DELETE RESTRICT`
 - `messages_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
 - `messages_conversation_id_client_message_id_unique` — UNIQUE: `UNIQUE (conversation_id, client_message_id)`
 
@@ -5174,6 +5274,67 @@ Procurement or immutable commerce record.
 
 - `order_delivery_snapshots_order_id_unique` — `CREATE UNIQUE INDEX order_delivery_snapshots_order_id_unique ON public.order_delivery_snapshots USING btree (order_id)`
 - `order_delivery_snapshots_pkey` — `CREATE UNIQUE INDEX order_delivery_snapshots_pkey ON public.order_delivery_snapshots USING btree (id)`
+
+## `order_document_renditions`
+
+Procurement or immutable commerce record.
+
+| Column | Database type | Null | Default | Key / meaning |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | No | — | Primary key. Id. |
+| `order_document_id` | `uuid` | No | — | Order document id. |
+| `layout_version` | `smallint` | No | — | Layout version. |
+| `file_id` | `uuid` | No | — | File id. |
+| `generated_at` | `timestamp with time zone` | No | — | Generated at. |
+| `context_snapshot` | `jsonb` | Yes | — | Context snapshot. |
+| `context_hash` | `character varying` | Yes | — | Context hash. |
+
+**Constraints**
+
+- `order_document_context_check` — CHECK: `CHECK ((context_snapshot IS NULL) = (context_hash IS NULL) AND (layout_version < 3 OR context_snapshot IS NOT NULL))`
+- `order_document_layout_version_check` — CHECK: `CHECK (layout_version > 0)`
+- `order_document_renditions_file_id_foreign` — FOREIGN KEY: `FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE RESTRICT`
+- `order_document_renditions_order_document_id_foreign` — FOREIGN KEY: `FOREIGN KEY (order_document_id) REFERENCES order_documents(id) ON DELETE RESTRICT`
+- `order_document_renditions_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
+- `order_document_renditions_file_id_unique` — UNIQUE: `UNIQUE (file_id)`
+- `order_document_renditions_order_document_id_layout_version_uniq` — UNIQUE: `UNIQUE (order_document_id, layout_version)`
+
+**Indexes**
+
+- `order_document_renditions_file_id_unique` — `CREATE UNIQUE INDEX order_document_renditions_file_id_unique ON public.order_document_renditions USING btree (file_id)`
+- `order_document_renditions_order_document_id_layout_version_uniq` — `CREATE UNIQUE INDEX order_document_renditions_order_document_id_layout_version_uniq ON public.order_document_renditions USING btree (order_document_id, layout_version)`
+- `order_document_renditions_pkey` — `CREATE UNIQUE INDEX order_document_renditions_pkey ON public.order_document_renditions USING btree (id)`
+
+## `order_documents`
+
+Procurement or immutable commerce record.
+
+| Column | Database type | Null | Default | Key / meaning |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | No | — | Primary key. Id. |
+| `order_id` | `uuid` | No | — | Order id. |
+| `kind` | `character varying` | No | — | Kind. |
+| `state` | `character varying` | No | `'QUEUED'::character varying` | State. |
+| `source_snapshot` | `jsonb` | No | — | Source snapshot. |
+| `source_hash` | `character varying` | No | — | Source hash. |
+| `file_id` | `uuid` | Yes | — | File id. |
+| `generated_at` | `timestamp with time zone` | Yes | — | Generated at. |
+| `created_at` | `timestamp with time zone` | Yes | — | Created at. |
+| `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+
+**Constraints**
+
+- `order_document_state_check` — CHECK: `CHECK ((kind::text = ANY (ARRAY['PURCHASE_ORDER'::character varying, 'PAYMENT_CONFIRMATION'::character varying]::text[])) AND (state::text = ANY (ARRAY['QUEUED'::character varying, 'READY'::character varying, 'FAILED'::character varying]::text[])) AND (state::text <> 'READY'::text OR file_id IS NOT NULL AND generated_at IS NOT NULL))`
+- `order_documents_file_id_foreign` — FOREIGN KEY: `FOREIGN KEY (file_id) REFERENCES files(id) ON DELETE RESTRICT`
+- `order_documents_order_id_foreign` — FOREIGN KEY: `FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE RESTRICT`
+- `order_documents_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
+- `order_documents_order_id_kind_unique` — UNIQUE: `UNIQUE (order_id, kind)`
+
+**Indexes**
+
+- `order_documents_order_id_kind_unique` — `CREATE UNIQUE INDEX order_documents_order_id_kind_unique ON public.order_documents USING btree (order_id, kind)`
+- `order_documents_pkey` — `CREATE UNIQUE INDEX order_documents_pkey ON public.order_documents USING btree (id)`
+- `order_documents_state_created_at_index` — `CREATE INDEX order_documents_state_created_at_index ON public.order_documents USING btree (state, created_at)`
 
 ## `order_fulfillment_assignments`
 
@@ -6716,6 +6877,7 @@ Procurement or immutable commerce record.
 | `lock_version` | `integer` | No | `1` | Lock version. |
 | `response_due_at` | `timestamp with time zone` | Yes | — | Response due at. |
 | `reminded_at` | `timestamp with time zone` | Yes | — | Reminded at. |
+| `replaces_order_id` | `uuid` | Yes | — | Replaces order id. |
 
 **Constraints**
 
@@ -6723,15 +6885,18 @@ Procurement or immutable commerce record.
 - `quotations_buyer_profile_id_foreign` — FOREIGN KEY: `FOREIGN KEY (buyer_profile_id) REFERENCES buyer_profiles(id) ON DELETE RESTRICT`
 - `quotations_conversation_id_foreign` — FOREIGN KEY: `FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE RESTRICT`
 - `quotations_current_version_id_foreign` — FOREIGN KEY: `FOREIGN KEY (current_version_id) REFERENCES quotation_versions(id) ON DELETE RESTRICT`
+- `quotations_replaces_order_id_foreign` — FOREIGN KEY: `FOREIGN KEY (replaces_order_id) REFERENCES orders(id) ON DELETE RESTRICT`
 - `quotations_vendor_organization_id_foreign` — FOREIGN KEY: `FOREIGN KEY (vendor_organization_id) REFERENCES vendor_organizations(id) ON DELETE RESTRICT`
 - `quotations_work_package_id_foreign` — FOREIGN KEY: `FOREIGN KEY (work_package_id) REFERENCES work_packages(id) ON DELETE RESTRICT`
 - `quotations_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
+- `quotations_replaces_order_id_unique` — UNIQUE: `UNIQUE (replaces_order_id)`
 
 **Indexes**
 
 - `conversation_one_open_quotation` — `CREATE UNIQUE INDEX conversation_one_open_quotation ON public.quotations USING btree (conversation_id) WHERE ((state)::text <> 'ACCEPTED'::text)`
 - `conversation_one_project_quotation` — `CREATE UNIQUE INDEX conversation_one_project_quotation ON public.quotations USING btree (conversation_id) WHERE ((procurement_type)::text = 'PROJECT_BASED'::text)`
 - `quotations_pkey` — `CREATE UNIQUE INDEX quotations_pkey ON public.quotations USING btree (id)`
+- `quotations_replaces_order_id_unique` — `CREATE UNIQUE INDEX quotations_replaces_order_id_unique ON public.quotations USING btree (replaces_order_id)`
 - `quotations_response_due_at_index` — `CREATE INDEX quotations_response_due_at_index ON public.quotations USING btree (response_due_at)`
 
 ## `recovery_codes`
@@ -7252,7 +7417,7 @@ Phase 1 platform foundation record.
 | `inquiry_seriousness` | `smallint` | Yes | — | Inquiry seriousness. |
 | `communication_quality` | `smallint` | Yes | — | Communication quality. |
 | `payment_reliability` | `smallint` | Yes | — | Payment reliability. |
-| `display_name_choice` | `character varying` | No | `'FIRST_NAME_LAST_INITIAL'::character varying` | Display name choice. |
+| `display_name_choice` | `character varying` | No | `'FULL_NAME'::character varying` | Display name choice. |
 | `public_display_name` | `character varying` | Yes | — | Public display name. |
 | `submitted_at` | `timestamp with time zone` | Yes | — | Submitted at. |
 | `editable_until` | `timestamp with time zone` | Yes | — | Editable until. |
@@ -7267,7 +7432,7 @@ Phase 1 platform foundation record.
 **Constraints**
 
 - `review_comment_length_check` — CHECK: `CHECK (comment IS NULL OR char_length(comment) <= 1000)`
-- `review_display_choice_check` — CHECK: `CHECK (display_name_choice::text = ANY (ARRAY['FIRST_NAME_LAST_INITIAL'::character varying, 'VERIFIED_BUYER'::character varying, 'STORE_NAME'::character varying]::text[]))`
+- `review_display_choice_check` — CHECK: `CHECK (display_name_choice::text = ANY (ARRAY['FULL_NAME'::character varying, 'FIRST_NAME_LAST_INITIAL'::character varying, 'VERIFIED_BUYER'::character varying, 'STORE_NAME'::character varying]::text[]))`
 - `review_edit_window_check` — CHECK: `CHECK (editable_until IS NULL OR submitted_at IS NULL OR editable_until = (submitted_at + '24:00:00'::interval))`
 - `review_moderation_state_check` — CHECK: `CHECK (moderation_state::text = ANY (ARRAY['NONE'::character varying, 'FLAGGED'::character varying, 'HIDDEN_PENDING_REVIEW'::character varying, 'CORRECTION_REQUESTED'::character varying, 'REMOVED'::character varying]::text[]))`
 - `review_party_check` — CHECK: `CHECK ((review_type::text = 'BUYER'::text) = (reviewer_party::text = 'VENDOR'::text))`
@@ -7285,6 +7450,7 @@ Phase 1 platform foundation record.
 
 **Indexes**
 
+- `reviews_buyer_received_submitted_idx` — `CREATE INDEX reviews_buyer_received_submitted_idx ON public.reviews USING btree (buyer_profile_id, submitted_at DESC, id DESC) WHERE ((review_type)::text = 'BUYER'::text)`
 - `reviews_moderation_state_updated_at_index` — `CREATE INDEX reviews_moderation_state_updated_at_index ON public.reviews USING btree (moderation_state, updated_at)`
 - `reviews_one_party_rating_per_order` — `CREATE UNIQUE INDEX reviews_one_party_rating_per_order ON public.reviews USING btree (order_id, review_type) WHERE ((review_type)::text = ANY ((ARRAY['VENDOR'::character varying, 'BUYER'::character varying])::text[]))`
 - `reviews_one_product_review_per_line` — `CREATE UNIQUE INDEX reviews_one_product_review_per_line ON public.reviews USING btree (order_id, order_line_id) WHERE ((review_type)::text = 'PRODUCT'::text)`
@@ -8479,6 +8645,30 @@ Vendor organization, access, onboarding, or storefront record.
 
 - `vendor_authority_reviews_pkey` — `CREATE UNIQUE INDEX vendor_authority_reviews_pkey ON public.vendor_authority_reviews USING btree (id)`
 
+## `vendor_automated_responses`
+
+Vendor organization, access, onboarding, or storefront record.
+
+| Column | Database type | Null | Default | Key / meaning |
+| --- | --- | --- | --- | --- |
+| `vendor_organization_id` | `uuid` | No | — | Primary key. Vendor organization id. |
+| `enabled` | `boolean` | No | `false` | Enabled. |
+| `welcome_message` | `text` | No | `''::text` | Welcome message. |
+| `options` | `jsonb` | No | `'[]'::jsonb` | Options. |
+| `lock_version` | `integer` | No | `1` | Lock version. |
+| `created_at` | `timestamp with time zone` | Yes | — | Created at. |
+| `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+
+**Constraints**
+
+- `automated_response_rules_check` — CHECK: `CHECK (jsonb_typeof(options) = 'array'::text AND jsonb_array_length(options) <= 3 AND (NOT enabled OR length(TRIM(BOTH FROM welcome_message)) > 0))`
+- `vendor_automated_responses_vendor_organization_id_foreign` — FOREIGN KEY: `FOREIGN KEY (vendor_organization_id) REFERENCES vendor_organizations(id) ON DELETE RESTRICT`
+- `vendor_automated_responses_pkey` — PRIMARY KEY: `PRIMARY KEY (vendor_organization_id)`
+
+**Indexes**
+
+- `vendor_automated_responses_pkey` — `CREATE UNIQUE INDEX vendor_automated_responses_pkey ON public.vendor_automated_responses USING btree (vendor_organization_id)`
+
 ## `vendor_badge_history`
 
 Vendor organization, access, onboarding, or storefront record.
@@ -8775,6 +8965,33 @@ Vendor organization, access, onboarding, or storefront record.
 
 - `vendor_invitations_pkey` — `CREATE UNIQUE INDEX vendor_invitations_pkey ON public.vendor_invitations USING btree (id)`
 - `vendor_invitations_token_hash_unique` — `CREATE UNIQUE INDEX vendor_invitations_token_hash_unique ON public.vendor_invitations USING btree (token_hash)`
+
+## `vendor_invoice_presets`
+
+Vendor organization, access, onboarding, or storefront record.
+
+| Column | Database type | Null | Default | Key / meaning |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | No | — | Primary key. Id. |
+| `vendor_organization_id` | `uuid` | No | — | Vendor organization id. |
+| `defaults` | `jsonb` | No | — | Defaults. |
+| `lock_version` | `integer` | No | `1` | Lock version. |
+| `updated_by_user_id` | `bigint` | No | — | Updated by user id. |
+| `created_at` | `timestamp with time zone` | Yes | — | Created at. |
+| `updated_at` | `timestamp with time zone` | Yes | — | Updated at. |
+
+**Constraints**
+
+- `invoice_preset_version_check` — CHECK: `CHECK (lock_version > 0)`
+- `vendor_invoice_presets_updated_by_user_id_foreign` — FOREIGN KEY: `FOREIGN KEY (updated_by_user_id) REFERENCES users(id) ON DELETE RESTRICT`
+- `vendor_invoice_presets_vendor_organization_id_foreign` — FOREIGN KEY: `FOREIGN KEY (vendor_organization_id) REFERENCES vendor_organizations(id) ON DELETE RESTRICT`
+- `vendor_invoice_presets_pkey` — PRIMARY KEY: `PRIMARY KEY (id)`
+- `vendor_invoice_presets_vendor_organization_id_unique` — UNIQUE: `UNIQUE (vendor_organization_id)`
+
+**Indexes**
+
+- `vendor_invoice_presets_pkey` — `CREATE UNIQUE INDEX vendor_invoice_presets_pkey ON public.vendor_invoice_presets USING btree (id)`
+- `vendor_invoice_presets_vendor_organization_id_unique` — `CREATE UNIQUE INDEX vendor_invoice_presets_vendor_organization_id_unique ON public.vendor_invoice_presets USING btree (vendor_organization_id)`
 
 ## `vendor_listings`
 

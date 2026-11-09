@@ -99,6 +99,10 @@ export interface DirectoryVendorProfile {
      *
      */
     canViewVerification: boolean;
+    /**
+     *
+     */
+    canViewScores: boolean;
 }
 
 
@@ -128,6 +132,7 @@ export function instanceOfDirectoryVendorProfile(value: object): value is Direct
     if (!('sanctions' in value) || value['sanctions'] === undefined) return false;
     if ((!('canViewEnforcement' in (value as Record<string, any>)) && !('can_view_enforcement' in (value as Record<string, any>))) || ((value as Record<string, any>)['canViewEnforcement'] === undefined && (value as Record<string, any>)['can_view_enforcement'] === undefined)) return false;
     if ((!('canViewVerification' in (value as Record<string, any>)) && !('can_view_verification' in (value as Record<string, any>))) || ((value as Record<string, any>)['canViewVerification'] === undefined && (value as Record<string, any>)['can_view_verification'] === undefined)) return false;
+    if ((!('canViewScores' in (value as Record<string, any>)) && !('can_view_scores' in (value as Record<string, any>))) || ((value as Record<string, any>)['canViewScores'] === undefined && (value as Record<string, any>)['can_view_scores'] === undefined)) return false;
     return true;
 }
 
@@ -152,6 +157,7 @@ export function DirectoryVendorProfileFromJSONTyped(json: any, ignoreDiscriminat
         'sanctions': ((json['sanctions'] as Array<any>).map(DirectorySanctionFromJSON)),
         'canViewEnforcement': json['can_view_enforcement'],
         'canViewVerification': json['can_view_verification'],
+        'canViewScores': json['can_view_scores'],
     };
 }
 
@@ -177,6 +183,7 @@ export function DirectoryVendorProfileToJSONTyped(value?: DirectoryVendorProfile
         'sanctions': ((value['sanctions'] as Array<any>).map(DirectorySanctionToJSON)),
         'can_view_enforcement': value['canViewEnforcement'],
         'can_view_verification': value['canViewVerification'],
+        'can_view_scores': value['canViewScores'],
     };
 }
 

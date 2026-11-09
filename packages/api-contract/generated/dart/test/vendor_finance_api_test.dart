@@ -23,7 +23,7 @@ void main() {
 
     // Owner-only audited CSV export: Internal Operational Report — Not a Tax Invoice.
     //
-    //Future<String> exportVendorTransactions(String tab, { String status, Date from, Date to }) async
+    //Future<String> exportVendorTransactions(String tab, { String status, String statementState, Date from, Date to }) async
     test('test exportVendorTransactions', () async {
       // TODO
     });
@@ -63,9 +63,16 @@ void main() {
       // TODO
     });
 
-    // Owner-only read-only Transaction History (former Wallet label). No balance, wallet or escrow.
+    // Owner-only paginated retained payments from the current taxpayer-year POSTED merchant assessments. Completed full principal refunds are omitted; completed partial refunds reduce the returned principal, fee and collection amounts once. Pending and failed refunds do not reduce amounts. Totals describe current retained payments, not a rewrite of the posted annual tax basis or crossed-threshold status. Own-store order references only; other stores sharing the taxpayer are aggregate-only without identities. VOIDED assessments, other years, direct COD and In-Store cash are excluded. Read-only TEST records.
     //
-    //Future<FinanceTransactionListEnvelope> listVendorTransactions({ String tab, int page, String status, Date from, Date to }) async
+    //Future<VendorThresholdPaymentsEnvelope> listVendorThresholdPayments({ int page }) async
+    test('test listVendorThresholdPayments', () async {
+      // TODO
+    });
+
+    // Owner-only read-only Transaction History (former Wallet label). PAYMENTS is the unified list of payments and their recorded remittance/withholding assessments, with unlinked historical assessments retained as separate records. No balance, wallet or escrow.
+    //
+    //Future<FinanceTransactionListEnvelope> listVendorTransactions({ String tab, int page, String status, String statementState, Date from, Date to }) async
     test('test listVendorTransactions', () async {
       // TODO
     });

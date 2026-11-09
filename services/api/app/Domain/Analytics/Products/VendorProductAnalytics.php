@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace App\Domain\Analytics\Products;
 
 use App\Domain\Analytics\Dashboard\DashboardForecast;
-use App\Domain\Analytics\Dashboard\VendorDashboardInsights;
 use App\Domain\Analytics\Mining\AssociationRules;
 use App\Domain\Analytics\Mining\Dbscan;
 use App\Domain\Analytics\Mining\KMeans;
 use App\Domain\Authorization\AccountAccess;
+use App\Domain\Finance\SalesReporting;
 use App\Domain\Identity\AuthenticationException;
+use App\Domain\Procurement\ListingPublicFacts;
+use App\Domain\Reviews\ReviewAccess;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
@@ -24,10 +26,9 @@ use Illuminate\Support\Str;
  *
  * Measures:
  * - A product view is one signed-in Buyer opening the listing's Product Details on one Asia/Manila day (listing_view_days).
- * - Orders are Vendor child orders first confirmed in the period that contain the product, valued by line payable amount.
- *   A cancelled order, or one whose payment was fully refunded (refund state REFUNDED), is left out, so refunded money is
- *   never counted as sold; a partial refund keeps the order at its full line value. Earnings' Commercial sales follows the same rule;
- *   the Dashboard's Gross sales is counted before refunds.
+ * - Product sales use the same surviving confirmed orders and latest frozen material lines as Finance and Dashboard
+ *   product reports. Values include discounts and VAT, exclude delivery, and are before partial refunds. Product sales
+ *   plus delivery less completed partial refunds reconcile to Finance Net sales. Cancelled and fully refunded sales are excluded.
  * - View-to-order conversion is the share of the product's distinct viewers in the period who also placed an order request
  *   containing it in the period. "Top performing" ranks by the Wilson 95% lower bound of that share, so a product with a
  *   handful of views is not ranked above one with a long, steady record.
@@ -71,11 +72,12 @@ final class VendorProductAnalytics
         'views' => 'Product views: one signed-in Buyer opening a product’s Product Details on one Asia/Manila day counts once, however many times they open it that day. Vendors see counts only, never who viewed.',
         'viewers' => 'Distinct Buyers who viewed the product at least once in the period.',
         'orders' => 'Vendor child orders first confirmed in the period that contain the product. A cancelled order, or one whose payment was fully refunded, is not counted, because the money went back to the Buyer.',
-        'value' => 'Line value of those orders (Owner only), by the same rule as Commercial sales in Earnings. Cancelled and fully refunded orders are excluded; a partial refund is not deducted from the line value. An internal operational view, not a tax invoice or accounting record.',
+        'value' => 'Product sales value after Vendor discounts, VAT included, from the same latest financial snapshots and first-confirmation dates as Finance and Dashboard product reports. Cancelled and fully refunded sales are excluded. Values are before partial refunds and exclude delivery; product sales plus delivery less completed partial refunds equal Net sales. Owner only; an internal operational report.',
         'conversion' => 'View-to-order conversion: the product’s distinct viewers in the period who also placed an order request containing it in the period, divided by its distinct viewers.',
         'top_selling' => 'Products ranked by order value (Owner) or by confirmed orders (other roles) in the period.',
         'top_performing' => 'Products ranked by the Wilson 95% lower bound of view-to-order conversion, so a product with few views is not ranked above one with a long, steady record.',
         'most_viewed' => 'Products ranked by product views in the period.',
+        'top_rated' => 'Up to five of your published products ranked by their existing all-time visible Product Quality average, then rating count, then product ID. Unrated products are omitted. Blind, moderated, disputed and score-excluded reviews do not count. Separate from the Vendor-level rolling 90-day MQS and independent of the selected analytics period. Requires reviews.view.',
         'categories' => 'Views, orders and (Owner) value summed by material category in the period.',
         'forecast' => 'A least-squares trend plus a weekday pattern fitted to up to 90 days of daily product views, with a 95% prediction band. It needs at least seven days with views and is an estimate for planning only.',
         'segments' => 'K-Means groups products with similar views, conversion and orders in the period (standardized, number of groups chosen by the best silhouette score). Group names compare each group’s centre with the store average.',
@@ -85,7 +87,7 @@ final class VendorProductAnalytics
         'stock' => 'Out of stock: no active variant has stock available to sell (on hand − hard reserved). Limited stock: a variant is at or below the reorder level you set.',
     ];
 
-    public function __construct(private readonly AccountAccess $access) {}
+    public function __construct(private readonly AccountAccess $access, private readonly ListingPublicFacts $listingFacts) {}
 
     /**
      * @param  array<string, mixed>  $filters  days|from|to, sort, page
@@ -136,6 +138,7 @@ final class VendorProductAnalytics
             'top_selling' => array_slice($this->sorted(array_filter($rows, static fn (array $row): bool => $row['orders'] > 0), $sales ? 'value' : 'orders', $sales), 0, self::TOP),
             'top_performing' => array_slice($this->sorted(array_filter($rows, static fn (array $row): bool => $row['converted'] > 0), 'conversion', $sales), 0, self::TOP),
             'most_viewed' => array_slice($this->sorted(array_filter($rows, static fn (array $row): bool => $row['views'] > 0), 'views', $sales), 0, self::TOP),
+            'top_rated' => $scope['ratings'] ? $this->topRated($rows) : null,
             'categories' => $this->categories($rows, $sales),
             'segments' => array_diff_key($segments, ['membership' => true, 'kinds' => true, 'members' => true]),
             'basket_rules' => ['baskets' => $rules['baskets'], 'rules' => $rules['rules'], 'window_days' => self::HISTORY_DAYS],
@@ -247,7 +250,29 @@ final class VendorProductAnalytics
         return ['period' => $this->periodView($period), 'items' => $items];
     }
 
-    /** @return array{organization: string, sales: bool} */
+    /**
+     * Reuse the public product averages in one batch; never average a paginated set of received reviews.
+     *
+     * @param  array<string, array<string, mixed>>  $rows
+     * @return list<array{listing_id: string, name: string, category: string, average: string, count: int}>
+     */
+    private function topRated(array $rows): array
+    {
+        $ratings = $this->listingFacts->productRatings(array_keys($rows));
+        $ranked = [];
+        foreach ($ratings as $listingId => $rating) {
+            if ($rating['average'] !== null && $rating['count'] > 0) {
+                $ranked[] = ['listing_id' => $listingId, 'name' => (string) $rows[$listingId]['name'], 'category' => (string) $rows[$listingId]['category'],
+                    'average' => $rating['average'], 'count' => $rating['count']];
+            }
+        }
+        usort($ranked, static fn (array $a, array $b): int => bccomp($b['average'], $a['average'], 2)
+            ?: $b['count'] <=> $a['count'] ?: strcmp($a['listing_id'], $b['listing_id']));
+
+        return array_slice($ranked, 0, self::TOP);
+    }
+
+    /** @return array{organization: string, sales: bool, ratings: bool} */
     private function scope(Request $request): array
     {
         $user = $request->user();
@@ -262,7 +287,8 @@ final class VendorProductAnalytics
             throw new AuthenticationException('PRODUCT_ANALYTICS_DENIED', 'Product analytics is available to roles that manage products.', 403);
         }
 
-        return ['organization' => $scope['organization_id'], 'sales' => in_array('finance.view', $scope['permissions'], true)];
+        return ['organization' => $scope['organization_id'], 'sales' => in_array('finance.view', $scope['permissions'], true),
+            'ratings' => in_array(ReviewAccess::VIEW, $scope['permissions'], true)];
     }
 
     /**
@@ -366,14 +392,11 @@ final class VendorProductAnalytics
             }
         }
 
-        $confirmed = DB::table('order_status_history')->where('state_family', 'ORDER')->where('to_state', 'CONFIRMED')->groupBy('order_id')->selectRaw('order_id, MIN(created_at) AS confirmed_at');
-        $confirmedOn = "(COALESCE(h.confirmed_at, o.accepted_at, o.created_at) AT TIME ZONE '".self::TIMEZONE."')::date";
-        $lineRows = DB::table('order_lines as l')->join('orders as o', 'o.id', '=', 'l.order_id')->leftJoinSub($confirmed, 'h', 'h.order_id', '=', 'o.id')->leftJoin('listing_variants as lv', 'lv.id', '=', 'l.listing_variant_id')
-            ->where('o.vendor_organization_id', $organizationId)->where('o.refund_state', '<>', 'REFUNDED')->where('o.order_state', '<>', 'CANCELLED')
-            ->where(fn (Builder $query) => $query->whereNotNull('h.confirmed_at')->orWhereIn('o.order_state', VendorDashboardInsights::POST_CONFIRMATION))
+        $confirmedOn = '('.SalesReporting::CONFIRMED_AT." AT TIME ZONE '".self::TIMEZONE."')::date";
+        $lineRows = SalesReporting::productLines($organizationId)
             ->whereRaw($confirmedOn.' >= ?', [$historyFrom])->whereRaw($confirmedOn.' <= ?', [$to])
-            ->when($only !== null, fn (Builder $query) => $query->whereIn(DB::raw('COALESCE(l.vendor_listing_id, lv.vendor_listing_id)'), $only ?? []))
-            ->get(['l.order_id', 'o.buyer_profile_id', 'o.order_state', 'l.payable_centavos', DB::raw('COALESCE(l.vendor_listing_id, lv.vendor_listing_id) AS listing_id'), DB::raw($confirmedOn.' AS confirmed_on')]);
+            ->when($only !== null, fn (Builder $query) => $query->whereIn(DB::raw(SalesReporting::LISTING_ID), $only ?? []))
+            ->get(['ol.order_id', 'o.buyer_profile_id', 'o.order_state', 'fl.ordinary_payable_centavos as payable_centavos', DB::raw(SalesReporting::LISTING_ID.' AS listing_id'), DB::raw($confirmedOn.' AS confirmed_on')]);
         $lines = [];
         $ordersByDay = [];
         $valueByDay = [];
@@ -695,7 +718,7 @@ final class VendorProductAnalytics
                     $rate = $row['conversion']['percent'] ?? '0.00';
                     $items[] = $kind === 'VIEWED_NOT_ORDERED'
                         ? ['key' => 'LOW_CONVERSION:'.$id, 'kind' => 'LOW_CONVERSION', 'priority' => 'MEDIUM', 'title' => 'Turn views of '.$row['name'].' into orders',
-                            'detail' => sprintf('%d Buyers viewed it but %d ordered (%s%%; store %s%%). Compare your price in Materials Analytics and check its photos, specifications and stock.', $row['viewers'], $row['converted'], $rate, $storeRate ?? '0.00'),
+                            'detail' => sprintf('%d Buyers viewed it but %d ordered (%s%%; store %s%%). Review its price, photos, specifications and stock.', $row['viewers'], $row['converted'], $rate, $storeRate ?? '0.00'),
                             'technique' => 'K-Means segment “'.$label.'”: views above and conversion below your store average.', 'href' => '/products/'.$id] + $product($row)
                         : ['key' => 'CONVERTS_WHEN_FOUND:'.$id, 'kind' => 'CONVERTS_WHEN_FOUND', 'priority' => 'LOW', 'title' => 'Keep '.$row['name'].' ready to sell',
                             'detail' => sprintf('Buyers who open it often order it (%s%%; store %s%%), but few see it (%d views). Keep it in stock with complete photos and details, and offer it in quotations.', $rate, $storeRate ?? '0.00', $row['views']),

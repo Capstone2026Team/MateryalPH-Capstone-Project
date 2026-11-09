@@ -21,6 +21,9 @@ part 'operation_failure.g.dart';
 /// * [failedAt]
 /// * [retryable]
 /// * [retryNote]
+/// * [recoveryStatus] - Automatic recovery eligibility; SCHEDULED is a lower-bound eligibility time, subject to the scheduler and worker being available.
+/// * [recoveryAttempts]
+/// * [nextRetryAt]
 @BuiltValue()
 abstract class OperationFailure implements Built<OperationFailure, OperationFailureBuilder> {
   @BuiltValueField(wireName: r'kind')
@@ -50,6 +53,17 @@ abstract class OperationFailure implements Built<OperationFailure, OperationFail
 
   @BuiltValueField(wireName: r'retry_note')
   String? get retryNote;
+
+  /// Automatic recovery eligibility; SCHEDULED is a lower-bound eligibility time, subject to the scheduler and worker being available.
+  @BuiltValueField(wireName: r'recovery_status')
+  OperationFailureRecoveryStatusEnum? get recoveryStatus;
+  // enum recoveryStatusEnum {  SCHEDULED,  LIMIT_REACHED,  OWNING_PROCESS,  RESOLVED,  };
+
+  @BuiltValueField(wireName: r'recovery_attempts')
+  int? get recoveryAttempts;
+
+  @BuiltValueField(wireName: r'next_retry_at')
+  DateTime? get nextRetryAt;
 
   OperationFailure._();
 
@@ -121,6 +135,27 @@ class _$OperationFailureSerializer implements PrimitiveSerializer<OperationFailu
       yield serializers.serialize(
         object.retryNote,
         specifiedType: const FullType.nullable(String),
+      );
+    }
+    if (object.recoveryStatus != null) {
+      yield r'recovery_status';
+      yield serializers.serialize(
+        object.recoveryStatus,
+        specifiedType: const FullType(OperationFailureRecoveryStatusEnum),
+      );
+    }
+    if (object.recoveryAttempts != null) {
+      yield r'recovery_attempts';
+      yield serializers.serialize(
+        object.recoveryAttempts,
+        specifiedType: const FullType(int),
+      );
+    }
+    if (object.nextRetryAt != null) {
+      yield r'next_retry_at';
+      yield serializers.serialize(
+        object.nextRetryAt,
+        specifiedType: const FullType.nullable(DateTime),
       );
     }
   }
@@ -211,6 +246,30 @@ class _$OperationFailureSerializer implements PrimitiveSerializer<OperationFailu
           if (valueDes == null) continue;
           result.retryNote = valueDes;
           break;
+        case r'recovery_status':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(OperationFailureRecoveryStatusEnum),
+          ) as OperationFailureRecoveryStatusEnum?;
+          if (valueDes == null) continue;
+          result.recoveryStatus = valueDes;
+          break;
+        case r'recovery_attempts':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.recoveryAttempts = valueDes;
+          break;
+        case r'next_retry_at':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(DateTime),
+          ) as DateTime?;
+          if (valueDes == null) continue;
+          result.nextRetryAt = valueDes;
+          break;
         default:
           unhandled.add(key);
           unhandled.add(value);
@@ -254,5 +313,25 @@ class OperationFailureKindEnum extends EnumClass {
 
   static BuiltSet<OperationFailureKindEnum> get values => _$operationFailureKindEnumValues;
   static OperationFailureKindEnum valueOf(String name) => _$operationFailureKindEnumValueOf(name);
+}
+
+/// Automatic recovery eligibility; SCHEDULED is a lower-bound eligibility time, subject to the scheduler and worker being available.
+class OperationFailureRecoveryStatusEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'SCHEDULED')
+  static const OperationFailureRecoveryStatusEnum SCHEDULED = _$operationFailureRecoveryStatusEnum_SCHEDULED;
+  @BuiltValueEnumConst(wireName: r'LIMIT_REACHED')
+  static const OperationFailureRecoveryStatusEnum LIMIT_REACHED = _$operationFailureRecoveryStatusEnum_LIMIT_REACHED;
+  @BuiltValueEnumConst(wireName: r'OWNING_PROCESS')
+  static const OperationFailureRecoveryStatusEnum OWNING_PROCESS = _$operationFailureRecoveryStatusEnum_OWNING_PROCESS;
+  @BuiltValueEnumConst(wireName: r'RESOLVED')
+  static const OperationFailureRecoveryStatusEnum RESOLVED = _$operationFailureRecoveryStatusEnum_RESOLVED;
+
+  static Serializer<OperationFailureRecoveryStatusEnum> get serializer => _$operationFailureRecoveryStatusEnumSerializer;
+
+  const OperationFailureRecoveryStatusEnum._(String name): super(name);
+
+  static BuiltSet<OperationFailureRecoveryStatusEnum> get values => _$operationFailureRecoveryStatusEnumValues;
+  static OperationFailureRecoveryStatusEnum valueOf(String name) => _$operationFailureRecoveryStatusEnumValueOf(name);
 }
 

@@ -8,6 +8,7 @@ import 'package:materyalph_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
+**vehicleDetails** | [**DeliveryVehicleProfile**](DeliveryVehicleProfile.md) | Frozen display details when available; older snapshots may omit them. Image bytes require the existing authorized order file endpoint. | [optional]
 **recommended** | **bool** | True for the lowest eligible formula-fee plan in this group | [optional]
 **vehicleId** | **String** |  |
 **name** | **String** |  |

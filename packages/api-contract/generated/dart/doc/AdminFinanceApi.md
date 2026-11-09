@@ -12,18 +12,24 @@ Method | HTTP request | Description
 [**approveFeeCredit**](AdminFinanceApi.md#approvefeecredit) | **POST** /admin/finance/fee-credits/{proposalId}/approve |
 [**approveFeeStatement**](AdminFinanceApi.md#approvefeestatement) | **POST** /admin/finance/statements/{statementId}/approve |
 [**draftFeeStatements**](AdminFinanceApi.md#draftfeestatements) | **POST** /admin/finance/statements/draft |
+[**getAdminCommissionStatement**](AdminFinanceApi.md#getadmincommissionstatement) | **GET** /admin/finance/statements/{statementId} |
 [**getWithholdingAccumulator**](AdminFinanceApi.md#getwithholdingaccumulator) | **GET** /admin/finance/withholding-accumulators/{accumulatorId} |
 [**listAdminPayments**](AdminFinanceApi.md#listadminpayments) | **GET** /admin/finance/payments |
 [**listChannelFees**](AdminFinanceApi.md#listchannelfees) | **GET** /admin/finance/channel-fees |
 [**listCommissionPolicies**](AdminFinanceApi.md#listcommissionpolicies) | **GET** /admin/finance/commission-policies |
+[**listCommissionTransactions**](AdminFinanceApi.md#listcommissiontransactions) | **GET** /admin/finance/commission-transactions |
 [**listFeeStatements**](AdminFinanceApi.md#listfeestatements) | **GET** /admin/finance/statements |
 [**listFinanceReviewItems**](AdminFinanceApi.md#listfinancereviewitems) | **GET** /admin/finance/review-items |
 [**listWithholdingAccumulators**](AdminFinanceApi.md#listwithholdingaccumulators) | **GET** /admin/finance/withholding-accumulators |
+[**previewCommissionPolicy**](AdminFinanceApi.md#previewcommissionpolicy) | **POST** /admin/finance/commission-policies/preview |
 [**proposeFeeCredit**](AdminFinanceApi.md#proposefeecredit) | **POST** /admin/finance/fee-credits |
 [**publishCommissionPolicy**](AdminFinanceApi.md#publishcommissionpolicy) | **POST** /admin/finance/commission-policies |
+[**resendCommissionEmail**](AdminFinanceApi.md#resendcommissionemail) | **POST** /admin/finance/commission-emails/{eventId}/resend |
+[**resendFailedCommissionEmails**](AdminFinanceApi.md#resendfailedcommissionemails) | **POST** /admin/finance/commission-policies/{policyId}/resend-failed |
 [**resolveFinanceReviewItem**](AdminFinanceApi.md#resolvefinancereviewitem) | **POST** /admin/finance/review-items/{itemId}/resolve |
 [**resolveWithholdingOverlap**](AdminFinanceApi.md#resolvewithholdingoverlap) | **POST** /admin/finance/withholding-accumulators/{accumulatorId}/overlap |
 [**runPaymentReconciliation**](AdminFinanceApi.md#runpaymentreconciliation) | **POST** /admin/finance/reconciliation/run |
+[**updateFeeStatementInvoice**](AdminFinanceApi.md#updatefeestatementinvoice) | **PUT** /admin/finance/statements/{statementId}/invoice |
 
 
 # **approveFeeCredit**
@@ -31,7 +37,7 @@ Method | HTTP request | Description
 
 
 
-finance.approve_statements by a user different from the preparer (403 PREPARER_REVIEWER_SAME).
+Manual corrections only: finance.approve_statements by a user different from the preparer (403 PREPARER_REVIEWER_SAME). Routine dispute credits and monthly statement issuance are automatic.
 
 ### Example
 ```dart
@@ -165,6 +171,61 @@ This endpoint does not need any parameter.
 ### Return type
 
 [**FinanceActionResultEnvelope**](FinanceActionResultEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **getAdminCommissionStatement**
+> GenericDataEnvelope getAdminCommissionStatement(statementId, page, paymentsPage)
+
+
+
+finance.view. Read-only statement detail, all-rate aggregate breakdown, separately paginated lines and payments (25 per page), and Owner email delivery activity without recipient contacts. Includes can_resend and can_export permissions.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getAdminFinanceApi();
+final String statementId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final int page = 56; // int |
+final int paymentsPage = 56; // int |
+
+try {
+    final response = api.getAdminCommissionStatement(statementId, page, paymentsPage);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AdminFinanceApi->getAdminCommissionStatement: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **statementId** | **String**|  |
+ **page** | **int**|  | [optional]
+ **paymentsPage** | **int**|  | [optional]
+
+### Return type
+
+[**GenericDataEnvelope**](GenericDataEnvelope.md)
 
 ### Authorization
 
@@ -389,8 +450,69 @@ Name | Type | Description  | Notes
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **listCommissionTransactions**
+> AdminPaymentListEnvelope listCommissionTransactions(page, from, to, status, search, statuses)
+
+
+
+finance.view. Paginated successful PLATFORM_FEE_PAYMENT captures to the platform account, excluding late captures. Dates and descending order use paid_at in Asia/Manila. Original captures remain visible after refunds; refunded_centavos and net_collected_centavos distinguish gross payments from retained collections. Gateway mode and evidence origin are retained. Optional status filters apply before pagination and exports.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getAdminFinanceApi();
+final int page = 56; // int |
+final Date from = 2013-10-20; // Date |
+final Date to = 2013-10-20; // Date |
+final String status = status_example; // String |
+final String search = search_example; // String |
+final String statuses = statuses_example; // String | Comma-separated payment statuses combined with OR before pagination.
+
+try {
+    final response = api.listCommissionTransactions(page, from, to, status, search, statuses);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AdminFinanceApi->listCommissionTransactions: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **page** | **int**|  | [optional]
+ **from** | **Date**|  | [optional]
+ **to** | **Date**|  | [optional]
+ **status** | **String**|  | [optional]
+ **search** | **String**|  | [optional]
+ **statuses** | **String**| Comma-separated payment statuses combined with OR before pagination. | [optional]
+
+### Return type
+
+[**AdminPaymentListEnvelope**](AdminPaymentListEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **listFeeStatements**
-> FeeStatementListEnvelope listFeeStatements(overdue, page, state, from, to)
+> FeeStatementListEnvelope listFeeStatements(search, states, overdue, page, state, from, to)
 
 
 
@@ -409,6 +531,8 @@ import 'package:materyalph_api_client/api.dart';
 //defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
 
 final api = MateryalphApiClient().getAdminFinanceApi();
+final String search = search_example; // String |
+final String states = states_example; // String | Comma-separated statement states combined with OR before pagination. Filter totals are returned in meta.totals.
 final bool overdue = true; // bool | Issued balances past their due date.
 final int page = 56; // int |
 final String state = state_example; // String |
@@ -416,7 +540,7 @@ final Date from = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omi
 final Date to = 2013-10-20; // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Statement issued_on, including drafts.
 
 try {
-    final response = api.listFeeStatements(overdue, page, state, from, to);
+    final response = api.listFeeStatements(search, states, overdue, page, state, from, to);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling AdminFinanceApi->listFeeStatements: $e\n');
@@ -427,6 +551,8 @@ try {
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
+ **search** | **String**|  | [optional]
+ **states** | **String**| Comma-separated statement states combined with OR before pagination. Filter totals are returned in meta.totals. | [optional]
  **overdue** | **bool**| Issued balances past their due date. | [optional]
  **page** | **int**|  | [optional]
  **state** | **String**|  | [optional]
@@ -453,7 +579,7 @@ Name | Type | Description  | Notes
 
 
 
-finance.view. Reconciliation exceptions, payment mismatches, late captures, unresolved overlap, threshold adjustments, base reviews, overdue statements and fee-credit proposals.
+finance.view. Reconciliation exceptions, payment mismatches, late captures, unresolved overlap, threshold adjustments, base reviews, overdue statements and manual fee-credit proposals. Executed dispute awards create automatic credits without review items.
 
 ### Example
 ```dart
@@ -562,12 +688,63 @@ Name | Type | Description  | Notes
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **previewCommissionPolicy**
+> CommissionPolicyPreviewEnvelope previewCommissionPolicy(commissionPolicyPublishRequest)
+
+
+
+Read-only impact, rendered mail and terms preview. Requires finance.view and platform_settings.manage. Estimates use the last three complete Manila calendar months of recorded eligible basis, not a revenue forecast.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getAdminFinanceApi();
+final CommissionPolicyPublishRequest commissionPolicyPublishRequest = ; // CommissionPolicyPublishRequest |
+
+try {
+    final response = api.previewCommissionPolicy(commissionPolicyPublishRequest);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AdminFinanceApi->previewCommissionPolicy: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **commissionPolicyPublishRequest** | [**CommissionPolicyPublishRequest**](CommissionPolicyPublishRequest.md)|  |
+
+### Return type
+
+[**CommissionPolicyPreviewEnvelope**](CommissionPolicyPreviewEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **proposeFeeCredit**
 > FinanceActionResultEnvelope proposeFeeCredit(feeCreditProposalRequest)
 
 
 
-finance.review_tax. Prepare a FIN-03 credit from returned exclusive value after completion.
+finance.review_tax. Prepare a manual FIN-03 correction from returned exclusive value after completion. Executed dispute awards are credited automatically.
 
 ### Example
 ```dart
@@ -618,7 +795,7 @@ Name | Type | Description  | Notes
 
 
 
-Requires finance.view, platform_settings.manage, recent authentication, CSRF, Idempotency-Key and expected_version. Publishes a new commercial rate with immutable, hash-verified Vendor terms and Owner notices. Existing quotations, orders, assessments and credits keep their saved rate. Statutory rates and provider mode are unchanged. No backdating or insertion before the latest scheduled policy.
+Requires finance.view, platform_settings.manage, recent authentication, CSRF, Idempotency-Key and expected_version. Publishes immutable policy and terms with unique queued verified-Owner emails per eligible Vendor (active account or unsettled bill). Increases need configured notice (default 30 days) or explicit reasoned audited override. Set supersedes_policy_id to edit the next scheduled change; cancel_scheduled appends a replacement at the current rate and cancellation notice. Earlier versions and saved transactions remain intact. No rate cache or scheduler flip is required.
 
 ### Example
 ```dart
@@ -662,6 +839,112 @@ Name | Type | Description  | Notes
 ### HTTP request headers
 
  - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **resendCommissionEmail**
+> GenericDataEnvelope resendCommissionEmail(eventId, idempotencyKey)
+
+
+
+finance.view plus finance.approve_statements for a statement, or platform_settings.manage for a rate notice. Requeues a sent or failed email. One-minute per-email throttle, audit event and idempotency required. Does not change any financial record.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getAdminFinanceApi();
+final String eventId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String idempotencyKey = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+
+try {
+    final response = api.resendCommissionEmail(eventId, idempotencyKey);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AdminFinanceApi->resendCommissionEmail: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **eventId** | **String**|  |
+ **idempotencyKey** | **String**|  |
+
+### Return type
+
+[**GenericDataEnvelope**](GenericDataEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **resendFailedCommissionEmails**
+> GenericDataEnvelope resendFailedCommissionEmails(policyId, idempotencyKey)
+
+
+
+Requires finance.view and platform_settings.manage. Requeues failed emails only, with per-email one-minute throttling, idempotency and an audit event. Existing immutable attempt history is retained.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getAdminFinanceApi();
+final String policyId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String idempotencyKey = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+
+try {
+    final response = api.resendFailedCommissionEmails(policyId, idempotencyKey);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AdminFinanceApi->resendFailedCommissionEmails: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **policyId** | **String**|  |
+ **idempotencyKey** | **String**|  |
+
+### Return type
+
+[**GenericDataEnvelope**](GenericDataEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
@@ -815,6 +1098,61 @@ This endpoint does not need any parameter.
 ### HTTP request headers
 
  - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **updateFeeStatementInvoice**
+> FeeStatementEnvelope updateFeeStatementInvoice(statementId, idempotencyKey, statementInvoiceUpdateRequest)
+
+
+
+finance.approve_statements. Edit a DRAFT commission invoice heading and Vendor message with optimistic concurrency and idempotency. Does not send mail. Amounts, issuer, recipients and deadlines remain system controlled. Approval freezes the copy into the immutable SAMPLE/TEST PDF and Owner email. Issued statements reject editing.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getAdminFinanceApi();
+final String statementId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String idempotencyKey = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final StatementInvoiceUpdateRequest statementInvoiceUpdateRequest = ; // StatementInvoiceUpdateRequest |
+
+try {
+    final response = api.updateFeeStatementInvoice(statementId, idempotencyKey, statementInvoiceUpdateRequest);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling AdminFinanceApi->updateFeeStatementInvoice: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **statementId** | **String**|  |
+ **idempotencyKey** | **String**|  |
+ **statementInvoiceUpdateRequest** | [**StatementInvoiceUpdateRequest**](StatementInvoiceUpdateRequest.md)|  |
+
+### Return type
+
+[**FeeStatementEnvelope**](FeeStatementEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)

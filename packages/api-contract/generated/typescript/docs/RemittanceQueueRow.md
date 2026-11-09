@@ -20,6 +20,11 @@ Name | Type
 `calculationState` | string
 `deductionEvidenceState` | string
 `reconciliationState` | string
+`sourceVersion` | string
+`canApproveReconciliation` | boolean
+`reconciliationMethod` | string
+`reconciliationActorRole` | string
+`reconciledAt` | Date
 `reviewItemId` | string
 `reason` | string
 `createdAt` | Date
@@ -45,6 +50,11 @@ const example = {
   "calculationState": null,
   "deductionEvidenceState": null,
   "reconciliationState": null,
+  "sourceVersion": null,
+  "canApproveReconciliation": null,
+  "reconciliationMethod": null,
+  "reconciliationActorRole": null,
+  "reconciledAt": null,
   "reviewItemId": null,
   "reason": null,
   "createdAt": null,

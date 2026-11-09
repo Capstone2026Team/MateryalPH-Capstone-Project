@@ -75,7 +75,7 @@ export interface VendorFinanceOverview {
      */
     statements: { [key: string]: any; };
     /**
-     *
+     * Recent Owner finance notices, newest first, limited to 10 after excluding notices linked to this store's fully PAID fee statements. Issued, due and overdue notices remain visible while the linked statement is unpaid or partially paid. Notification history is retained.
      */
     notices: Array<VendorFinanceNotice>;
 }

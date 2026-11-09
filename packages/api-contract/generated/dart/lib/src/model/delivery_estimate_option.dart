@@ -5,6 +5,7 @@
 // ignore_for_file: unused_element
 import 'package:built_collection/built_collection.dart';
 import 'package:materyalph_api_client/src/model/mixer_volume_plan.dart';
+import 'package:materyalph_api_client/src/model/delivery_vehicle_profile.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -13,6 +14,7 @@ part 'delivery_estimate_option.g.dart';
 /// DeliveryEstimateOption
 ///
 /// Properties:
+/// * [vehicleDetails] - Frozen display details when available; older snapshots may omit them. Image bytes require the existing authorized order file endpoint.
 /// * [vehicleId] - Recommended registered vehicle; absent in historical estimates.
 /// * [loadKey]
 /// * [vehicleName]
@@ -27,6 +29,10 @@ part 'delivery_estimate_option.g.dart';
 /// * [volumePlan]
 @BuiltValue()
 abstract class DeliveryEstimateOption implements Built<DeliveryEstimateOption, DeliveryEstimateOptionBuilder> {
+  /// Frozen display details when available; older snapshots may omit them. Image bytes require the existing authorized order file endpoint.
+  @BuiltValueField(wireName: r'vehicle_details')
+  DeliveryVehicleProfile? get vehicleDetails;
+
   /// Recommended registered vehicle; absent in historical estimates.
   @BuiltValueField(wireName: r'vehicle_id')
   String? get vehicleId;
@@ -90,6 +96,13 @@ class _$DeliveryEstimateOptionSerializer implements PrimitiveSerializer<Delivery
     DeliveryEstimateOption object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.vehicleDetails != null) {
+      yield r'vehicle_details';
+      yield serializers.serialize(
+        object.vehicleDetails,
+        specifiedType: const FullType.nullable(DeliveryVehicleProfile),
+      );
+    }
     if (object.vehicleId != null) {
       yield r'vehicle_id';
       yield serializers.serialize(
@@ -183,6 +196,14 @@ class _$DeliveryEstimateOptionSerializer implements PrimitiveSerializer<Delivery
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'vehicle_details':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(DeliveryVehicleProfile),
+          ) as DeliveryVehicleProfile?;
+          if (valueDes == null) continue;
+          result.vehicleDetails.replace(valueDes);
+          break;
         case r'vehicle_id':
           final valueDes = serializers.deserialize(
             value,

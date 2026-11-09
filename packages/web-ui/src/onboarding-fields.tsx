@@ -52,11 +52,11 @@ export function DocumentUploadField({ label, name, pdfOnly = false, busy = false
 
 export function OnboardingFormSection({ title, description, children, panel = false, region = false }: { title: string; description?: string; children: ReactNode; panel?: boolean; region?: boolean }) {
   if (!panel) return <fieldset className="grid min-w-0 gap-5 border-t border-border-default pt-6"><legend className="text-lg font-semibold">{title}</legend>{description && <p className="-mt-2 max-w-2xl text-sm leading-6 text-text-secondary">{description}</p>}{children}</fieldset>
-  return <section role={region ? 'region' : 'group'} aria-label={title} className="min-w-0 overflow-hidden rounded-surface border border-border-default bg-surface-primary">
-    <header className="border-b border-border-default bg-surface-canvas px-4 py-4 sm:px-6 sm:py-5">
-      <h3 className="text-lg font-semibold leading-6 text-text-strong">{title}</h3>
+  return <section role={region ? 'region' : 'group'} aria-label={title} className="min-w-0 overflow-hidden mp-card">
+    <header className="mp-card-padded border-b border-border-default">
+      <h3 className="mp-card-heading">{title}</h3>
       {description && <p className="mt-2 max-w-3xl text-sm leading-6 text-text-secondary">{description}</p>}
     </header>
-    <div className="grid min-w-0 gap-5 p-4 sm:p-6">{children}</div>
+    <div className="mp-card-padded grid min-w-0 gap-5">{children}</div>
   </section>
 }

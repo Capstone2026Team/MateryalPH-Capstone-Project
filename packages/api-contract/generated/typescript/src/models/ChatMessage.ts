@@ -13,6 +13,20 @@
  */
 
 import { mapValues } from '../runtime';
+import type { ChatWorkPackageAttachment } from './ChatWorkPackageAttachment';
+import {
+    ChatWorkPackageAttachmentFromJSON,
+    ChatWorkPackageAttachmentFromJSONTyped,
+    ChatWorkPackageAttachmentToJSON,
+    ChatWorkPackageAttachmentToJSONTyped,
+} from './ChatWorkPackageAttachment';
+import type { ChatAutomatedReply } from './ChatAutomatedReply';
+import {
+    ChatAutomatedReplyFromJSON,
+    ChatAutomatedReplyFromJSONTyped,
+    ChatAutomatedReplyToJSON,
+    ChatAutomatedReplyToJSONTyped,
+} from './ChatAutomatedReply';
 import type { ChatIdentity } from './ChatIdentity';
 import {
     ChatIdentityFromJSON,
@@ -41,6 +55,10 @@ import {
  * @interface ChatMessage
  */
 export interface ChatMessage {
+    /**
+     * Original authorized context for files and read receipts, including in a combined Buyer timeline.
+     */
+    conversationId?: string;
     /**
      *
      */
@@ -81,6 +99,14 @@ export interface ChatMessage {
      *
      */
     product?: ChatProduct;
+    /**
+     * Static store reply. SYSTEM messages with this field do not count as human responses.
+     */
+    automatedReply?: ChatAutomatedReply;
+    /**
+     *
+     */
+    workPackageAttachment?: ChatWorkPackageAttachment;
 }
 
 
@@ -93,6 +119,7 @@ export const ChatMessageKindEnum = {
     Attachment: 'ATTACHMENT',
     Product: 'PRODUCT',
     TextWithProduct: 'TEXT_WITH_PRODUCT',
+    WorkPackage: 'WORK_PACKAGE',
 } as const;
 export type ChatMessageKindEnum = typeof ChatMessageKindEnum[keyof typeof ChatMessageKindEnum];
 
@@ -123,6 +150,7 @@ export function ChatMessageFromJSONTyped(json: any, ignoreDiscriminator: boolean
     }
     return {
 
+        'conversationId': json['conversation_id'] == null ? undefined : json['conversation_id'],
         'id': json['id'],
         'clientMessageId': json['client_message_id'],
         'body': json['body'],
@@ -133,6 +161,8 @@ export function ChatMessageFromJSONTyped(json: any, ignoreDiscriminator: boolean
         'attachments': ((json['attachments'] as Array<any>).map(ChatAttachmentFromJSON)),
         'readByRecipient': json['read_by_recipient'],
         'product': json['product'] == null ? undefined : ChatProductFromJSON(json['product']),
+        'automatedReply': json['automated_reply'] == null ? undefined : ChatAutomatedReplyFromJSON(json['automated_reply']),
+        'workPackageAttachment': json['work_package_attachment'] == null ? undefined : ChatWorkPackageAttachmentFromJSON(json['work_package_attachment']),
     };
 }
 
@@ -147,6 +177,7 @@ export function ChatMessageToJSONTyped(value?: ChatMessage | null, ignoreDiscrim
 
     return {
 
+        'conversation_id': value['conversationId'],
         'id': value['id'],
         'client_message_id': value['clientMessageId'],
         'body': value['body'],
@@ -157,6 +188,8 @@ export function ChatMessageToJSONTyped(value?: ChatMessage | null, ignoreDiscrim
         'attachments': ((value['attachments'] as Array<any>).map(ChatAttachmentToJSON)),
         'read_by_recipient': value['readByRecipient'],
         'product': ChatProductToJSON(value['product']),
+        'automated_reply': ChatAutomatedReplyToJSON(value['automatedReply']),
+        'work_package_attachment': ChatWorkPackageAttachmentToJSON(value['workPackageAttachment']),
     };
 }
 

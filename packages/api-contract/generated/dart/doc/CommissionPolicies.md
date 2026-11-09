@@ -12,6 +12,9 @@ Name | Type | Description | Notes
 **next** | [**CommissionPolicy**](CommissionPolicy.md) |  | [optional]
 **latestVersion** | **int** |  |
 **canManage** | **bool** |  |
+**minNoticeDays** | **int** |  | [optional]
+**eligibleVendorCount** | **int** |  | [optional]
+**canExport** | **bool** |  | [optional]
 **versions** | [**BuiltList&lt;CommissionPolicy&gt;**](CommissionPolicy.md) |  |
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

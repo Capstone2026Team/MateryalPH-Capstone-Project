@@ -52,5 +52,10 @@ void main() {
       // TODO
     });
 
+    // String replacesOrderId
+    test('to test the property `replacesOrderId`', () async {
+      // TODO
+    });
+
   });
 }

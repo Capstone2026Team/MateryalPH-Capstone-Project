@@ -130,8 +130,9 @@ async function capture(page: Page, name: string) {
   const directory = resolve('../../docs/design/evidence/portal-standardization')
   mkdirSync(directory, { recursive: true })
   // Desktop portals scroll inside the workspace; release it so the capture shows the whole page.
-  await page.addStyleTag({ content: 'html, body, .portal-layout, .portal-workspace { height: auto !important; max-height: none !important; overflow: visible !important; } .portal-workspace > header { position: static !important; }' })
+  const style = await page.addStyleTag({ content: 'html, body, .portal-layout, .portal-workspace { height: auto !important; max-height: none !important; overflow: visible !important; } .portal-workspace > header { position: static !important; }' })
   await page.screenshot({ path: resolve(directory, `catalog-${page.viewportSize()!.width}-${name}.png`), fullPage: true })
+  await style.evaluate(element => element.remove())
 }
 
 test('My Products shows summary tiles, status chips and product cards, and the same data as a table', async ({ page }) => {
@@ -172,6 +173,80 @@ test('My Products shows summary tiles, status chips and product cards, and the s
   await expect(page.getByText(/stays active without products/)).toBeVisible()
   await fits(page)
   await capture(page, 'products-empty')
+})
+
+test('a clickable product card keeps Delete and its confirmation separate from navigation', async ({ page }) => {
+  await vendorFixture(page)
+  await page.goto('/products')
+  const cards = page.getByRole('list', { name: 'Store products' })
+  await cards.getByRole('button', { name: 'Delete Portland cement 40 kg' }).click()
+  await expect(page).toHaveURL('/products')
+  const dialog = page.getByRole('dialog', { name: 'Delete this draft?' })
+  await expect(dialog).toBeVisible()
+  await expect(dialog.getByRole('button', { name: 'Cancel' })).toBeFocused()
+  await dialog.getByRole('button', { name: 'Cancel' }).click()
+  await expect(dialog).toBeHidden()
+  await expect(page).toHaveURL('/products')
+  await expect(cards.getByRole('link', { name: 'Portland cement 40 kg', exact: true })).toHaveAttribute('href', '/analytics/products/listing-1')
+})
+
+test('compact catalog keeps long products, photo fallbacks and grouped table details readable', async ({ page }) => {
+  const mutations = await vendorFixture(page)
+  const screenshot = async (name: string) => {
+    const style = await page.addStyleTag({ content: 'html, body, .portal-layout, .portal-workspace { height: auto !important; max-height: none !important; overflow: visible !important; } .portal-workspace > header { position: static !important; }' })
+    await page.screenshot({ path: test.info().outputPath(name), fullPage: true })
+    await style.evaluate(element => element.remove())
+  }
+  const products = [
+    { name: 'Rerolled steel bar', sku: 'STEEL-12MM', status: 'ACTIVE', regulated: true, compliance: 'VERIFIED', quantity: '4893.0000', price: 28550, unit: 'PC', photo: 'photo.png' },
+    { name: 'Ready-mixed concrete', sku: 'RMC-3000PSI', status: 'ACTIVE', regulated: false, compliance: 'NOT_REQUIRED', quantity: '3.0000', price: 300000, unit: 'M3', photo: 'photo.png' },
+    { name: 'Steel wire nail', sku: 'NAIL-2IN', status: 'INACTIVE', regulated: true, compliance: 'NOT_SUBMITTED', quantity: '100.0000', price: 25000, unit: 'BOX', photo: 'photo.png' },
+    { name: 'Galvanized steel reinforcement for structural construction, 12 mm × 6 m', sku: 'REINFORCEMENTSTRUCTURAL12MM6000MMGALVANIZED', status: 'TEMPORARILY_HIDDEN_STOCK_NOT_CONFIRMED', regulated: true, compliance: 'CHANGES_REQUIRED', quantity: '0.0000', price: 120000000, unit: 'PC', photo: 'unavailable.png' },
+    { name: 'Portland cement 40 kg', sku: 'CEM-DRAFT', status: 'DRAFT', regulated: true, compliance: 'NOT_SUBMITTED', quantity: null, price: null, unit: 'BAG', photo: null },
+    { name: 'Hollow block 4 in', sku: 'CHB-4', status: 'PENDING_ADMIN_REVIEW', regulated: false, compliance: 'NOT_REQUIRED', quantity: '1200.0000', price: 1450, unit: 'PC', photo: null },
+  ]
+  await page.route('https://files.example.test/unavailable.png', route => route.fulfill({ status: 404, body: '' }))
+  await page.route('**/api/v1/vendor/catalog/listings?*', route => fulfil(route, products.map((product, index) => ({
+    id: `layout-${index}`, display_name: product.name, vendor_sku: product.sku, status: product.status,
+    compliance_status: product.compliance, regulated: product.regulated, category_name: 'Construction materials',
+    material_name: product.name, other_label: null, lock_version: 1, variant_count: index === 5 ? 2 : 1,
+    min_price_centavos: product.price, max_price_centavos: index === 5 ? 1875 : product.price,
+    public_availability: product.quantity === '0.0000' ? 'OUT_OF_STOCK' : 'IN_STOCK',
+    primary_image_url: product.photo ? `https://files.example.test/${product.photo}` : null,
+    unit_code: product.unit, available_quantity: product.quantity, deletable: product.status === 'DRAFT',
+  })), { total: 6, last_page: 1, status_counts: { ACTIVE: 2, INACTIVE: 1, DRAFT: 1, TEMPORARILY_HIDDEN_STOCK_NOT_CONFIRMED: 1, PENDING_ADMIN_REVIEW: 1 } }))
+  await page.route('**/api/v1/vendor/product-analytics/summaries?*', route => fulfil(route, {
+    period: { days: 30, from: '2026-10-07T00:00:00Z', to: '2026-11-05T00:00:00Z', timezone: 'Asia/Manila' },
+    items: products.flatMap((product, index) => product.status === 'DRAFT' ? [] : [{ listing_id: `layout-${index}`, views: index === 2 ? 0 : 42, previous_views: 21, views_change_percent: index === 2 ? null : 100, viewers: 30, orders: index === 2 ? 0 : 6, conversion: { percent: index === 2 ? null : '20.00', numerator: 6, denominator: 30 }, daily_views: index === 2 ? [0, 0, 0] : [1, 4, 2, 5, 3, 8, 6] }]),
+  }))
+  await page.goto('/products')
+  const cards = page.getByRole('list', { name: 'Store products' })
+  await expect(cards.getByRole('listitem')).toHaveCount(6)
+  await expect(cards.getByText('Photo unavailable')).toBeVisible()
+  await expect(cards.getByText('No photo yet')).toHaveCount(2)
+  await expect(cards.getByText('20.00%')).toHaveCount(4)
+  await fits(page)
+  if (page.viewportSize()!.width >= 640) expect((await page.getByLabel('Listing summary').boundingBox())!.height).toBeLessThanOrEqual(104)
+  const firstCard = cards.getByRole('listitem').first()
+  const edit = firstCard.getByRole('link', { name: 'Edit Rerolled steel bar' })
+  expect((await edit.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+  await screenshot('catalog-grid.png')
+  await page.getByRole('button', { name: 'Table' }).click()
+  const tableMode = page.viewportSize()!.width >= 1024 ? page.getByRole('table', { name: 'Store products' }) : page.getByRole('list', { name: 'Store products' })
+  await expect(tableMode.getByText('₱14.50 – ₱18.75 / piece')).toBeVisible()
+  await expect(tableMode.getByText('No price yet')).toBeVisible()
+  await expect(tableMode.getByText('Stock (private)', { exact: true })).toHaveCount(page.viewportSize()!.width >= 1024 ? 1 : 6)
+  await expect(tableMode.getByText(/^Buyers:/)).toHaveCount(6)
+  await expect(tableMode.getByRole('link', { name: /^Edit / })).toHaveCount(6)
+  if (page.viewportSize()!.width >= 1024) await expect(tableMode.getByRole('columnheader')).toHaveCount(6)
+  await fits(page)
+  await screenshot('catalog-table.png')
+  await page.getByRole('button', { name: 'Grid' }).click()
+  await firstCard.scrollIntoViewIfNeeded()
+  const photoBounds = (await firstCard.locator('.mp-product-listing-photo').boundingBox())!
+  await page.mouse.click(photoBounds.x + 20, photoBounds.y + 60)
+  await expect(page).toHaveURL('/analytics/products/layout-0')
+  expect(mutations).toHaveLength(0)
 })
 
 test('listing wizard creates a draft, validates variants and tiers, uploads a photo and converges PS/ICC on one review step', async ({ page }) => {

@@ -18,6 +18,10 @@ part 'admin_score_detail.g.dart';
 /// AdminScoreDetail
 ///
 /// Properties:
+/// * [ratingComponents]
+/// * [completedOrders]
+/// * [ohsCalculatedOn]
+/// * [nextOhsRecalculationOn]
 /// * [vendorId]
 /// * [storeName]
 /// * [calculated]
@@ -35,6 +39,18 @@ part 'admin_score_detail.g.dart';
 /// * [canInvestigate]
 @BuiltValue()
 abstract class AdminScoreDetail implements Built<AdminScoreDetail, AdminScoreDetailBuilder> {
+  @BuiltValueField(wireName: r'rating_components')
+  BuiltMap<String, JsonObject?>? get ratingComponents;
+
+  @BuiltValueField(wireName: r'completed_orders')
+  BuiltMap<String, JsonObject?>? get completedOrders;
+
+  @BuiltValueField(wireName: r'ohs_calculated_on')
+  Date? get ohsCalculatedOn;
+
+  @BuiltValueField(wireName: r'next_ohs_recalculation_on')
+  Date? get nextOhsRecalculationOn;
+
   @BuiltValueField(wireName: r'vendor_id')
   String? get vendorId;
 
@@ -103,6 +119,34 @@ class _$AdminScoreDetailSerializer implements PrimitiveSerializer<AdminScoreDeta
     AdminScoreDetail object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.ratingComponents != null) {
+      yield r'rating_components';
+      yield serializers.serialize(
+        object.ratingComponents,
+        specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
+      );
+    }
+    if (object.completedOrders != null) {
+      yield r'completed_orders';
+      yield serializers.serialize(
+        object.completedOrders,
+        specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
+      );
+    }
+    if (object.ohsCalculatedOn != null) {
+      yield r'ohs_calculated_on';
+      yield serializers.serialize(
+        object.ohsCalculatedOn,
+        specifiedType: const FullType.nullable(Date),
+      );
+    }
+    if (object.nextOhsRecalculationOn != null) {
+      yield r'next_ohs_recalculation_on';
+      yield serializers.serialize(
+        object.nextOhsRecalculationOn,
+        specifiedType: const FullType(Date),
+      );
+    }
     if (object.vendorId != null) {
       yield r'vendor_id';
       yield serializers.serialize(
@@ -231,6 +275,38 @@ class _$AdminScoreDetailSerializer implements PrimitiveSerializer<AdminScoreDeta
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'rating_components':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
+          ) as BuiltMap<String, JsonObject?>?;
+          if (valueDes == null) continue;
+          result.ratingComponents.replace(valueDes);
+          break;
+        case r'completed_orders':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
+          ) as BuiltMap<String, JsonObject?>?;
+          if (valueDes == null) continue;
+          result.completedOrders.replace(valueDes);
+          break;
+        case r'ohs_calculated_on':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(Date),
+          ) as Date?;
+          if (valueDes == null) continue;
+          result.ohsCalculatedOn = valueDes;
+          break;
+        case r'next_ohs_recalculation_on':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(Date),
+          ) as Date?;
+          if (valueDes == null) continue;
+          result.nextOhsRecalculationOn = valueDes;
+          break;
         case r'vendor_id':
           final valueDes = serializers.deserialize(
             value,

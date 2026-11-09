@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowDownRight, ArrowRight, ArrowUpRight, BarChart3, Eye, Minus, MousePointerClick, PencilLine, ShoppingCart, Users, Wallet } from 'lucide-react'
-import {
-  AssociationRuleList, BarList, ChartDataTable, ForecastNote, InfoNote, InsightList, InsightPanel, KpiCard, Pagination, PeriodSelector, RankedList, ResponsiveRecordList, Select, SegmentScatter,
-  ShareBar, Sparkline, StatusBadge, StatusMessage, TrendLineChart, analyticsDay, formatChartDay, formatCount, formatPesoCentavos, usePortalResource,
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { ArrowDownRight, ArrowRight, ArrowUpRight, BarChart3, Eye, Minus, MousePointerClick, ShoppingCart, Wallet } from 'lucide-react'
+import { BackNavigation,
+  AnalyticsChartCard, AnalyticsSummary, AnalyticsDetails, AssociationRuleList, BarList, ChartDataTable, DashboardPanel, ForecastNote, MaterialQualityCard, MethodNote, InfoNote, InsightList, InsightPanel, Pagination, PeriodSelector, RankedList, ResponsiveRecordList, SegmentedControl, SegmentScatter,
+  ProductDetailWorkspace, ShareBar, Sparkline, StatusBadge, StatusMessage, TrendLineChart, analyticsDay, formatChartDay, formatCount, formatPesoCentavos, usePortalResource,
   type ForecastView, type InsightItem, type RecordColumn, type TrendMarker, type VizColor,
 } from '@materyalph/web-ui'
 import type { DashboardForecast, DashboardRate, ProductAnalyticsSeriesPoint } from '@materyalph/api-client-ts'
@@ -13,7 +13,10 @@ import {
 } from '../lib/product-analytics-api'
 import { readableApiError } from '../lib/auth-api'
 import { ProductReviewsSection } from './VendorReviewPages'
-import { ErrorState, LoadingState, PageHeader } from './PhaseThreeVendorPages'
+import { ErrorState, LoadingState } from './PhaseThreeVendorPages'
+import { ProductAnalyticsProduct } from './ProductAnalyticsProduct'
+import { useProductAnalyticsListing } from '../lib/product-analytics-context'
+import { getStorePerformance, type StorePerformance } from '../lib/trust-api'
 
 const SLOTS: VizColor[] = ['--mp-viz-series-1', '--mp-viz-series-2', '--mp-viz-series-3', '--mp-viz-series-4', '--mp-viz-series-5', '--mp-viz-series-6']
 const STOCK: Record<string, { label: string; tone: 'success' | 'warning' | 'error' }> = { IN_STOCK: { label: 'In stock', tone: 'success' }, LIMITED_STOCK: { label: 'Limited stock', tone: 'warning' }, OUT_OF_STOCK: { label: 'Out of stock', tone: 'error' } }
@@ -52,27 +55,39 @@ function suggestionItems(items: ProductAnalyticsSuggestion[]): InsightItem[] {
 
 function ViewsTrend({ series, forecast, markers = [], horizonDays, method, subject = 'your products' }: { series: ProductAnalyticsSeriesPoint[]; forecast: DashboardForecast; markers?: TrendMarker[]; horizonDays: number; method: ReactNode; subject?: string }) {
   const labels = series.map(point => day(point.date))
-  return <InsightPanel title="Product views and orders" purpose={`Daily demand for ${subject}: Buyers who opened it (bars) and confirmed orders that included it (line). The shaded region is a 7-day views forecast.`} method={method}>
-    <TrendLineChart title="Product views and orders per day" labels={labels} formatLabel={formatChartDay} formatValue={value => formatCount(Math.round(value * 10) / 10)} emptyReason="No views or orders in this period."
-      series={[{ key: 'views', label: 'Product views', colorVar: '--mp-viz-series-1', values: series.map(point => point.views), kind: 'bar' }, { key: 'orders', label: 'Orders', colorVar: '--mp-viz-series-2', values: series.map(point => point.orders) }]}
-      forecast={forecast.state === 'OK' ? { label: 'Views forecast', labels: forecast.points.map(point => day(point.date)), values: forecast.points.map(point => point.value), lower: forecast.points.map(point => point.lower), upper: forecast.points.map(point => point.upper) } : null}
-      markers={markers} />
+  return <AnalyticsChartCard title="Product views and orders" description={`Views and confirmed orders for ${subject}.`} details={<>
     <ForecastNote forecast={forecastView(forecast)} horizonDays={horizonDays} unit="product views" formatValue={value => formatCount(Math.round(value))} />
     <ChartDataTable caption="Product views and orders per day" rowHeader="Date" rows={labels.map(formatChartDay)} columns={[
       { key: 'views', header: 'Product views', values: series.map(point => formatCount(point.views)) },
       { key: 'orders', header: 'Orders', values: series.map(point => formatCount(point.orders)) },
       ...(series.some(point => point.valueCentavos !== null && point.valueCentavos !== undefined) ? [{ key: 'value', header: 'Sales value', values: series.map(point => formatPesoCentavos(point.valueCentavos ?? null)) }] : []),
-    ]} />
-  </InsightPanel>
+    ]} /><MethodNote>{method}</MethodNote></>}>
+    <TrendLineChart title="Product views and orders per day" labels={labels} formatLabel={formatChartDay} formatValue={value => formatCount(Math.round(value * 10) / 10)} emptyReason="No views or orders in this period."
+      series={[{ key: 'views', label: 'Product views', colorVar: '--mp-viz-series-1', values: series.map(point => point.views), kind: 'bar' }, { key: 'orders', label: 'Orders', colorVar: '--mp-viz-series-2', values: series.map(point => point.orders) }]}
+      forecast={forecast.state === 'OK' ? { label: 'Views forecast', labels: forecast.points.map(point => day(point.date)), values: forecast.points.map(point => point.value), lower: forecast.points.map(point => point.lower), upper: forecast.points.map(point => point.upper) } : null}
+      markers={markers} />
+  </AnalyticsChartCard>
 }
 
-const productLink = (row: ProductAnalyticsRow) => <Link className="hover:text-action-primary hover:underline" to={`/performance/products/${row.listingId}`}>{row.name}</Link>
+const productLink = (row: ProductAnalyticsRow) => <Link className="hover:text-action-primary hover:underline" to={`/analytics/products/${row.listingId}`}>{row.name}</Link>
+
+/** Scores keep their own loading/retry boundary and their published 90-day window. */
+function ProductMaterialQuality({ data, error, onRetry }: { data: StorePerformance | null; error: unknown; onRetry: () => void }) {
+  const message = useErrorText(error)
+  if (!data) return <DashboardPanel density="compact" title="Material quality (MQS)" description="Quality across your sold materials">
+    {message ? <ErrorState message={message} onRetry={onRetry} /> : <LoadingState label="Loading material quality…" />}
+  </DashboardPanel>
+  return <div className="mp-product-quality-score">
+    {message && <StatusMessage tone="error">{message} Showing the last successful score.</StatusMessage>}
+    <MaterialQualityCard score={data.scores?.find(score => score.key === 'MQS')} />
+  </div>
+}
 
 /**
- * Store-wide Product Analytics (Store Performance → Product analytics). One request per period and table page; peso
+ * Store-wide Product Analytics in its own Analytics section. One request per period and table page; peso
  * values arrive only for the Owner. Every panel states what it is for and how it is calculated.
  */
-export function ProductAnalyticsWorkspace() {
+export function ProductAnalyticsWorkspace({ canViewScores = false }: { canViewScores?: boolean }) {
   const [params, setParams] = useSearchParams()
   const period = parsePeriod(params.get('days'))
   const sort = (SORTS.some(item => item.value === params.get('sort')) ? params.get('sort') : 'views') as ProductSort
@@ -80,84 +95,99 @@ export function ProductAnalyticsWorkspace() {
   const update = (patch: Record<string, string | null>) => setParams(current => { const next = new URLSearchParams(current); for (const [key, value] of Object.entries(patch)) { if (value) next.set(key, value); else next.delete(key) } return next }, { replace: true })
   const loader = useCallback(() => getProductAnalytics(period, sort, page), [period, sort, page])
   const { data, error, pending, refresh } = usePortalResource(`vendor-product-analytics-${period}-${sort}-${page}`, loader)
+  const quality = usePortalResource('vendor-product-material-quality', getStorePerformance, canViewScores)
   const message = useErrorText(error)
-  const toolbar = <div className="flex flex-wrap items-center justify-between gap-3">
+  const toolbar = <div className="mp-product-analytics-toolbar">
     <PeriodSelector label="Period" value={period} options={ANALYTICS_PERIODS} disabled={pending && !data} onChange={value => update({ days: String(value), page: null })} />
     {data && <p className="text-xs text-text-secondary">{formatChartDay(day(data.period.from))} – {formatChartDay(day(data.period.to))} · Asia/Manila · updated {new Date(data.generatedAt).toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' })}</p>}
   </div>
-  if (!data) return <div className="space-y-5">{toolbar}{message ? <ErrorState message={message} onRetry={() => void refresh()} /> : <LoadingState label="Loading product analytics…" />}</div>
+  if (!data) return <div className="mp-analytics space-y-3">{toolbar}{message ? <ErrorState message={message} onRetry={() => void refresh()} /> : <LoadingState label="Loading product analytics…" />}</div>
   const sales = data.access.salesValue
   const kpis = data.kpis
   const periodLabel = `previous ${data.period.days} days`
   const leaderSelling = Math.max(1, ...data.topSelling.map(row => (sales ? row.valueCentavos ?? 0 : row.orders)))
   const leaderViews = Math.max(1, ...data.mostViewed.map(row => row.views))
   const definitions = data.definitions
-  return <div className="space-y-5">
+  return <div className="mp-analytics mp-product-analytics">
     {toolbar}
     {message && <StatusMessage tone="error">{message} Showing the last successful update.</StatusMessage>}
     <TrackingNote since={data.tracking.viewsSince} from={data.period.from} />
-    <dl aria-label="Product analytics summary" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <KpiCard label="Product views" value={formatCount(kpis.views.value)} delta={{ changePercent: kpis.views.changePercent, periodLabel }} sparkline={data.series.map(point => point.views)} icon={<Eye size={16} aria-hidden="true" />} accent
-        hint={`${formatCount(kpis.viewers.value)} distinct Buyers · ${formatCount(kpis.productsViewed.value)} of ${formatCount(kpis.productsViewed.total)} products viewed.`} />
-      <KpiCard label="View-to-order conversion" value={percent(kpis.conversion)} icon={<MousePointerClick size={16} aria-hidden="true" />}
-        hint={kpis.conversion.denominator === 0 ? 'No viewers in this period.' : `${formatCount(kpis.conversion.numerator)} of ${formatCount(kpis.conversion.denominator)} viewers ordered a product they viewed.`} />
-      <KpiCard label="Orders with your products" value={formatCount(kpis.orders.value)} delta={{ changePercent: kpis.orders.changePercent, periodLabel }} sparkline={data.series.map(point => point.orders)} icon={<ShoppingCart size={16} aria-hidden="true" />} hint="Confirmed orders in the period, excluding fully refunded." />
-      {sales && kpis.valueCentavos
-        ? <KpiCard label="Product sales value" value={formatPesoCentavos(kpis.valueCentavos.value)} delta={{ changePercent: kpis.valueCentavos.changePercent, periodLabel }} icon={<Wallet size={16} aria-hidden="true" />} hint="Line value; fully refunded orders excluded." />
-        : <KpiCard label="Buyers viewing" value={formatCount(kpis.viewers.value)} delta={{ changePercent: kpis.viewers.changePercent, periodLabel }} icon={<Users size={16} aria-hidden="true" />} hint="Distinct Buyers who opened at least one of your products. Peso values are available to the Owner." />}
-    </dl>
+    <div className="mp-product-analytics-overview" data-has-quality={canViewScores || undefined}>
+      <AnalyticsSummary density="compact" title="At a glance" featured={sales && kpis.valueCentavos
+        ? { label: 'Product sales value', value: formatPesoCentavos(kpis.valueCentavos.value), icon: <Wallet size={16} aria-hidden="true" />, hint: 'Materials after discounts, VAT included. Before partial refunds; delivery excluded.', changePercent: kpis.valueCentavos.changePercent, comparison: `vs ${periodLabel}`, comparisonUnavailable: kpis.valueCentavos.previous === 0 ? `No sales in ${periodLabel}` : 'Previous period comparison unavailable' }
+        : { label: 'Product views', value: formatCount(kpis.views.value), changePercent: kpis.views.changePercent, comparison: `vs ${periodLabel}`, comparisonUnavailable: kpis.views.previous === 0 ? `No views in ${periodLabel}` : 'Previous period comparison unavailable' }} metrics={[
+          { label: 'Product views', value: formatCount(kpis.views.value), icon: <Eye size={15} />, hint: `${formatCount(kpis.viewers.value)} distinct Buyers · ${formatCount(kpis.productsViewed.value)} of ${formatCount(kpis.productsViewed.total)} products viewed.` },
+          { label: 'View-to-order conversion', value: percent(kpis.conversion), icon: <MousePointerClick size={15} />, hint: kpis.conversion.denominator === 0 ? 'No viewers in this period.' : `${formatCount(kpis.conversion.numerator)} of ${formatCount(kpis.conversion.denominator)} viewers ordered a product they viewed.` },
+          { label: 'Orders with your products', value: formatCount(kpis.orders.value), icon: <ShoppingCart size={15} />, changePercent: kpis.orders.changePercent, comparison: `vs ${periodLabel}`, comparisonUnavailable: kpis.orders.previous === 0 ? `No orders in ${periodLabel}` : 'Previous period comparison unavailable' },
+        ]} />
 
-    <ViewsTrend series={data.series} forecast={data.forecast.views} horizonDays={data.forecast.horizonDays} method={<>{definitions.views} {definitions.orders} {definitions.forecast}</>} />
-
-    <div className="flex items-center gap-3"><h2 className="text-xs font-semibold uppercase tracking-widest text-action-primary">Top performance</h2><div className="h-px flex-1 bg-border-default" /></div>
-    <div className="grid items-start gap-5 xl:grid-cols-3">
-      <InsightPanel title="Top selling products" purpose={sales ? 'Your best sellers by sales value, to plan stock and pricing.' : 'Your best sellers by confirmed orders, to plan stock.'} method={definitions.top_selling}>
-        <RankedList label="Top selling products" empty="No product was ordered in this period." items={data.topSelling.map(row => ({ key: row.listingId, label: productLink(row), title: row.name, meta: row.category,
-          value: sales ? formatPesoCentavos(row.valueCentavos ?? null) : `${formatCount(row.orders)} orders`, detail: sales ? `${formatCount(row.orders)} orders · ${formatCount(row.buyers)} Buyers` : `${formatCount(row.buyers)} Buyers`,
-          share: (sales ? row.valueCentavos ?? 0 : row.orders) / leaderSelling }))} />
-      </InsightPanel>
-      <InsightPanel title="Top performing products" purpose="Products that turn views into orders most reliably — the ones worth keeping in stock and featuring." method={definitions.top_performing}>
-        <RankedList label="Top performing products" colorVar="--mp-viz-series-3" empty="No viewer has ordered a product they viewed in this period yet." items={data.topPerforming.map(row => ({ key: row.listingId, label: productLink(row), title: row.name, meta: row.category,
-          value: percent(row.conversion), detail: `${formatCount(row.converted)} of ${formatCount(row.viewers)} viewers`, share: row.conversionLowerBound ?? 0 }))} />
-      </InsightPanel>
-      <InsightPanel title="Most viewed products" purpose="Where Buyer attention goes. A product viewed often but rarely ordered may need a price or listing review." method={definitions.most_viewed}>
-        <RankedList label="Most viewed products" colorVar="--mp-viz-series-2" empty="No product was viewed in this period." items={data.mostViewed.map(row => ({ key: row.listingId, label: productLink(row), title: row.name, meta: row.category,
-          value: `${formatCount(row.views)} views`, detail: `${percent(row.conversion)} converted`, share: row.views / leaderViews }))} />
-      </InsightPanel>
+      {canViewScores && <section aria-label="Product quality" className="mp-product-analytics-quality">
+        <ProductMaterialQuality data={quality.data} error={quality.error} onRetry={() => void quality.refresh()} />
+      </section>}
     </div>
 
-    <InsightPanel title="Suggestions" purpose="What to do next, worked out from your own views, orders, stock and mining results. Nothing changes until you act." method={definitions.suggestions}>
-      <InsightList items={suggestionItems(data.suggestions)} empty="No suggestions right now. They appear as Buyers view and order your products." />
-    </InsightPanel>
+    <div className="mp-product-analytics-columns">
+      <div className="mp-product-analytics-trend">
+        <ViewsTrend series={data.series} forecast={data.forecast.views} horizonDays={data.forecast.horizonDays} method={<>{definitions.views} {definitions.orders} {definitions.forecast}</>} />
+        {data.suggestions.length > 0 && <InsightPanel title="Suggestions" purpose="Actions based on product demand and stock." method={definitions.suggestions} scrollBody>
+          <InsightList compact items={suggestionItems(data.suggestions)} empty="No suggestions right now. They appear as Buyers view and order your products." />
+        </InsightPanel>}
+      </div>
+      <div className="mp-product-analytics-rankings">
+        {data.topRated != null && <DashboardPanel density="compact" title="Top-rated products" description="Highest product ratings across your published products · All time" calculation={definitions.top_rated}>
+          <RankedList label="Top-rated products" empty="No rated products yet. Products appear here after receiving an eligible, visible Product Quality rating." items={data.topRated.map(row => ({ key: row.listingId,
+            label: <Link className="hover:text-action-primary hover:underline" to={`/analytics/products/${row.listingId}`}>{row.name}</Link>, title: row.name, meta: row.category,
+            value: `${row.average} / 5`, detail: `${formatCount(row.count)} ${row.count === 1 ? 'rating' : 'ratings'}`, share: Number(row.average) / 5 }))} />
+          <p className="mt-4 text-xs leading-5 text-text-secondary">Individual product averages are separate from your store’s rolling 90-day MQS. The selected analytics period does not change these ratings.</p>
+        </DashboardPanel>}
+        <InsightPanel title="Top selling products" purpose={sales ? 'Top 3 by sales value.' : 'Top 3 by confirmed orders.'} method={definitions.top_selling}>
+          <RankedList label="Top selling products" empty="No product was ordered in this period." items={data.topSelling.slice(0, 3).map(row => ({ key: row.listingId, label: productLink(row), title: row.name, meta: row.category,
+            value: sales ? formatPesoCentavos(row.valueCentavos ?? null) : `${formatCount(row.orders)} orders`, detail: sales ? `${formatCount(row.orders)} orders · ${formatCount(row.buyers)} Buyers` : `${formatCount(row.buyers)} Buyers`,
+            share: (sales ? row.valueCentavos ?? 0 : row.orders) / leaderSelling }))} />
+        </InsightPanel>
+        <InsightPanel title="Top performing products" purpose="Top 3 by reliable view-to-order conversion." method={definitions.top_performing}>
+          <RankedList label="Top performing products" colorVar="--mp-viz-series-3" empty="No viewer has ordered a product they viewed in this period yet." items={data.topPerforming.slice(0, 3).map(row => ({ key: row.listingId, label: productLink(row), title: row.name, meta: row.category,
+            value: percent(row.conversion), detail: `${formatCount(row.converted)} of ${formatCount(row.viewers)} viewers`, share: row.conversionLowerBound ?? 0 }))} />
+        </InsightPanel>
+        <InsightPanel title="Category share" purpose={sales ? 'Sales value by material category.' : 'Confirmed orders by material category.'} method={definitions.categories}>
+          <ShareBar variant="donut" label="Category share" empty="No category had orders in this period." formatValue={value => (sales ? formatPesoCentavos(value) : formatCount(value))}
+            segments={data.categories.map((category, index) => ({ key: category.category, label: category.category, value: sales ? category.valueCentavos ?? 0 : category.orders, colorVar: SLOTS[index % SLOTS.length] ?? '--mp-viz-series-1' }))} />
+        </InsightPanel>
+      </div>
 
-    <div className="grid items-start gap-5 xl:grid-cols-2">
-      <InsightPanel title="Category share" purpose={sales ? 'How your sales value splits across material categories.' : 'How your orders split across material categories.'} method={definitions.categories}>
-        <ShareBar label="Category share" empty="No category had orders in this period." formatValue={value => (sales ? formatPesoCentavos(value) : formatCount(value))}
-          segments={data.categories.map((category, index) => ({ key: category.category, label: category.category, value: sales ? category.valueCentavos ?? 0 : category.orders, colorVar: SLOTS[index % SLOTS.length] ?? '--mp-viz-series-1' }))} />
-        <BarList label="Views by category" colorVar="--mp-viz-series-2" empty="No category was viewed in this period." items={data.categories.map(category => ({ key: category.category, label: category.category, value: category.views, display: `${formatCount(category.views)} views`, detail: `${formatCount(category.orders)} orders` }))} />
-      </InsightPanel>
-      <InsightPanel title="Frequently ordered together" purpose="Products Buyers order in the same order — useful for stocking pairs and offering them together in quotations." method={definitions.basket_rules}>
-        <AssociationRuleList countLabel="orders" empty={`No pattern yet: a pair must appear in at least two orders from two different Buyers (${formatCount(data.basketRules.baskets)} orders checked in the last ${data.basketRules.windowDays} days).`}
-          rules={data.basketRules.rules.map(rule => ({ antecedent: rule.antecedent, consequent: rule.consequent, confidence: rule.confidence, lift: rule.lift, supportCount: rule.supportCount }))} />
-      </InsightPanel>
     </div>
 
-    <InsightPanel title="Product performance segments" purpose="Your products grouped by similar views, conversion and orders, so you can treat each group differently." method={<>{definitions.segments}{data.segments.silhouette !== null && data.segments.silhouette !== undefined ? ` Silhouette ${data.segments.silhouette.toFixed(2)} (closer to 1 means clearer groups).` : ''}</>}>
-      {data.segments.state !== 'OK' ? <p className="text-sm text-text-secondary">{data.segments.reason ?? 'Not enough products with activity to group yet.'}</p> : <>
-        <SegmentScatter title="Products by views and conversion" xLabel="Product views" yLabel="Conversion %" groups={data.segments.segments.map(segment => segment.label)} formatY={value => `${Math.round(value)}%`}
-          points={data.segments.points.map(point => ({ key: point.listingId, label: point.name, x: point.views, y: point.conversionPercent, group: point.segment }))} />
-        <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">{data.segments.segments.map(segment => <li key={segment.id} className="grid gap-1 border-l-2 border-border-default pl-4 text-sm">
-          <span className="font-semibold text-text-strong">{segment.label}</span>
-          <span className="text-text-secondary">{formatCount(segment.size)} products · about {formatCount(segment.averageViews)} views, {formatCount(segment.averageConversionPercent)}% conversion and {formatCount(segment.averageOrders)} orders each</span>
-          <span className="text-xs text-text-secondary">e.g. {segment.examples.join(', ')}</span></li>)}</ul>
-      </>}
-    </InsightPanel>
-
-    <InsightPanel title="All products" purpose="Every published product with its measures for the period. Open a product for its own trend, forecast and suggestions." method={<>{definitions.conversion} {definitions.stock}</>}
-      action={<div className="w-48"><Select label="Sort products" hideLabel value={sort} onChange={event => update({ sort: event.target.value, page: null })}>{SORTS.filter(item => sales || item.value !== 'value').map(item => <option key={item.value} value={item.value}>{item.label}</option>)}</Select></div>}>
+    <InsightPanel title="All products" purpose={`${formatCount(data.products.meta.total)} published products · Compare views, orders and conversion for the selected dates.`} method={<>{definitions.conversion} {definitions.stock}</>}>
+      <SegmentedControl label="Sort products" value={sort} options={SORTS.filter(item => sales || item.value !== 'value')} onChange={value => update({ sort: value, page: null })} />
       <ProductTable rows={data.products.items} sales={sales} />
       {data.products.meta.lastPage > 1 && <Pagination page={data.products.meta.page} lastPage={data.products.meta.lastPage} total={data.products.meta.total} busy={pending} onChange={next => update({ page: String(next) })} />}
     </InsightPanel>
+    <section aria-label="Product demand patterns" className="mp-product-demand">
+      <header className="mp-product-analytics-section-heading"><h2>Product demand patterns</h2><p>Explore Buyer attention, ordering patterns and product groups.</p></header>
+      <div className="mp-product-patterns">
+        <InsightPanel title="Most viewed products" purpose="Where Buyer attention goes. A product viewed often but rarely ordered may need a price or listing review." method={definitions.most_viewed}>
+          <RankedList label="Most viewed products" colorVar="--mp-viz-series-2" empty="No product was viewed in this period." items={data.mostViewed.map(row => ({ key: row.listingId, label: productLink(row), title: row.name, meta: row.category,
+            value: `${formatCount(row.views)} views`, detail: `${percent(row.conversion)} converted`, share: row.views / leaderViews }))} />
+        </InsightPanel>
+        <InsightPanel title="Frequently ordered together" purpose="Products Buyers order in the same order — useful for stocking pairs and offering them together in quotations." method={definitions.basket_rules}>
+          <AssociationRuleList countLabel="orders" empty={`No pattern yet: a pair must appear in at least two orders from two different Buyers (${formatCount(data.basketRules.baskets)} orders checked in the last ${data.basketRules.windowDays} days).`}
+            rules={data.basketRules.rules.map(rule => ({ antecedent: rule.antecedent, consequent: rule.consequent, confidence: rule.confidence, lift: rule.lift, supportCount: rule.supportCount }))} />
+        </InsightPanel>
+        <InsightPanel title="Views by category" purpose="Buyer attention across your material categories." method={definitions.categories}>
+          <BarList label="Views by category" colorVar="--mp-viz-series-2" empty="No category was viewed in this period." items={data.categories.map(category => ({ key: category.category, label: category.category, value: category.views, display: `${formatCount(category.views)} views`, detail: `${formatCount(category.orders)} orders` }))} />
+        </InsightPanel>
+        <InsightPanel title="Product performance segments" purpose="Your products grouped by similar views, conversion and orders, so you can treat each group differently." method={<>{definitions.segments}{data.segments.silhouette !== null && data.segments.silhouette !== undefined ? ` Silhouette ${data.segments.silhouette.toFixed(2)} (closer to 1 means clearer groups).` : ''}</>}>
+          {data.segments.state !== 'OK' ? <SegmentScatter compact title="Products by views and conversion" xLabel="Product views" yLabel="Conversion %" groups={[]} points={[]} emptyReason={data.segments.reason ?? 'Not enough products with activity to group yet.'} /> : <>
+            <SegmentScatter title="Products by views and conversion" xLabel="Product views" yLabel="Conversion %" groups={data.segments.segments.map(segment => segment.label)} formatY={value => `${Math.round(value)}%`}
+              points={data.segments.points.map(point => ({ key: point.listingId, label: point.name, x: point.views, y: point.conversionPercent, group: point.segment }))} />
+            <ul className="mp-product-analytics-segments">{data.segments.segments.map(segment => <li key={segment.id} className="grid gap-1 border-l-2 border-border-default pl-4 text-sm">
+              <span className="font-semibold text-text-strong">{segment.label}</span>
+              <span className="text-text-secondary">{formatCount(segment.size)} products · about {formatCount(segment.averageViews)} views, {formatCount(segment.averageConversionPercent)}% conversion and {formatCount(segment.averageOrders)} orders each</span>
+              <span className="text-xs text-text-secondary">e.g. {segment.examples.join(', ')}</span></li>)}</ul>
+          </>}
+        </InsightPanel>
+      </div>
+    </section>
   </div>
 }
 
@@ -169,7 +199,7 @@ function ChangeText({ value }: { value: number | null | undefined }) {
 function ProductTable({ rows, sales }: { rows: ProductAnalyticsRow[]; sales: boolean }) {
   if (rows.length === 0) return <p className="text-sm text-text-secondary">No published products yet. Products appear here after you publish them.</p>
   const columns: RecordColumn<ProductAnalyticsRow>[] = [
-    { key: 'product', header: 'Product', cell: row => <span className="grid"><Link className="font-semibold text-action-primary underline-offset-4 hover:underline" to={`/performance/products/${row.listingId}`}>{row.name}</Link><span className="text-xs text-text-secondary">{row.category}{row.sku ? ` · SKU ${row.sku}` : ''}</span></span> },
+    { key: 'product', header: 'Product', cell: row => <span className="grid"><Link className="font-semibold text-action-primary underline-offset-4 hover:underline" to={`/analytics/products/${row.listingId}`}>{row.name}</Link><span className="text-xs text-text-secondary">{row.category}{row.sku ? ` · SKU ${row.sku}` : ''}</span></span> },
     { key: 'views', header: 'Views', cell: row => <span className="grid whitespace-nowrap tabular-nums"><span>{formatCount(row.views)} <ChangeText value={row.viewsChangePercent} /></span><span className="text-xs text-text-secondary">{formatCount(row.viewers)} Buyers</span></span> },
     { key: 'conversion', header: 'Conversion', cell: row => <span className="whitespace-nowrap tabular-nums">{percent(row.conversion)}</span> },
     { key: 'orders', header: 'Orders', cell: row => <span className="whitespace-nowrap tabular-nums">{formatCount(row.orders)}</span> },
@@ -177,19 +207,29 @@ function ProductTable({ rows, sales }: { rows: ProductAnalyticsRow[]; sales: boo
     { key: 'segment', header: 'Segment', cell: row => row.segment ?? <span className="text-text-secondary">—</span> },
     { key: 'stock', header: 'Stock', cell: row => <StatusBadge label={STOCK[row.stockStatus]?.label ?? row.stockStatus} tone={STOCK[row.stockStatus]?.tone ?? 'neutral'} /> },
   ]
-  return <ResponsiveRecordList caption="Product measures" rows={rows} columns={columns} rowKey={row => row.listingId} cardTitle={row => <Link className="text-action-primary underline" to={`/performance/products/${row.listingId}`}>{row.name}</Link>} />
+  return <ResponsiveRecordList compact caption="Product measures" rows={rows} columns={columns} rowKey={row => row.listingId} tableClassName="[&_th]:whitespace-nowrap" cardTitle={row => <Link className="text-action-primary underline" to={`/analytics/products/${row.listingId}`}>{row.name}</Link>} />
 }
 
-/** One product's analytics (route /performance/products/:listingId); the shell checks catalog.manage and the API checks it again. */
+/** One product's analytics (route /analytics/products/:listingId); the shell checks catalog.manage and the API checks it again. */
 export function ProductAnalyticsDetail({ canViewReviews = false }: { canViewReviews?: boolean }) {
+  const location = useLocation()
+  const navigate = useNavigate()
   const { listingId = '' } = useParams()
   const [params, setParams] = useSearchParams()
   const period = parsePeriod(params.get('days'))
   const loader = useCallback(() => getProductAnalyticsDetail(listingId, period), [listingId, period])
   const { data, error, pending, refresh } = usePortalResource(`vendor-product-analytics-${listingId}-${period}`, loader)
+  const context = useProductAnalyticsListing(listingId)
+  const contextMessage = useErrorText(context.error)
   const message = useErrorText(error)
-  const back = <div className="flex flex-wrap gap-x-6"><Link to={`/performance?tab=products&days=${period}`} className={link}>← Product analytics</Link><Link to="/products" className={link}>My Products</Link></div>
-  if (!data) return <div className="space-y-4">{back}{message ? <ErrorState message={message} onRetry={() => void refresh()} /> : <LoadingState label="Loading product analytics…" />}</div>
+  const returnTo = location.state && typeof location.state === 'object' && 'returnTo' in location.state && typeof location.state.returnTo === 'string' && /^\/products(?:\?[^#]*)?$/.test(location.state.returnTo) ? location.state.returnTo : null
+  const back = <BackNavigation><button type="button" onClick={() => {
+    if (returnTo) navigate(returnTo)
+    else if (typeof window.history.state?.idx === 'number' && window.history.state.idx > 0) navigate(-1)
+    else navigate(`/analytics/products?days=${period}`)
+  }}>Return</button></BackNavigation>
+  const information = <ProductAnalyticsProduct product={data?.product ?? { listingId, name: context.data?.listing.displayName ?? 'Product', sku: context.data?.listing.vendorSku ?? null, category: context.data?.listing.material?.name ?? 'Product' }} context={context.data} error={contextMessage} refreshing={context.pending} onRetry={() => void context.refresh()} />
+  if (!data) return <div className="space-y-3">{back}<ProductDetailWorkspace information={information}>{message ? <ErrorState message={message} onRetry={() => void refresh()} /> : <LoadingState label="Loading product analytics…" />}</ProductDetailWorkspace></div>
   const product = data.product
   const kpis = data.kpis
   const sales = data.access.salesValue
@@ -197,11 +237,13 @@ export function ProductAnalyticsDetail({ canViewReviews = false }: { canViewRevi
   const labels = data.series.map(point => day(point.date))
   const markers: TrendMarker[] = data.unusualDays.days.map(item => ({ index: labels.indexOf(day(item.date)), label: 'Unusual day' })).filter(marker => marker.index >= 0)
   const definitions = data.definitions
-  return <div className="space-y-6">
+  return <div className="space-y-3">
     {back}
-    <PageHeader eyebrow={`Product analytics · ${product.category}`} title={product.name} description={`${product.sku ? `SKU ${product.sku} · ` : ''}How Buyers find, view and order this product.`}
-      actions={<><PeriodSelector label="Period" value={period} options={ANALYTICS_PERIODS} disabled={pending} onChange={value => setParams(current => { const next = new URLSearchParams(current); next.set('days', String(value)); return next }, { replace: true })} />
-        <Link className="inline-flex min-h-11 items-center gap-2 rounded-control border border-border-default bg-surface-primary px-4 text-sm font-semibold hover:bg-surface-canvas" to={`/products/${product.listingId}`}><PencilLine size={16} aria-hidden="true" />Edit listing</Link></>} />
+    <ProductDetailWorkspace information={information}>
+    <div className="flex min-w-0 flex-wrap items-start justify-between gap-4">
+      <div><h2 className="text-lg font-semibold">Analytics &amp; reviews</h2><p className="mt-1 text-xs text-text-secondary">Views and orders across all variants.</p></div>
+      <PeriodSelector label="Period" value={period} options={ANALYTICS_PERIODS} disabled={pending} onChange={value => setParams(current => { const next = new URLSearchParams(current); next.set('days', String(value)); return next }, { replace: true })} />
+    </div>
     {message && <StatusMessage tone="error">{message} Showing the last successful update.</StatusMessage>}
     <TrackingNote since={data.tracking.viewsSince} from={data.period.from} />
     <ul aria-label="Product standing" className="flex flex-wrap gap-2 text-sm">
@@ -210,17 +252,16 @@ export function ProductAnalyticsDetail({ canViewReviews = false }: { canViewRevi
       {product.segment && <li className="rounded-pill border border-border-default bg-surface-primary px-3 py-1">Segment: {product.segment}</li>}
       <li><StatusBadge label={STOCK[product.stockStatus]?.label ?? product.stockStatus} tone={STOCK[product.stockStatus]?.tone ?? 'neutral'} /></li>
     </ul>
-    <dl aria-label="Product summary" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <KpiCard label="Product views" value={formatCount(kpis.views.value)} delta={{ changePercent: kpis.views.changePercent, periodLabel }} sparkline={data.series.map(point => point.views)} icon={<Eye size={16} aria-hidden="true" />} accent hint={`${formatCount(kpis.viewers.value)} distinct Buyers.`} />
-      <KpiCard label="View-to-order conversion" value={percent(kpis.conversion)} icon={<MousePointerClick size={16} aria-hidden="true" />} hint={`Store average ${percent(kpis.storeConversion)} · ${formatCount(kpis.conversion.numerator)} of ${formatCount(kpis.conversion.denominator)} viewers ordered.`} />
-      <KpiCard label="Orders" value={formatCount(kpis.orders.value)} delta={{ changePercent: kpis.orders.changePercent, periodLabel }} icon={<ShoppingCart size={16} aria-hidden="true" />} hint={`${formatCount(kpis.buyers)} distinct Buyers ordered.`} />
-      {sales && kpis.valueCentavos
-        ? <KpiCard label="Sales value" value={formatPesoCentavos(kpis.valueCentavos.value)} delta={{ changePercent: kpis.valueCentavos.changePercent, periodLabel }} icon={<Wallet size={16} aria-hidden="true" />} hint="Line value; fully refunded orders left out." />
-        : <KpiCard label="Rank by orders" value={product.rankOrders ? `#${product.rankOrders}` : '—'} icon={<BarChart3 size={16} aria-hidden="true" />} hint={`Among ${formatCount(kpis.products)} published products.`} />}
-    </dl>
+    <AnalyticsSummary density="compact" featured={{ label: 'Product views', value: formatCount(kpis.views.value), icon: <Eye size={16} aria-hidden="true" />, hint: `${formatCount(kpis.viewers.value)} distinct Buyers.`, changePercent: kpis.views.changePercent, comparison: `vs ${periodLabel}`, comparisonUnavailable: kpis.views.previous === 0 ? `No views in ${periodLabel}` : 'Previous period comparison unavailable' }} metrics={[
+      { label: 'View-to-order conversion', value: percent(kpis.conversion), icon: <MousePointerClick size={16} aria-hidden="true" />, hint: `Store average ${percent(kpis.storeConversion)} · ${formatCount(kpis.conversion.numerator)} of ${formatCount(kpis.conversion.denominator)} viewers ordered.` },
+      { label: 'Orders', value: formatCount(kpis.orders.value), icon: <ShoppingCart size={16} aria-hidden="true" />, hint: `${formatCount(kpis.buyers)} distinct Buyers ordered.`, changePercent: kpis.orders.changePercent, comparison: `vs ${periodLabel}`, comparisonUnavailable: kpis.orders.previous === 0 ? `No orders in ${periodLabel}` : 'Previous period comparison unavailable' },
+      sales && kpis.valueCentavos ? { label: 'Product sales value', value: formatPesoCentavos(kpis.valueCentavos.value), icon: <Wallet size={16} aria-hidden="true" />, hint: 'Before partial refunds; delivery excluded. Cancelled and fully refunded sales excluded.', changePercent: kpis.valueCentavos.changePercent, comparison: `vs ${periodLabel}`, comparisonUnavailable: kpis.valueCentavos.previous === 0 ? `No sales in ${periodLabel}` : 'Previous period comparison unavailable' }
+        : { label: 'Rank by orders', value: product.rankOrders ? `#${product.rankOrders}` : '—', icon: <BarChart3 size={16} aria-hidden="true" />, hint: `Among ${formatCount(kpis.products)} published products.` },
+    ]} />
     <ViewsTrend series={data.series} forecast={data.forecast.views} horizonDays={data.forecast.horizonDays} markers={markers} subject="this product"
       method={<>{definitions.views} {definitions.forecast} {definitions.unusual_days}{data.unusualDays.state !== 'OK' ? ' Unusual days need at least eight active days.' : ''}</>} />
-    <div className="grid items-start gap-5 xl:grid-cols-2">
+    <AnalyticsDetails title="More product insights">
+    <div className="mp-card-group grid items-stretch gap-5">
       <InsightPanel title="From view to order" purpose="How many Buyers saw this product and how many went on to order it, compared with your store." method={definitions.conversion}>
         <BarList label="From view to order" items={[
           { key: 'views', label: 'Product views', value: kpis.views.value, display: formatCount(kpis.views.value), detail: 'One per Buyer per day.' },
@@ -236,30 +277,31 @@ export function ProductAnalyticsDetail({ canViewReviews = false }: { canViewRevi
     <InsightPanel title="Suggestions for this product" purpose="Next steps worked out from this product’s views, orders, stock and trend." method={definitions.suggestions}>
       <InsightList items={suggestionItems(data.suggestions)} empty="No suggestions for this product right now." />
     </InsightPanel>
+    </AnalyticsDetails>
     <p className="text-xs text-text-secondary">Analytics never changes your listing, price or ranking. Values are an internal operational view, not a tax invoice or accounting record.</p>
-    <ProductReviewsSection listingId={product.listingId} canView={canViewReviews} />
+    <ProductReviewsSection listingId={product.listingId} canView={canViewReviews} compact />
+    </ProductDetailWorkspace>
   </div>
 }
 
-/** The compact 30-day analytics line on a My Products card or row, with the shortcut into the product's analytics. */
-export function ProductInsightStrip({ listingId, summary, compact = false }: { listingId: string; summary: ProductSummary | undefined; compact?: boolean }) {
-  const shortcut = <Link className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-action-primary underline-offset-4 hover:underline" to={`/performance/products/${listingId}`} aria-label="View product analytics"><BarChart3 size={14} aria-hidden="true" />Analytics</Link>
-  if (!summary) return compact ? shortcut : <div className="flex items-center justify-between gap-2 border-t border-border-default px-4 py-1 text-xs text-text-secondary"><span>Analytics loading…</span>{shortcut}</div>
-  const stats = <dl className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-text-secondary">
-    <div className="flex items-center gap-1"><dt className="inline-flex items-center gap-1"><Eye size={12} aria-hidden="true" /><span className="sr-only">Views, last 30 days</span></dt><dd className="inline-flex items-center gap-1"><strong className="font-semibold tabular-nums text-text-strong">{formatCount(summary.views)}</strong> views<ChangeText value={summary.viewsChangePercent} /></dd></div>
-    <div className="flex items-center gap-1"><dt className="sr-only">Orders, last 30 days</dt><dd><strong className="font-semibold tabular-nums text-text-strong">{formatCount(summary.orders)}</strong> orders</dd></div>
-    <div className="flex items-center gap-1"><dt className="sr-only">View-to-order conversion</dt><dd><strong className="font-semibold tabular-nums text-text-strong">{percent(summary.conversion)}</strong> conversion</dd></div>
+/** Read-only 30-day measures; the product card provides the primary navigation. */
+export function ProductInsightStrip({ summary, compact = false }: { summary: ProductSummary | undefined; compact?: boolean }) {
+  if (!summary) return <div className={compact ? 'text-xs text-text-secondary' : 'mp-product-insight-strip text-xs text-text-secondary'}>Analytics loading…</div>
+  const stats = <dl className="mp-product-insight-stats" data-compact={compact || undefined}>
+    <div><dt>Views<span className="sr-only">, last 30 days</span></dt><dd><strong>{formatCount(summary.views)}</strong><ChangeText value={summary.viewsChangePercent} /></dd></div>
+    <div><dt>Orders<span className="sr-only">, last 30 days</span></dt><dd><strong>{formatCount(summary.orders)}</strong></dd></div>
+    <div><dt>Conversion<span className="sr-only">, view to order</span></dt><dd><strong>{percent(summary.conversion)}</strong></dd></div>
   </dl>
-  if (compact) return <div className="grid gap-1">{stats}{shortcut}</div>
-  return <div className="grid gap-1 border-t border-border-default px-4 py-2">
-    <div className="flex items-center justify-between gap-2"><span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-secondary">Last 30 days</span>{shortcut}</div>
+  if (compact) return stats
+  return <div className="mp-product-insight-strip">
+    <span>Last 30 days</span>
     {stats}
-    {summary.dailyViews.some(value => value > 0) && <div className="w-full" aria-hidden="true"><Sparkline values={summary.dailyViews} /></div>}
+    <div className="mp-product-insight-sparkline" aria-hidden="true">{summary.dailyViews.some(value => value > 0) && <Sparkline values={summary.dailyViews} />}</div>
   </div>
 }
 
-/** Store Performance opened on its Product analytics tab. */
-const PRODUCT_ANALYTICS_HREF = '/performance?tab=products'
+/** Standalone Product Analytics workspace. */
+const PRODUCT_ANALYTICS_HREF = '/analytics/products'
 
 export function ProductAnalyticsShortcut({ label = 'Product analytics' }: { label?: string }) {
   return <Link className="inline-flex min-h-11 items-center gap-2 rounded-control border border-border-default bg-surface-primary px-4 text-sm font-semibold text-text-strong hover:bg-surface-canvas" to={PRODUCT_ANALYTICS_HREF}><BarChart3 size={16} aria-hidden="true" />{label}</Link>

@@ -1,13 +1,14 @@
-import { useNavigationRefresh } from '@materyalph/web-ui'
+import { BackNavigation } from '@materyalph/web-ui'
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
-import { AlertCircle, ArrowLeft, BadgeCheck, CheckCircle2, Clock, ExternalLink, FileSearch, ShieldCheck, XCircle } from 'lucide-react'
-import { ALL_DATES, Button, DateFilter, Field, FormDialog, PrivateEvidenceGallery, ResponsiveRecordList, ReviewWorkspace, StatusMessage, manilaToday, type PrivateEvidenceItem, type RecordColumn } from '@materyalph/web-ui'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { AlertCircle, BadgeCheck, CheckCircle2, Clock, ExternalLink, FileSearch, ShieldCheck, XCircle } from 'lucide-react'
+import { dateFilterPreset, dateRangePatch, Button, DateFilter, Field, FilterPanel, FilterTabs, FormDialog, Pagination, PrivateEvidenceGallery, QueueSurface, useQueueStatusCounts, ResponsiveRecordList, ReviewWorkspace, StatusMessage, manilaToday, type PrivateEvidenceItem, type RecordColumn } from '@materyalph/web-ui'
 import type { ComplianceReferenceResult, CompliancePath, ListProductComplianceQueueStatusEnum } from '@materyalph/api-client-ts'
 import { activateRegister, complianceErrorCode, decideCompliance, getComplianceCase, getComplianceFileUrl, importRegister, listComplianceQueue, listRegisters, type ComplianceRegister, type ProductComplianceCase, type ProductComplianceQueueItem } from '../lib/product-compliance-api'
 import { readableVerificationError } from '../lib/vendor-verification-api'
 import { dateQuery, formatDate, record, records, statusLabel, stringValue, numberValue } from '../lib/admin-format'
 import { AdminShell, ErrorState, LoadingState, PageHeader } from './PhaseThreeAdminPages'
+import { useAdminQueue, useQueueParams } from '../lib/use-admin-queue'
 
 const apiBasePath = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'
 const icons: Record<string, typeof Clock> = { PENDING_ADMIN_REVIEW: Clock, VERIFIED: ShieldCheck, CHANGES_REQUIRED: AlertCircle, REJECTED: XCircle, SUPERSEDED: FileSearch, MATCHED: CheckCircle2, UNCERTAIN: AlertCircle, UNMATCHED: XCircle, UNAVAILABLE: FileSearch }
@@ -23,29 +24,21 @@ const referenceExplanation: Record<string, string> = {
   UNMATCHED: 'The number was not found in the active register snapshot. This is not a counterfeit finding.',
   UNAVAILABLE: 'No active register snapshot was available when this was submitted.',
 }
+const COMPLIANCE_STATES: ListProductComplianceQueueStatusEnum[] = ['PENDING_ADMIN_REVIEW', 'CHANGES_REQUIRED', 'VERIFIED', 'REJECTED', 'SUPERSEDED', 'ALL']
 
 export function AdminProductComplianceQueuePage() {
-  const [filters, setFilters] = useState<{ status: ListProductComplianceQueueStatusEnum; path: string; referenceResult: string; sort: 'oldest' | 'newest' }>({ status: 'PENDING_ADMIN_REVIEW', path: '', referenceResult: '', sort: 'oldest' })
-  const [applied, setApplied] = useState(filters)
-  const [range, setRange] = useState(ALL_DATES)
-  const [page, setPage] = useState(1)
-  const [items, setItems] = useState<ProductComplianceQueueItem[]>([])
-  const [meta, setMeta] = useState<{ last_page?: number; total?: number }>({})
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [attempt, setAttempt] = useState(0)
-  useNavigationRefresh(() => setAttempt(value => value + 1))
-  useEffect(() => {
-    let active = true
-    setLoading(true); setError(null)
-    void listComplianceQueue({ status: applied.status, sort: applied.sort, page, ...dateQuery(range), ...(applied.path ? { path: applied.path as CompliancePath } : {}), ...(applied.referenceResult ? { referenceResult: applied.referenceResult as ComplianceReferenceResult } : {}) })
-      .then(result => { if (active) { setItems(result.items); setMeta(result.meta) } })
-      .catch(async cause => { const message = await readableVerificationError(cause); if (active) setError(message) })
-      .finally(() => { if (active) setLoading(false) })
-    return () => { active = false }
-  }, [applied, page, range, attempt])
+  const { params, page, range, change, setPage, context } = useQueueParams()
+  const applied = { status: COMPLIANCE_STATES.find(value => value === params.get('status')) ?? 'PENDING_ADMIN_REVIEW', path: params.get('path') ?? '', referenceResult: params.get('reference') ?? '', sort: params.get('sort') === 'newest' ? 'newest' as const : 'oldest' as const }
+  const [filters, setFilters] = useState({ path: applied.path, referenceResult: applied.referenceResult, sort: applied.sort })
+  useEffect(() => { setFilters({ path: applied.path, referenceResult: applied.referenceResult, sort: applied.sort }) }, [applied.path, applied.referenceResult, applied.sort])
+  const queue = useAdminQueue(`compliance:${JSON.stringify([applied, page, range.from, range.to])}`, () => listComplianceQueue({ status: applied.status, sort: applied.sort, page, ...dateQuery(range), ...(applied.path ? { path: applied.path as CompliancePath } : {}), ...(applied.referenceResult ? { referenceResult: applied.referenceResult as ComplianceReferenceResult } : {}) }))
+  const items = queue.data?.items ?? [], meta = queue.data?.meta ?? {}
+  const counts = useQueueStatusCounts(queue.data?.meta.counts, Boolean(queue.error))
+  const total = typeof meta.total === 'number' ? meta.total : null
+  const reset = () => change({ status: '', path: '', reference: '', sort: '', ...dateRangePatch(dateFilterPreset(30)) })
+  const href = (id: string) => `/product-compliance/${id}${context}`
   const columns: RecordColumn<ProductComplianceQueueItem>[] = [
-    { key: 'listing', header: 'Listing', cell: row => <Link className="font-semibold text-action-primary underline" to={`/product-compliance/${row.id}`}>{row.displayName}</Link> },
+    { key: 'listing', header: 'Listing', cell: row => <Link className="inline-flex min-h-11 items-center font-semibold text-action-primary underline" to={href(row.id)}>{row.displayName}</Link> },
     { key: 'store', header: 'Store', cell: row => row.publicStoreName ?? '—' },
     { key: 'product', header: 'Regulated product', cell: row => <>{row.productName ?? row.materialName ?? '—'}<span className="block text-xs text-text-secondary">{row.referenceStandard ?? ''}</span></> },
     { key: 'path', header: 'Path', cell: row => <>{statusLabel(row.path)}{row.reviewMode === 'MANUAL_REVIEW' && <span className="block text-xs text-text-secondary">Vendor requested review</span>}</> },
@@ -54,20 +47,21 @@ export function AdminProductComplianceQueuePage() {
     { key: 'submitted', header: 'Submitted', cell: row => `${formatDate(row.submittedAt)} · v${row.version}` },
   ]
   const control = 'min-h-11 rounded-control border border-border-default bg-surface-primary px-3 font-normal'
-  return <AdminShell activeHref="/product-compliance"><div className="space-y-6">
-    <PageHeader eyebrow="Compliance & quality" title="Product Compliance Queue" description="PS Mark and ICC sticker submissions for DTI-BPS regulated products. Oldest pending first. MateryalPH review is a marketplace control, not a government certification." actions={<><RegisterSnapshotsDialog /><Button variant="secondary" disabled={loading} onClick={() => setAttempt(value => value + 1)}>Refresh queue</Button></>} />
-    <form className="flex flex-wrap items-end gap-3 rounded-surface border border-border-default bg-surface-primary p-4" aria-label="Filter compliance queue" onSubmit={event => { event.preventDefault(); setPage(1); setApplied(filters) }}>
-      <DateFilter title="Submission dates" value={range} onChange={value => { setRange(value); setPage(1) }} />
-      <label className="grid gap-2 text-sm font-semibold">Status<select className={control} value={filters.status} onChange={event => setFilters({ ...filters, status: event.target.value as ListProductComplianceQueueStatusEnum })}>{['PENDING_ADMIN_REVIEW', 'CHANGES_REQUIRED', 'VERIFIED', 'REJECTED', 'SUPERSEDED', 'ALL'].map(status => <option key={status} value={status}>{statusLabel(status)}</option>)}</select></label>
+  return <AdminShell activeHref="/product-compliance"><div className="mp-queue-workspace">
+    <PageHeader eyebrow="Compliance & quality" title="Product Compliance Queue" description="Review PS Mark and ICC sticker submissions against DTI-BPS references. MateryalPH review is a marketplace control, not a government certification." actions={<><RegisterSnapshotsDialog /><Button variant="secondary" disabled={queue.loading} onClick={() => void queue.retry()}>{queue.loading && queue.data ? 'Refreshing…' : 'Refresh queue'}</Button></>} />
+
+    <FilterTabs appearance="chips" label="Compliance status" value={applied.status} onChange={status => change({ status })} chips={COMPLIANCE_STATES.map(value => ({ value, label: value === 'ALL' ? 'All submissions' : statusLabel(value), count: counts[value] }))} />
+    <form aria-label="Filter compliance queue" onSubmit={event => { event.preventDefault(); change({ path: filters.path, reference: filters.referenceResult, sort: filters.sort }) }}>
+      <FilterPanel compact columns={3} label="Compliance filters" footer={<div className="mp-filter-date"><span>Submission dates</span><DateFilter title="Submission dates" value={range} onChange={value => change(dateRangePatch(value))} /></div>} actions={<><Button type="submit" disabled={queue.loading}>Apply filters</Button><Button variant="quiet" onClick={() => { setFilters({ path: '', referenceResult: '', sort: 'oldest' }); reset() }}>Reset filters</Button></>}>
       <label className="grid gap-2 text-sm font-semibold">Input path<select className={control} value={filters.path} onChange={event => setFilters({ ...filters, path: event.target.value })}><option value="">All paths</option>{['PHOTO_OCR', 'QR', 'MANUAL'].map(path => <option key={path} value={path}>{statusLabel(path)}</option>)}</select></label>
       <label className="grid gap-2 text-sm font-semibold">Register result<select className={control} value={filters.referenceResult} onChange={event => setFilters({ ...filters, referenceResult: event.target.value })}><option value="">All results</option>{['MATCHED', 'UNCERTAIN', 'UNMATCHED', 'UNAVAILABLE'].map(result => <option key={result} value={result}>{statusLabel(result)}</option>)}</select></label>
       <label className="grid gap-2 text-sm font-semibold">Sort<select className={control} value={filters.sort} onChange={event => setFilters({ ...filters, sort: event.target.value as 'oldest' | 'newest' })}><option value="oldest">Oldest first</option><option value="newest">Newest first</option></select></label>
-      <Button type="submit" disabled={loading}>Apply filters</Button>
-      <Button variant="quiet" onClick={() => { const reset = { status: 'PENDING_ADMIN_REVIEW' as const, path: '', referenceResult: '', sort: 'oldest' as const }; setFilters(reset); setApplied(reset); setRange(ALL_DATES); setPage(1) }}>Reset filters</Button>
+      </FilterPanel>
     </form>
-    {loading ? <LoadingState /> : error ? <ErrorState message={error} onRetry={() => setAttempt(value => value + 1)} />
-      : items.length === 0 ? <section className="grid min-h-48 place-items-center border-y border-border-default py-10 text-center"><div><CheckCircle2 className="mx-auto text-action-primary" size={28} aria-hidden="true" /><h2 className="mt-3 text-xl font-semibold">No submissions match this view.</h2><p className="mt-2 text-sm text-text-secondary">{applied.status === 'PENDING_ADMIN_REVIEW' ? 'Nothing is waiting for review. New PS/ICC submissions appear here automatically.' : 'Change the filters to see other submissions.'}</p></div></section>
-        : <><p className="text-sm text-text-secondary" aria-live="polite">{meta.total ?? items.length} submissions</p><ResponsiveRecordList caption="Product compliance submissions" rows={items} columns={columns} rowKey={row => row.id} cardTitle={row => <Link className="text-action-primary underline" to={`/product-compliance/${row.id}`}>{row.displayName}</Link>} /><div className="flex items-center gap-3"><Button variant="secondary" disabled={page <= 1} onClick={() => setPage(value => value - 1)}>Previous</Button><span>Page {page} of {meta.last_page ?? 1}</span><Button variant="secondary" disabled={page >= (meta.last_page ?? 1)} onClick={() => setPage(value => value + 1)}>Next</Button></div></>}
+    <QueueSurface title={statusLabel(applied.status)} description={`${applied.sort === 'oldest' ? 'Oldest' : 'Newest'} submissions first. Open a submission to inspect its evidence and recorded references.`} count={total} shown={items.length} loaded={Boolean(queue.data)} busy={queue.loading} error={queue.error && <ErrorState message={queue.error} onRetry={queue.retry} />} emptyTitle={page > 1 ? 'No submissions on this page.' : 'No submissions match this view.'} emptyDescription="No submissions match the applied filters and submission dates. Adjust the filters to see other records." emptyAction={page > 1 ? <Button variant="secondary" onClick={() => setPage(1)}>Return to first page</Button> : undefined}
+      footer={queue.data && (page > 1 || (meta.last_page ?? 1) > 1) && <Pagination page={page} lastPage={meta.last_page ?? 1} total={total ?? 0} busy={queue.loading} onChange={setPage} />}>
+      <ResponsiveRecordList compact tableClassName="mp-queue-record-table" caption="Product compliance submissions" rows={items} columns={columns} rowKey={row => row.id} cardTitle={row => <Link className="inline-flex min-h-11 items-center text-action-primary underline" to={href(row.id)}>{row.displayName}</Link>} />
+    </QueueSurface>
   </div></AdminShell>
 }
 
@@ -101,7 +95,7 @@ function RegisterSnapshotsDialog() {
     <FormDialog open={open} title="DTI-BPS register snapshots" description="Import dated register snapshots, review their records and activate drafts for product matching." busy={busy} onClose={() => setOpen(false)} bodyClassName="grid min-h-0 gap-4 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6" footer={<div className="flex justify-end"><Button variant="secondary" disabled={busy} onClick={() => setOpen(false)}>Done</Button></div>}>
     <p className="max-w-3xl text-sm text-text-secondary">The List of PS Licensees and List of ICC Certificate Holders are maintained by DTI-BPS and updated monthly. Their Google Sheets disable downloading, so import the file DTI-BPS provides (.xlsx or .csv, official layout) as a dated snapshot. A PS License No. or ICC sticker serial listed for the product verifies a submission automatically; Vendors send anything else here only when they request manual review.</p>
     {message && <StatusMessage tone={message.tone}>{message.text}</StatusMessage>}
-    <form className="grid grid-cols-1 gap-4 rounded-surface border border-border-default bg-surface-primary p-4 sm:grid-cols-2" onSubmit={submit} aria-busy={busy}>
+    <form className="grid grid-cols-1 gap-4 mp-card mp-card-padded sm:grid-cols-2" onSubmit={submit} aria-busy={busy}>
       <label className="grid gap-2 text-sm font-semibold">Register<select name="register_kind" className="min-h-12 rounded-control border border-border-default bg-surface-primary px-3 text-base font-normal" required><option value="PS_LICENSE">PS licensees</option><option value="ICC_CERTIFICATE">ICC certificates</option></select></label>
       <Field label="Snapshot date" name="snapshot_date" type="date" required max={manilaToday()} />
       <Field label="Source" name="source_reference" required minLength={3} maxLength={500} hint="Where the list came from, for example the DTI-BPS sheet link." />
@@ -109,7 +103,7 @@ function RegisterSnapshotsDialog() {
       <Button type="submit" className="w-fit" disabled={busy}>{busy ? 'Importing…' : 'Import snapshot'}</Button>
     </form>
     {imported && imported.rejectedRows && imported.rejectedRows.length > 0 && <details className="text-sm"><summary className="min-h-11 cursor-pointer py-2 font-semibold">Rejected rows ({imported.rejectedRowCount})</summary><ul className="mt-2 grid gap-1">{records(imported.rejectedRows).map(row => <li key={numberValue(row.row_number)}>Row {numberValue(row.row_number)}: {stringValue(row.reason)}</li>)}</ul></details>}
-    {registers.length > 0 && <div className="overflow-x-auto rounded-surface border border-border-default"><table className="w-full min-w-[640px] text-left text-sm"><caption className="sr-only">Register snapshots</caption><thead className="bg-surface-canvas"><tr>{['Register', 'Snapshot', 'Records', 'Status', 'Source', 'Action'].map(label => <th key={label} scope="col" className="px-4 py-3">{label}</th>)}</tr></thead><tbody>{registers.map(register => <tr key={register.id} className="border-t border-border-default"><td className="px-4 py-3">{register.registerKind === 'PS_LICENSE' ? 'PS licensees' : 'ICC certificates'}</td><td className="px-4 py-3">{formatDate(register.snapshotDate)}</td><td className="px-4 py-3">{register.rowCount}{register.rejectedRowCount ? ` (${register.rejectedRowCount} rejected)` : ''}</td><td className="px-4 py-3">{statusLabel(register.status)}{register.stale && <span className="mt-1 flex items-center gap-1 text-xs font-semibold text-amber-900"><AlertCircle size={14} aria-hidden="true" />Older than a month — import the latest list</span>}</td><td className="px-4 py-3">{register.sourceChannel === 'FEED' ? 'Authorized feed' : 'Admin upload'}</td><td className="px-4 py-3">{register.status === 'DRAFT' ? <Button variant="secondary" disabled={busy} onClick={() => void activate(register)}>Activate</Button> : '—'}</td></tr>)}</tbody></table></div>}
+    {registers.length > 0 && <div className="overflow-x-auto mp-card"><table className="w-full min-w-[640px] text-left text-sm"><caption className="sr-only">Register snapshots</caption><thead className="bg-surface-canvas"><tr>{['Register', 'Snapshot', 'Records', 'Status', 'Source', 'Action'].map(label => <th key={label} scope="col" className="px-4 py-3">{label}</th>)}</tr></thead><tbody>{registers.map(register => <tr key={register.id} className="border-t border-border-default"><td className="px-4 py-3">{register.registerKind === 'PS_LICENSE' ? 'PS licensees' : 'ICC certificates'}</td><td className="px-4 py-3">{formatDate(register.snapshotDate)}</td><td className="px-4 py-3">{register.rowCount}{register.rejectedRowCount ? ` (${register.rejectedRowCount} rejected)` : ''}</td><td className="px-4 py-3">{statusLabel(register.status)}{register.stale && <span className="mt-1 flex items-center gap-1 text-xs font-semibold text-amber-900"><AlertCircle size={14} aria-hidden="true" />Older than a month — import the latest list</span>}</td><td className="px-4 py-3">{register.sourceChannel === 'FEED' ? 'Authorized feed' : 'Admin upload'}</td><td className="px-4 py-3">{register.status === 'DRAFT' ? <Button variant="secondary" disabled={busy} onClick={() => void activate(register)}>Activate</Button> : '—'}</td></tr>)}</tbody></table></div>}
     </FormDialog>
   </>
 }
@@ -123,7 +117,13 @@ const sections = [
 
 export function AdminProductComplianceCasePage() {
   const { submissionId = '' } = useParams()
+  return <ProductComplianceCase key={submissionId} submissionId={submissionId} />
+}
+
+function ProductComplianceCase({ submissionId }: { submissionId: string }) {
   const navigate = useNavigate()
+  const [params] = useSearchParams()
+  const back = `/product-compliance${params.size ? `?${params.toString()}` : ''}`
   const [detail, setDetail] = useState<ProductComplianceCase | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -140,7 +140,7 @@ export function AdminProductComplianceCasePage() {
     try { setDetail(await getComplianceCase(submissionId)) } catch (cause) { setError(await readableVerificationError(cause)) } finally { setLoading(false) }
   }, [submissionId])
   useEffect(() => { void load() }, [load])
-  if (loading) return <AdminShell activeHref="/product-compliance"><LoadingState /></AdminShell>
+  if (loading && !detail) return <AdminShell activeHref="/product-compliance"><LoadingState /></AdminShell>
   if (error || !detail) return <AdminShell activeHref="/product-compliance"><ErrorState message={error ?? 'The submission is unavailable.'} onRetry={() => void load()} /></AdminShell>
 
   const submission = record(detail.submission)
@@ -155,6 +155,7 @@ export function AdminProductComplianceCasePage() {
 
   async function submitDecision(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (busy || loading || stale || !pending) return
     if (decision !== 'APPROVED' && reason.trim().length < 3) { setMessage({ tone: 'error', text: 'A reason is required to return for correction or reject.' }); return }
     setBusy(true); setMessage(null)
     try {
@@ -167,7 +168,7 @@ export function AdminProductComplianceCasePage() {
   }
 
   const datum = (label: string, value: unknown) => <div key={label} className="min-w-0"><dt className="text-xs text-text-secondary">{label}</dt><dd className="mt-0.5 break-words text-sm font-medium">{stringValue(value) || 'Not provided'}</dd></div>
-  const information = <section aria-labelledby="case-section-heading" className="min-w-0 rounded-surface border border-border-default bg-surface-primary p-4 sm:p-5">
+  const information = <section aria-labelledby="case-section-heading" className="min-w-0 mp-card mp-card-padded">
     <h2 id="case-section-heading" className="text-lg font-semibold">{sections.find(item => item.key === section)?.label}</h2>
     {section === 'listing' && <div className="mt-4 grid gap-5"><dl className="grid gap-3 sm:grid-cols-2">{datum('Display name', listing.display_name)}{datum('Vendor SKU', listing.vendor_sku)}{datum('Canonical material', listing.material_name)}{datum('Category', listing.category_name)}{datum('Brand', listing.brand)}{datum('Model', listing.model)}{datum('Manufacturer', listing.manufacturer)}{datum('Country of manufacture', listing.country_of_manufacture)}</dl>
       <div className="border-t border-border-default pt-4"><h3 className="font-semibold">{stringValue(rule.product_name, 'Regulated product')}</h3><dl className="mt-3 grid gap-3 sm:grid-cols-2">{datum('Reference standard', rule.reference_standard)}{datum('Technical regulation', rule.technical_regulation)}</dl><p className="mt-3 text-sm">{stringValue(rule.scope)}</p><h4 className="mt-4 text-sm font-semibold">Marking requirements</h4><ul className="mt-2 list-disc space-y-1 pl-5 text-sm">{(Array.isArray(rule.marking_requirements) ? rule.marking_requirements : []).map(item => <li key={String(item)}>{String(item)}</li>)}</ul></div>
@@ -182,7 +183,7 @@ export function AdminProductComplianceCasePage() {
       <div className="border-t border-border-default pt-4"><h3 className="font-semibold">Review decisions</h3>{records(detail.reviews).length === 0 ? <p className="mt-2 text-sm text-text-secondary">No decision recorded yet.</p> : <ul className="mt-2 divide-y divide-border-default text-sm">{records(detail.reviews).map(item => <li key={stringValue(item.id)} className="py-2">Version {numberValue(item.submission_version)} · {statusLabel(stringValue(item.decision))} · {stringValue(item.source) === 'SYSTEM_REGISTER_MATCH' ? 'System register match' : stringValue(item.reviewer_name, 'Admin')} · {formatDate(item.reviewed_at)}{stringValue(item.reason) ? ` · ${stringValue(item.reason)}` : ''}</li>)}</ul>}</div></div>}
   </section>
 
-  const decisionPanel = <section aria-labelledby="decision-heading" className="min-w-0 rounded-surface border border-border-default bg-surface-primary p-4 sm:p-5">
+  const decisionPanel = <section aria-labelledby="decision-heading" className="min-w-0 mp-card mp-card-padded">
     <div className="flex items-start gap-3"><BadgeCheck className="mt-1 shrink-0 text-action-primary" size={22} aria-hidden="true" /><div><h2 id="decision-heading" className="text-lg font-semibold">Record decision</h2><p className="mt-1 text-sm text-text-secondary">Target: submission version {numberValue(submission.version)} · lock {numberValue(submission.lock_version)} · {evidence.length} evidence file{evidence.length === 1 ? '' : 's'} · rule v{numberValue(submission.rule_version)}</p></div></div>
     {stale && <div className="mt-4 flex flex-wrap items-center gap-3 rounded-control border border-status-warning/40 bg-amber-50 p-3 text-sm" role="alert"><AlertCircle size={18} aria-hidden="true" /><span className="flex-1">This submission changed or was already decided. Refresh to review the current version.</span><Button variant="secondary" onClick={() => void load()}>Refresh case</Button></div>}
     {message && <div className="mt-4"><StatusMessage tone={message.tone}>{message.text}</StatusMessage></div>}
@@ -192,17 +193,17 @@ export function AdminProductComplianceCasePage() {
         <label className="grid gap-2 text-sm font-semibold" htmlFor="compliance-reason"><span>Reason {decision !== 'APPROVED' && <span className="text-status-error" aria-hidden="true">*</span>}</span><textarea id="compliance-reason" className="min-h-20 rounded-control border border-border-default bg-surface-primary px-3 py-3 text-base font-normal" value={reason} required={decision !== 'APPROVED'} onChange={event => setReason(event.target.value)} placeholder={decision === 'APPROVED' ? 'Optional approval note' : 'Tell the Vendor exactly what to correct.'} /></label>
         <Field label="Source checked" name="source_reference" value={source} hint="For example the DTI-BPS list and date you checked." onChange={event => setSource(event.target.value)} />
         <label className="grid gap-2 text-sm font-semibold" htmlFor="compliance-remarks">Internal remarks<textarea id="compliance-remarks" className="min-h-16 rounded-control border border-border-default bg-surface-primary px-3 py-3 text-base font-normal" value={remarks} onChange={event => setRemarks(event.target.value)} /></label>
-        <Button type="submit" className="w-fit" disabled={busy}>{busy ? 'Recording…' : 'Record decision'}</Button>
+        <Button type="submit" className="w-fit" disabled={busy || loading || stale}>{busy ? 'Recording…' : 'Record decision'}</Button>
       </form>}
     <div className="mt-5 border-t border-border-default pt-4"><h3 className="text-sm font-semibold">Official references</h3><ul className="mt-2 grid gap-1 text-sm">{records(detail.official_references).map(reference => <li key={stringValue(reference.url)}><a className="inline-flex min-h-11 items-center gap-1 text-action-primary underline" href={stringValue(reference.url)} target="_blank" rel="noopener noreferrer">{stringValue(reference.label)} <ExternalLink size={14} aria-hidden="true" /><span className="sr-only">(opens in a new tab)</span></a></li>)}</ul></div>
   </section>
 
-  const navigator = <div className="grid gap-2 rounded-surface border border-border-default bg-surface-primary p-2">{sections.map(item => <Button key={item.key} variant={section === item.key ? 'primary' : 'quiet'} className="justify-start text-left" aria-current={section === item.key ? 'true' : undefined} onClick={() => setSection(item.key)}>{item.label}</Button>)}</div>
+  const navigator = <div className="grid gap-2 mp-card p-2">{sections.map(item => <Button key={item.key} variant={section === item.key ? 'primary' : 'quiet'} className="justify-start text-left" aria-current={section === item.key ? 'true' : undefined} onClick={() => setSection(item.key)}>{item.label}</Button>)}</div>
 
-  return <AdminShell activeHref="/product-compliance"><div className="space-y-5">
-    <PageHeader compact eyebrow="Product compliance case" title={stringValue(listing.display_name, 'Compliance submission')} description={`${stringValue(listing.public_store_name, 'Vendor store')} · ${stringValue(rule.product_name, '')} · submitted ${formatDate(submission.submitted_at)}`} actions={<Button variant="secondary" onClick={() => navigate('/product-compliance')}><ArrowLeft size={16} aria-hidden="true" /> Back to queue</Button>} />
+  return <AdminShell activeHref="/product-compliance"><div className="mp-queue-workspace" aria-busy={loading}>
+    <PageHeader compact eyebrow="Product compliance case" title={stringValue(listing.display_name, 'Compliance submission')} description={`${stringValue(listing.public_store_name, 'Vendor store')} · ${stringValue(rule.product_name, '')} · submitted ${formatDate(submission.submitted_at)}`} actions={<BackNavigation><button type="button" onClick={() => navigate(back)}>Back to queue</button></BackNavigation>} />
     <p className="flex flex-wrap gap-4 text-sm"><StateText status={stringValue(submission.status)} />{match && <span>Register: <StateText status={stringValue(match.result)} /></span>}<span>Listing: {statusLabel(stringValue(listing.status))}</span></p>
-    <ReviewWorkspace navigator={navigator} information={information} decision={decisionPanel} />
+    <ReviewWorkspace compact navigator={navigator} information={information} decision={decisionPanel} />
   </div></AdminShell>
 }
 

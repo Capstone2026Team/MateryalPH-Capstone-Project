@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, expect, test, vi } from 'vitest'
 import { DeliveryRouteMap } from '../../../../packages/web-ui/src/delivery-route-map'
 import { loadGoogleMaps } from '../../../../packages/web-ui/src/google-maps'
@@ -32,4 +32,30 @@ test('a map-provider failure retains readable store and destination addresses', 
   expect(await screen.findByText(/The map could not load/)).toBeVisible()
   expect(screen.getByText('Registered store')).toBeVisible()
   expect(screen.getByText('Confirmed drop-off', { selector: 'dd' })).toBeVisible()
+})
+
+test('pickup displays only the store pin and never invents a driving line', async () => {
+  const marker = vi.fn(function () { return { setMap: vi.fn() } })
+  const polyline = vi.fn(), fitBounds = vi.fn()
+  vi.mocked(loadGoogleMaps).mockResolvedValue({ maps: {
+    Map: vi.fn(function () { return { fitBounds } }), Marker: marker, Polyline: polyline,
+    LatLngBounds: vi.fn(function () { return { extend: vi.fn() } }), event: { clearInstanceListeners: vi.fn() },
+  } })
+  render(<DeliveryRouteMap origin={origin} browserKey="fixture" mapLabel="Order pickup map" originLabel="Pickup at your store" />)
+  await waitFor(() => expect(marker).toHaveBeenCalledTimes(1))
+  expect(screen.getByRole('region', { name: 'Order pickup map' })).toBeVisible()
+  expect(screen.getByText('Pickup at your store')).toBeVisible()
+  expect(polyline).not.toHaveBeenCalled()
+  expect(fitBounds).not.toHaveBeenCalled()
+})
+
+test('a map can recover after retry without losing its address alternative', async () => {
+  vi.mocked(loadGoogleMaps).mockRejectedValueOnce(new Error('Offline')).mockResolvedValue({ maps: {
+    Map: vi.fn(function () { return { fitBounds: vi.fn() } }), Marker: vi.fn(function () { return { setMap: vi.fn() } }),
+    LatLngBounds: vi.fn(function () { return { extend: vi.fn() } }), event: { clearInstanceListeners: vi.fn() },
+  } })
+  render(<DeliveryRouteMap origin={origin} browserKey="fixture" />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Retry map' }))
+  await waitFor(() => expect(screen.getByRole('region', { name: 'Delivery route map' })).toHaveAttribute('aria-busy', 'false'))
+  expect(screen.getByText('Registered store')).toBeVisible()
 })

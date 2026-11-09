@@ -55,6 +55,20 @@ final class PhaseElevenFinanceRulesTest extends TestCase
         self::assertSame([Engine::SUBJECT_STANDARD, 1000], [$missing['status_after'], $missing['withheld_centavos']]);
     }
 
+    public function test_withholding_rounds_each_remittance_half_up_without_recalculating_the_rounded_ledger_total(): void
+    {
+        $withheld = [];
+        foreach ([99 => 0, 100 => 1, 101 => 1, 299 => 1, 300 => 2, 301 => 2] as $gross => $expected) {
+            $decision = Engine::decide(Engine::SUBJECT_STANDARD, 'NO_DECLARATION', 0, $gross, Engine::DEFAULT_THRESHOLD_CENTAVOS, false);
+            self::assertSame($expected, $decision['withheld_centavos']);
+            $withheld[] = $decision['withheld_centavos'];
+        }
+
+        self::assertSame(7, array_sum($withheld), 'The ledger sums rounded remittance amounts; it never recomputes tax on their combined gross.');
+        self::assertSame(6, Money::proportion(1200, 50, 10000), 'Aggregating first would lose one centavo from these six remittances.');
+        self::assertSame(5000000001, Money::proportion(1000000000100, 50, 10000), 'Large remittances retain exact half-up centavos.');
+    }
+
     public function test_fin06_direct_cod_and_mixed_cod_nrpc(): void
     {
         $commercial = FinancialCalculator::commercial([['line_id' => 'a', 'quantity' => '1', 'unit_price_centavos' => 1000000, 'tax_category' => 'NON_VAT']], 0, 50000);

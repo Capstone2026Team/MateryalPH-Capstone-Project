@@ -47,7 +47,6 @@ export interface DocumentExportInput {
  */
 export const DocumentExportInputTypeEnum = {
     PurchaseOrder: 'PURCHASE_ORDER',
-    PaymentConfirmation: 'PAYMENT_CONFIRMATION',
     ProjectSummary: 'PROJECT_SUMMARY',
     BudgetReport: 'BUDGET_REPORT',
     OperationalOrder: 'OPERATIONAL_ORDER',

@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\URL;
 
 /**
  * Audience-specific review payloads. A party sees its own submissions at once; the counterpart's ratings appear only
- * after the blind reveal and only while they remain visible. Public names are the stored privacy-safe display name;
+ * after the blind reveal and only while they remain visible. Buyer authors use their current full profile name;
  * reviewer user ids, contacts and order amounts are never serialized. Photos are five-minute signed links.
  */
 final class ReviewPresenter
@@ -73,7 +73,7 @@ final class ReviewPresenter
             'type' => $review->review_type,
             'ratings' => $this->ratings($review),
             'comment' => $review->comment,
-            'display_name' => (string) ($review->public_display_name ?? 'Verified Buyer'),
+            'display_name' => $this->authorName($review),
             'verified_purchase' => true,
             'submitted_at' => self::iso($review->submitted_at),
             'edited' => (int) $review->revision > 1,
@@ -94,7 +94,7 @@ final class ReviewPresenter
             'type' => $review->review_type,
             'ratings' => $this->ratings($review),
             'comment' => $review->comment,
-            'display_name' => (string) ($review->public_display_name ?? ''),
+            'display_name' => $this->authorName($review),
             'submitted_at' => self::iso($review->submitted_at),
             'editable_until' => self::iso($review->editable_until),
             'editable_until_label' => self::manila($review->editable_until),
@@ -177,7 +177,19 @@ final class ReviewPresenter
     /** @return array<string, mixed> */
     private function ratingOnly(object $review): array
     {
-        return ['ratings' => $this->ratings($review), 'comment' => $review->comment, 'display_name' => (string) ($review->public_display_name ?? ''), 'submitted_at' => self::iso($review->submitted_at)];
+        return ['ratings' => $this->ratings($review), 'comment' => $review->comment, 'display_name' => $this->authorName($review), 'submitted_at' => self::iso($review->submitted_at)];
+    }
+
+    /** Resolve legacy anonymous reviews without rewriting their original submission or immutable revisions. */
+    public function authorName(object $review): string
+    {
+        if ($review->reviewer_party !== 'BUYER') {
+            return (string) ($review->public_display_name ?? 'Store unavailable');
+        }
+        $name = DB::table('users as u')->leftJoin('user_profiles as p', 'p.user_id', '=', 'u.id')->where('u.id', $review->reviewer_user_id)
+            ->selectRaw('coalesce(nullif(trim(p.full_name), \'\'), u.name) as full_name')->value('full_name');
+
+        return ReviewRules::publicName(is_string($name) ? $name : null);
     }
 
     public static function iso(mixed $value): ?string

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { AccountsApi, ResponseError } from '@materyalph/api-client-ts'
-import { Button, createWebApiConfiguration, GuestSupportAccessForm, StatusMessage, SupportClient, SupportConversation, SupportRequestForm, SupportRequestList, type SupportIdentity } from '@materyalph/web-ui'
+import { BackNavigation, Button, createWebApiConfiguration, GuestSupportAccessForm, StatusMessage, SupportClient, SupportConversation, SupportRequestForm, SupportRequestList, type SupportIdentity } from '@materyalph/web-ui'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { BrandHeader } from '../components/BrandHeader'
 import { readableApiError } from '../lib/auth-api'
@@ -8,7 +8,7 @@ import { readableApiError } from '../lib/auth-api'
 const basePath = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'
 
 function SupportPage({ children, title }: { children: ReactNode; title: string }) {
-  return <div className="min-h-screen bg-surface-canvas text-text-strong"><BrandHeader /><main id="main-content" className="mx-auto grid max-w-4xl gap-6 px-5 py-10 sm:px-8"><header><Link to="/" className="inline-flex min-h-11 items-center font-semibold text-action-primary">Back to MateryalPH</Link><h1 className="mt-3 text-3xl font-semibold">{title}</h1><p className="mt-3 max-w-2xl leading-7 text-text-secondary">Send your concern to the MateryalPH administration team. Responses and follow-ups stay in one private support ticket. This is an asynchronous support service.</p></header><div className="grid gap-8 rounded-surface border border-border-default bg-surface-primary p-5 sm:p-8">{children}</div></main></div>
+  return <div className="min-h-screen bg-surface-canvas text-text-strong"><BrandHeader /><main id="main-content" className="mx-auto grid max-w-4xl gap-6 px-5 py-10 sm:px-8"><header><BackNavigation><Link to="/">Back to MateryalPH</Link></BackNavigation><h1 className="mt-3 text-3xl font-semibold">{title}</h1><p className="mt-3 max-w-2xl leading-7 text-text-secondary">Send your concern to the MateryalPH administration team. Responses and follow-ups stay in one private support ticket. This is an asynchronous support service.</p></header><div className="grid gap-8 mp-card mp-card-padded">{children}</div></main></div>
 }
 
 export function VendorContactPage() {

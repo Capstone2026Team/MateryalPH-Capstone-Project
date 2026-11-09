@@ -40,9 +40,17 @@ export interface VendorDashboardSeriesPoint {
      */
     grossSalesCentavos?: number | null;
     /**
-     *
+     * Displayed as Earnings. Gross sales less completed online refund principal, confirmed physical reimbursements and cancelled-order value not already refunded. Before commission, other charges and business costs; not profit. Null without finance.view.
      */
     netSalesCentavos?: number | null;
+    /**
+     * Completed online refund principal and confirmed physical reimbursements deducted from this store's orders first confirmed on this Asia/Manila day, including cancellation refunds, capped at each confirmed sale value. Excludes Buyer processing fees, late-capture compensation and pending or failed refunds. Null without finance.view. Not grouped by refund payout date.
+     */
+    refundsCentavos?: number | null;
+    /**
+     * Cancelled confirmed order value not already included in refunds_centavos, grouped by first confirmation day. Gross sales minus refunds minus these other cancellation deductions equals net sales (displayed as Earnings). Null without finance.view.
+     */
+    cancellationDeductionsCentavos?: number | null;
     /**
      *
      */
@@ -75,6 +83,8 @@ export function VendorDashboardSeriesPointFromJSONTyped(json: any, ignoreDiscrim
         'ordersAverage': json['orders_average'] === undefined ? undefined : json['orders_average'] === null ? null : json['orders_average'],
         'grossSalesCentavos': json['gross_sales_centavos'] === undefined ? undefined : json['gross_sales_centavos'] === null ? null : json['gross_sales_centavos'],
         'netSalesCentavos': json['net_sales_centavos'] === undefined ? undefined : json['net_sales_centavos'] === null ? null : json['net_sales_centavos'],
+        'refundsCentavos': json['refunds_centavos'] === undefined ? undefined : json['refunds_centavos'] === null ? null : json['refunds_centavos'],
+        'cancellationDeductionsCentavos': json['cancellation_deductions_centavos'] === undefined ? undefined : json['cancellation_deductions_centavos'] === null ? null : json['cancellation_deductions_centavos'],
         'salesAverageCentavos': json['sales_average_centavos'] === undefined ? undefined : json['sales_average_centavos'] === null ? null : json['sales_average_centavos'],
     };
 }
@@ -96,6 +106,8 @@ export function VendorDashboardSeriesPointToJSONTyped(value?: VendorDashboardSer
         'orders_average': value['ordersAverage'],
         'gross_sales_centavos': value['grossSalesCentavos'],
         'net_sales_centavos': value['netSalesCentavos'],
+        'refunds_centavos': value['refundsCentavos'],
+        'cancellation_deductions_centavos': value['cancellationDeductionsCentavos'],
         'sales_average_centavos': value['salesAverageCentavos'],
     };
 }

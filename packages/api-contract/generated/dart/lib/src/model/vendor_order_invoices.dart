@@ -5,10 +5,13 @@
 // ignore_for_file: unused_element
 import 'package:materyalph_api_client/src/model/invoice_order_line.dart';
 import 'package:materyalph_api_client/src/model/invoice_request_view.dart';
+import 'package:materyalph_api_client/src/model/invoice_draft.dart';
+import 'package:materyalph_api_client/src/model/invoice_order_summary.dart';
 import 'package:materyalph_api_client/src/model/invoice_record_view.dart';
 import 'package:materyalph_api_client/src/model/platform_document_ref.dart';
 import 'package:materyalph_api_client/src/model/vendor_invoice_billing_details.dart';
 import 'package:built_collection/built_collection.dart';
+import 'package:materyalph_api_client/src/model/vendor_invoice_preset.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -17,6 +20,7 @@ part 'vendor_order_invoices.g.dart';
 /// VendorOrderInvoices
 ///
 /// Properties:
+/// * [buyerName] - The order Buyer's display name, available without an invoice request. This is separate from supplied invoice billing details.
 /// * [orderId]
 /// * [orderReference]
 /// * [status]
@@ -32,8 +36,16 @@ part 'vendor_order_invoices.g.dart';
 /// * [sourceSystems]
 /// * [invoicingMethods]
 /// * [lines]
+/// * [canSend]
+/// * [draft]
+/// * [preset]
+/// * [orderSummary]
 @BuiltValue()
 abstract class VendorOrderInvoices implements Built<VendorOrderInvoices, VendorOrderInvoicesBuilder> {
+  /// The order Buyer's display name, available without an invoice request. This is separate from supplied invoice billing details.
+  @BuiltValueField(wireName: r'buyer_name')
+  String? get buyerName;
+
   @BuiltValueField(wireName: r'order_id')
   String get orderId;
 
@@ -83,6 +95,18 @@ abstract class VendorOrderInvoices implements Built<VendorOrderInvoices, VendorO
   @BuiltValueField(wireName: r'lines')
   BuiltList<InvoiceOrderLine> get lines;
 
+  @BuiltValueField(wireName: r'can_send')
+  bool? get canSend;
+
+  @BuiltValueField(wireName: r'draft')
+  InvoiceDraft? get draft;
+
+  @BuiltValueField(wireName: r'preset')
+  VendorInvoicePreset? get preset;
+
+  @BuiltValueField(wireName: r'order_summary')
+  InvoiceOrderSummary? get orderSummary;
+
   VendorOrderInvoices._();
 
   factory VendorOrderInvoices([void updates(VendorOrderInvoicesBuilder b)]) = _$VendorOrderInvoices;
@@ -106,6 +130,13 @@ class _$VendorOrderInvoicesSerializer implements PrimitiveSerializer<VendorOrder
     VendorOrderInvoices object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.buyerName != null) {
+      yield r'buyer_name';
+      yield serializers.serialize(
+        object.buyerName,
+        specifiedType: const FullType(String),
+      );
+    }
     yield r'order_id';
     yield serializers.serialize(
       object.orderId,
@@ -183,6 +214,34 @@ class _$VendorOrderInvoicesSerializer implements PrimitiveSerializer<VendorOrder
       object.lines,
       specifiedType: const FullType(BuiltList, [FullType(InvoiceOrderLine)]),
     );
+    if (object.canSend != null) {
+      yield r'can_send';
+      yield serializers.serialize(
+        object.canSend,
+        specifiedType: const FullType(bool),
+      );
+    }
+    if (object.draft != null) {
+      yield r'draft';
+      yield serializers.serialize(
+        object.draft,
+        specifiedType: const FullType.nullable(InvoiceDraft),
+      );
+    }
+    if (object.preset != null) {
+      yield r'preset';
+      yield serializers.serialize(
+        object.preset,
+        specifiedType: const FullType(VendorInvoicePreset),
+      );
+    }
+    if (object.orderSummary != null) {
+      yield r'order_summary';
+      yield serializers.serialize(
+        object.orderSummary,
+        specifiedType: const FullType(InvoiceOrderSummary),
+      );
+    }
   }
 
   @override
@@ -206,6 +265,14 @@ class _$VendorOrderInvoicesSerializer implements PrimitiveSerializer<VendorOrder
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'buyer_name':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.buyerName = valueDes;
+          break;
         case r'order_id':
           final valueDes = serializers.deserialize(
             value,
@@ -311,6 +378,38 @@ class _$VendorOrderInvoicesSerializer implements PrimitiveSerializer<VendorOrder
             specifiedType: const FullType(BuiltList, [FullType(InvoiceOrderLine)]),
           ) as BuiltList<InvoiceOrderLine>;
           result.lines.replace(valueDes);
+          break;
+        case r'can_send':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.canSend = valueDes;
+          break;
+        case r'draft':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(InvoiceDraft),
+          ) as InvoiceDraft?;
+          if (valueDes == null) continue;
+          result.draft.replace(valueDes);
+          break;
+        case r'preset':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(VendorInvoicePreset),
+          ) as VendorInvoicePreset?;
+          if (valueDes == null) continue;
+          result.preset.replace(valueDes);
+          break;
+        case r'order_summary':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(InvoiceOrderSummary),
+          ) as InvoiceOrderSummary?;
+          if (valueDes == null) continue;
+          result.orderSummary.replace(valueDes);
           break;
         default:
           unhandled.add(key);

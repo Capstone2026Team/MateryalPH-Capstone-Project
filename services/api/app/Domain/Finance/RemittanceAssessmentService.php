@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Finance;
 
 use App\Domain\Identity\AuthenticationException;
+use App\Domain\Operations\OutboxPublisher;
 use App\Domain\Reporting\TaxCalendar;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
@@ -210,6 +211,9 @@ final class RemittanceAssessmentService
             }
             $this->threshold->post($accumulator, $decision, $gross);
             $this->postLedger($assessmentId, $input, $withheld, $cash, $context['scenario'], $correlationId);
+            if ($input['payment_id'] !== null && $context['scenario'] === 'DEMO_PLATFORM_WITHHOLDER') {
+                app(OutboxPublisher::class)->publish('REMITTANCE_RECONCILIATION_REQUESTED', 'REMITTANCE_ASSESSMENT', $assessmentId, ['assessment_id' => $assessmentId]);
+            }
 
             return $assessmentId;
         });

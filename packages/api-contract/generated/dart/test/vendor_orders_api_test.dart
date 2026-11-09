@@ -21,10 +21,17 @@ void main() {
       // TODO
     });
 
-    // Job-order detail with lines, authorized inventory, reservations, auto-accept outcome, confirmed delivery, NRPC, money breakdown, history, role-aware permissions and one primary action per state. Buyer coordinates are never returned.
+    // Job-order detail with lines, authorized inventory, reservations, auto-accept outcome, confirmed delivery, NRPC, money breakdown, history, role-aware permissions and one primary action per state. Location map points are limited to the registered store and the order's saved vehicle drop-off, available only to current authorized order viewers.
     //
     //Future<OrderDetailEnvelope> getVendorOrder(String orderId) async
     test('test getVendorOrder', () async {
+      // TODO
+    });
+
+    // Current sanitized Buyer profile photo for an authorized order viewer, including Self-Pickup and closed orders. Rechecks membership, organization, assignment where applicable and photo version after storage access. Phone authorization is unchanged. Private, no-store PNG.
+    //
+    //Future<Uint8List> getVendorOrderBuyerPhoto(String orderId, int version) async
+    test('test getVendorOrderBuyerPhoto', () async {
       // TODO
     });
 
@@ -32,6 +39,13 @@ void main() {
     //
     //Future<DeliveryPlanEnvelope> getVendorOrderDeliveryPlan(String orderId, DeliveryPlanRequest deliveryPlanRequest) async
     test('test getVendorOrderDeliveryPlan', () async {
+      // TODO
+    });
+
+    // Read-only Google driving estimate from the registered store to this order's saved vehicle drop-off, including requests and closed orders. Current order-view authorization is rechecked after the provider call. No device location, live tracking or commercial recalculation.
+    //
+    //Future<DeliveryNavigationRouteEnvelope> getVendorOrderRoute(String orderId) async
+    test('test getVendorOrderRoute', () async {
       // TODO
     });
 

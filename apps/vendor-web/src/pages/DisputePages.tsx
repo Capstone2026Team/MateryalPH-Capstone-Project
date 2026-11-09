@@ -1,11 +1,11 @@
-import { shouldRotateIdempotencyKey } from '@materyalph/web-ui'
+import { BackNavigation, shouldRotateIdempotencyKey } from '@materyalph/web-ui'
 import { useNavigationRefresh } from '@materyalph/web-ui'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, FileDown, Gavel, Handshake, Info, Paperclip, RefreshCw, Scale, Send, ShieldAlert, Upload } from 'lucide-react'
+import { FileDown, Gavel, Handshake, Info, Paperclip, RefreshCw, Scale, Send, ShieldAlert, Upload } from 'lucide-react'
 import {
-  ActiveFilters, ALL_DATES, Button, DateFilter, ConfirmDialog, DisputeDeadlines, DisputeStatusBadge, DisputeTimeline, FileSelectionReview, FormDialog, FilterTabs, Toolbar, InfoNote, EmptyState, PageHeader as SharedPageHeader, OriginalPaymentMethodNotice, Pagination, RefundTimeline, ResponsiveRecordList, StatusBadge, StatusMessage,
-  DisputeComplaintDetails, dateFilterLabel, disputeIssueLabel, disputeRemedyLabel, disputeRoleLabel, formatManilaDateTime, formatPesoCentavos, type RecordColumn,
+  ActiveFilters, Button, DateFilter, dateFilterPreset, ConfirmDialog, DisputeDeadlines, DisputeStatusBadge, DisputeTimeline, FileSelectionReview, FormDialog, FilterTabs, Toolbar, InfoNote, EmptyState, PageHeader as SharedPageHeader, OriginalPaymentMethodNotice, Pagination, RefundTimeline, ResponsiveRecordList, StatusBadge, StatusMessage,
+  DisputeComplaintDetails, disputeIssueLabel, disputeRemedyLabel, disputeRoleLabel, formatManilaDateTime, formatPesoCentavos, type RecordColumn,
 } from '@materyalph/web-ui'
 import {
   addEvidence, answerClarification, answerProposal, appeal, disputeApiBasePath, downloadExport, escalate, fileDispute, getDispute, getEligibility, listDisputes, listExports, propose,
@@ -92,11 +92,10 @@ function DisputesWorkspace({ canExport }: { canExport: boolean }) {
     <Toolbar searchFirst filters={<DateFilter title="Case filing dates" value={range} onChange={next => update(dateRangePatch(next))} />} search={{ label: 'Search by Case ID or Order ID', placeholder: 'Case ID or Order ID', value: query, onChange: setQuery, maxLength: 120, onSubmit: event => { event.preventDefault(); update({ q: query.trim() }) } }} />
     <ActiveFilters filters={[
       ...(q ? [{ key: 'q', label: `Search: ${q}`, onRemove: () => update({ q: '' }) }] : []),
-      ...(range.from || range.to ? [{ key: 'dates', label: dateFilterLabel(range), onRemove: () => update(dateRangePatch(ALL_DATES)) }] : []),
-    ]} onClear={() => { setQuery(''); update({ q: '', ...dateRangePatch(ALL_DATES) }) }} />
+    ]} onClear={() => { setQuery(''); update({ q: '', ...dateRangePatch(dateFilterPreset(30)) }) }} />
     {error ? <ErrorState message={error} onRetry={() => setAttempt(value => value + 1)} />
       : rows === null ? <div className="grid gap-3" aria-busy="true" aria-label="Loading cases">{[0, 1, 2].map(index => <div key={index} className="h-20 animate-pulse rounded-surface bg-surface-canvas motion-reduce:animate-none" />)}</div>
-        : rows.length === 0 ? <EmptyState icon={<Scale size={24} aria-hidden="true" />} message={q || range.from || range.to ? 'No cases match these filters.' : 'No cases in this view.'} action={q || range.from || range.to ? <Button variant="secondary" onClick={() => { setQuery(''); update({ q: '', ...dateRangePatch(ALL_DATES) }) }}>Clear filters</Button> : undefined} />
+        : rows.length === 0 ? <EmptyState icon={<Scale size={24} aria-hidden="true" />} message={q || range.from || range.to ? 'No cases match these filters.' : 'No cases in this view.'} action={q ? <Button variant="secondary" onClick={() => { setQuery(''); update({ q: '', ...dateRangePatch(dateFilterPreset(30)) }) }}>Clear filters</Button> : undefined} />
           : <div className="grid gap-3"><ResponsiveRecordList caption="Cases" rows={rows} columns={columns} rowKey={row => row.id} cardTitle={row => <CaseIdentity row={row} />} cardAction={row => <Link to={`/disputes/${row.id}`} className="inline-flex min-h-11 items-center font-semibold text-action-primary">Open case</Link>} />
             {meta && meta.total !== undefined && meta.perPage !== undefined && meta.total > meta.perPage && <Pagination page={page} total={meta.total} hasMore={Boolean(meta.hasMore)} busy={rows === null} onChange={next => update({ page: String(next) })} />}
           </div>}
@@ -176,19 +175,19 @@ function DisputeWorkspace({ caseId }: { caseId: string }) {
     <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
       <div className="grid min-w-0 content-start gap-6">
         {!detail.limitedView && <CaseFacts detail={detail} />}
-        <section aria-labelledby="timeline-heading" className="grid gap-4 rounded-surface border border-border-default bg-surface-primary p-4 sm:p-5">
+        <section aria-labelledby="timeline-heading" className="grid gap-4 mp-card mp-card-padded">
           <h2 id="timeline-heading" className="text-lg font-semibold">Case timeline</h2>
           <DisputeTimeline entries={detail.timeline} apiBasePath={disputeApiBasePath} onLinkExpired={reload} />
         </section>
         {!detail.limitedView && detail.decisions.length > 0 && <DecisionsPanel detail={detail} />}
-        {!detail.limitedView && (detail.refunds.length > 0 || (detail.reimbursements?.length ?? 0) > 0) && <section aria-labelledby="case-refunds-heading" className="grid gap-3 rounded-surface border border-border-default bg-surface-primary p-4">
+        {!detail.limitedView && (detail.refunds.length > 0 || (detail.reimbursements?.length ?? 0) > 0) && <section aria-labelledby="case-refunds-heading" className="grid gap-3 mp-card mp-card-padded">
           <h2 id="case-refunds-heading" className="text-base font-semibold">Dispute-Conclusion Refunds</h2>
           <RefundTimeline timeline={{ refunds: detail.refunds, reimbursements: detail.reimbursements ?? [], noLongerDueCentavos: 0 }} audience="VENDOR" />
           <p className="text-xs text-text-secondary">Refunds go to the Buyer's original payment method only. Retry a failed refund from the order after funding is resolved.</p>
         </section>}
       </div>
       <aside className="grid min-w-0 content-start gap-4" aria-label="Case actions">
-        {actions.size === 0 && <p className="rounded-surface border border-border-default bg-surface-primary p-4 text-sm text-text-secondary">{['RESOLVED', 'CLOSED_INCONCLUSIVE'].includes(detail.status) ? 'This case has concluded. Its history stays on record.' : 'There is nothing for your role to do right now.'}</p>}
+        {actions.size === 0 && <p className="mp-card mp-card-padded text-sm text-text-secondary">{['RESOLVED', 'CLOSED_INCONCLUSIVE'].includes(detail.status) ? 'This case has concluded. Its history stays on record.' : 'There is nothing for your role to do right now.'}</p>}
         {actions.has('RESPOND') && <RespondForm detail={detail} onChanged={changed} />}
         {actions.has('ANSWER_PROPOSAL') && <ProposalsPanel detail={detail} onChanged={changed} />}
         {actions.has('PROPOSE') && <ProposeForm detail={detail} onChanged={changed} />}
@@ -204,11 +203,11 @@ function DisputeWorkspace({ caseId }: { caseId: string }) {
 }
 
 function BackLink() {
-  return <Link to="/disputes" className="inline-flex min-h-11 w-fit items-center gap-2 text-sm font-semibold text-text-secondary hover:text-text-strong"><ArrowLeft size={16} aria-hidden="true" />All cases</Link>
+  return <BackNavigation><Link to="/disputes">All cases</Link></BackNavigation>
 }
 
 function CaseFacts({ detail }: { detail: DisputeDetail }) {
-  return <section aria-labelledby="facts-heading" className="grid gap-4 rounded-surface border border-border-default bg-surface-primary p-4 sm:p-5">
+  return <section aria-labelledby="facts-heading" className="grid gap-4 mp-card mp-card-padded">
     <h2 id="facts-heading" className="text-lg font-semibold">Original complaint</h2>
     <DisputeComplaintDetails detail={detail} />
     {detail.affectedLines.length > 0 && <div className="grid gap-2"><h3 className="text-sm font-semibold">Affected lines</h3><ul className="grid gap-1 text-sm">{detail.affectedLines.map(line => <li key={line.orderLineId} className="flex flex-wrap justify-between gap-x-3">
@@ -224,7 +223,7 @@ function CaseFacts({ detail }: { detail: DisputeDetail }) {
 }
 
 function DecisionsPanel({ detail }: { detail: DisputeDetail }) {
-  return <section aria-labelledby="decisions-heading" className="grid gap-3 rounded-surface border border-border-default bg-surface-primary p-4 sm:p-5">
+  return <section aria-labelledby="decisions-heading" className="grid gap-3 mp-card mp-card-padded">
     <h2 id="decisions-heading" className="flex items-center gap-2 text-lg font-semibold"><Gavel size={18} aria-hidden="true" />Decisions</h2>
     <ul className="grid gap-3">{detail.decisions.map(decision => <li key={decision.id} className={`grid gap-1 border-l-4 pl-3 ${decision.current ? 'border-action-primary' : 'border-border-default'}`}>
       <p className="font-semibold">Version {decision.version} · {decision.kind === 'MUTUAL_AGREEMENT' ? 'Agreement' : decision.kind === 'APPEAL_DECISION' ? `Appeal ${decision.appealResult?.toLowerCase() ?? ''}` : 'Admin decision'} · {disputeRemedyLabel(decision.outcome)}{decision.awardedCentavos > 0 ? ` · ${formatPesoCentavos(decision.awardedCentavos)}` : ''}</p>
@@ -237,7 +236,7 @@ function DecisionsPanel({ detail }: { detail: DisputeDetail }) {
 }
 
 function ActionCard({ title, icon, children }: { title: string; icon: ReactNode; children: ReactNode }) {
-  return <section className="grid gap-3 rounded-surface border border-border-default bg-surface-primary p-4" aria-label={title}><h2 className="flex items-center gap-2 text-base font-semibold">{icon}{title}</h2>{children}</section>
+  return <section className="grid gap-3 mp-card mp-card-padded" aria-label={title}><h2 className="flex items-center gap-2 text-base font-semibold">{icon}{title}</h2>{children}</section>
 }
 
 function useSubmission() {
@@ -494,11 +493,11 @@ function FileDisputeWorkspace({ orderId, modal = false, onBusyChange }: { orderI
   if (loadError) return <ErrorState message={loadError} onRetry={() => setAttempt(value => value + 1)} />
   if (!eligibility) return <LoadingState label="Checking the order…" />
   return <div className={`grid min-w-0 gap-6 ${modal ? '' : 'max-w-3xl'}`}>
-    {!modal && <><Link to={`/orders/${orderId}`} className="inline-flex min-h-11 w-fit items-center gap-2 text-sm font-semibold text-text-secondary hover:text-text-strong"><ArrowLeft size={16} aria-hidden="true" />Back to the order</Link>
+    {!modal && <><BackNavigation><Link to={`/orders/${orderId}`}>Back to the order</Link></BackNavigation>
     <PageHeader eyebrow="Disputes & Appeals" title="File a case" description="Report a Buyer issue on this order and provide supporting evidence." /></>}
     <InfoNote>For a Buyer issue on this order such as an unpaid cash balance, a pickup no-show, abusive communication, false evidence or an inaccessible delivery site. The Buyer has 48 hours to respond.</InfoNote>
     {!eligibility.available ? <StatusMessage tone="error">{eligibility.reason}{eligibility.activeCaseId && <> <Link className="font-semibold underline" to={`/disputes/${eligibility.activeCaseId}`}>Open the active case</Link></>}</StatusMessage>
-      : <form aria-label="File a case" className={modal ? 'grid min-w-0 gap-5' : 'grid gap-5 rounded-surface border border-border-default bg-surface-primary p-4 sm:p-6'} noValidate onSubmit={event => { event.preventDefault()
+      : <form aria-label="File a case" className={modal ? 'grid min-w-0 gap-5' : 'grid gap-5 mp-card mp-card-padded'} noValidate onSubmit={event => { event.preventDefault()
         if (busy) return
         const local: Record<string, string> = {}
         if (description.trim().length < 20) local.description = 'Describe the issue in at least 20 characters.'

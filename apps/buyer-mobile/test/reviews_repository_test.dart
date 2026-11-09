@@ -27,7 +27,7 @@ Map<String, Object?> _envelope() => {
       'blind_reveal': 'Hidden until reveal',
     },
     'display_name_options': [
-      {'choice': 'VERIFIED_BUYER', 'preview': 'Verified Buyer'},
+      {'choice': 'FULL_NAME', 'preview': 'Juan dela Cruz'},
     ],
     'can_submit_vendor_rating': true,
     'lines': [
@@ -96,6 +96,39 @@ Map<String, Object?> _listingEnvelope({int page = 1}) => {
   'errors': <Object?>[],
 };
 
+Map<String, Object?> _receivedEnvelope({double? score = 4.25}) => {
+  'data': [
+    {
+      'id': 'sample-rating',
+      'store_name': 'Sample Supply',
+      'order_id': 'sample-order',
+      'order_reference': 'ORD-SAMPLE',
+      'ratings': {
+        'inquiry_seriousness': 4,
+        'communication_quality': 5,
+        'payment_reliability': 4,
+      },
+      'submitted_at': '2026-11-05T01:00:00Z',
+      'comment': 'Clear communication.',
+    },
+  ],
+  'meta': {
+    'page': 2,
+    'per_page': 20,
+    'total': 25,
+    'summary': {
+      'score': score,
+      'count': score == null ? 4 : 25,
+      'minimum_count': 5,
+      'window_days': 90,
+      'inquiry_seriousness': score == null ? null : 4.0,
+      'communication_quality': score == null ? null : 4.75,
+      'payment_reliability': score == null ? null : 4.0,
+    },
+  },
+  'errors': <Object?>[],
+};
+
 ApiReviewsRepository _listingRepository(
   Map<String, Object?> response, [
   List<RequestOptions>? requests,
@@ -124,6 +157,35 @@ ApiReviewsRepository _listingRepository(
 }
 
 void main() {
+  test(
+    'received Buyer ratings use the self-scoped route and decode server CCS before pagination',
+    () async {
+      final requests = <RequestOptions>[];
+      final result = await _listingRepository(
+        _receivedEnvelope(),
+        requests,
+      ).receivedRatings(page: 2);
+      expect(requests.single.path, '/buyers/ratings');
+      expect(requests.single.queryParameters['page'], 2);
+      expect(result.summary.score, 4.25);
+      expect(result.summary.minimumCount, 5);
+      expect(result.summary.windowDays, 90);
+      expect(result.items.single.storeName, 'Sample Supply');
+      expect(result.total, 25);
+    },
+  );
+
+  test(
+    'a score below the CCS sample gate stays null during client decoding',
+    () async {
+      final result = await _listingRepository(
+        _receivedEnvelope(score: null),
+      ).receivedRatings();
+      expect(result.summary.score, isNull);
+      expect(result.summary.inquirySeriousness, isNull);
+      expect(result.summary.count, 4);
+    },
+  );
   test(
     'listing summary uses all visible ratings, not the current page',
     () async {

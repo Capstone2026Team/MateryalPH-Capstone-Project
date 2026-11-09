@@ -14,6 +14,7 @@ part 'review_list_meta.g.dart';
 /// ReviewListMeta
 ///
 /// Properties:
+/// * [counts] - Admin moderation only. Full totals by moderation state, including ALL and NEEDS_ACTION, after submission date filters but before state selection and pagination. NEEDS_ACTION counts each review once using the queue's existing open-report or flagged/hidden criteria.
 /// * [page]
 /// * [perPage]
 /// * [total]
@@ -23,6 +24,10 @@ part 'review_list_meta.g.dart';
 /// * [correlationId]
 @BuiltValue()
 abstract class ReviewListMeta implements Built<ReviewListMeta, ReviewListMetaBuilder> {
+  /// Admin moderation only. Full totals by moderation state, including ALL and NEEDS_ACTION, after submission date filters but before state selection and pagination. NEEDS_ACTION counts each review once using the queue's existing open-report or flagged/hidden criteria.
+  @BuiltValueField(wireName: r'counts')
+  BuiltMap<String, int>? get counts;
+
   @BuiltValueField(wireName: r'page')
   int? get page;
 
@@ -67,6 +72,13 @@ class _$ReviewListMetaSerializer implements PrimitiveSerializer<ReviewListMeta> 
     ReviewListMeta object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.counts != null) {
+      yield r'counts';
+      yield serializers.serialize(
+        object.counts,
+        specifiedType: const FullType(BuiltMap, [FullType(String), FullType(int)]),
+      );
+    }
     if (object.page != null) {
       yield r'page';
       yield serializers.serialize(
@@ -139,6 +151,14 @@ class _$ReviewListMetaSerializer implements PrimitiveSerializer<ReviewListMeta> 
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'counts':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltMap, [FullType(String), FullType(int)]),
+          ) as BuiltMap<String, int>?;
+          if (valueDes == null) continue;
+          result.counts.replace(valueDes);
+          break;
         case r'page':
           final valueDes = serializers.deserialize(
             value,

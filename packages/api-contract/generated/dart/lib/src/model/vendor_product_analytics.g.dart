@@ -30,6 +30,8 @@ class _$VendorProductAnalytics extends VendorProductAnalytics {
   @override
   final BuiltList<ProductAnalyticsRow> mostViewed;
   @override
+  final BuiltList<ProductAnalyticsRatedProduct>? topRated;
+  @override
   final BuiltList<VendorProductAnalyticsCategoriesInner> categories;
   @override
   final ProductAnalyticsSegments segments;
@@ -56,6 +58,7 @@ class _$VendorProductAnalytics extends VendorProductAnalytics {
       required this.topSelling,
       required this.topPerforming,
       required this.mostViewed,
+      this.topRated,
       required this.categories,
       required this.segments,
       required this.basketRules,
@@ -86,6 +89,7 @@ class _$VendorProductAnalytics extends VendorProductAnalytics {
         topSelling == other.topSelling &&
         topPerforming == other.topPerforming &&
         mostViewed == other.mostViewed &&
+        topRated == other.topRated &&
         categories == other.categories &&
         segments == other.segments &&
         basketRules == other.basketRules &&
@@ -107,6 +111,7 @@ class _$VendorProductAnalytics extends VendorProductAnalytics {
     _$hash = $jc(_$hash, topSelling.hashCode);
     _$hash = $jc(_$hash, topPerforming.hashCode);
     _$hash = $jc(_$hash, mostViewed.hashCode);
+    _$hash = $jc(_$hash, topRated.hashCode);
     _$hash = $jc(_$hash, categories.hashCode);
     _$hash = $jc(_$hash, segments.hashCode);
     _$hash = $jc(_$hash, basketRules.hashCode);
@@ -130,6 +135,7 @@ class _$VendorProductAnalytics extends VendorProductAnalytics {
           ..add('topSelling', topSelling)
           ..add('topPerforming', topPerforming)
           ..add('mostViewed', mostViewed)
+          ..add('topRated', topRated)
           ..add('categories', categories)
           ..add('segments', segments)
           ..add('basketRules', basketRules)
@@ -205,6 +211,12 @@ class VendorProductAnalyticsBuilder
   set mostViewed(ListBuilder<ProductAnalyticsRow>? mostViewed) =>
       _$this._mostViewed = mostViewed;
 
+  ListBuilder<ProductAnalyticsRatedProduct>? _topRated;
+  ListBuilder<ProductAnalyticsRatedProduct> get topRated =>
+      _$this._topRated ??= ListBuilder<ProductAnalyticsRatedProduct>();
+  set topRated(ListBuilder<ProductAnalyticsRatedProduct>? topRated) =>
+      _$this._topRated = topRated;
+
   ListBuilder<VendorProductAnalyticsCategoriesInner>? _categories;
   ListBuilder<VendorProductAnalyticsCategoriesInner> get categories =>
       _$this._categories ??=
@@ -255,6 +267,7 @@ class VendorProductAnalyticsBuilder
       _topSelling = $v.topSelling.toBuilder();
       _topPerforming = $v.topPerforming.toBuilder();
       _mostViewed = $v.mostViewed.toBuilder();
+      _topRated = $v.topRated?.toBuilder();
       _categories = $v.categories.toBuilder();
       _segments = $v.segments.toBuilder();
       _basketRules = $v.basketRules.toBuilder();
@@ -295,6 +308,7 @@ class VendorProductAnalyticsBuilder
             topSelling: topSelling.build(),
             topPerforming: topPerforming.build(),
             mostViewed: mostViewed.build(),
+            topRated: _topRated?.build(),
             categories: categories.build(),
             segments: segments.build(),
             basketRules: basketRules.build(),
@@ -324,6 +338,8 @@ class VendorProductAnalyticsBuilder
         topPerforming.build();
         _$failedField = 'mostViewed';
         mostViewed.build();
+        _$failedField = 'topRated';
+        _topRated?.build();
         _$failedField = 'categories';
         categories.build();
         _$failedField = 'segments';

@@ -14,14 +14,16 @@ part 'buyer_review_submit_request.g.dart';
 /// Any not-yet-submitted subset; each rating once per order or purchased line. Requires a COMPLETED order inside its 14-day window.
 ///
 /// Properties:
-/// * [displayNameChoice]
+/// * [displayNameChoice] - Deprecated compatibility field; FULL_NAME is always used. Legacy choices are accepted from older clients but cannot hide identity.
 /// * [vendorRating]
 /// * [productReviews]
 @BuiltValue()
 abstract class BuyerReviewSubmitRequest implements Built<BuyerReviewSubmitRequest, BuyerReviewSubmitRequestBuilder> {
+  /// Deprecated compatibility field; FULL_NAME is always used. Legacy choices are accepted from older clients but cannot hide identity.
+  @Deprecated('displayNameChoice has been deprecated')
   @BuiltValueField(wireName: r'display_name_choice')
-  BuyerReviewSubmitRequestDisplayNameChoiceEnum get displayNameChoice;
-  // enum displayNameChoiceEnum {  FIRST_NAME_LAST_INITIAL,  VERIFIED_BUYER,  };
+  BuyerReviewSubmitRequestDisplayNameChoiceEnum? get displayNameChoice;
+  // enum displayNameChoiceEnum {  FULL_NAME,  FIRST_NAME_LAST_INITIAL,  VERIFIED_BUYER,  };
 
   @BuiltValueField(wireName: r'vendor_rating')
   BuyerReviewSubmitRequestVendorRating? get vendorRating;
@@ -34,7 +36,8 @@ abstract class BuyerReviewSubmitRequest implements Built<BuyerReviewSubmitReques
   factory BuyerReviewSubmitRequest([void updates(BuyerReviewSubmitRequestBuilder b)]) = _$BuyerReviewSubmitRequest;
 
   @BuiltValueHook(initializeBuilder: true)
-  static void _defaults(BuyerReviewSubmitRequestBuilder b) => b;
+  static void _defaults(BuyerReviewSubmitRequestBuilder b) => b
+      ..displayNameChoice = BuyerReviewSubmitRequestDisplayNameChoiceEnum.valueOf('FULL_NAME');
 
   @BuiltValueSerializer(custom: true)
   static Serializer<BuyerReviewSubmitRequest> get serializer => _$BuyerReviewSubmitRequestSerializer();
@@ -52,11 +55,13 @@ class _$BuyerReviewSubmitRequestSerializer implements PrimitiveSerializer<BuyerR
     BuyerReviewSubmitRequest object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
-    yield r'display_name_choice';
-    yield serializers.serialize(
-      object.displayNameChoice,
-      specifiedType: const FullType(BuyerReviewSubmitRequestDisplayNameChoiceEnum),
-    );
+    if (object.displayNameChoice != null) {
+      yield r'display_name_choice';
+      yield serializers.serialize(
+        object.displayNameChoice,
+        specifiedType: const FullType(BuyerReviewSubmitRequestDisplayNameChoiceEnum),
+      );
+    }
     if (object.vendorRating != null) {
       yield r'vendor_rating';
       yield serializers.serialize(
@@ -97,8 +102,9 @@ class _$BuyerReviewSubmitRequestSerializer implements PrimitiveSerializer<BuyerR
         case r'display_name_choice':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(BuyerReviewSubmitRequestDisplayNameChoiceEnum),
-          ) as BuyerReviewSubmitRequestDisplayNameChoiceEnum;
+            specifiedType: const FullType.nullable(BuyerReviewSubmitRequestDisplayNameChoiceEnum),
+          ) as BuyerReviewSubmitRequestDisplayNameChoiceEnum?;
+          if (valueDes == null) continue;
           result.displayNameChoice = valueDes;
           break;
         case r'vendor_rating':
@@ -147,8 +153,11 @@ class _$BuyerReviewSubmitRequestSerializer implements PrimitiveSerializer<BuyerR
 }
 
 
+/// Deprecated compatibility field; FULL_NAME is always used. Legacy choices are accepted from older clients but cannot hide identity.
 class BuyerReviewSubmitRequestDisplayNameChoiceEnum extends EnumClass {
 
+  @BuiltValueEnumConst(wireName: r'FULL_NAME')
+  static const BuyerReviewSubmitRequestDisplayNameChoiceEnum FULL_NAME = _$buyerReviewSubmitRequestDisplayNameChoiceEnum_FULL_NAME;
   @BuiltValueEnumConst(wireName: r'FIRST_NAME_LAST_INITIAL')
   static const BuyerReviewSubmitRequestDisplayNameChoiceEnum FIRST_NAME_LAST_INITIAL = _$buyerReviewSubmitRequestDisplayNameChoiceEnum_FIRST_NAME_LAST_INITIAL;
   @BuiltValueEnumConst(wireName: r'VERIFIED_BUYER')

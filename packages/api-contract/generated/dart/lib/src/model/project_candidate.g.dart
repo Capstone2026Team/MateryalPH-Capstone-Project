@@ -147,6 +147,8 @@ class _$ProjectCandidateProcurementBudgetLabelEnumSerializer
 
 class _$ProjectCandidate extends ProjectCandidate {
   @override
+  final BuiltList<PublicBadge>? badges;
+  @override
   final String id;
   @override
   final String estimateId;
@@ -242,7 +244,8 @@ class _$ProjectCandidate extends ProjectCandidate {
       (ProjectCandidateBuilder()..update(updates))._build();
 
   _$ProjectCandidate._(
-      {required this.id,
+      {this.badges,
+      required this.id,
       required this.estimateId,
       required this.vendorId,
       required this.storeName,
@@ -300,6 +303,7 @@ class _$ProjectCandidate extends ProjectCandidate {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is ProjectCandidate &&
+        badges == other.badges &&
         id == other.id &&
         estimateId == other.estimateId &&
         vendorId == other.vendorId &&
@@ -350,6 +354,7 @@ class _$ProjectCandidate extends ProjectCandidate {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, badges.hashCode);
     _$hash = $jc(_$hash, id.hashCode);
     _$hash = $jc(_$hash, estimateId.hashCode);
     _$hash = $jc(_$hash, vendorId.hashCode);
@@ -402,6 +407,7 @@ class _$ProjectCandidate extends ProjectCandidate {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'ProjectCandidate')
+          ..add('badges', badges)
           ..add('id', id)
           ..add('estimateId', estimateId)
           ..add('vendorId', vendorId)
@@ -454,6 +460,11 @@ class _$ProjectCandidate extends ProjectCandidate {
 class ProjectCandidateBuilder
     implements Builder<ProjectCandidate, ProjectCandidateBuilder> {
   _$ProjectCandidate? _$v;
+
+  ListBuilder<PublicBadge>? _badges;
+  ListBuilder<PublicBadge> get badges =>
+      _$this._badges ??= ListBuilder<PublicBadge>();
+  set badges(ListBuilder<PublicBadge>? badges) => _$this._badges = badges;
 
   String? _id;
   String? get id => _$this._id;
@@ -686,6 +697,7 @@ class ProjectCandidateBuilder
   ProjectCandidateBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _badges = $v.badges?.toBuilder();
       _id = $v.id;
       _estimateId = $v.estimateId;
       _vendorId = $v.vendorId;
@@ -754,6 +766,7 @@ class ProjectCandidateBuilder
     try {
       _$result = _$v ??
           _$ProjectCandidate._(
+            badges: _badges?.build(),
             id: BuiltValueNullFieldError.checkNotNull(
                 id, r'ProjectCandidate', 'id'),
             estimateId: BuiltValueNullFieldError.checkNotNull(
@@ -831,6 +844,9 @@ class ProjectCandidateBuilder
     } catch (_) {
       late String _$failedField;
       try {
+        _$failedField = 'badges';
+        _badges?.build();
+
         _$failedField = 'fms';
         fms.build();
 

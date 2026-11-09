@@ -62,12 +62,12 @@ class _ExploreScreenState extends State<ExploreScreen>
     super.dispose();
   }
 
-  void _openCategory([CategoryCountView? category]) {
+  void _openCategory(CategoryCountView category) {
     _controller.search(
       query: '',
       filters: ListingFilters(
-        categoryId: category?.id,
-        categoryName: category?.name,
+        categoryId: category.id,
+        categoryName: category.name,
       ),
       sort: () => null,
     );
@@ -129,7 +129,7 @@ class _ExploreScreenState extends State<ExploreScreen>
               Semantics(
                 header: true,
                 child: const Text(
-                  'All categories',
+                  'Categories',
                   style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
                 ),
               ),
@@ -291,12 +291,6 @@ class _ExploreScreenState extends State<ExploreScreen>
     );
     return CategoryTileGrid(
       children: [
-        tile(
-          'All',
-          LucideIcons.layoutGrid,
-          summary.vendorListings,
-          _openCategory,
-        ),
         for (final category in summary.categories)
           tile(
             category.name,

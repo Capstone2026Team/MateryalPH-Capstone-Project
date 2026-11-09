@@ -22,6 +22,7 @@ part 'chat_quotation.g.dart';
 /// * [draft]
 /// * [canDraft]
 /// * [canPublish]
+/// * [replacesOrderId]
 @BuiltValue()
 abstract class ChatQuotation implements Built<ChatQuotation, ChatQuotationBuilder> {
   @BuiltValueField(wireName: r'id')
@@ -50,6 +51,9 @@ abstract class ChatQuotation implements Built<ChatQuotation, ChatQuotationBuilde
 
   @BuiltValueField(wireName: r'can_publish')
   bool get canPublish;
+
+  @BuiltValueField(wireName: r'replaces_order_id')
+  String? get replacesOrderId;
 
   ChatQuotation._();
 
@@ -127,6 +131,13 @@ class _$ChatQuotationSerializer implements PrimitiveSerializer<ChatQuotation> {
       object.canPublish,
       specifiedType: const FullType(bool),
     );
+    if (object.replacesOrderId != null) {
+      yield r'replaces_order_id';
+      yield serializers.serialize(
+        object.replacesOrderId,
+        specifiedType: const FullType(String),
+      );
+    }
   }
 
   @override
@@ -216,6 +227,14 @@ class _$ChatQuotationSerializer implements PrimitiveSerializer<ChatQuotation> {
             specifiedType: const FullType(bool),
           ) as bool;
           result.canPublish = valueDes;
+          break;
+        case r'replaces_order_id':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.replacesOrderId = valueDes;
           break;
         default:
           unhandled.add(key);

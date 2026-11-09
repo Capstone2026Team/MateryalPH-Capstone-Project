@@ -34,8 +34,7 @@ export interface ReviewDisplayOption {
  * @export
  */
 export const ReviewDisplayOptionChoiceEnum = {
-    FirstNameLastInitial: 'FIRST_NAME_LAST_INITIAL',
-    VerifiedBuyer: 'VERIFIED_BUYER',
+    FullName: 'FULL_NAME',
 } as const;
 export type ReviewDisplayOptionChoiceEnum = typeof ReviewDisplayOptionChoiceEnum[keyof typeof ReviewDisplayOptionChoiceEnum];
 
@@ -45,6 +44,8 @@ export type ReviewDisplayOptionChoiceEnum = typeof ReviewDisplayOptionChoiceEnum
  */
 export function instanceOfReviewDisplayOption(value: object): value is ReviewDisplayOption {
     if (!('choice' in value) || value['choice'] === undefined) return false;
+    if (value['choice'] !== 'FULL_NAME') return false;
+
     if (!('preview' in value) || value['preview'] === undefined) return false;
     return true;
 }

@@ -6,6 +6,8 @@
 
 Name | Type
 ------------ | -------------
+`threadAuthority` | string
+`threadContexts` | [Array&lt;ConversationView&gt;](ConversationView.md)
 `conversation` | [ConversationView](ConversationView.md)
 `messages` | [ChatMessagePage](ChatMessagePage.md)
 `quotations` | [ChatQuotationPage](ChatQuotationPage.md)
@@ -18,6 +20,8 @@ import type { ConversationDetail } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "threadAuthority": null,
+  "threadContexts": null,
   "conversation": null,
   "messages": null,
   "quotations": null,

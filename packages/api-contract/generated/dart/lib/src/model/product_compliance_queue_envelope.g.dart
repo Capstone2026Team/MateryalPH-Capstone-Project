@@ -10,7 +10,7 @@ class _$ProductComplianceQueueEnvelope extends ProductComplianceQueueEnvelope {
   @override
   final BuiltList<ProductComplianceQueueItem> data;
   @override
-  final BuiltMap<String, JsonObject?> meta;
+  final ProductComplianceQueueEnvelopeMeta meta;
   @override
   final BuiltList<BuiltMap<String, JsonObject?>> errors;
 
@@ -71,10 +71,11 @@ class ProductComplianceQueueEnvelopeBuilder
   set data(ListBuilder<ProductComplianceQueueItem>? data) =>
       _$this._data = data;
 
-  MapBuilder<String, JsonObject?>? _meta;
-  MapBuilder<String, JsonObject?> get meta =>
-      _$this._meta ??= MapBuilder<String, JsonObject?>();
-  set meta(MapBuilder<String, JsonObject?>? meta) => _$this._meta = meta;
+  ProductComplianceQueueEnvelopeMetaBuilder? _meta;
+  ProductComplianceQueueEnvelopeMetaBuilder get meta =>
+      _$this._meta ??= ProductComplianceQueueEnvelopeMetaBuilder();
+  set meta(ProductComplianceQueueEnvelopeMetaBuilder? meta) =>
+      _$this._meta = meta;
 
   ListBuilder<BuiltMap<String, JsonObject?>>? _errors;
   ListBuilder<BuiltMap<String, JsonObject?>> get errors =>

@@ -190,6 +190,8 @@ void main() {
           reason: 'Materials Analytics stays disabled until its feature ships.',
         );
         expect(find.text('Roofing Materials'), findsOneWidget);
+        expect(find.text('Categories'), findsOneWidget);
+        expect(find.text('All'), findsNothing);
         expect(
           find.bySemanticsLabel('Masonry, 0 Vendor listings'),
           findsOneWidget,
@@ -283,11 +285,6 @@ void main() {
         await tester.tap(find.widgetWithText(FilterPill, 'Favorite Suppliers'));
         await tester.pumpAndSettle();
         expect(repository.searches.last.filters.favoritesOnly, isTrue);
-        await tester.tap(find.text('Best Deal'));
-        await tester.pumpAndSettle();
-        await tester.tap(find.text('Favorites First'));
-        await tester.pumpAndSettle();
-        expect(repository.searches.last.sort, ListingSort.favoritesFirst);
 
         await tester.tap(find.textContaining('Why this ranking'));
         await tester.pumpAndSettle();
@@ -299,6 +296,13 @@ void main() {
         );
         Navigator.of(tester.element(find.byType(RankingExplanation))).pop();
         await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Best Deal'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Favorites First'));
+        await tester.pumpAndSettle();
+        expect(repository.searches.last.sort, ListingSort.favoritesFirst);
+        expect(find.text('Why this ranking'), findsNothing);
 
         Navigator.of(tester.element(find.byType(SearchResultsScreen))).pop();
         await tester.pumpAndSettle();
@@ -340,10 +344,12 @@ void main() {
           findsOneWidget,
         );
         expect(h.explore.effectiveSort, ListingSort.distance);
+        expect(find.text('Why this ranking'), findsNothing);
 
         await tester.tap(find.bySemanticsLabel(RegExp('^Sort by Price')));
         await tester.pumpAndSettle();
         expect(h.explore.effectiveSort.family, ListingSort.price);
+        expect(find.text('Why this ranking'), findsNothing);
 
         await tester.tap(find.text('Search any materials'));
         await tester.pumpAndSettle();
@@ -355,6 +361,14 @@ void main() {
         expect(h.explore.sort, isNull);
         expect(h.explore.effectiveSort, ListingSort.bestDeal);
         expect(find.bySemanticsLabel('Sort by Best Deal'), findsOneWidget);
+        expect(find.text('Why this ranking'), findsOneWidget);
+
+        await tester.ensureVisible(
+          find.bySemanticsLabel(RegExp('^Sort by Price')),
+        );
+        await tester.tap(find.bySemanticsLabel(RegExp('^Sort by Price')));
+        await tester.pumpAndSettle();
+        expect(find.text('Why this ranking'), findsNothing);
 
         // A relevance sort never carries back into browsing.
         await h.explore.search(
@@ -367,6 +381,59 @@ void main() {
           find.bySemanticsLabel(RegExp('^Sort by (Best Deal|Favorites First)')),
           findsNothing,
         );
+      },
+    );
+
+    testWidgets(
+      'category catalog opens main search for suggestions and submitted results',
+      (tester) async {
+        final repository = FakeProcurementRepository(
+          page: searchPage([listingCard('roof-1', name: 'Roofing sheet')]),
+        );
+        final h = await _harness(repository);
+        await _pump(tester, _explore(h));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Cement and Concrete'));
+        await tester.pumpAndSettle();
+        expect(find.text('Cement and Concrete Catalog'), findsOneWidget);
+        expect(h.explore.filters.categoryId, 'cat-cement');
+        expect(find.text('Why this ranking'), findsNothing);
+        final origin = h.explore.origin;
+        final radius = h.explore.radiusKm;
+
+        await tester.tap(find.text('Search any materials'));
+        await tester.pumpAndSettle();
+        expect(find.byType(MaterialSearchScreen), findsOneWidget);
+        await tester.enterText(find.byType(TextField), 'roofing');
+        await tester.pump(const Duration(milliseconds: 400));
+        await tester.pumpAndSettle();
+        expect(repository.searches.last.query, 'roofing');
+        expect(repository.searches.last.filters, const ListingFilters());
+        expect(find.text('Roofing sheet'), findsOneWidget);
+        expect(h.explore.filters.categoryId, 'cat-cement');
+        expect(h.explore.recentSearches, isEmpty);
+
+        await tester.tap(find.byTooltip('Back'));
+        await tester.pumpAndSettle();
+        expect(find.text('Cement and Concrete Catalog'), findsOneWidget);
+        expect(h.explore.filters.categoryId, 'cat-cement');
+
+        await tester.tap(find.text('Search any materials'));
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextField), 'roofing');
+        await tester.testTextInput.receiveAction(TextInputAction.search);
+        await tester.pumpAndSettle();
+        expect(find.byType(SearchResultsScreen), findsOneWidget);
+        expect(find.text('Cement and Concrete Catalog'), findsNothing);
+        expect(find.text('Roofing sheet'), findsOneWidget);
+        expect(repository.searches.last.query, 'roofing');
+        expect(repository.searches.last.filters, const ListingFilters());
+        expect(h.explore.filters, const ListingFilters());
+        expect(h.explore.effectiveSort, ListingSort.bestDeal);
+        expect(h.explore.origin, origin);
+        expect(h.explore.radiusKm, radius);
+        expect(find.text('Why this ranking'), findsOneWidget);
       },
     );
 
@@ -707,7 +774,7 @@ void main() {
         );
         expect(
           find.textContaining(
-            '2% commission and withholding are not Buyer charges',
+            'commission and withholding are not Buyer charges',
           ),
           findsWidgets,
         );

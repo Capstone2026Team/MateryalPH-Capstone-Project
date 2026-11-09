@@ -70,6 +70,8 @@ class _$DeliveryPlanVehicleMobilizationBasisEnumSerializer
 
 class _$DeliveryPlanVehicle extends DeliveryPlanVehicle {
   @override
+  final DeliveryVehicleProfile? vehicleDetails;
+  @override
   final bool? recommended;
   @override
   final String vehicleId;
@@ -127,7 +129,8 @@ class _$DeliveryPlanVehicle extends DeliveryPlanVehicle {
       (DeliveryPlanVehicleBuilder()..update(updates))._build();
 
   _$DeliveryPlanVehicle._(
-      {this.recommended,
+      {this.vehicleDetails,
+      this.recommended,
       required this.vehicleId,
       required this.name,
       this.vehicleCategory,
@@ -167,6 +170,7 @@ class _$DeliveryPlanVehicle extends DeliveryPlanVehicle {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is DeliveryPlanVehicle &&
+        vehicleDetails == other.vehicleDetails &&
         recommended == other.recommended &&
         vehicleId == other.vehicleId &&
         name == other.name &&
@@ -198,6 +202,7 @@ class _$DeliveryPlanVehicle extends DeliveryPlanVehicle {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, vehicleDetails.hashCode);
     _$hash = $jc(_$hash, recommended.hashCode);
     _$hash = $jc(_$hash, vehicleId.hashCode);
     _$hash = $jc(_$hash, name.hashCode);
@@ -231,6 +236,7 @@ class _$DeliveryPlanVehicle extends DeliveryPlanVehicle {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'DeliveryPlanVehicle')
+          ..add('vehicleDetails', vehicleDetails)
           ..add('recommended', recommended)
           ..add('vehicleId', vehicleId)
           ..add('name', name)
@@ -264,6 +270,12 @@ class _$DeliveryPlanVehicle extends DeliveryPlanVehicle {
 class DeliveryPlanVehicleBuilder
     implements Builder<DeliveryPlanVehicle, DeliveryPlanVehicleBuilder> {
   _$DeliveryPlanVehicle? _$v;
+
+  DeliveryVehicleProfileBuilder? _vehicleDetails;
+  DeliveryVehicleProfileBuilder get vehicleDetails =>
+      _$this._vehicleDetails ??= DeliveryVehicleProfileBuilder();
+  set vehicleDetails(DeliveryVehicleProfileBuilder? vehicleDetails) =>
+      _$this._vehicleDetails = vehicleDetails;
 
   bool? _recommended;
   bool? get recommended => _$this._recommended;
@@ -397,6 +409,7 @@ class DeliveryPlanVehicleBuilder
   DeliveryPlanVehicleBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _vehicleDetails = $v.vehicleDetails?.toBuilder();
       _recommended = $v.recommended;
       _vehicleId = $v.vehicleId;
       _name = $v.name;
@@ -446,6 +459,7 @@ class DeliveryPlanVehicleBuilder
     try {
       _$result = _$v ??
           _$DeliveryPlanVehicle._(
+            vehicleDetails: _vehicleDetails?.build(),
             recommended: recommended,
             vehicleId: BuiltValueNullFieldError.checkNotNull(
                 vehicleId, r'DeliveryPlanVehicle', 'vehicleId'),
@@ -493,6 +507,9 @@ class DeliveryPlanVehicleBuilder
     } catch (_) {
       late String _$failedField;
       try {
+        _$failedField = 'vehicleDetails';
+        _vehicleDetails?.build();
+
         _$failedField = 'volumePlan';
         _volumePlan?.build();
       } catch (e) {

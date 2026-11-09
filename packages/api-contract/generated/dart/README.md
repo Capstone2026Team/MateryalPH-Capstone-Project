@@ -76,6 +76,7 @@ Class | Method | HTTP request | Description
 [*AccountsApi*](doc/AccountsApi.md) | [**confirmAccountFactorReplacement**](doc/AccountsApi.md#confirmaccountfactorreplacement) | **POST** /{accountPortal}/account/factor/confirm |
 [*AccountsApi*](doc/AccountsApi.md) | [**confirmBuyerTwoFactor**](doc/AccountsApi.md#confirmbuyertwofactor) | **POST** /buyers/account/two-factor/confirm |
 [*AccountsApi*](doc/AccountsApi.md) | [**deleteBuyerAccount**](doc/AccountsApi.md#deletebuyeraccount) | **POST** /buyers/account/deletion |
+[*AccountsApi*](doc/AccountsApi.md) | [**deleteVendorAccount**](doc/AccountsApi.md#deletevendoraccount) | **POST** /vendors/account/deletion |
 [*AccountsApi*](doc/AccountsApi.md) | [**deleteVendorTeamInvitation**](doc/AccountsApi.md#deletevendorteaminvitation) | **DELETE** /vendors/account/invitations/{invitationId} |
 [*AccountsApi*](doc/AccountsApi.md) | [**deleteVendorTeamMember**](doc/AccountsApi.md#deletevendorteammember) | **DELETE** /vendors/account/memberships/{membershipId} |
 [*AccountsApi*](doc/AccountsApi.md) | [**disableBuyerTwoFactor**](doc/AccountsApi.md#disablebuyertwofactor) | **POST** /buyers/account/two-factor/disable |
@@ -84,6 +85,7 @@ Class | Method | HTTP request | Description
 [*AccountsApi*](doc/AccountsApi.md) | [**getAccountSecurity**](doc/AccountsApi.md#getaccountsecurity) | **GET** /{accountPortal}/account/security |
 [*AccountsApi*](doc/AccountsApi.md) | [**getBuyerAccountDeletionPreview**](doc/AccountsApi.md#getbuyeraccountdeletionpreview) | **GET** /buyers/account/deletion |
 [*AccountsApi*](doc/AccountsApi.md) | [**getBuyerAccountPhoto**](doc/AccountsApi.md#getbuyeraccountphoto) | **GET** /buyers/account/photo |
+[*AccountsApi*](doc/AccountsApi.md) | [**getVendorAccountDeletionPreview**](doc/AccountsApi.md#getvendoraccountdeletionpreview) | **GET** /vendors/account/deletion |
 [*AccountsApi*](doc/AccountsApi.md) | [**inviteAccountAdmin**](doc/AccountsApi.md#inviteaccountadmin) | **POST** /{accountPortal}/account/invitations |
 [*AccountsApi*](doc/AccountsApi.md) | [**listAccountAdminRoles**](doc/AccountsApi.md#listaccountadminroles) | **GET** /{accountPortal}/account/roles |
 [*AccountsApi*](doc/AccountsApi.md) | [**listAccountAdministrators**](doc/AccountsApi.md#listaccountadministrators) | **GET** /{accountPortal}/account/administrators |
@@ -120,31 +122,44 @@ Class | Method | HTTP request | Description
 [*AdminDisputesApi*](doc/AdminDisputesApi.md) | [**requestAdminDisputeClarification**](doc/AdminDisputesApi.md#requestadmindisputeclarification) | **POST** /admin/disputes/{caseId}/clarifications |
 [*AdminEnforcementApi*](doc/AdminEnforcementApi.md) | [**applyEnforcementAction**](doc/AdminEnforcementApi.md#applyenforcementaction) | **POST** /admin/enforcement/{actionId}/apply |
 [*AdminEnforcementApi*](doc/AdminEnforcementApi.md) | [**declineEnforcementAction**](doc/AdminEnforcementApi.md#declineenforcementaction) | **POST** /admin/enforcement/{actionId}/decline |
+[*AdminEnforcementApi*](doc/AdminEnforcementApi.md) | [**downloadEnforcementEvidence**](doc/AdminEnforcementApi.md#downloadenforcementevidence) | **GET** /admin/enforcement/{actionId}/files/{fileId}/content |
 [*AdminEnforcementApi*](doc/AdminEnforcementApi.md) | [**getEnforcementAction**](doc/AdminEnforcementApi.md#getenforcementaction) | **GET** /admin/enforcement/{actionId} |
+[*AdminEnforcementApi*](doc/AdminEnforcementApi.md) | [**getEnforcementEvidenceLink**](doc/AdminEnforcementApi.md#getenforcementevidencelink) | **GET** /admin/enforcement/{actionId}/files/{fileId} |
 [*AdminEnforcementApi*](doc/AdminEnforcementApi.md) | [**getEnforcementSubject**](doc/AdminEnforcementApi.md#getenforcementsubject) | **GET** /admin/enforcement/subjects/{type}/{subjectId} |
 [*AdminEnforcementApi*](doc/AdminEnforcementApi.md) | [**liftEnforcementAction**](doc/AdminEnforcementApi.md#liftenforcementaction) | **POST** /admin/enforcement/{actionId}/lift |
 [*AdminEnforcementApi*](doc/AdminEnforcementApi.md) | [**listEnforcementActions**](doc/AdminEnforcementApi.md#listenforcementactions) | **GET** /admin/enforcement |
 [*AdminEnforcementApi*](doc/AdminEnforcementApi.md) | [**recordEnforcementAction**](doc/AdminEnforcementApi.md#recordenforcementaction) | **POST** /admin/enforcement |
 [*AdminEnforcementApi*](doc/AdminEnforcementApi.md) | [**searchEnforcementSubjects**](doc/AdminEnforcementApi.md#searchenforcementsubjects) | **GET** /admin/enforcement/subjects |
+[*AdminEnforcementApi*](doc/AdminEnforcementApi.md) | [**uploadEnforcementEvidence**](doc/AdminEnforcementApi.md#uploadenforcementevidence) | **POST** /admin/enforcement/subjects/{type}/{subjectId}/files |
 [*AdminFinanceApi*](doc/AdminFinanceApi.md) | [**approveFeeCredit**](doc/AdminFinanceApi.md#approvefeecredit) | **POST** /admin/finance/fee-credits/{proposalId}/approve |
 [*AdminFinanceApi*](doc/AdminFinanceApi.md) | [**approveFeeStatement**](doc/AdminFinanceApi.md#approvefeestatement) | **POST** /admin/finance/statements/{statementId}/approve |
 [*AdminFinanceApi*](doc/AdminFinanceApi.md) | [**draftFeeStatements**](doc/AdminFinanceApi.md#draftfeestatements) | **POST** /admin/finance/statements/draft |
+[*AdminFinanceApi*](doc/AdminFinanceApi.md) | [**getAdminCommissionStatement**](doc/AdminFinanceApi.md#getadmincommissionstatement) | **GET** /admin/finance/statements/{statementId} |
 [*AdminFinanceApi*](doc/AdminFinanceApi.md) | [**getWithholdingAccumulator**](doc/AdminFinanceApi.md#getwithholdingaccumulator) | **GET** /admin/finance/withholding-accumulators/{accumulatorId} |
 [*AdminFinanceApi*](doc/AdminFinanceApi.md) | [**listAdminPayments**](doc/AdminFinanceApi.md#listadminpayments) | **GET** /admin/finance/payments |
 [*AdminFinanceApi*](doc/AdminFinanceApi.md) | [**listChannelFees**](doc/AdminFinanceApi.md#listchannelfees) | **GET** /admin/finance/channel-fees |
 [*AdminFinanceApi*](doc/AdminFinanceApi.md) | [**listCommissionPolicies**](doc/AdminFinanceApi.md#listcommissionpolicies) | **GET** /admin/finance/commission-policies |
+[*AdminFinanceApi*](doc/AdminFinanceApi.md) | [**listCommissionTransactions**](doc/AdminFinanceApi.md#listcommissiontransactions) | **GET** /admin/finance/commission-transactions |
 [*AdminFinanceApi*](doc/AdminFinanceApi.md) | [**listFeeStatements**](doc/AdminFinanceApi.md#listfeestatements) | **GET** /admin/finance/statements |
 [*AdminFinanceApi*](doc/AdminFinanceApi.md) | [**listFinanceReviewItems**](doc/AdminFinanceApi.md#listfinancereviewitems) | **GET** /admin/finance/review-items |
 [*AdminFinanceApi*](doc/AdminFinanceApi.md) | [**listWithholdingAccumulators**](doc/AdminFinanceApi.md#listwithholdingaccumulators) | **GET** /admin/finance/withholding-accumulators |
+[*AdminFinanceApi*](doc/AdminFinanceApi.md) | [**previewCommissionPolicy**](doc/AdminFinanceApi.md#previewcommissionpolicy) | **POST** /admin/finance/commission-policies/preview |
 [*AdminFinanceApi*](doc/AdminFinanceApi.md) | [**proposeFeeCredit**](doc/AdminFinanceApi.md#proposefeecredit) | **POST** /admin/finance/fee-credits |
 [*AdminFinanceApi*](doc/AdminFinanceApi.md) | [**publishCommissionPolicy**](doc/AdminFinanceApi.md#publishcommissionpolicy) | **POST** /admin/finance/commission-policies |
+[*AdminFinanceApi*](doc/AdminFinanceApi.md) | [**resendCommissionEmail**](doc/AdminFinanceApi.md#resendcommissionemail) | **POST** /admin/finance/commission-emails/{eventId}/resend |
+[*AdminFinanceApi*](doc/AdminFinanceApi.md) | [**resendFailedCommissionEmails**](doc/AdminFinanceApi.md#resendfailedcommissionemails) | **POST** /admin/finance/commission-policies/{policyId}/resend-failed |
 [*AdminFinanceApi*](doc/AdminFinanceApi.md) | [**resolveFinanceReviewItem**](doc/AdminFinanceApi.md#resolvefinancereviewitem) | **POST** /admin/finance/review-items/{itemId}/resolve |
 [*AdminFinanceApi*](doc/AdminFinanceApi.md) | [**resolveWithholdingOverlap**](doc/AdminFinanceApi.md#resolvewithholdingoverlap) | **POST** /admin/finance/withholding-accumulators/{accumulatorId}/overlap |
 [*AdminFinanceApi*](doc/AdminFinanceApi.md) | [**runPaymentReconciliation**](doc/AdminFinanceApi.md#runpaymentreconciliation) | **POST** /admin/finance/reconciliation/run |
+[*AdminFinanceApi*](doc/AdminFinanceApi.md) | [**updateFeeStatementInvoice**](doc/AdminFinanceApi.md#updatefeestatementinvoice) | **PUT** /admin/finance/statements/{statementId}/invoice |
+[*AdminFinanceOperationsApi*](doc/AdminFinanceOperationsApi.md) | [**approveRemittanceReconciliation**](doc/AdminFinanceOperationsApi.md#approveremittancereconciliation) | **POST** /admin/finance/remittances/{assessmentId}/approve-reconciliation |
 [*AdminFinanceOperationsApi*](doc/AdminFinanceOperationsApi.md) | [**getFinanceKpis**](doc/AdminFinanceOperationsApi.md#getfinancekpis) | **GET** /admin/finance/kpis |
+[*AdminFinanceOperationsApi*](doc/AdminFinanceOperationsApi.md) | [**getWithholdingRegister**](doc/AdminFinanceOperationsApi.md#getwithholdingregister) | **GET** /admin/finance/withholding-register |
+[*AdminFinanceOperationsApi*](doc/AdminFinanceOperationsApi.md) | [**getWithholdingVendor**](doc/AdminFinanceOperationsApi.md#getwithholdingvendor) | **GET** /admin/finance/withholding-register/{vendorId} |
 [*AdminFinanceOperationsApi*](doc/AdminFinanceOperationsApi.md) | [**listRemittanceQueue**](doc/AdminFinanceOperationsApi.md#listremittancequeue) | **GET** /admin/finance/remittances |
 [*AdminFinanceOperationsApi*](doc/AdminFinanceOperationsApi.md) | [**listTaxAdjustments**](doc/AdminFinanceOperationsApi.md#listtaxadjustments) | **GET** /admin/finance/tax-adjustments |
 [*AdminFinanceOperationsApi*](doc/AdminFinanceOperationsApi.md) | [**listTaxEvidenceQueue**](doc/AdminFinanceOperationsApi.md#listtaxevidencequeue) | **GET** /admin/finance/evidence |
+[*AdminFinanceOperationsApi*](doc/AdminFinanceOperationsApi.md) | [**listTaxIssues**](doc/AdminFinanceOperationsApi.md#listtaxissues) | **GET** /admin/finance/tax-issues |
 [*AdminFinanceOperationsApi*](doc/AdminFinanceOperationsApi.md) | [**postTaxAdjustment**](doc/AdminFinanceOperationsApi.md#posttaxadjustment) | **POST** /admin/finance/tax-adjustments/{adjustmentId}/post |
 [*AdminFinanceOperationsApi*](doc/AdminFinanceOperationsApi.md) | [**prepareTaxAdjustment**](doc/AdminFinanceOperationsApi.md#preparetaxadjustment) | **POST** /admin/finance/tax-adjustments/{adjustmentId}/prepare |
 [*AdminFinanceOperationsApi*](doc/AdminFinanceOperationsApi.md) | [**reviewTaxAdjustment**](doc/AdminFinanceOperationsApi.md#reviewtaxadjustment) | **POST** /admin/finance/tax-adjustments/{adjustmentId}/review |
@@ -165,7 +180,10 @@ Class | Method | HTTP request | Description
 [*AdminMaterialsAnalyticsApi*](doc/AdminMaterialsAnalyticsApi.md) | [**listAdminMaterialPriceSources**](doc/AdminMaterialsAnalyticsApi.md#listadminmaterialpricesources) | **GET** /admin/materials-analytics/{groupId}/sources |
 [*AdminMaterialsAnalyticsApi*](doc/AdminMaterialsAnalyticsApi.md) | [**listAdminMaterialsAnalytics**](doc/AdminMaterialsAnalyticsApi.md#listadminmaterialsanalytics) | **GET** /admin/materials-analytics |
 [*AdminOrderOperationsApi*](doc/AdminOrderOperationsApi.md) | [**confirmAdminReimbursement**](doc/AdminOrderOperationsApi.md#confirmadminreimbursement) | **POST** /admin/order-operations/reimbursements/{reimbursementId}/confirm |
+[*AdminOrderOperationsApi*](doc/AdminOrderOperationsApi.md) | [**getAdminAuditOrder**](doc/AdminOrderOperationsApi.md#getadminauditorder) | **GET** /admin/order-operations/orders/{orderId} |
+[*AdminOrderOperationsApi*](doc/AdminOrderOperationsApi.md) | [**getAdminAuditOrderFile**](doc/AdminOrderOperationsApi.md#getadminauditorderfile) | **GET** /admin/order-operations/orders/{orderId}/files/{fileId} |
 [*AdminOrderOperationsApi*](doc/AdminOrderOperationsApi.md) | [**getAdminOrderOperationsSummary**](doc/AdminOrderOperationsApi.md#getadminorderoperationssummary) | **GET** /admin/order-operations/summary |
+[*AdminOrderOperationsApi*](doc/AdminOrderOperationsApi.md) | [**listAdminAuditOrders**](doc/AdminOrderOperationsApi.md#listadminauditorders) | **GET** /admin/order-operations/orders |
 [*AdminOrderOperationsApi*](doc/AdminOrderOperationsApi.md) | [**listAdminCancellationRequests**](doc/AdminOrderOperationsApi.md#listadmincancellationrequests) | **GET** /admin/order-operations/cancellation-requests |
 [*AdminOrderOperationsApi*](doc/AdminOrderOperationsApi.md) | [**listAdminRefunds**](doc/AdminOrderOperationsApi.md#listadminrefunds) | **GET** /admin/order-operations/refunds |
 [*AdminOrderOperationsApi*](doc/AdminOrderOperationsApi.md) | [**listAdminReimbursements**](doc/AdminOrderOperationsApi.md#listadminreimbursements) | **GET** /admin/order-operations/reimbursements |
@@ -366,6 +384,7 @@ Class | Method | HTTP request | Description
 [*BuyerReviewsApi*](doc/BuyerReviewsApi.md) | [**editBuyerReview**](doc/BuyerReviewsApi.md#editbuyerreview) | **PATCH** /buyers/reviews/{reviewId} |
 [*BuyerReviewsApi*](doc/BuyerReviewsApi.md) | [**getBuyerOrderReviews**](doc/BuyerReviewsApi.md#getbuyerorderreviews) | **GET** /buyers/orders/{orderId}/reviews |
 [*BuyerReviewsApi*](doc/BuyerReviewsApi.md) | [**getBuyerReviewPhoto**](doc/BuyerReviewsApi.md#getbuyerreviewphoto) | **GET** /buyers/reviews/{reviewId}/media/{mediaId}/content |
+[*BuyerReviewsApi*](doc/BuyerReviewsApi.md) | [**listBuyerReceivedRatings**](doc/BuyerReviewsApi.md#listbuyerreceivedratings) | **GET** /buyers/ratings |
 [*BuyerReviewsApi*](doc/BuyerReviewsApi.md) | [**listListingReviews**](doc/BuyerReviewsApi.md#listlistingreviews) | **GET** /buyers/listings/{listingId}/reviews |
 [*BuyerReviewsApi*](doc/BuyerReviewsApi.md) | [**listStoreReviews**](doc/BuyerReviewsApi.md#liststorereviews) | **GET** /buyers/stores/{vendorId}/reviews |
 [*BuyerReviewsApi*](doc/BuyerReviewsApi.md) | [**removeBuyerReviewMedia**](doc/BuyerReviewsApi.md#removebuyerreviewmedia) | **DELETE** /buyers/reviews/{reviewId}/media/{mediaId} |
@@ -374,28 +393,36 @@ Class | Method | HTTP request | Description
 [*MessagingApi*](doc/MessagingApi.md) | [**archiveChatConversation**](doc/MessagingApi.md#archivechatconversation) | **PUT** /{messagingPortal}/conversations/{conversationId}/archive |
 [*MessagingApi*](doc/MessagingApi.md) | [**authorizeChatChannel**](doc/MessagingApi.md#authorizechatchannel) | **POST** /{messagingPortal}/messaging/auth |
 [*MessagingApi*](doc/MessagingApi.md) | [**cancelSiteInspection**](doc/MessagingApi.md#cancelsiteinspection) | **POST** /{messagingPortal}/conversations/{conversationId}/site-inspections/{inspectionId}/cancel |
+[*MessagingApi*](doc/MessagingApi.md) | [**chooseChatAutomatedResponse**](doc/MessagingApi.md#choosechatautomatedresponse) | **POST** /buyers/conversations/{conversationId}/automated-response |
 [*MessagingApi*](doc/MessagingApi.md) | [**createConversation**](doc/MessagingApi.md#createconversation) | **POST** /{messagingPortal}/conversations |
 [*MessagingApi*](doc/MessagingApi.md) | [**decideChatQuotation**](doc/MessagingApi.md#decidechatquotation) | **POST** /{messagingPortal}/conversations/{conversationId}/quotation/{action} |
 [*MessagingApi*](doc/MessagingApi.md) | [**decideSiteInspection**](doc/MessagingApi.md#decidesiteinspection) | **POST** /{messagingPortal}/conversations/{conversationId}/site-inspections/{inspectionId}/{action} |
 [*MessagingApi*](doc/MessagingApi.md) | [**downloadChatAttachment**](doc/MessagingApi.md#downloadchatattachment) | **GET** /{messagingPortal}/conversations/{conversationId}/attachments/{attachmentId} |
+[*MessagingApi*](doc/MessagingApi.md) | [**getAutomatedResponseSettings**](doc/MessagingApi.md#getautomatedresponsesettings) | **GET** /vendor/messaging/automated-response |
 [*MessagingApi*](doc/MessagingApi.md) | [**getChatAvatar**](doc/MessagingApi.md#getchatavatar) | **GET** /{messagingPortal}/conversations/{conversationId}/avatars/{userId} |
 [*MessagingApi*](doc/MessagingApi.md) | [**getChatRealtime**](doc/MessagingApi.md#getchatrealtime) | **GET** /{messagingPortal}/messaging/realtime |
 [*MessagingApi*](doc/MessagingApi.md) | [**getConversation**](doc/MessagingApi.md#getconversation) | **GET** /{messagingPortal}/conversations/{conversationId} |
+[*MessagingApi*](doc/MessagingApi.md) | [**getVendorBuyerThread**](doc/MessagingApi.md#getvendorbuyerthread) | **GET** /vendor/conversations/{conversationId}/buyer-thread |
 [*MessagingApi*](doc/MessagingApi.md) | [**listChatHandlers**](doc/MessagingApi.md#listchathandlers) | **GET** /{messagingPortal}/conversations/{conversationId}/handlers |
 [*MessagingApi*](doc/MessagingApi.md) | [**listChatProducts**](doc/MessagingApi.md#listchatproducts) | **GET** /{messagingPortal}/conversations/{conversationId}/products |
 [*MessagingApi*](doc/MessagingApi.md) | [**listChatProjectInquiries**](doc/MessagingApi.md#listchatprojectinquiries) | **GET** /{messagingPortal}/conversations/{conversationId}/project-inquiries |
 [*MessagingApi*](doc/MessagingApi.md) | [**listConversations**](doc/MessagingApi.md#listconversations) | **GET** /{messagingPortal}/conversations |
+[*MessagingApi*](doc/MessagingApi.md) | [**listVendorBuyerThreadContexts**](doc/MessagingApi.md#listvendorbuyerthreadcontexts) | **GET** /vendor/conversations/{conversationId}/buyer-thread/contexts |
 [*MessagingApi*](doc/MessagingApi.md) | [**listVendorFulfillmentConversations**](doc/MessagingApi.md#listvendorfulfillmentconversations) | **GET** /vendor/conversations/{conversationId}/fulfillment-conversations |
+[*MessagingApi*](doc/MessagingApi.md) | [**messageWorkPackageOrder**](doc/MessagingApi.md#messageworkpackageorder) | **POST** /buyers/orders/{orderId}/work-package-message |
+[*MessagingApi*](doc/MessagingApi.md) | [**openPendingOrderQuotation**](doc/MessagingApi.md#openpendingorderquotation) | **POST** /vendor/orders/{orderId}/quotation-inquiry |
 [*MessagingApi*](doc/MessagingApi.md) | [**openVendorOrderConversation**](doc/MessagingApi.md#openvendororderconversation) | **POST** /vendor/orders/{orderId}/conversation |
 [*MessagingApi*](doc/MessagingApi.md) | [**previewChatQuotationDelivery**](doc/MessagingApi.md#previewchatquotationdelivery) | **POST** /vendor/conversations/{conversationId}/quotation/delivery-plan |
 [*MessagingApi*](doc/MessagingApi.md) | [**publishChatQuotation**](doc/MessagingApi.md#publishchatquotation) | **POST** /{messagingPortal}/conversations/{conversationId}/quotation/publish |
 [*MessagingApi*](doc/MessagingApi.md) | [**readChatMessages**](doc/MessagingApi.md#readchatmessages) | **POST** /{messagingPortal}/conversations/{conversationId}/read |
 [*MessagingApi*](doc/MessagingApi.md) | [**requestSiteInspection**](doc/MessagingApi.md#requestsiteinspection) | **POST** /{messagingPortal}/site-inspections |
 [*MessagingApi*](doc/MessagingApi.md) | [**restoreChatConversation**](doc/MessagingApi.md#restorechatconversation) | **DELETE** /{messagingPortal}/conversations/{conversationId}/archive |
+[*MessagingApi*](doc/MessagingApi.md) | [**saveAutomatedResponseSettings**](doc/MessagingApi.md#saveautomatedresponsesettings) | **PUT** /vendor/messaging/automated-response |
 [*MessagingApi*](doc/MessagingApi.md) | [**saveChatQuotationDraft**](doc/MessagingApi.md#savechatquotationdraft) | **PUT** /{messagingPortal}/conversations/{conversationId}/quotation/draft |
 [*MessagingApi*](doc/MessagingApi.md) | [**searchChatQuotationLocation**](doc/MessagingApi.md#searchchatquotationlocation) | **POST** /vendor/conversations/{conversationId}/quotation/location |
 [*MessagingApi*](doc/MessagingApi.md) | [**sendChatMessage**](doc/MessagingApi.md#sendchatmessage) | **POST** /{messagingPortal}/conversations/{conversationId}/messages |
 [*MessagingApi*](doc/MessagingApi.md) | [**sendChatTyping**](doc/MessagingApi.md#sendchattyping) | **POST** /{messagingPortal}/conversations/{conversationId}/typing |
+[*MessagingApi*](doc/MessagingApi.md) | [**shareChatWorkPackage**](doc/MessagingApi.md#sharechatworkpackage) | **POST** /buyers/conversations/{conversationId}/work-package-attachment |
 [*MessagingApi*](doc/MessagingApi.md) | [**startNextChatQuotation**](doc/MessagingApi.md#startnextchatquotation) | **POST** /{messagingPortal}/conversations/{conversationId}/quotation/start |
 [*MessagingApi*](doc/MessagingApi.md) | [**transferChatHandler**](doc/MessagingApi.md#transferchathandler) | **POST** /{messagingPortal}/conversations/{conversationId}/transfer |
 [*MessagingApi*](doc/MessagingApi.md) | [**updateChatDestination**](doc/MessagingApi.md#updatechatdestination) | **PUT** /{messagingPortal}/conversations/{conversationId}/destination |
@@ -416,9 +443,12 @@ Class | Method | HTTP request | Description
 [*NotificationsApi*](doc/NotificationsApi.md) | [**updateNotificationPreference**](doc/NotificationsApi.md#updatenotificationpreference) | **PUT** /{audience}/notifications/preferences | update Notification Preference
 [*PaymentWebhooksApi*](doc/PaymentWebhooksApi.md) | [**receiveXenditPaymentWebhook**](doc/PaymentWebhooksApi.md#receivexenditpaymentwebhook) | **POST** /webhooks/xendit |
 [*PaymentWebhooksApi*](doc/PaymentWebhooksApi.md) | [**showPaymentReturnPage**](doc/PaymentWebhooksApi.md#showpaymentreturnpage) | **GET** /payments/return |
+[*PublicFinanceApi*](doc/PublicFinanceApi.md) | [**getPublicCommissionPolicy**](doc/PublicFinanceApi.md#getpubliccommissionpolicy) | **GET** /commission-policy |
 [*ReportingApi*](doc/ReportingApi.md) | [**downloadDocumentExport**](doc/ReportingApi.md#downloaddocumentexport) | **GET** /{audience}/reports/{exportId}/download | download Document Export
+[*ReportingApi*](doc/ReportingApi.md) | [**downloadOrderDocument**](doc/ReportingApi.md#downloadorderdocument) | **GET** /{audience}/orders/{orderId}/documents/{kind}/download | Download an already generated order PDF
 [*ReportingApi*](doc/ReportingApi.md) | [**getTaxPackage**](doc/ReportingApi.md#gettaxpackage) | **GET** /admin/reports/tax/{packageId} | get Tax Package
 [*ReportingApi*](doc/ReportingApi.md) | [**listDocumentExports**](doc/ReportingApi.md#listdocumentexports) | **GET** /{audience}/reports | list Document Exports
+[*ReportingApi*](doc/ReportingApi.md) | [**listOrderDocuments**](doc/ReportingApi.md#listorderdocuments) | **GET** /{audience}/orders/{orderId}/documents | List automatically issued order documents
 [*ReportingApi*](doc/ReportingApi.md) | [**listTaxPackages**](doc/ReportingApi.md#listtaxpackages) | **GET** /admin/reports/tax | list Tax Packages
 [*ReportingApi*](doc/ReportingApi.md) | [**prepareTaxPackage**](doc/ReportingApi.md#preparetaxpackage) | **POST** /admin/reports/tax | prepare Tax Package
 [*ReportingApi*](doc/ReportingApi.md) | [**recordTaxSimulation**](doc/ReportingApi.md#recordtaxsimulation) | **POST** /admin/reports/tax/{packageId}/simulation | record Tax Simulation
@@ -492,6 +522,7 @@ Class | Method | HTTP request | Description
 [*VendorFinanceApi*](doc/VendorFinanceApi.md) | [**getVendorFeePayment**](doc/VendorFinanceApi.md#getvendorfeepayment) | **GET** /vendor/finance/payments/{paymentId} |
 [*VendorFinanceApi*](doc/VendorFinanceApi.md) | [**getVendorFeeStatement**](doc/VendorFinanceApi.md#getvendorfeestatement) | **GET** /vendor/finance/statements/{statementId} |
 [*VendorFinanceApi*](doc/VendorFinanceApi.md) | [**getVendorFinanceOverview**](doc/VendorFinanceApi.md#getvendorfinanceoverview) | **GET** /vendor/finance |
+[*VendorFinanceApi*](doc/VendorFinanceApi.md) | [**listVendorThresholdPayments**](doc/VendorFinanceApi.md#listvendorthresholdpayments) | **GET** /vendor/finance/threshold-payments |
 [*VendorFinanceApi*](doc/VendorFinanceApi.md) | [**listVendorTransactions**](doc/VendorFinanceApi.md#listvendortransactions) | **GET** /vendor/finance/transactions |
 [*VendorFinanceApi*](doc/VendorFinanceApi.md) | [**payVendorFeeStatement**](doc/VendorFinanceApi.md#payvendorfeestatement) | **POST** /vendor/finance/statements/{statementId}/payments |
 [*VendorFinanceApi*](doc/VendorFinanceApi.md) | [**recordVendorPhysicalPayment**](doc/VendorFinanceApi.md#recordvendorphysicalpayment) | **POST** /vendor/orders/{orderId}/physical-payments |
@@ -528,10 +559,14 @@ Class | Method | HTTP request | Description
 [*VendorInventoryApi*](doc/VendorInventoryApi.md) | [**listVendorPriceHistory**](doc/VendorInventoryApi.md#listvendorpricehistory) | **GET** /vendor/inventory/items/{variantId}/prices |
 [*VendorInventoryApi*](doc/VendorInventoryApi.md) | [**saveVendorInventorySettings**](doc/VendorInventoryApi.md#savevendorinventorysettings) | **PUT** /vendor/inventory/settings |
 [*VendorInventoryApi*](doc/VendorInventoryApi.md) | [**updateVendorInventoryItem**](doc/VendorInventoryApi.md#updatevendorinventoryitem) | **PATCH** /vendor/inventory/items/{variantId} |
+[*VendorInvoicesApi*](doc/VendorInvoicesApi.md) | [**downloadVendorInvoiceDraft**](doc/VendorInvoicesApi.md#downloadvendorinvoicedraft) | **GET** /vendor/invoice-drafts/{draftId}/files/{fileId} |
 [*VendorInvoicesApi*](doc/VendorInvoicesApi.md) | [**explainVendorInvoiceDifference**](doc/VendorInvoicesApi.md#explainvendorinvoicedifference) | **POST** /vendor/orders/{orderId}/invoices/{recordId}/explanation |
 [*VendorInvoicesApi*](doc/VendorInvoicesApi.md) | [**getVendorInvoiceFile**](doc/VendorInvoicesApi.md#getvendorinvoicefile) | **GET** /vendor/invoice-records/{recordId}/content |
+[*VendorInvoicesApi*](doc/VendorInvoicesApi.md) | [**getVendorInvoicePreset**](doc/VendorInvoicesApi.md#getvendorinvoicepreset) | **GET** /vendor/invoices/preset |
 [*VendorInvoicesApi*](doc/VendorInvoicesApi.md) | [**getVendorOrderInvoices**](doc/VendorInvoicesApi.md#getvendororderinvoices) | **GET** /vendor/orders/{orderId}/invoices |
 [*VendorInvoicesApi*](doc/VendorInvoicesApi.md) | [**listVendorInvoices**](doc/VendorInvoicesApi.md#listvendorinvoices) | **GET** /vendor/invoices |
+[*VendorInvoicesApi*](doc/VendorInvoicesApi.md) | [**saveVendorInvoicePreset**](doc/VendorInvoicesApi.md#savevendorinvoicepreset) | **PUT** /vendor/invoices/preset |
+[*VendorInvoicesApi*](doc/VendorInvoicesApi.md) | [**sendVendorInvoice**](doc/VendorInvoicesApi.md#sendvendorinvoice) | **POST** /vendor/orders/{orderId}/invoices/send |
 [*VendorInvoicesApi*](doc/VendorInvoicesApi.md) | [**uploadVendorInvoice**](doc/VendorInvoicesApi.md#uploadvendorinvoice) | **POST** /vendor/orders/{orderId}/invoices |
 [*VendorMaterialsAnalyticsApi*](doc/VendorMaterialsAnalyticsApi.md) | [**exportVendorMaterialsAnalytics**](doc/VendorMaterialsAnalyticsApi.md#exportvendormaterialsanalytics) | **GET** /vendor/materials-analytics/export |
 [*VendorMaterialsAnalyticsApi*](doc/VendorMaterialsAnalyticsApi.md) | [**getVendorMaterialPriceDetails**](doc/VendorMaterialsAnalyticsApi.md#getvendormaterialpricedetails) | **GET** /vendor/materials-analytics/{groupId} |
@@ -569,7 +604,9 @@ Class | Method | HTTP request | Description
 [*VendorOrdersApi*](doc/VendorOrdersApi.md) | [**confirmVendorOrder**](doc/VendorOrdersApi.md#confirmvendororder) | **POST** /vendor/orders/{orderId}/confirm |
 [*VendorOrdersApi*](doc/VendorOrdersApi.md) | [**declineVendorOrder**](doc/VendorOrdersApi.md#declinevendororder) | **POST** /vendor/orders/{orderId}/decline |
 [*VendorOrdersApi*](doc/VendorOrdersApi.md) | [**getVendorOrder**](doc/VendorOrdersApi.md#getvendororder) | **GET** /vendor/orders/{orderId} |
+[*VendorOrdersApi*](doc/VendorOrdersApi.md) | [**getVendorOrderBuyerPhoto**](doc/VendorOrdersApi.md#getvendororderbuyerphoto) | **GET** /vendor/orders/{orderId}/buyer-photo |
 [*VendorOrdersApi*](doc/VendorOrdersApi.md) | [**getVendorOrderDeliveryPlan**](doc/VendorOrdersApi.md#getvendororderdeliveryplan) | **POST** /vendor/orders/{orderId}/delivery-recommendations |
+[*VendorOrdersApi*](doc/VendorOrdersApi.md) | [**getVendorOrderRoute**](doc/VendorOrdersApi.md#getvendororderroute) | **GET** /vendor/orders/{orderId}/route |
 [*VendorOrdersApi*](doc/VendorOrdersApi.md) | [**listVendorOrders**](doc/VendorOrdersApi.md#listvendororders) | **GET** /vendor/orders |
 [*VendorProductAnalyticsApi*](doc/VendorProductAnalyticsApi.md) | [**getVendorProductAnalytics**](doc/VendorProductAnalyticsApi.md#getvendorproductanalytics) | **GET** /vendor/product-analytics |
 [*VendorProductAnalyticsApi*](doc/VendorProductAnalyticsApi.md) | [**getVendorProductAnalyticsDetail**](doc/VendorProductAnalyticsApi.md#getvendorproductanalyticsdetail) | **GET** /vendor/product-analytics/listings/{listingId} |
@@ -577,6 +614,7 @@ Class | Method | HTTP request | Description
 [*VendorReviewsApi*](doc/VendorReviewsApi.md) | [**editVendorBuyerRating**](doc/VendorReviewsApi.md#editvendorbuyerrating) | **PATCH** /vendor/reviews/{reviewId} |
 [*VendorReviewsApi*](doc/VendorReviewsApi.md) | [**getVendorOrderReviews**](doc/VendorReviewsApi.md#getvendororderreviews) | **GET** /vendor/orders/{orderId}/reviews |
 [*VendorReviewsApi*](doc/VendorReviewsApi.md) | [**getVendorReview**](doc/VendorReviewsApi.md#getvendorreview) | **GET** /vendor/reviews/{reviewId} |
+[*VendorReviewsApi*](doc/VendorReviewsApi.md) | [**getVendorReviewBuyerPhoto**](doc/VendorReviewsApi.md#getvendorreviewbuyerphoto) | **GET** /vendor/reviews/{reviewId}/buyer-photo |
 [*VendorReviewsApi*](doc/VendorReviewsApi.md) | [**getVendorReviewPhoto**](doc/VendorReviewsApi.md#getvendorreviewphoto) | **GET** /vendor/reviews/{reviewId}/media/{mediaId}/content |
 [*VendorReviewsApi*](doc/VendorReviewsApi.md) | [**listVendorReviews**](doc/VendorReviewsApi.md#listvendorreviews) | **GET** /vendor/reviews |
 [*VendorReviewsApi*](doc/VendorReviewsApi.md) | [**reportVendorReview**](doc/VendorReviewsApi.md#reportvendorreview) | **POST** /vendor/reviews/{reviewId}/flags |
@@ -697,6 +735,8 @@ Class | Method | HTTP request | Description
  - [AnalyticsUnit](doc/AnalyticsUnit.md)
  - [AnalyticsWindow](doc/AnalyticsWindow.md)
  - [ApiError](doc/ApiError.md)
+ - [AssessedOnlinePayment](doc/AssessedOnlinePayment.md)
+ - [AssessedOnlinePaymentTotals](doc/AssessedOnlinePaymentTotals.md)
  - [AuditActionListEnvelope](doc/AuditActionListEnvelope.md)
  - [AuditEvent](doc/AuditEvent.md)
  - [AuditEventDetail](doc/AuditEventDetail.md)
@@ -719,6 +759,10 @@ Class | Method | HTTP request | Description
  - [AutoAcceptReason](doc/AutoAcceptReason.md)
  - [AutoAcceptResume](doc/AutoAcceptResume.md)
  - [AutoAcceptStatus](doc/AutoAcceptStatus.md)
+ - [AutomatedResponseOption](doc/AutomatedResponseOption.md)
+ - [AutomatedResponseSettings](doc/AutomatedResponseSettings.md)
+ - [AutomatedResponseSettingsEnvelope](doc/AutomatedResponseSettingsEnvelope.md)
+ - [AutomaticRecoveryHealth](doc/AutomaticRecoveryHealth.md)
  - [BadgeMetric](doc/BadgeMetric.md)
  - [BadgeState](doc/BadgeState.md)
  - [BadgeStateScopesInner](doc/BadgeStateScopesInner.md)
@@ -789,6 +833,10 @@ Class | Method | HTTP request | Description
  - [BuyerOrderReviews](doc/BuyerOrderReviews.md)
  - [BuyerOrderReviewsEnvelope](doc/BuyerOrderReviewsEnvelope.md)
  - [BuyerOriginRequest](doc/BuyerOriginRequest.md)
+ - [BuyerRatingSummary](doc/BuyerRatingSummary.md)
+ - [BuyerReceivedRating](doc/BuyerReceivedRating.md)
+ - [BuyerReceivedRatingsEnvelope](doc/BuyerReceivedRatingsEnvelope.md)
+ - [BuyerReceivedRatingsMeta](doc/BuyerReceivedRatingsMeta.md)
  - [BuyerReviewEditRequest](doc/BuyerReviewEditRequest.md)
  - [BuyerReviewSubmitRequest](doc/BuyerReviewSubmitRequest.md)
  - [BuyerReviewSubmitRequestProductReviewsInner](doc/BuyerReviewSubmitRequestProductReviewsInner.md)
@@ -859,6 +907,9 @@ Class | Method | HTTP request | Description
  - [ChannelFeeVersion](doc/ChannelFeeVersion.md)
  - [ChannelFeeVersionListEnvelope](doc/ChannelFeeVersionListEnvelope.md)
  - [ChatAttachment](doc/ChatAttachment.md)
+ - [ChatAutomatedChoice](doc/ChatAutomatedChoice.md)
+ - [ChatAutomatedOption](doc/ChatAutomatedOption.md)
+ - [ChatAutomatedReply](doc/ChatAutomatedReply.md)
  - [ChatChannelAuth](doc/ChatChannelAuth.md)
  - [ChatChannelSignature](doc/ChatChannelSignature.md)
  - [ChatCreate](doc/ChatCreate.md)
@@ -900,6 +951,7 @@ Class | Method | HTTP request | Description
  - [ChatStore](doc/ChatStore.md)
  - [ChatTransfer](doc/ChatTransfer.md)
  - [ChatTyping](doc/ChatTyping.md)
+ - [ChatWorkPackageAttachment](doc/ChatWorkPackageAttachment.md)
  - [CheckoutChildOrder](doc/CheckoutChildOrder.md)
  - [CheckoutGroupPreview](doc/CheckoutGroupPreview.md)
  - [CheckoutInvoiceDetails](doc/CheckoutInvoiceDetails.md)
@@ -911,10 +963,13 @@ Class | Method | HTTP request | Description
  - [CheckoutSubmissionEnvelope](doc/CheckoutSubmissionEnvelope.md)
  - [CheckoutSubmitRequest](doc/CheckoutSubmitRequest.md)
  - [CheckoutVendorRef](doc/CheckoutVendorRef.md)
+ - [CommissionEmailSummary](doc/CommissionEmailSummary.md)
  - [CommissionPolicies](doc/CommissionPolicies.md)
  - [CommissionPoliciesEnvelope](doc/CommissionPoliciesEnvelope.md)
  - [CommissionPolicy](doc/CommissionPolicy.md)
  - [CommissionPolicyEnvelope](doc/CommissionPolicyEnvelope.md)
+ - [CommissionPolicyPreview](doc/CommissionPolicyPreview.md)
+ - [CommissionPolicyPreviewEnvelope](doc/CommissionPolicyPreviewEnvelope.md)
  - [CommissionPolicyPublishRequest](doc/CommissionPolicyPublishRequest.md)
  - [CommissionTrendPoint](doc/CommissionTrendPoint.md)
  - [ComparableGroupCreate](doc/ComparableGroupCreate.md)
@@ -982,6 +1037,7 @@ Class | Method | HTTP request | Description
  - [DeliveryRoute](doc/DeliveryRoute.md)
  - [DeliveryVehicleOption](doc/DeliveryVehicleOption.md)
  - [DeliveryVehicleOptionsEnvelope](doc/DeliveryVehicleOptionsEnvelope.md)
+ - [DeliveryVehicleProfile](doc/DeliveryVehicleProfile.md)
  - [DeliveryVehicleSelection](doc/DeliveryVehicleSelection.md)
  - [DeliveryWorkspacePage](doc/DeliveryWorkspacePage.md)
  - [DeliveryWorkspacePageMeta](doc/DeliveryWorkspacePageMeta.md)
@@ -1072,7 +1128,12 @@ Class | Method | HTTP request | Description
  - [EnforcementDetail](doc/EnforcementDetail.md)
  - [EnforcementDetailEnvelope](doc/EnforcementDetailEnvelope.md)
  - [EnforcementEvent](doc/EnforcementEvent.md)
+ - [EnforcementEvidence](doc/EnforcementEvidence.md)
+ - [EnforcementEvidenceEnvelope](doc/EnforcementEvidenceEnvelope.md)
+ - [EnforcementEvidenceLinkEnvelope](doc/EnforcementEvidenceLinkEnvelope.md)
+ - [EnforcementEvidenceLinkEnvelopeData](doc/EnforcementEvidenceLinkEnvelopeData.md)
  - [EnforcementListEnvelope](doc/EnforcementListEnvelope.md)
+ - [EnforcementListEnvelopeMeta](doc/EnforcementListEnvelopeMeta.md)
  - [EnforcementRecordRequest](doc/EnforcementRecordRequest.md)
  - [EnforcementSubjectEnvelope](doc/EnforcementSubjectEnvelope.md)
  - [EnforcementSubjectEnvelopeData](doc/EnforcementSubjectEnvelopeData.md)
@@ -1208,18 +1269,24 @@ Class | Method | HTTP request | Description
  - [InvestigationAckEnvelope](doc/InvestigationAckEnvelope.md)
  - [InvestigationReasonRequest](doc/InvestigationReasonRequest.md)
  - [InvoiceBillingDetailsRequest](doc/InvoiceBillingDetailsRequest.md)
+ - [InvoiceBillingSnapshot](doc/InvoiceBillingSnapshot.md)
+ - [InvoiceDraft](doc/InvoiceDraft.md)
  - [InvoiceExplanationRequest](doc/InvoiceExplanationRequest.md)
  - [InvoiceListMeta](doc/InvoiceListMeta.md)
  - [InvoiceLogEnvelope](doc/InvoiceLogEnvelope.md)
  - [InvoiceLogRow](doc/InvoiceLogRow.md)
  - [InvoiceOrderLine](doc/InvoiceOrderLine.md)
+ - [InvoiceOrderSummary](doc/InvoiceOrderSummary.md)
+ - [InvoicePresetInput](doc/InvoicePresetInput.md)
  - [InvoiceRecordView](doc/InvoiceRecordView.md)
  - [InvoiceRequestAnswer](doc/InvoiceRequestAnswer.md)
  - [InvoiceRequestCreate](doc/InvoiceRequestCreate.md)
  - [InvoiceRequestView](doc/InvoiceRequestView.md)
+ - [InvoiceSendInput](doc/InvoiceSendInput.md)
  - [ListDocumentExports200Response](doc/ListDocumentExports200Response.md)
  - [ListNotificationFailures200Response](doc/ListNotificationFailures200Response.md)
  - [ListNotifications200Response](doc/ListNotifications200Response.md)
+ - [ListOrderDocuments200Response](doc/ListOrderDocuments200Response.md)
  - [ListTaxPackages200Response](doc/ListTaxPackages200Response.md)
  - [ListingAttributeLabel](doc/ListingAttributeLabel.md)
  - [ListingCategoryRef](doc/ListingCategoryRef.md)
@@ -1331,6 +1398,7 @@ Class | Method | HTTP request | Description
  - [OrderLineQuantity](doc/OrderLineQuantity.md)
  - [OrderListEnvelope](doc/OrderListEnvelope.md)
  - [OrderListMeta](doc/OrderListMeta.md)
+ - [OrderLocationMap](doc/OrderLocationMap.md)
  - [OrderNrpc](doc/OrderNrpc.md)
  - [OrderPaymentAvailability](doc/OrderPaymentAvailability.md)
  - [OrderPaymentState](doc/OrderPaymentState.md)
@@ -1361,6 +1429,7 @@ Class | Method | HTTP request | Description
  - [PaymentWebhookAck](doc/PaymentWebhookAck.md)
  - [PaymentWebhookAckEnvelope](doc/PaymentWebhookAckEnvelope.md)
  - [PaymentWebhookPayload](doc/PaymentWebhookPayload.md)
+ - [PendingOrderQuotationInput](doc/PendingOrderQuotationInput.md)
  - [PhysicalHandoverCash](doc/PhysicalHandoverCash.md)
  - [PhysicalPaymentRecord](doc/PhysicalPaymentRecord.md)
  - [PhysicalPaymentSettings](doc/PhysicalPaymentSettings.md)
@@ -1386,6 +1455,7 @@ Class | Method | HTTP request | Description
  - [ProcessingFee](doc/ProcessingFee.md)
  - [ProcessingFeeAmount](doc/ProcessingFeeAmount.md)
  - [ProductAnalyticsPeriod](doc/ProductAnalyticsPeriod.md)
+ - [ProductAnalyticsRatedProduct](doc/ProductAnalyticsRatedProduct.md)
  - [ProductAnalyticsRow](doc/ProductAnalyticsRow.md)
  - [ProductAnalyticsSegments](doc/ProductAnalyticsSegments.md)
  - [ProductAnalyticsSegmentsPointsInner](doc/ProductAnalyticsSegmentsPointsInner.md)
@@ -1397,6 +1467,7 @@ Class | Method | HTTP request | Description
  - [ProductComplianceCaseEnvelopeData](doc/ProductComplianceCaseEnvelopeData.md)
  - [ProductComplianceDecision](doc/ProductComplianceDecision.md)
  - [ProductComplianceQueueEnvelope](doc/ProductComplianceQueueEnvelope.md)
+ - [ProductComplianceQueueEnvelopeMeta](doc/ProductComplianceQueueEnvelopeMeta.md)
  - [ProductComplianceQueueItem](doc/ProductComplianceQueueItem.md)
  - [ProductDeliveryPreviewRequest](doc/ProductDeliveryPreviewRequest.md)
  - [ProductRatingSummary](doc/ProductRatingSummary.md)
@@ -1463,6 +1534,8 @@ Class | Method | HTTP request | Description
  - [PsgcSearchEnvelopeData](doc/PsgcSearchEnvelopeData.md)
  - [PublicAddressSummary](doc/PublicAddressSummary.md)
  - [PublicBadge](doc/PublicBadge.md)
+ - [PublicCommissionPolicy](doc/PublicCommissionPolicy.md)
+ - [PublicCommissionPolicyEnvelope](doc/PublicCommissionPolicyEnvelope.md)
  - [PublicReview](doc/PublicReview.md)
  - [PublicReviewListEnvelope](doc/PublicReviewListEnvelope.md)
  - [PublicScores](doc/PublicScores.md)
@@ -1497,6 +1570,9 @@ Class | Method | HTTP request | Description
  - [ReimbursementTimelineItem](doc/ReimbursementTimelineItem.md)
  - [RemittanceQueueEnvelope](doc/RemittanceQueueEnvelope.md)
  - [RemittanceQueueRow](doc/RemittanceQueueRow.md)
+ - [RemittanceReconciliationApproval](doc/RemittanceReconciliationApproval.md)
+ - [RemittanceReconciliationDecision](doc/RemittanceReconciliationDecision.md)
+ - [RemittanceReconciliationDecisionEnvelope](doc/RemittanceReconciliationDecisionEnvelope.md)
  - [RequestDocumentExport202Response](doc/RequestDocumentExport202Response.md)
  - [ResendBotChallengeRequest](doc/ResendBotChallengeRequest.md)
  - [ResolveNotification200Response](doc/ResolveNotification200Response.md)
@@ -1537,6 +1613,7 @@ Class | Method | HTTP request | Description
  - [SiteInspectionVersion](doc/SiteInspectionVersion.md)
  - [StaleListing](doc/StaleListing.md)
  - [StatementApproveRequest](doc/StatementApproveRequest.md)
+ - [StatementInvoiceUpdateRequest](doc/StatementInvoiceUpdateRequest.md)
  - [StatementPaymentRequest](doc/StatementPaymentRequest.md)
  - [StockConfirmationItem](doc/StockConfirmationItem.md)
  - [StockConfirmationRequest](doc/StockConfirmationRequest.md)
@@ -1597,6 +1674,13 @@ Class | Method | HTTP request | Description
  - [ThresholdStatusEvent](doc/ThresholdStatusEvent.md)
  - [UserIdentity](doc/UserIdentity.md)
  - [VehicleIssueRequest](doc/VehicleIssueRequest.md)
+ - [VendorAccountDeletionBlockers](doc/VendorAccountDeletionBlockers.md)
+ - [VendorAccountDeletionPreview](doc/VendorAccountDeletionPreview.md)
+ - [VendorAccountDeletionPreviewEnvelope](doc/VendorAccountDeletionPreviewEnvelope.md)
+ - [VendorAccountDeletionRequest](doc/VendorAccountDeletionRequest.md)
+ - [VendorAccountDeletionResult](doc/VendorAccountDeletionResult.md)
+ - [VendorAccountDeletionResultEnvelope](doc/VendorAccountDeletionResultEnvelope.md)
+ - [VendorAccountRetainedRecord](doc/VendorAccountRetainedRecord.md)
  - [VendorActivationSnapshot](doc/VendorActivationSnapshot.md)
  - [VendorAddressGeocode](doc/VendorAddressGeocode.md)
  - [VendorAddressGeocodeEnvelope](doc/VendorAddressGeocodeEnvelope.md)
@@ -1673,6 +1757,8 @@ Class | Method | HTTP request | Description
  - [VendorInvitationEnvelope](doc/VendorInvitationEnvelope.md)
  - [VendorInvitationRequest](doc/VendorInvitationRequest.md)
  - [VendorInvoiceBillingDetails](doc/VendorInvoiceBillingDetails.md)
+ - [VendorInvoicePreset](doc/VendorInvoicePreset.md)
+ - [VendorInvoicePresetEnvelope](doc/VendorInvoicePresetEnvelope.md)
  - [VendorMaterialsAnalyticsDetail](doc/VendorMaterialsAnalyticsDetail.md)
  - [VendorMaterialsAnalyticsDetailEnvelope](doc/VendorMaterialsAnalyticsDetailEnvelope.md)
  - [VendorMaterialsAnalyticsDetailGroup](doc/VendorMaterialsAnalyticsDetailGroup.md)
@@ -1716,6 +1802,7 @@ Class | Method | HTTP request | Description
  - [VendorProductAnalyticsSummaries](doc/VendorProductAnalyticsSummaries.md)
  - [VendorProductAnalyticsSummariesEnvelope](doc/VendorProductAnalyticsSummariesEnvelope.md)
  - [VendorProductAnalyticsSummariesItemsInner](doc/VendorProductAnalyticsSummariesItemsInner.md)
+ - [VendorProductSalesBreakdown](doc/VendorProductSalesBreakdown.md)
  - [VendorRestriction](doc/VendorRestriction.md)
  - [VendorRestrictionEnvelope](doc/VendorRestrictionEnvelope.md)
  - [VendorReviewEditRequest](doc/VendorReviewEditRequest.md)
@@ -1751,6 +1838,8 @@ Class | Method | HTTP request | Description
  - [VendorTeamQuotationPerformance](doc/VendorTeamQuotationPerformance.md)
  - [VendorTeamReplyTime](doc/VendorTeamReplyTime.md)
  - [VendorTeamSalesPerformance](doc/VendorTeamSalesPerformance.md)
+ - [VendorThresholdPayments](doc/VendorThresholdPayments.md)
+ - [VendorThresholdPaymentsEnvelope](doc/VendorThresholdPaymentsEnvelope.md)
  - [VendorTinReveal](doc/VendorTinReveal.md)
  - [VendorTinRevealEnvelope](doc/VendorTinRevealEnvelope.md)
  - [VendorVerificationDraft](doc/VendorVerificationDraft.md)
@@ -1779,8 +1868,19 @@ Class | Method | HTTP request | Description
  - [WithholdingAccumulatorDetailEnvelope](doc/WithholdingAccumulatorDetailEnvelope.md)
  - [WithholdingAccumulatorListEnvelope](doc/WithholdingAccumulatorListEnvelope.md)
  - [WithholdingAccumulatorView](doc/WithholdingAccumulatorView.md)
+ - [WithholdingCalculation](doc/WithholdingCalculation.md)
+ - [WithholdingCalculationBreakdown](doc/WithholdingCalculationBreakdown.md)
+ - [WithholdingPaymentCalculation](doc/WithholdingPaymentCalculation.md)
+ - [WithholdingRecordedPayment](doc/WithholdingRecordedPayment.md)
+ - [WithholdingRegister](doc/WithholdingRegister.md)
+ - [WithholdingRegisterEnvelope](doc/WithholdingRegisterEnvelope.md)
  - [WithholdingThresholdCalculation](doc/WithholdingThresholdCalculation.md)
  - [WithholdingThresholdPanel](doc/WithholdingThresholdPanel.md)
+ - [WithholdingVendorDetail](doc/WithholdingVendorDetail.md)
+ - [WithholdingVendorDetailEnvelope](doc/WithholdingVendorDetailEnvelope.md)
+ - [WithholdingVendorDetailEnvelopeMeta](doc/WithholdingVendorDetailEnvelopeMeta.md)
+ - [WithholdingVendorRow](doc/WithholdingVendorRow.md)
+ - [WithholdingYearLimit](doc/WithholdingYearLimit.md)
  - [WorkPackageAlternative](doc/WorkPackageAlternative.md)
  - [WorkPackageAlternativePage](doc/WorkPackageAlternativePage.md)
  - [WorkPackageAlternativePageExcluded](doc/WorkPackageAlternativePageExcluded.md)

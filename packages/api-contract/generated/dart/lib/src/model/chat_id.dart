@@ -12,10 +12,15 @@ part 'chat_id.g.dart';
 ///
 /// Properties:
 /// * [id]
+/// * [storeConversationId] - Normal Buyer/store chat to open after sharing a Work Package. The id field preserves historical quotation linkage.
 @BuiltValue()
 abstract class ChatId implements Built<ChatId, ChatIdBuilder> {
   @BuiltValueField(wireName: r'id')
   String get id;
+
+  /// Normal Buyer/store chat to open after sharing a Work Package. The id field preserves historical quotation linkage.
+  @BuiltValueField(wireName: r'store_conversation_id')
+  String? get storeConversationId;
 
   ChatId._();
 
@@ -45,6 +50,13 @@ class _$ChatIdSerializer implements PrimitiveSerializer<ChatId> {
       object.id,
       specifiedType: const FullType(String),
     );
+    if (object.storeConversationId != null) {
+      yield r'store_conversation_id';
+      yield serializers.serialize(
+        object.storeConversationId,
+        specifiedType: const FullType(String),
+      );
+    }
   }
 
   @override
@@ -74,6 +86,14 @@ class _$ChatIdSerializer implements PrimitiveSerializer<ChatId> {
             specifiedType: const FullType(String),
           ) as String;
           result.id = valueDes;
+          break;
+        case r'store_conversation_id':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.storeConversationId = valueDes;
           break;
         default:
           unhandled.add(key);

@@ -14,6 +14,7 @@ import '../../design_system/components/quotation_payment_choices.dart';
 import '../../design_system/components/ranking_indicator.dart';
 import '../../design_system/theme.dart';
 import '../map_discovery/discovery_models.dart';
+import '../map_discovery/discovery_repository.dart' show newIdempotencyKey;
 import 'projects_repository.dart';
 import 'quotation_line_widgets.dart';
 import 'vendor_quotation_screen.dart'
@@ -281,38 +282,44 @@ class _ProjectArrangementScreenState extends State<ProjectArrangementScreen> {
     }
   }
 
+  final _messageKeys = <String, String>{};
   Future<void> _message(ProjectData vendor) async {
-    if (vendor['order_id'] != null) {
-      widget.links.openOrder(context, projectText(vendor['order_id']));
-      return;
-    }
-    if (vendor['conversation_id'] != null) {
-      widget.links.openConversation(
-        context,
-        projectText(vendor['conversation_id']),
-      );
-      return;
-    }
+    if (busy) return;
     setState(() {
       busy = true;
       error = null;
     });
     try {
-      final next = await widget.repository.arrangementInquiry(
-        packageId,
-        id,
-        projectText(vendor['vendor_id']),
-        projectInt(arrangement!.version),
-      );
-      if (!mounted) return;
-      setState(() => _accept(next));
-      final updated = vendors.firstWhere(
-        (v) => v['vendor_id'] == vendor['vendor_id'],
-      );
-      widget.links.openConversation(
-        context,
-        projectText(updated['conversation_id']),
-      );
+      final String chat;
+      if (vendor['order_id'] != null) {
+        final order = projectText(vendor['order_id']);
+        chat = await widget.repository.messageOrder(
+          order,
+          _messageKeys.putIfAbsent('order:$order', newIdempotencyKey),
+        );
+      } else {
+        var inquiry = projectText(vendor['conversation_id']);
+        if (inquiry.isEmpty) {
+          final next = await widget.repository.arrangementInquiry(
+            packageId,
+            id,
+            projectText(vendor['vendor_id']),
+            projectInt(arrangement!.version),
+          );
+          if (!mounted) return;
+          setState(() => _accept(next));
+          inquiry = projectText(
+            vendors.firstWhere(
+              (v) => v['vendor_id'] == vendor['vendor_id'],
+            )['conversation_id'],
+          );
+        }
+        chat = await widget.repository.messageInquiry(
+          inquiry,
+          _messageKeys.putIfAbsent('inquiry:$inquiry', newIdempotencyKey),
+        );
+      }
+      if (mounted) widget.links.openConversation(context, chat);
     } on DiscoveryFailure catch (e) {
       if (mounted) setState(() => error = e.message);
     } finally {
@@ -415,7 +422,7 @@ class _ProjectArrangementScreenState extends State<ProjectArrangementScreen> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             children: [
-              if (loading || busy) const LinearProgressIndicator(),
+              if (loading || busy) const BuyerLoadingProgress(),
               if (error != null)
                 StatusBand(
                   tone: BandTone.danger,
@@ -1337,7 +1344,7 @@ class _ArrangementOffersState extends State<_ArrangementOffers> {
         const Text(
           'Project-Based suppliers within 50 km. Review specifications before adding. Manage requested vendors through their quotation or order.',
         ),
-        if (loading) const LinearProgressIndicator(),
+        if (loading) const BuyerLoadingProgress(),
         if (error != null)
           StatusBand(
             tone: BandTone.danger,

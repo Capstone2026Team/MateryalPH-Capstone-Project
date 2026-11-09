@@ -17,6 +17,9 @@ part 'commission_policies.g.dart';
 /// * [next]
 /// * [latestVersion]
 /// * [canManage]
+/// * [minNoticeDays]
+/// * [eligibleVendorCount]
+/// * [canExport]
 /// * [versions]
 @BuiltValue()
 abstract class CommissionPolicies implements Built<CommissionPolicies, CommissionPoliciesBuilder> {
@@ -31,6 +34,15 @@ abstract class CommissionPolicies implements Built<CommissionPolicies, Commissio
 
   @BuiltValueField(wireName: r'can_manage')
   bool get canManage;
+
+  @BuiltValueField(wireName: r'min_notice_days')
+  int? get minNoticeDays;
+
+  @BuiltValueField(wireName: r'eligible_vendor_count')
+  int? get eligibleVendorCount;
+
+  @BuiltValueField(wireName: r'can_export')
+  bool? get canExport;
 
   @BuiltValueField(wireName: r'versions')
   BuiltList<CommissionPolicy> get versions;
@@ -82,6 +94,27 @@ class _$CommissionPoliciesSerializer implements PrimitiveSerializer<CommissionPo
       object.canManage,
       specifiedType: const FullType(bool),
     );
+    if (object.minNoticeDays != null) {
+      yield r'min_notice_days';
+      yield serializers.serialize(
+        object.minNoticeDays,
+        specifiedType: const FullType(int),
+      );
+    }
+    if (object.eligibleVendorCount != null) {
+      yield r'eligible_vendor_count';
+      yield serializers.serialize(
+        object.eligibleVendorCount,
+        specifiedType: const FullType(int),
+      );
+    }
+    if (object.canExport != null) {
+      yield r'can_export';
+      yield serializers.serialize(
+        object.canExport,
+        specifiedType: const FullType(bool),
+      );
+    }
     yield r'versions';
     yield serializers.serialize(
       object.versions,
@@ -139,6 +172,30 @@ class _$CommissionPoliciesSerializer implements PrimitiveSerializer<CommissionPo
             specifiedType: const FullType(bool),
           ) as bool;
           result.canManage = valueDes;
+          break;
+        case r'min_notice_days':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.minNoticeDays = valueDes;
+          break;
+        case r'eligible_vendor_count':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.eligibleVendorCount = valueDes;
+          break;
+        case r'can_export':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.canExport = valueDes;
           break;
         case r'versions':
           final valueDes = serializers.deserialize(

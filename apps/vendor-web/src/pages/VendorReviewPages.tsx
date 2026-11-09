@@ -1,10 +1,10 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Flag } from 'lucide-react'
-import {
-  ActiveFilters, ALL_DATES, Button, DateFilter, EmptyState, FilterTabs, FormDialog, InfoNote, Pagination,
-  ProductReviewSummary, ReviewDetailContent, ReviewListCard, Select, StatusMessage,
-  dateFilterLabel, type DateFilterRange,
+import { BarChart3, Flag } from 'lucide-react'
+import { BackNavigation,
+  Button, DateFilter, EmptyState, FilterTabs, FormDialog, InfoNote, Pagination,
+  ProductReviewSummary, ReviewDetailContent, ReviewListCard, ReviewOverview, Select, StatusMessage,
+  type DateFilterRange,
 } from '@materyalph/web-ui'
 import { getReview, listReviews, reportReview, type FlagReason, type ReviewTab, type VendorReviewRow } from '../lib/trust-api'
 import { readableOrderError } from '../lib/orders-api'
@@ -13,7 +13,7 @@ import { newIdempotencyKey } from '../lib/onboarding-api'
 import { ErrorState, LoadingState, PageHeader } from './PhaseThreeVendorPages'
 
 const TABS: { value: ReviewTab; label: string }[] = [
-  { value: 'VENDOR', label: 'Store ratings' }, { value: 'PRODUCT', label: 'Product reviews' }, { value: 'BUYER', label: 'Your Buyer ratings' },
+  { value: 'VENDOR', label: 'Store ratings' }, { value: 'PRODUCT', label: 'Product reviews' },
 ]
 const FLAG_REASONS: { value: FlagReason; label: string }[] = [
   { value: 'OFFENSIVE', label: 'Offensive language' }, { value: 'PERSONAL_INFORMATION', label: 'Personal information' },
@@ -52,9 +52,9 @@ function useReviewActions() {
   }
 }
 
-function ReviewRows({ rows, open, report }: { rows: VendorReviewRow[]; open: (review: VendorReviewRow) => void; report: (review: VendorReviewRow) => void }) {
-  return <ul className="divide-y divide-border-default" aria-label="Reviews">{rows.map(row => <li key={row.id}>
-    <ReviewListCard review={row} onOpen={() => open(row)} {...(row.canReport ? { onReport: () => report(row) } : {})} />
+function ReviewRows({ rows, open, report, grid = false, compact = false }: { rows: VendorReviewRow[]; open: (review: VendorReviewRow) => void; report: (review: VendorReviewRow) => void; grid?: boolean; compact?: boolean }) {
+  return <ul className={grid ? 'mp-review-grid' : compact ? 'grid gap-3 px-4 py-4 sm:px-6' : 'divide-y divide-border-default'} aria-label="Reviews">{rows.map(row => <li key={row.id}>
+    <ReviewListCard review={row} compact={grid || compact} apiBasePath={apiBasePath} onOpen={() => open(row)} {...(row.canReport ? { onReport: () => report(row) } : {})} />
   </li>)}</ul>
 }
 
@@ -79,43 +79,45 @@ export function ReviewsWorkspace() {
     return next
   }, { replace: true })
   return <div className="space-y-6">
-    <PageHeader eyebrow="Store operations" title="Ratings & Reviews" description="Explore verified-purchase feedback, review media and your Buyer ratings." />
-    <InfoNote>Ratings appear after both sides submit or 14 days after completion. You can report a review for moderation; stores cannot delete reviews or their attachments.</InfoNote>
-    <FilterTabs appearance="tabs" label="Review type" value={tab} chips={TABS} onChange={value => setParams(current => { const next = new URLSearchParams(current); next.set('tab', value); next.delete('page'); return next }, { replace: true })} />
-    <section className="overflow-hidden rounded-surface border border-border-default bg-surface-primary" aria-label={TABS.find(item => item.value === tab)?.label}>
+    <PageHeader eyebrow="Store operations" title="Ratings & Reviews" description="Explore your store ratings, product reviews and verified-purchase feedback." />
+    <div className="mp-review-toolbar">
+      <div className="mp-review-tabs"><FilterTabs appearance="tabs" label="Review type" value={tab} chips={TABS} onChange={value => setParams(current => { const next = new URLSearchParams(current); next.set('tab', value); next.delete('page'); return next }, { replace: true })} /></div>
+      <DateFilter title="Review submission dates" value={range} onChange={changeDates} />
+    </div>
+    {actions.notice && <StatusMessage tone="success">{actions.notice}</StatusMessage>}
+    {data && data.items.length > 0 && !error && <ReviewOverview rows={data.items} total={data.meta.total ?? 0} type={tab} {...(data.meta.summary ? { summary: data.meta.summary } : {})} onOpen={actions.open} apiBasePath={apiBasePath} />}
+    <section className="overflow-hidden mp-card" aria-label={TABS.find(item => item.value === tab)?.label}>
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-default px-4 py-4 sm:px-6">
         <div><h2 className="text-base font-semibold">{TABS.find(item => item.value === tab)?.label}</h2><p className="mt-1 text-sm text-text-secondary">{data ? `${data.meta.total ?? 0} ${tab === 'PRODUCT' ? 'product reviews' : 'ratings'} · Newest first` : 'Newest first'} · Select a review to view details</p></div>
-        <DateFilter title="Review submission dates" value={range} onChange={changeDates} />
       </div>
-      {(range.from || range.to) && <div className="px-4 pt-4 sm:px-6"><ActiveFilters filters={[{ key: 'dates', label: dateFilterLabel(range), onRemove: () => changeDates(ALL_DATES) }]} onClear={() => changeDates(ALL_DATES)} /></div>}
-      {actions.notice && <div className="px-4 pt-4 sm:px-6"><StatusMessage tone="success">{actions.notice}</StatusMessage></div>}
       {error ? <div className="p-6"><ErrorState message={error} onRetry={retry} /></div> : !data ? <div className="p-6"><LoadingState label="Loading reviews…" /></div>
-        : data.items.length === 0 ? <div className="p-6"><EmptyState message={range.from || range.to ? 'No reviews in this date range. Try another range or view all dates.' : tab === 'BUYER' ? 'Rate Buyers from completed orders within 14 days of completion.' : 'No published reviews yet.'} action={<Link className={link} to="/orders?group=CLOSED">View completed orders</Link>} /></div>
-          : <ReviewRows rows={data.items} open={actions.open} report={actions.report} />}
+        : data.items.length === 0 ? <div className="p-6"><EmptyState message={range.from || range.to ? 'No reviews in this date range. Try another range or view all dates.' : 'No published reviews yet.'} action={<Link className={link} to="/orders?group=CLOSED">View completed orders</Link>} /></div>
+          : <ReviewRows rows={data.items} open={actions.open} report={actions.report} grid />}
       {data && <ReviewPagination data={data} page={page} onChange={value => setParams(current => { const next = new URLSearchParams(current); next.set('page', String(value)); return next }, { replace: true })} />}
     </section>
+    <InfoNote>Ratings appear after both sides submit or 14 days after completion. You can report a review for moderation; stores cannot delete reviews or their attachments.</InfoNote>
     {actions.dialog}
   </div>
 }
 
 /** All published feedback for this listing, independent of the analytics chart period. */
-export function ProductReviewsSection({ listingId, canView }: { listingId: string; canView: boolean }) {
-  if (!canView) return <section className="rounded-surface border border-border-default bg-surface-primary p-5"><h2 className="text-base font-semibold">Ratings & reviews</h2><p className="mt-2 text-sm text-text-secondary">Your role does not include access to store reviews.</p></section>
-  return <ProductReviewsWorkspace key={listingId} listingId={listingId} />
+export function ProductReviewsSection({ listingId, canView, compact = false }: { listingId: string; canView: boolean; compact?: boolean }) {
+  if (!canView) return <section className="mp-card mp-card-padded"><h2 className="text-base font-semibold">Ratings & reviews</h2><p className="mt-2 text-sm text-text-secondary">Your role does not include access to store reviews.</p></section>
+  return <ProductReviewsWorkspace key={listingId} listingId={listingId} compact={compact} />
 }
 
-function ProductReviewsWorkspace({ listingId }: { listingId: string }) {
+function ProductReviewsWorkspace({ listingId, compact }: { listingId: string; compact: boolean }) {
   const [params, setParams] = useSearchParams()
   const requestedPage = Number(params.get('reviews_page'))
   const page = Number.isSafeInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1
   const { data, error, retry } = useReviews('PRODUCT', page, undefined, undefined, listingId)
   const actions = useReviewActions()
-  return <section aria-labelledby="product-reviews-title" className="overflow-hidden rounded-surface border border-border-default bg-surface-primary">
-    <div className="border-b border-border-default px-4 py-5 sm:px-6"><h2 id="product-reviews-title" className="text-base font-semibold">Ratings & reviews</h2><p className="mt-1 text-sm text-text-secondary">All-time published feedback for this product. Includes every variant and is independent of the chart period.</p></div>
+  return <section aria-labelledby="product-reviews-title" className="overflow-hidden mp-card">
+    <div className={`border-b border-border-default px-4 ${compact ? 'py-4' : 'py-5 sm:px-6'}`}><h2 id="product-reviews-title" className="text-base font-semibold">Ratings & reviews</h2><p className={`mt-1 ${compact ? 'text-xs' : 'text-sm'} text-text-secondary`}>{compact ? 'Published, verified-purchase feedback · All variants · All time' : 'All-time published feedback for this product. Includes every variant and is independent of the chart period.'}</p></div>
     {actions.notice && <div className="px-4 pt-4 sm:px-6"><StatusMessage tone="success">{actions.notice}</StatusMessage></div>}
     {error ? <div className="p-6"><ErrorState message={error} onRetry={retry} /></div> : !data ? <div className="p-6"><LoadingState label="Loading product ratings and reviews…" /></div> : <>
-      {data.meta.summary ? <div className="border-b border-border-default px-4 py-5 sm:px-6"><ProductReviewSummary summary={data.meta.summary} /></div> : <div className="p-6"><ErrorState message="The rating summary is unavailable." onRetry={retry} /></div>}
-      {data.items.length > 0 ? <><div className="px-4 pt-5 text-sm font-semibold sm:px-6">Buyer reviews <span className="font-normal text-text-secondary">· Newest first</span></div><ReviewRows rows={data.items} open={actions.open} report={actions.report} /></> : <div className="px-4 py-6 text-sm text-text-secondary sm:px-6">No published reviews yet. Feedback appears here after an eligible purchase and publication.</div>}
+      {data.meta.summary ? <div className={`border-b border-border-default px-4 ${compact ? 'py-4' : 'py-5 sm:px-6'}`}><ProductReviewSummary summary={data.meta.summary} compact={compact} /></div> : <div className="p-6"><ErrorState message="The rating summary is unavailable." onRetry={retry} /></div>}
+      {data.items.length > 0 ? <><div className="px-4 pt-5 text-sm font-semibold sm:px-6">Buyer reviews <span className="font-normal text-text-secondary">· Newest first</span></div><ReviewRows rows={data.items} open={actions.open} report={actions.report} compact={compact} /></> : <div className="px-4 py-6 text-sm text-text-secondary sm:px-6">No published reviews yet. Feedback appears here after an eligible purchase and publication.</div>}
       <ReviewPagination data={data} page={page} onChange={value => setParams(current => { const next = new URLSearchParams(current); next.set('reviews_page', String(value)); return next }, { replace: true })} />
     </>}
     {actions.dialog}
@@ -124,16 +126,16 @@ function ProductReviewsWorkspace({ listingId }: { listingId: string }) {
 
 function reviewReturnPath(state: unknown): string {
   if (state && typeof state === 'object' && 'returnTo' in state && typeof state.returnTo === 'string'
-    && /^\/(?:reviews(?:\?[^#]*)?|performance\/products\/[a-zA-Z0-9-]+(?:\?[^#]*)?)$/.test(state.returnTo)) return state.returnTo
+    && /^\/(?:reviews(?:\?[^#]*)?|(?:analytics|performance)\/products\/[a-zA-Z0-9-]+(?:\?[^#]*)?)$/.test(state.returnTo)) return state.returnTo
   return '/reviews'
 }
 
-export function ReviewDetailsWorkspace() {
+export function ReviewDetailsWorkspace({ canViewProductAnalytics = false }: { canViewProductAnalytics?: boolean }) {
   const { reviewId = '' } = useParams()
-  return <ReviewDetails key={reviewId} reviewId={reviewId} />
+  return <ReviewDetails key={reviewId} reviewId={reviewId} canViewProductAnalytics={canViewProductAnalytics} />
 }
 
-function ReviewDetails({ reviewId }: { reviewId: string }) {
+function ReviewDetails({ reviewId, canViewProductAnalytics }: { reviewId: string; canViewProductAnalytics: boolean }) {
   const location = useLocation()
   const [review, setReview] = useState<VendorReviewRow | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -148,12 +150,13 @@ function ReviewDetails({ reviewId }: { reviewId: string }) {
   }, [reviewId, attempt])
   const back = reviewReturnPath(location.state)
   return <div className="space-y-6">
-    <Link to={back} className={link}><ArrowLeft size={16} aria-hidden="true" />{back.startsWith('/performance/') ? 'Product analytics' : 'Ratings & Reviews'}</Link>
+    <BackNavigation><Link to={back}>{back.startsWith('/reviews') ? 'Ratings & Reviews' : 'Product analytics'}</Link></BackNavigation>
     <PageHeader eyebrow="Ratings & reviews" title="Review details" description="Verified-purchase feedback and attachments."
       actions={review && <>{review.orderId && <Link className="inline-flex min-h-11 items-center rounded-control border border-border-default bg-surface-primary px-4 text-sm font-semibold" to={`/orders/${review.orderId}`}>View order {review.orderReference}</Link>}{review.canReport && <Button variant="secondary" onClick={() => actions.report(review)}><Flag size={16} aria-hidden="true" />Report review</Button>}</>} />
     {actions.notice && <StatusMessage tone="success">{actions.notice}</StatusMessage>}
     {error ? <ErrorState message={error} onRetry={() => setAttempt(value => value + 1)} /> : !review ? <LoadingState label="Loading review details…" />
-      : <ReviewDetailContent review={review} apiBasePath={apiBasePath} onRefreshMedia={() => setAttempt(value => value + 1)} />}
+      : <ReviewDetailContent review={review} apiBasePath={apiBasePath} onRefreshMedia={() => setAttempt(value => value + 1)}
+        productAction={canViewProductAnalytics && review.product?.listingId ? <Link to={`/analytics/products/${review.product.listingId}`} className="inline-flex min-h-11 items-center gap-2 rounded-control border border-border-default px-4 text-sm font-semibold text-action-primary hover:bg-surface-canvas"><BarChart3 size={16} aria-hidden="true" />View product analytics</Link> : undefined} />}
     {actions.dialog}
   </div>
 }
@@ -177,7 +180,7 @@ function ReportReviewDialog({ review, onClose }: { review: VendorReviewRow; onCl
   return <FormDialog open title="Report review" description="Tell our moderation team why this review needs attention. Submitting a report does not remove the review." size="compact" busy={busy} onClose={() => onClose(false)}
     footer={<div className="flex flex-wrap justify-end gap-2"><Button variant="secondary" disabled={busy} onClick={() => onClose(false)}>Cancel</Button><Button type="submit" form={id} disabled={busy}>{busy ? 'Sending…' : 'Send report'}</Button></div>}>
     <form id={id} onSubmit={submit} className="grid gap-4">
-      <p className="text-sm text-text-secondary">Review by {review.displayName || 'Verified Buyer'} · {review.orderReference}</p>
+      <p className="text-sm text-text-secondary">Review by {review.displayName || 'Reviewer unavailable'} · {review.orderReference}</p>
       <Select label="Reason" value={reason} disabled={busy} onChange={event => setReason(event.target.value as FlagReason)}>{FLAG_REASONS.map(item => <option key={item.value} value={item.value}>{item.label}</option>)}</Select>
       <label className="grid gap-2 text-sm font-semibold">Details (optional)<textarea className="min-h-28 w-full min-w-0 resize-y rounded-control border border-border-default bg-surface-primary p-3 text-base font-normal" maxLength={1000} disabled={busy} value={details} onChange={event => setDetails(event.target.value)} /></label>
       {error && <StatusMessage tone="error">{error}</StatusMessage>}

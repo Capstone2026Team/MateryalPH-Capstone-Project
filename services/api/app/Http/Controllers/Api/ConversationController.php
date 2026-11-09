@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api;
 
+use App\Domain\Catalog\CatalogAccess;
+use App\Domain\Messaging\AutomatedResponseService;
 use App\Domain\Messaging\BuyerInboxChannel;
 use App\Domain\Messaging\ConversationAccess;
 use App\Domain\Messaging\ConversationBroadcast;
@@ -11,11 +13,15 @@ use App\Domain\Messaging\ConversationChannel;
 use App\Domain\Messaging\ConversationFiles;
 use App\Domain\Messaging\ConversationProducts;
 use App\Domain\Messaging\ConversationService;
+use App\Domain\Messaging\PendingOrderQuotationService;
 use App\Domain\Messaging\QuotationDestination;
 use App\Domain\Messaging\QuotationService;
 use App\Domain\Messaging\SiteInspectionService;
+use App\Domain\Messaging\VendorBuyerThread;
+use App\Domain\Messaging\WorkPackageChatAttachment;
 use App\Http\ApiResponse;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Messaging\AutomatedResponseSettingsRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Broadcast;
@@ -33,6 +39,53 @@ final class ConversationController extends Controller
         $request->validate(['page' => ['sometimes', 'integer', 'between:1,10000'], 'archived' => ['sometimes', 'in:true,false,1,0']]);
 
         return ApiResponse::success($this->conversations->inbox($request));
+    }
+
+    public function buyerThread(Request $request, string $conversationId, VendorBuyerThread $thread): JsonResponse
+    {
+        $request->validate(['before' => ['sometimes', 'uuid'], 'page' => ['sometimes', 'integer', 'between:1,10000']]);
+
+        return ApiResponse::success($thread->show($request, $conversationId));
+    }
+
+    public function buyerThreadContexts(Request $request, string $conversationId, VendorBuyerThread $thread): JsonResponse
+    {
+        $request->validate(['page' => ['sometimes', 'integer', 'between:1,10000']]);
+
+        return ApiResponse::success($thread->contexts($request, $conversationId));
+    }
+
+    public function shareWorkPackage(Request $request, string $conversationId, WorkPackageChatAttachment $attachments): JsonResponse
+    {
+        $key = app(CatalogAccess::class)->requireIdempotencyKey($request);
+
+        return ApiResponse::success(['id' => $attachments->share($request, $conversationId, $key)], [], 201);
+    }
+
+    public function messageWorkPackageOrder(Request $request, string $orderId, WorkPackageChatAttachment $attachments): JsonResponse
+    {
+        $key = app(CatalogAccess::class)->requireIdempotencyKey($request);
+
+        return ApiResponse::success(['id' => $attachments->shareOrder($request, $orderId, $key)], [], 201);
+    }
+
+    public function automatedSettings(Request $request, AutomatedResponseService $bot): JsonResponse
+    {
+        return ApiResponse::success($bot->settings($request));
+    }
+
+    public function saveAutomatedSettings(AutomatedResponseSettingsRequest $request, AutomatedResponseService $bot): JsonResponse
+    {
+        $bot->save($request, $request->validated());
+
+        return ApiResponse::success($bot->settings($request));
+    }
+
+    public function automatedChoice(Request $request, string $conversationId, AutomatedResponseService $bot): JsonResponse
+    {
+        $input = $request->validate(['welcome_message_id' => ['required', 'uuid'], 'option_index' => ['required', 'integer', 'between:0,2'], 'client_message_id' => ['required', 'uuid']]);
+
+        return ApiResponse::success(['id' => $bot->choose($request, $conversationId, $input['welcome_message_id'], $input['option_index'], $input['client_message_id'])], [], 201);
     }
 
     public function archive(Request $request, string $conversationId): JsonResponse
@@ -75,10 +128,21 @@ final class ConversationController extends Controller
         return ApiResponse::success(['id' => $this->conversations->fromOrder($request, $orderId)]);
     }
 
+    public function pendingOrderQuotation(Request $request, string $orderId, PendingOrderQuotationService $quotations): JsonResponse
+    {
+        $input = $request->validate(['lock_version' => ['required', 'integer', 'min:1']]);
+
+        return ApiResponse::success(['id' => $quotations->open($request, $orderId, $input['lock_version'])]);
+    }
+
     public function show(Request $request, string $conversationId, QuotationService $quotations): JsonResponse
     {
         $c = $this->access->require($request->user(), $conversationId);
-        $request->validate(['before' => ['sometimes', 'uuid'], 'page' => ['sometimes', 'integer', 'between:1,10000'], 'legacy_page' => ['sometimes', 'integer', 'between:1,10000']]);
+        $request->validate(['before' => ['sometimes', 'uuid'], 'page' => ['sometimes', 'integer', 'between:1,10000'], 'legacy_page' => ['sometimes', 'integer', 'between:1,10000'], 'store_thread' => ['sometimes', 'in:true,false,1,0']]);
+
+        if ($request->boolean('store_thread') && $request->user()->account_type === 'BUYER' && $c->purpose === 'SALES') {
+            return ApiResponse::success(app(VendorBuyerThread::class)->show($request, $conversationId));
+        }
 
         return ApiResponse::success(['conversation' => $this->conversations->header($request, $c), 'messages' => $this->conversations->messages($request, $conversationId),
             'quotations' => $quotations->show($request, $conversationId), 'site_inspections' => app(SiteInspectionService::class)->forConversation($request->user(), $c)]);

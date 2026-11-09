@@ -7,18 +7,26 @@ namespace Tests\Feature\Api;
 use App\Domain\Disputes\DisputeAdminService;
 use App\Domain\Disputes\DisputeChannel;
 use App\Domain\Disputes\DisputeExportService;
+use App\Domain\Disputes\DisputeFeeCredits;
 use App\Domain\Disputes\DisputeRemedyService;
 use App\Domain\Disputes\DisputeRules;
+use App\Domain\Finance\CommissionService;
+use App\Domain\Finance\FeeAssessmentService;
 use App\Domain\Geography\PlacesProvider;
 use App\Domain\Geography\RouteProvider;
 use App\Domain\Identity\TokenSessionService;
+use App\Domain\Invoices\InvoiceCopyMailFactory;
 use App\Domain\Invoices\InvoiceService;
+use App\Domain\Notifications\NotificationDelivery;
+use App\Domain\Notifications\NotificationPolicy;
+use App\Domain\Notifications\NotificationService;
 use App\Domain\Operations\OutboxProcessor;
 use App\Domain\Operations\OutboxPublisher;
 use App\Domain\Orders\OrderActor;
 use App\Domain\Vendors\AddressGeocoder;
 use App\Domain\Vendors\StoreOperatingSchedule;
 use App\Domain\Vendors\VendorFileScanner;
+use App\Mail\InvoiceCopyMail;
 use App\Models\AuthSession;
 use App\Models\User;
 use App\Models\VendorOrganization;
@@ -27,14 +35,17 @@ use Database\Seeders\SystemFoundationSeeder;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Mail\MailManager;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Laravel\Passport\AccessToken;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Support\CreatesDiscoveryFixtures;
 use Tests\Support\CreatesOrderFixtures;
 use Tests\Support\CreatesPaymentFixtures;
@@ -226,7 +237,15 @@ final class PhaseThirteenDisputesTest extends TestCase
         self::assertSame(['COMPLETED', 'RESOLVED', 'PARTIALLY_REFUNDED'], array_values((array) DB::table('orders')->where('id', $orderId)->first(['order_state', 'dispute_state', 'refund_state'])));
         $fee = DB::table('fee_assessments')->where('order_id', $orderId)->first();
         self::assertSame(['EARNED', false], [$fee->state, (bool) $fee->dispute_hold]);
-        self::assertSame(1, DB::table('finance_review_items')->where('kind', 'FEE_CREDIT_PROPOSAL')->where('source_id', $fee->id)->count(), 'The commission credit is a separate reviewed proposal.');
+        self::assertSame(0, DB::table('finance_review_items')->where('kind', 'FEE_CREDIT_PROPOSAL')->where('source_id', $fee->id)->count(), 'Executed awards do not wait for another finance approval.');
+        $credit = DB::table('fee_adjustments')->where('fee_assessment_id', $fee->id)->sole();
+        self::assertSame(['DISPUTE', null, null], [$credit->origin, $credit->prepared_by_user_id, $credit->approved_by_user_id]);
+        self::assertSame((int) $credit->amount_centavos, (int) $fee->credited_centavos);
+        self::assertTrue(DB::table('commission_credit_executions')->where('dispute_remedy_id', $credit->dispute_remedy_id)->exists());
+        self::assertSame('SYSTEM', DB::table('financial_ledger_entries')->where('source_type', 'FEE_ADJUSTMENT')->where('source_id', $credit->id)->value('actor_role'));
+        app(DisputeFeeCredits::class)->applyPending($orderId, OrderActor::system());
+        self::assertSame(0, app(DisputeFeeCredits::class)->recover());
+        self::assertSame(1, DB::table('fee_adjustments')->where('fee_assessment_id', $fee->id)->count(), 'Delivery and recovery retries never duplicate credits.');
         self::assertSame(1, DB::table('dispute_events')->where('dispute_case_id', $caseId)->where('event_type', 'CASE_RESOLVED')->count());
         $assessment = DB::table('remittance_assessments')->where('payment_id', $paymentId)->where('calculation_state', 'POSTED')->value('id');
         if ($assessment !== null) {
@@ -239,6 +258,33 @@ final class PhaseThirteenDisputesTest extends TestCase
     }
 
     // ── Admin review, clarification, decision and the one appeal ────────────────────────────────────
+
+    public function test_legacy_award_proposals_are_recovered_automatically_without_crediting_twice(): void
+    {
+        [, $owner, $buyer, $orderId] = $this->paidPickup('Legacy Commission Credit');
+        $this->toPickedUp($owner, $orderId);
+        $caseId = (string) $this->fileCase($buyer, $orderId, ['requested_remedy' => 'PARTIAL_REFUND', 'requested_amount_centavos' => 200000])->assertCreated()->json('data.id');
+        $this->signInStoreMember($owner);
+        $this->postJson('/api/v1/vendor/disputes/'.$caseId.'/respond', ['position' => 'OFFER_REFUND', 'body' => 'Refund the returned damaged materials.', 'amount_centavos' => 200000], $this->key())->assertOk();
+        $proposalId = (string) DB::table('dispute_resolution_proposals')->where('dispute_case_id', $caseId)->value('id');
+        $this->signInBuyer($buyer);
+        $this->postJson('/api/v1/buyers/disputes/'.$caseId.'/proposals/'.$proposalId.'/answer', ['decision' => 'ACCEPT'], $this->key())->assertOk();
+        $remedy = DB::table('dispute_remedies')->where('dispute_case_id', $caseId)->where('kind', 'FEE_CREDIT_REVIEW')->sole();
+        self::assertSame(0, app(DisputeFeeCredits::class)->recover(), 'An estimated fee cannot be credited.');
+        // Reproduce a pre-upgrade completed order whose credit still waits in the old proposal queue.
+        DB::table('orders')->where('id', $orderId)->update(['order_state' => 'COMPLETED', 'closed_at' => now()]);
+        app(FeeAssessmentService::class)->earnOnCompletion($orderId, (string) Str::uuid7());
+        $assessment = DB::table('fee_assessments')->where('order_id', $orderId)->sole();
+        $preparer = $this->admin('ADMIN_SUPERADMIN');
+        $oldProposal = app(CommissionService::class)->proposeCredit((string) $assessment->id, (int) $remedy->amount_centavos, 'Legacy executed return award awaiting finance review.', (int) $preparer->id);
+        DB::table('dispute_remedies')->where('id', $remedy->id)->update(['state' => 'COMPLETED', 'completed_at' => now(), 'note' => 'Fee-credit proposal '.$oldProposal.' awaits a different finance reviewer.']);
+        self::assertSame(1, app(DisputeFeeCredits::class)->recover());
+        self::assertSame('RESOLVED', DB::table('finance_review_items')->where('id', $oldProposal)->value('state'));
+        self::assertSame('DISPUTE', DB::table('fee_adjustments')->where('fee_assessment_id', $assessment->id)->sole()->origin);
+        self::assertSame(0, app(DisputeFeeCredits::class)->recover());
+        self::assertSame(1, DB::table('fee_adjustments')->where('fee_assessment_id', $assessment->id)->count());
+        $this->expectAppendOnly(fn () => DB::table('commission_credit_executions')->where('dispute_remedy_id', $remedy->id)->delete());
+    }
 
     public function test_escalation_clarification_conflict_checked_decision_and_one_appeal_with_final_execution(): void
     {
@@ -533,15 +579,21 @@ final class PhaseThirteenDisputesTest extends TestCase
         CarbonImmutable::setTestNow($now);
         Carbon::setTestNow($now);
         [$store, $owner, $buyer, $orderId] = $this->paidPickup('Invoice Store');
+        DB::table('user_profiles')->insert(['id' => (string) Str::uuid7(), 'user_id' => $buyer->id, 'full_name' => 'Ana Buyer', 'created_at' => now(), 'updated_at' => now()]);
         DB::table('vendor_organizations')->where('id', $store->id)->update(['legal_business_name' => 'Invoice Store Trading Corp.']);
         $staff = $this->teamMember($store, 'STORE_STAFF');
         $service = $this->teamMember($store, 'CUSTOMER_SERVICE');
         $inventory = $this->teamMember($store, 'INVENTORY');
         $totalBefore = (int) DB::table('orders')->where('id', $orderId)->value('commercial_total_centavos');
 
+        $this->signInStoreMember($owner);
+        $this->getJson('/api/v1/vendor/navigation-updates')->assertOk()->assertJsonPath('data.sections./invoices', 1);
+        $this->getJson('/api/v1/vendor/invoices?view=DUE')->assertOk()->assertJsonPath('data.0.buyer_name', 'Ana Buyer')->assertJsonPath('data.0.open_request', false);
+        $this->getJson('/api/v1/vendor/orders/'.$orderId.'/invoices')->assertOk()->assertJsonPath('data.buyer_name', 'Ana Buyer')->assertJsonPath('data.billing_details', null);
+        self::assertFalse(DB::table('invoice_requests')->where('order_id', $orderId)->exists(), 'Buyer names are available before an invoice request.');
         $this->signInBuyer($buyer);
         $view = $this->getJson('/api/v1/buyers/orders/'.$orderId.'/invoices')->assertOk()->assertJsonPath('data.status', 'NOT_YET_UPLOADED')->assertJsonPath('data.can_request_copy', true)->json('data');
-        self::assertSame([true, true], array_column($view['platform_documents'], 'not_tax_invoice'), 'MateryalPH documents are labelled not a tax invoice.');
+        self::assertSame([true], array_column($view['platform_documents'], 'not_tax_invoice'), 'The MateryalPH Purchase Order retains its document classification.');
         self::assertStringContainsString('does not wait for order completion', $view['issuance_notice']);
         $this->putJson('/api/v1/buyers/orders/'.$orderId.'/invoices/details', ['billing_name' => 'Ana Buyer Construction', 'billing_address' => '12 Rizal St, Quezon City', 'tin' => '123-456-789-000'])
             ->assertOk()->assertJsonPath('data.billing_details.tin_masked', '•••• 9000');
@@ -553,7 +605,7 @@ final class PhaseThirteenDisputesTest extends TestCase
 
         // Upload scope: Owner/Manager/Store Staff only; Customer Service sees status; Inventory sees nothing.
         $upload = ['invoice_type' => 'VENDOR_GOODS_INVOICE', 'issuer_name' => 'Invoice Store Trading Corp', 'invoice_number' => 'SI-0001', 'issued_on' => CarbonImmutable::now('Asia/Manila')->toDateString(),
-            'amount_centavos' => '1000001', 'source_system' => 'REGISTERED_CAS', 'invoicing_method' => 'COMPUTERIZED', 'file' => UploadedFile::fake()->create('invoice.pdf', 10, 'application/pdf')];
+            'amount_centavos' => '1000001', 'source_system' => 'REGISTERED_CAS', 'invoicing_method' => 'COMPUTERIZED', 'lock_version' => 0, 'file' => UploadedFile::fake()->create('invoice.pdf', 10, 'application/pdf')];
         $this->signInStoreMember($service);
         $this->getJson('/api/v1/vendor/navigation-updates')->assertOk()->assertJsonPath('data.sections./invoices', 1);
         $invoiceNotice = DB::table('notifications')->where('user_id', $service->id)->where('category', 'INVOICES')->sole();
@@ -561,33 +613,56 @@ final class PhaseThirteenDisputesTest extends TestCase
         // Reading the notice does not fulfill the still-pending invoice request.
         $this->getJson('/api/v1/vendor/navigation-updates')->assertOk()->assertJsonPath('data.sections./invoices', 1);
         $this->post('/api/v1/vendor/orders/'.$orderId.'/invoices', $upload, $this->key() + ['Accept' => 'application/json'])->assertForbidden();
+        $this->getJson('/api/v1/vendor/invoices?view=REQUESTS')->assertOk()->assertJsonPath('data.0.order_id', $orderId);
+        $this->getJson('/api/v1/vendor/invoices?view=DUE')->assertOk()->assertJsonPath('data.0.order_id', $orderId);
         $this->getJson('/api/v1/vendor/orders/'.$orderId.'/invoices')->assertOk()->assertJsonPath('data.can_upload', false)->assertJsonPath('data.billing_details.tin', null);
         $this->signInStoreMember($inventory);
         $this->getJson('/api/v1/vendor/orders/'.$orderId.'/invoices')->assertForbidden();
         $this->signInStoreMember($staff);
+        $this->postJson('/api/v1/vendor/orders/'.$orderId.'/invoices/send', ['lock_version' => 1], $this->key())->assertConflict();
         $this->post('/api/v1/vendor/orders/'.$orderId.'/invoices', ['issued_on' => CarbonImmutable::now('Asia/Manila')->addDay()->toDateString(), 'file' => $this->validPdf()] + $upload,
             $this->key() + ['Accept' => 'application/json'])->assertUnprocessable()->assertJsonPath('errors.0.details.issued_on.0', fn (string $message): bool => $message !== '');
         $this->post('/api/v1/vendor/orders/'.$orderId.'/invoices', ['issuer_name' => 'Somebody Else Inc', 'file' => $this->validPdf()] + $upload, $this->key() + ['Accept' => 'application/json'])->assertStatus(422)->assertJsonPath('errors.0.code', 'INVOICE_ISSUER_MISMATCH');
         $this->post('/api/v1/vendor/orders/'.$orderId.'/invoices', ['invoice_type' => 'PLATFORM_SERVICE_INVOICE'] + $upload, $this->key() + ['Accept' => 'application/json'])->assertStatus(422);
         $pdf = $this->validPdf();
-        $vendorView = $this->post('/api/v1/vendor/orders/'.$orderId.'/invoices', ['file' => $pdf] + $upload, $this->key() + ['Accept' => 'application/json'])->assertCreated()
+        $draftKey = $this->key();
+        $prepared = $this->post('/api/v1/vendor/orders/'.$orderId.'/invoices', ['file' => $pdf] + $upload, $draftKey + ['Accept' => 'application/json'])->assertCreated()
+            ->assertJsonCount(0, 'data.records')->assertJsonPath('data.can_send', true)->assertJsonPath('data.draft.lock_version', 1)->json('data');
+        $this->post('/api/v1/vendor/orders/'.$orderId.'/invoices', ['file' => $pdf] + $upload, $draftKey + ['Accept' => 'application/json'])->assertCreated()->assertJsonPath('data.draft.lock_version', 1);
+        self::assertSame('REQUESTED', (string) DB::table('invoice_requests')->where('id', $request->id)->value('state'));
+        $draftLink = $prepared['draft']['download']['url'];
+        $this->get($draftLink)->assertOk();
+        $this->post('/api/v1/vendor/orders/'.$orderId.'/invoices', ['file' => $this->validPdf()] + $upload, $this->key() + ['Accept' => 'application/json'])->assertConflict()->assertJsonPath('errors.0.code', 'RESOURCE_VERSION_CONFLICT');
+        $this->signInBuyer($buyer);
+        $this->getJson('/api/v1/buyers/orders/'.$orderId.'/invoices')->assertOk()->assertJsonCount(0, 'data.records')->assertJsonMissingPath('data.draft');
+        $this->get($draftLink)->assertForbidden();
+        $this->signInStoreMember($staff);
+        $sendKey = $this->key();
+        $vendorView = $this->postJson('/api/v1/vendor/orders/'.$orderId.'/invoices/send', ['lock_version' => 1], $sendKey)->assertOk()
             ->assertJsonPath('data.records.0.reconciliation_state', 'INVOICE_RECONCILIATION_REQUIRED')->assertJsonPath('data.records.0.origin_label', 'DEMO sample (TEST)')
             ->assertJsonPath('data.records.0.verification_state', 'UNVERIFIED')->assertJsonPath('data.billing_details.tin', '123456789000')->json('data');
         self::assertSame(1000001 - (int) $vendorView['records'][0]['expected_total_centavos'], $vendorView['records'][0]['reconciliation_difference_centavos']);
         self::assertNotSame(0, $vendorView['records'][0]['reconciliation_difference_centavos']);
         self::assertSame($totalBefore, (int) DB::table('orders')->where('id', $orderId)->value('commercial_total_centavos'), 'A difference never changes the accepted Buyer total.');
         self::assertSame('UPLOADED', (string) DB::table('invoice_requests')->where('id', $request->id)->value('state'));
-        $this->post('/api/v1/vendor/orders/'.$orderId.'/invoices', ['file' => $this->validPdf()] + $upload, $this->key() + ['Accept' => 'application/json'])->assertStatus(409)->assertJsonPath('errors.0.code', 'INVOICE_NUMBER_DUPLICATE');
+        $this->getJson('/api/v1/vendor/navigation-updates')->assertOk()->assertJsonPath('data.sections./invoices', 0);
+        $this->postJson('/api/v1/vendor/orders/'.$orderId.'/invoices/send', ['lock_version' => 1], $sendKey)->assertOk()->assertJsonCount(1, 'data.records');
+        $this->post('/api/v1/vendor/orders/'.$orderId.'/invoices', ['file' => $this->validPdf()] + $upload, $this->key() + ['Accept' => 'application/json'])->assertStatus(409)->assertJsonPath('errors.0.code', 'INVOICE_EDIT_LOCKED');
         foreach (self::PROTECTED_FINANCE as $key) {
             self::assertStringNotContainsString('"'.$key, json_encode($vendorView, JSON_THROW_ON_ERROR));
         }
         $record = (string) $vendorView['records'][0]['id'];
+        foreach (['RECORDS', 'RECONCILIATION'] as $invoiceView) {
+            $this->getJson('/api/v1/vendor/invoices?view='.$invoiceView)->assertOk()
+                ->assertJsonPath('data.0.order_id', $orderId)->assertJsonPath('data.0.id', $record);
+        }
         $this->postJson('/api/v1/vendor/orders/'.$orderId.'/invoices/'.$record.'/explanation', ['note' => 'Rounding on the printed invoice; correction to follow.'], $this->key())->assertOk()
             ->assertJsonPath('data.records.0.reconciliation_state', 'EXPLAINED');
         $this->expectAppendOnly(fn () => DB::table('invoice_records')->where('id', $record)->update(['amount_centavos' => 1]));
 
         // Audited, short-lived downloads; the Buyer's download moves the request to DOWNLOADED.
         $this->signInBuyer($buyer);
+        $this->postJson('/api/v1/buyers/orders/'.$orderId.'/invoices/requests', ['kind' => 'COPY', 'details' => 'Please send another invoice copy.'], $this->key())->assertConflict()->assertJsonPath('errors.0.code', 'INVOICE_COPY_ALREADY_SENT');
         $link = $this->getJson('/api/v1/buyers/orders/'.$orderId.'/invoices')->assertOk()->assertJsonPath('data.status', 'ISSUED')->json('data.records.0.download.url');
         $this->get($link)->assertOk();
         self::assertSame(['DOWNLOADED', 1], [(string) DB::table('invoice_requests')->where('id', $request->id)->value('state'), DB::table('invoice_record_downloads')->where('audience', 'BUYER')->count()]);
@@ -603,6 +678,9 @@ final class PhaseThirteenDisputesTest extends TestCase
         // A correction request has its own three-business-day target, reminder and overdue notice.
         $this->signInBuyer($buyer);
         $this->postJson('/api/v1/buyers/orders/'.$orderId.'/invoices/requests', ['kind' => 'CORRECTION', 'details' => 'The billing name is misspelled.', 'invoice_record_id' => $record], $this->key())->assertCreated();
+        $this->signInStoreMember($owner);
+        $this->getJson('/api/v1/vendor/navigation-updates')->assertOk()->assertJsonPath('data.sections./invoices', 1);
+        $this->getJson('/api/v1/vendor/orders/'.$orderId.'/invoices')->assertOk()->assertJsonPath('data.can_upload', true);
         $this->travel(5)->days();
         $counts = app(InvoiceService::class)->sweep();
         self::assertSame(1, $counts['overdue']);
@@ -610,9 +688,187 @@ final class PhaseThirteenDisputesTest extends TestCase
         self::assertNotNull($owner);
     }
 
+    public function test_invoice_presets_draft_revisions_and_returned_copies_keep_sent_versions_immutable(): void
+    {
+        [$store, $owner, $buyer, $orderId] = $this->paidPickup('Preset Invoice Store');
+        DB::table('vendor_organizations')->where('id', $store->id)->update(['legal_business_name' => 'Preset Invoice Store Corp.']);
+        $service = $this->teamMember($store, 'CUSTOMER_SERVICE');
+        $preset = ['invoice_type' => 'VENDOR_GOODS_INVOICE', 'issuer_name' => 'Preset Invoice Store Corp.', 'source_system' => 'LOOSE_LEAF_OR_PRINTED', 'invoicing_method' => 'MANUAL', 'lock_version' => 0];
+        $this->signInStoreMember($service);
+        $this->putJson('/api/v1/vendor/invoices/preset', $preset, $this->key())->assertForbidden();
+        $this->signInStoreMember($owner);
+        $this->getJson('/api/v1/vendor/invoices/preset')->assertOk()->assertJsonPath('data.date_mode', 'TODAY')->assertJsonPath('data.lock_version', 0);
+        $key = $this->key();
+        $this->putJson('/api/v1/vendor/invoices/preset', $preset, $key)->assertOk()->assertJsonPath('data.lock_version', 1);
+        $this->putJson('/api/v1/vendor/invoices/preset', $preset, $key)->assertOk()->assertJsonPath('data.lock_version', 1);
+        $this->putJson('/api/v1/vendor/invoices/preset', $preset, $this->key())->assertConflict();
+        $this->getJson('/api/v1/vendor/orders/'.$orderId.'/invoices')->assertOk()->assertJsonPath('data.preset.invoicing_method', 'MANUAL')->assertJsonPath('data.can_send', false);
+        self::assertArrayNotHasKey('issued_on', json_decode((string) DB::table('vendor_invoice_presets')->where('vendor_organization_id', $store->id)->value('defaults'), true));
+
+        $this->signInBuyer($buyer);
+        $this->postJson('/api/v1/buyers/orders/'.$orderId.'/invoices/requests', ['kind' => 'COPY', 'details' => 'Please provide the invoice copy.'], $this->key())->assertCreated();
+        $requestId = (string) DB::table('invoice_requests')->where('order_id', $orderId)->value('id');
+        $input = array_diff_key($preset, ['lock_version' => 0]) + ['invoice_number' => 'PRESET-01', 'issued_on' => now('Asia/Manila')->toDateString(), 'amount_centavos' => 12000];
+        $this->signInStoreMember($owner);
+        $this->post('/api/v1/vendor/orders/'.$orderId.'/invoices', $input + ['lock_version' => 0, 'file' => $this->validPdf()], $this->key() + ['Accept' => 'application/json'])->assertCreated();
+        $oldFile = DB::table('invoice_drafts')->where('order_id', $orderId)->value('file_id');
+        $this->postJson('/api/v1/vendor/orders/'.$orderId.'/invoices', ['invoice_number' => 'PRESET-02', 'lock_version' => 1] + $input, $this->key())->assertCreated()->assertJsonPath('data.draft.lock_version', 2);
+        self::assertSame($oldFile, DB::table('invoice_drafts')->where('order_id', $orderId)->value('file_id'));
+        $this->postJson('/api/v1/vendor/orders/'.$orderId.'/invoices/send', ['lock_version' => 1], $this->key())->assertConflict();
+        $sent = $this->postJson('/api/v1/vendor/orders/'.$orderId.'/invoices/send', ['lock_version' => 2], $this->key())->assertOk()->assertJsonPath('data.can_upload', false)->json('data.records.0');
+        $recordId = $sent['id'];
+        $snapshot = DB::table('invoice_records')->where('id', $recordId)->value('commercial_snapshot');
+        self::assertNotNull($snapshot);
+        $this->expectAppendOnly(fn () => DB::table('invoice_records')->where('id', $recordId)->update(['commercial_snapshot' => '{}']));
+        $this->signInBuyer($buyer);
+        $this->postJson('/api/v1/buyers/orders/'.$orderId.'/invoices/requests/'.$requestId.'/answer', ['action' => 'RETURN', 'reason' => 'Please correct the invoice reference.'], $this->key())->assertOk();
+        $this->signInStoreMember($owner);
+        $this->getJson('/api/v1/vendor/orders/'.$orderId.'/invoices')->assertOk()->assertJsonPath('data.can_upload', true)->assertJsonPath('data.draft.lock_version', 3);
+        $this->postJson('/api/v1/vendor/orders/'.$orderId.'/invoices', ['invoice_number' => 'PRESET-03', 'lock_version' => 3] + $input, $this->key())->assertCreated()->assertJsonPath('data.draft.amends_invoice_record_id', $recordId);
+        $corrected = $this->postJson('/api/v1/vendor/orders/'.$orderId.'/invoices/send', ['lock_version' => 4], $this->key())->assertOk()->assertJsonCount(2, 'data.records')->assertJsonPath('data.can_upload', false)->json('data');
+        self::assertSame('UPLOADED', DB::table('invoice_requests')->where('id', $requestId)->value('state'));
+        self::assertNotSame($recordId, DB::table('invoice_requests')->where('id', $requestId)->value('fulfilled_invoice_record_id'));
+        self::assertSame($snapshot, DB::table('invoice_records')->where('id', $recordId)->value('commercial_snapshot'));
+        self::assertSame('PRESET-02', $corrected['records'][0]['invoice_number']);
+        $originalEmail = app(InvoiceCopyMailFactory::class)->make($buyer, $recordId);
+        $correctionEmail = app(InvoiceCopyMailFactory::class)->make($buyer, $corrected['records'][1]['id']);
+        self::assertSame('PRESET-02', $originalEmail->invoice['invoice_number']);
+        self::assertFalse($originalEmail->invoice['is_correction']);
+        self::assertSame('PRESET-03', $correctionEmail->invoice['invoice_number']);
+        self::assertTrue($correctionEmail->invoice['is_correction']);
+        $this->signInBuyer($buyer);
+        $this->postJson('/api/v1/buyers/orders/'.$orderId.'/invoices/requests', ['kind' => 'CORRECTION', 'invoice_record_id' => $recordId, 'details' => 'Please correct this older version.'], $this->key())->assertConflict();
+    }
+
+    #[DataProvider('invoiceAttachmentTypes')]
+    public function test_sent_invoice_email_attaches_the_exact_file_once_and_rechecks_access(string $type, string $mime): void
+    {
+        Mail::fake();
+        config(['mail.delivery_not_before' => null]);
+        [$store, $owner, $buyer, $orderId] = $this->paidPickup('Email Invoice Store');
+        DB::table('vendor_organizations')->where('id', $store->id)->update(['legal_business_name' => 'Email Invoice Store & Supply Corp.']);
+        Queue::fake();
+        Mail::fake();
+        $upload = $type === 'pdf' ? $this->validPdf() : UploadedFile::fake()->image('invoice.'.$type);
+        $bytes = (string) file_get_contents($upload->getRealPath());
+        $this->signInStoreMember($owner);
+        $input = ['invoice_type' => 'VENDOR_GOODS_INVOICE', 'issuer_name' => 'Email Invoice Store & Supply Corp.', 'invoice_number' => 'EMAIL-01',
+            'issued_on' => '2026-11-05', 'amount_centavos' => 12000, 'vat_centavos' => 1000, 'source_system' => 'REGISTERED_CAS', 'invoicing_method' => 'COMPUTERIZED', 'lock_version' => 0];
+        $this->post('/api/v1/vendor/orders/'.$orderId.'/invoices', $input + ['file' => $upload], $this->key() + ['Accept' => 'application/json'])->assertCreated();
+        self::assertSame(0, DB::table('notifications')->where('resource_type', 'INVOICE_RECORD')->count());
+        Mail::assertNothingSent();
+        $key = $this->key();
+        $recordId = $this->postJson('/api/v1/vendor/orders/'.$orderId.'/invoices/send', ['lock_version' => 1], $key)->assertOk()->json('data.records.0.id');
+        $this->postJson('/api/v1/vendor/orders/'.$orderId.'/invoices/send', ['lock_version' => 1], $key)->assertOk();
+        self::assertSame(1, DB::table('notifications')->where('resource_type', 'INVOICE_RECORD')->where('resource_id', $recordId)->count());
+        self::assertSame(0, DB::table('invoice_requests')->where('order_id', $orderId)->count(), 'Sending also emails a Buyer who never requested a copy.');
+        $notice = DB::table('notifications')->where('resource_type', 'INVOICE_RECORD')->where('resource_id', $recordId)->first();
+        $processor = app(OutboxProcessor::class);
+        $ready = DB::table('outbox_events')->where('event_type', 'NOTIFICATION_READY')->where('aggregate_id', $notice->id)->value('id');
+        $processor->process($ready);
+        $processor->process($ready);
+        $deliveryId = DB::table('notification_deliveries')->where('notification_id', $notice->id)->where('channel', 'EMAIL')->value('id');
+        self::assertSame(1, DB::table('notification_deliveries')->where('notification_id', $notice->id)->where('channel', 'EMAIL')->count());
+        $deliveryEvent = DB::table('outbox_events')->where('event_type', 'NOTIFICATION_DELIVERY')->where('aggregate_id', $deliveryId)->value('id');
+        $processor->process($deliveryEvent);
+        $processor->process($deliveryEvent);
+        Mail::assertSent(InvoiceCopyMail::class, function (InvoiceCopyMail $mail) use ($buyer, $bytes, $mime, $type): bool {
+            self::assertSame('₱120.00', $mail->invoice['total']);
+            self::assertSame('₱10.00', $mail->invoice['vat']);
+            $html = $mail->render();
+            foreach (['EMAIL-01', 'Email Invoice Store & Supply Corp.', 'Nov 5, 2026', 'Computerized', 'Invoice copy attached', 'DEMO SAMPLE'] as $text) {
+                self::assertStringContainsString(e($text), $html);
+            }
+            self::assertStringNotContainsString('Open notification', $html);
+            self::assertStringNotContainsString('private/order/', $html);
+            self::assertStringContainsString('Download your invoice', $html);
+            $sent = (new MailManager($this->app))->mailer('array')->send($mail);
+            $message = $sent->getSymfonySentMessage()->getOriginalMessage();
+            self::assertCount(1, $message->getAttachments());
+            $attachment = $message->getAttachments()[0];
+            self::assertSame($bytes, $attachment->getBody());
+            self::assertSame('attachment', $attachment->getDisposition());
+            self::assertSame($mime, $attachment->getMediaType().'/'.$attachment->getMediaSubtype());
+            self::assertSame('invoice-email-01.'.$type, $attachment->getFilename());
+            self::assertStringContainsString('Invoice total: ₱120.00', $message->getTextBody());
+            self::assertStringContainsString('Issued by: Email Invoice Store & Supply Corp.', $message->getTextBody());
+
+            return $mail->hasTo($buyer->email);
+        });
+        Mail::assertSentCount(1);
+        $this->assertDatabaseHas('notification_deliveries', ['id' => $deliveryId, 'state' => 'SENT', 'attempt_count' => 1]);
+        self::assertSame('/orders/'.$orderId, app(NotificationPolicy::class)->target($buyer, $notice));
+        $other = $this->buyer();
+        self::assertFalse(app(NotificationPolicy::class)->allows($other, $notice));
+        self::assertNull(app(InvoiceCopyMailFactory::class)->make($other, $recordId));
+
+        // A queued invoice is not delivered after account access is revoked.
+        $revoked = app(NotificationService::class)->record((int) $buyer->id, 'INVOICES', 'Invoice copy', 'Review invoice', 'INVOICE_RECORD', $recordId, 'revocation-fixture');
+        app(NotificationService::class)->enqueue($revoked);
+        $revokedDelivery = DB::table('notification_deliveries')->where('notification_id', $revoked)->where('channel', 'EMAIL')->value('id');
+        DB::table('users')->where('id', $buyer->id)->update(['account_status' => 'SUSPENDED']);
+        app(NotificationDelivery::class)->send($revokedDelivery);
+        $this->assertDatabaseHas('notification_deliveries', ['id' => $revokedDelivery, 'state' => 'REVOKED']);
+        Mail::assertSentCount(1);
+        DB::table('users')->where('id', $buyer->id)->update(['account_status' => 'ACTIVE']);
+
+        $file = DB::table('files')->where('id', DB::table('invoice_records')->where('id', $recordId)->value('file_id'))->first();
+        DB::table('files')->where('id', $file->id)->update(['scan_state' => 'PENDING']);
+        self::assertNull(app(InvoiceCopyMailFactory::class)->make($buyer, $recordId));
+        DB::table('files')->where('id', $file->id)->update(['scan_state' => 'CLEAN']);
+        Storage::disk('local')->put($file->object_key, 'changed-file');
+        $retry = app(NotificationService::class)->record((int) $buyer->id, 'INVOICES', 'Invoice copy', 'Review invoice', 'INVOICE_RECORD', $recordId, 'integrity-fixture');
+        app(NotificationService::class)->enqueue($retry);
+        $retryDelivery = DB::table('notification_deliveries')->where('notification_id', $retry)->where('channel', 'EMAIL')->value('id');
+        try {
+            app(NotificationDelivery::class)->send($retryDelivery);
+            self::fail('An altered attachment must not be sent.');
+        } catch (\RuntimeException $failure) {
+            self::assertSame('Notification delivery failed. See the operational delivery record.', $failure->getMessage());
+        }
+        $this->assertDatabaseHas('notification_deliveries', ['id' => $retryDelivery, 'state' => 'RETRY', 'failure_code' => 'CHANNEL_UNAVAILABLE']);
+        Mail::assertSentCount(1);
+        Storage::disk('local')->put($file->object_key, $bytes);
+        app(NotificationDelivery::class)->send($retryDelivery);
+        $this->assertDatabaseHas('notification_deliveries', ['id' => $retryDelivery, 'state' => 'SENT', 'attempt_count' => 2]);
+        Mail::assertSentCount(2);
+    }
+
+    public static function invoiceAttachmentTypes(): array
+    {
+        return ['PDF' => ['pdf', 'application/pdf'], 'JPG' => ['jpg', 'image/jpeg'], 'PNG' => ['png', 'image/png']];
+    }
+
     // ── Fixtures ─────────────────────────────────────────────────────────────────────────────────────
 
     /** @param array<string, mixed> $overrides */
+    public function test_case_order_audit_rechecks_case_scope_files_and_revoked_permissions(): void
+    {
+        [, $owner, $buyer, $orderId] = $this->paidPickup('Case Audit Store');
+        $this->milestone($owner, $orderId, 'PROCESSING')->assertOk();
+        $this->milestone($owner, $orderId, 'READY_FOR_PICKUP')->assertOk();
+        $this->milestone($owner, $orderId, 'PICKED_UP', ['handover_confirmed' => '1', 'receiver_name' => 'Ana Buyer', 'receiver_kind' => 'BUYER', 'file' => UploadedFile::fake()->image('handover.png')])->assertOk();
+        $caseId = (string) $this->fileCase($buyer, $orderId)->assertCreated()->json('data.id');
+        [, , , $otherOrder] = $this->paidPickup('Unrelated Audit Store');
+        $admin = $this->admin('ADMIN_ORDER_DISPUTE');
+        $role = DB::table('platform_roles')->where('code', 'ADMIN_ORDER_DISPUTE')->value('id');
+        DB::table('role_permissions')->where('platform_role_id', $role)->where('permission_id', DB::table('permissions')->where('code', 'orders.operations.view')->value('id'))->delete();
+        $this->signInAdmin($admin);
+        $base = '/api/v1/admin/order-operations/orders/';
+        $this->getJson($base.$orderId)->assertForbidden();
+        $this->getJson($base.$orderId.'?case_id='.$caseId)->assertOk()->assertJsonPath('data.id', $orderId)->assertJsonPath('data.available_actions', []);
+        $this->getJson($base.$otherOrder.'?case_id='.$caseId)->assertNotFound();
+        $this->getJson($base.$orderId.'?case_id='.Str::uuid7())->assertNotFound();
+        $this->getJson($base.$orderId.'?case_id=invalid')->assertUnprocessable();
+        $fileId = DB::table('fulfillment_proofs')->where('order_id', $orderId)->value('photo_file_id');
+        self::assertNotNull($fileId);
+        $this->get($base.$orderId.'/files/'.$fileId.'?case_id='.$caseId)->assertOk()->assertHeader('Cache-Control', 'no-store, private');
+        $this->getJson($base.$otherOrder.'/files/'.$fileId.'?case_id='.$caseId)->assertNotFound();
+        DB::table('role_permissions')->where('platform_role_id', $role)->where('permission_id', DB::table('permissions')->where('code', 'disputes.view')->value('id'))->delete();
+        $this->getJson($base.$orderId.'?case_id='.$caseId)->assertForbidden();
+        $this->getJson($base.$orderId.'/files/'.$fileId.'?case_id='.$caseId)->assertForbidden();
+    }
+
     private function fileCase(User $buyer, string $orderId, array $overrides = [], ?string $key = null): TestResponse
     {
         $this->signInBuyer($buyer);

@@ -7,7 +7,7 @@
 Name | Type
 ------------ | -------------
 `data` | [Array&lt;EnforcementSummary&gt;](EnforcementSummary.md)
-`meta` | { [key: string]: any; }
+`meta` | [EnforcementListEnvelopeMeta](EnforcementListEnvelopeMeta.md)
 `errors` | [Array&lt;ApiError&gt;](ApiError.md)
 
 ## Example

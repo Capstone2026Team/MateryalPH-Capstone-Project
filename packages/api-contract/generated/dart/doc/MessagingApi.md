@@ -12,28 +12,36 @@ Method | HTTP request | Description
 [**archiveChatConversation**](MessagingApi.md#archivechatconversation) | **PUT** /{messagingPortal}/conversations/{conversationId}/archive |
 [**authorizeChatChannel**](MessagingApi.md#authorizechatchannel) | **POST** /{messagingPortal}/messaging/auth |
 [**cancelSiteInspection**](MessagingApi.md#cancelsiteinspection) | **POST** /{messagingPortal}/conversations/{conversationId}/site-inspections/{inspectionId}/cancel |
+[**chooseChatAutomatedResponse**](MessagingApi.md#choosechatautomatedresponse) | **POST** /buyers/conversations/{conversationId}/automated-response |
 [**createConversation**](MessagingApi.md#createconversation) | **POST** /{messagingPortal}/conversations |
 [**decideChatQuotation**](MessagingApi.md#decidechatquotation) | **POST** /{messagingPortal}/conversations/{conversationId}/quotation/{action} |
 [**decideSiteInspection**](MessagingApi.md#decidesiteinspection) | **POST** /{messagingPortal}/conversations/{conversationId}/site-inspections/{inspectionId}/{action} |
 [**downloadChatAttachment**](MessagingApi.md#downloadchatattachment) | **GET** /{messagingPortal}/conversations/{conversationId}/attachments/{attachmentId} |
+[**getAutomatedResponseSettings**](MessagingApi.md#getautomatedresponsesettings) | **GET** /vendor/messaging/automated-response |
 [**getChatAvatar**](MessagingApi.md#getchatavatar) | **GET** /{messagingPortal}/conversations/{conversationId}/avatars/{userId} |
 [**getChatRealtime**](MessagingApi.md#getchatrealtime) | **GET** /{messagingPortal}/messaging/realtime |
 [**getConversation**](MessagingApi.md#getconversation) | **GET** /{messagingPortal}/conversations/{conversationId} |
+[**getVendorBuyerThread**](MessagingApi.md#getvendorbuyerthread) | **GET** /vendor/conversations/{conversationId}/buyer-thread |
 [**listChatHandlers**](MessagingApi.md#listchathandlers) | **GET** /{messagingPortal}/conversations/{conversationId}/handlers |
 [**listChatProducts**](MessagingApi.md#listchatproducts) | **GET** /{messagingPortal}/conversations/{conversationId}/products |
 [**listChatProjectInquiries**](MessagingApi.md#listchatprojectinquiries) | **GET** /{messagingPortal}/conversations/{conversationId}/project-inquiries |
 [**listConversations**](MessagingApi.md#listconversations) | **GET** /{messagingPortal}/conversations |
+[**listVendorBuyerThreadContexts**](MessagingApi.md#listvendorbuyerthreadcontexts) | **GET** /vendor/conversations/{conversationId}/buyer-thread/contexts |
 [**listVendorFulfillmentConversations**](MessagingApi.md#listvendorfulfillmentconversations) | **GET** /vendor/conversations/{conversationId}/fulfillment-conversations |
+[**messageWorkPackageOrder**](MessagingApi.md#messageworkpackageorder) | **POST** /buyers/orders/{orderId}/work-package-message |
+[**openPendingOrderQuotation**](MessagingApi.md#openpendingorderquotation) | **POST** /vendor/orders/{orderId}/quotation-inquiry |
 [**openVendorOrderConversation**](MessagingApi.md#openvendororderconversation) | **POST** /vendor/orders/{orderId}/conversation |
 [**previewChatQuotationDelivery**](MessagingApi.md#previewchatquotationdelivery) | **POST** /vendor/conversations/{conversationId}/quotation/delivery-plan |
 [**publishChatQuotation**](MessagingApi.md#publishchatquotation) | **POST** /{messagingPortal}/conversations/{conversationId}/quotation/publish |
 [**readChatMessages**](MessagingApi.md#readchatmessages) | **POST** /{messagingPortal}/conversations/{conversationId}/read |
 [**requestSiteInspection**](MessagingApi.md#requestsiteinspection) | **POST** /{messagingPortal}/site-inspections |
 [**restoreChatConversation**](MessagingApi.md#restorechatconversation) | **DELETE** /{messagingPortal}/conversations/{conversationId}/archive |
+[**saveAutomatedResponseSettings**](MessagingApi.md#saveautomatedresponsesettings) | **PUT** /vendor/messaging/automated-response |
 [**saveChatQuotationDraft**](MessagingApi.md#savechatquotationdraft) | **PUT** /{messagingPortal}/conversations/{conversationId}/quotation/draft |
 [**searchChatQuotationLocation**](MessagingApi.md#searchchatquotationlocation) | **POST** /vendor/conversations/{conversationId}/quotation/location |
 [**sendChatMessage**](MessagingApi.md#sendchatmessage) | **POST** /{messagingPortal}/conversations/{conversationId}/messages |
 [**sendChatTyping**](MessagingApi.md#sendchattyping) | **POST** /{messagingPortal}/conversations/{conversationId}/typing |
+[**shareChatWorkPackage**](MessagingApi.md#sharechatworkpackage) | **POST** /buyers/conversations/{conversationId}/work-package-attachment |
 [**startNextChatQuotation**](MessagingApi.md#startnextchatquotation) | **POST** /{messagingPortal}/conversations/{conversationId}/quotation/start |
 [**transferChatHandler**](MessagingApi.md#transferchathandler) | **POST** /{messagingPortal}/conversations/{conversationId}/transfer |
 [**updateChatDestination**](MessagingApi.md#updatechatdestination) | **PUT** /{messagingPortal}/conversations/{conversationId}/destination |
@@ -175,6 +183,51 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**SiteInspectionListResponse**](SiteInspectionListResponse.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **chooseChatAutomatedResponse**
+> ChatIdResponse chooseChatAutomatedResponse(conversationId, chatAutomatedChoice)
+
+
+
+Buyer-only explicit button selection for the active welcome message. Rechecks membership, enabled settings, read-only closure and human takeover. Same client_message_id replays safely.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+
+final api = MateryalphApiClient().getMessagingApi();
+final String conversationId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final ChatAutomatedChoice chatAutomatedChoice = ; // ChatAutomatedChoice |
+
+try {
+    final response = api.chooseChatAutomatedResponse(conversationId, chatAutomatedChoice);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling MessagingApi->chooseChatAutomatedResponse: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **conversationId** | **String**|  |
+ **chatAutomatedChoice** | [**ChatAutomatedChoice**](ChatAutomatedChoice.md)|  |
+
+### Return type
+
+[**ChatIdResponse**](ChatIdResponse.md)
 
 ### Authorization
 
@@ -407,6 +460,53 @@ Name | Type | Description  | Notes
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **getAutomatedResponseSettings**
+> AutomatedResponseSettingsEnvelope getAutomatedResponseSettings()
+
+
+
+Owner and Store Manager only. Static store text, disabled by default.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getMessagingApi();
+
+try {
+    final response = api.getAutomatedResponseSettings();
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling MessagingApi->getAutomatedResponseSettings: $e\n');
+}
+```
+
+### Parameters
+This endpoint does not need any parameter.
+
+### Return type
+
+[**AutomatedResponseSettingsEnvelope**](AutomatedResponseSettingsEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [passportBearer](../README.md#passportBearer), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **getChatAvatar**
 > Uint8List getChatAvatar(messagingPortal, conversationId, userId)
 
@@ -514,7 +614,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **getConversation**
-> ConversationDetailResponse getConversation(messagingPortal, conversationId, page, before, legacyPage)
+> ConversationDetailResponse getConversation(messagingPortal, conversationId, page, before, legacyPage, storeThread)
 
 
 
@@ -538,9 +638,10 @@ final String conversationId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
 final int page = 56; // int |
 final String before = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
 final int legacyPage = 56; // int | Page of preserved legacy inquiry references, 25 per page.
+final bool storeThread = true; // bool | Buyer app opens one normal store chat with all authorized sales history. The server selects the normal chat automatically. Dedicated fulfillment and raw commercial history remain separately authorized.
 
 try {
-    final response = api.getConversation(messagingPortal, conversationId, page, before, legacyPage);
+    final response = api.getConversation(messagingPortal, conversationId, page, before, legacyPage, storeThread);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling MessagingApi->getConversation: $e\n');
@@ -556,6 +657,7 @@ Name | Type | Description  | Notes
  **page** | **int**|  | [optional]
  **before** | **String**|  | [optional]
  **legacyPage** | **int**| Page of preserved legacy inquiry references, 25 per page. | [optional]
+ **storeThread** | **bool**| Buyer app opens one normal store chat with all authorized sales history. The server selects the normal chat automatically. Dedicated fulfillment and raw commercial history remain separately authorized. | [optional] [default to false]
 
 ### Return type
 
@@ -564,6 +666,61 @@ Name | Type | Description  | Notes
 ### Authorization
 
 [accessCookie](../README.md#accessCookie), [passportBearer](../README.md#passportBearer), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **getVendorBuyerThread**
+> ConversationDetailResponse getVendorBuyerThread(conversationId, before, page)
+
+
+
+One normal Buyer/store chat. The server uses the authorized store sales conversation for ordinary replies automatically, preserving order closure and original commercial permissions. Work Packages appear as message attachments; users never choose a reply subject.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getMessagingApi();
+final String conversationId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String before = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final int page = 56; // int |
+
+try {
+    final response = api.getVendorBuyerThread(conversationId, before, page);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling MessagingApi->getVendorBuyerThread: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **conversationId** | **String**|  |
+ **before** | **String**|  | [optional]
+ **page** | **int**|  | [optional]
+
+### Return type
+
+[**ConversationDetailResponse**](ConversationDetailResponse.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
 
 ### HTTP request headers
 
@@ -742,7 +899,7 @@ Name | Type | Description  | Notes
 
 
 
-One sales inbox entry per Buyer and Store. The authorized Item-Based conversation is the main thread; when unavailable to the viewer, use their oldest authorized project inquiry. Preview, activity ordering and unread count include all currently authorized sales inquiries in that group. Detail messages and read receipts remain conversation-specific. Assigned Fulfillment Staff retain their separate order threads. Current purpose, participant, account and fixed-role authority are checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses native bearer transport.
+Unified paginated inbox of authorized SALES inquiry threads, including Work Packages directly. Fulfillment remains order-specific. Each inquiry preserves its own receipts and personal archive.
 
 ### Example
 ```dart
@@ -784,6 +941,59 @@ Name | Type | Description  | Notes
 ### Authorization
 
 [accessCookie](../README.md#accessCookie), [passportBearer](../README.md#passportBearer), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **listVendorBuyerThreadContexts**
+> ConversationPageResponse listVendorBuyerThreadContexts(conversationId, page)
+
+
+
+Compatibility read for historical clients. The application has no subject picker; normal chat replies are routed automatically.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getMessagingApi();
+final String conversationId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final int page = 56; // int |
+
+try {
+    final response = api.listVendorBuyerThreadContexts(conversationId, page);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling MessagingApi->listVendorBuyerThreadContexts: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **conversationId** | **String**|  |
+ **page** | **int**|  | [optional]
+
+### Return type
+
+[**ConversationPageResponse**](ConversationPageResponse.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
 
 ### HTTP request headers
 
@@ -837,6 +1047,106 @@ Name | Type | Description  | Notes
 ### HTTP request headers
 
  - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **messageWorkPackageOrder**
+> ChatIdResponse messageWorkPackageOrder(orderId, idempotencyKey)
+
+
+
+Buyer-only Message action. Reuses the normal store chat and posts its locked Work Package attachment; never changes an order, quotation or procurement selection.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+
+final api = MateryalphApiClient().getMessagingApi();
+final String orderId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String idempotencyKey = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+
+try {
+    final response = api.messageWorkPackageOrder(orderId, idempotencyKey);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling MessagingApi->messageWorkPackageOrder: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **orderId** | **String**|  |
+ **idempotencyKey** | **String**|  |
+
+### Return type
+
+[**ChatIdResponse**](ChatIdResponse.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **openPendingOrderQuotation**
+> ChatIdResponse openPendingOrderQuotation(orderId, idempotencyKey, pendingOrderQuotationInput)
+
+
+
+Authorized sales publisher opens the inquiry attached to this pending unconfirmed order. Opening never removes or cancels the order. Buyer acceptance atomically cancels the original pending request and creates its quotation-backed replacement. Accepted orders and any order with payment records cannot be replaced.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getMessagingApi();
+final String orderId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String idempotencyKey = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final PendingOrderQuotationInput pendingOrderQuotationInput = ; // PendingOrderQuotationInput |
+
+try {
+    final response = api.openPendingOrderQuotation(orderId, idempotencyKey, pendingOrderQuotationInput);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling MessagingApi->openPendingOrderQuotation: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **orderId** | **String**|  |
+ **idempotencyKey** | **String**|  |
+ **pendingOrderQuotationInput** | [**PendingOrderQuotationInput**](PendingOrderQuotationInput.md)|  |
+
+### Return type
+
+[**ChatIdResponse**](ChatIdResponse.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [passportBearer](../README.md#passportBearer), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
@@ -1151,6 +1461,59 @@ Name | Type | Description  | Notes
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **saveAutomatedResponseSettings**
+> AutomatedResponseSettingsEnvelope saveAutomatedResponseSettings(idempotencyKey, automatedResponseSettings)
+
+
+
+Versioned, idempotent static response settings. Up to three explicit button rules; no AI or NLP.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+// TODO Configure API key authorization: webCsrf
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('webCsrf').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getMessagingApi();
+final String idempotencyKey = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final AutomatedResponseSettings automatedResponseSettings = ; // AutomatedResponseSettings |
+
+try {
+    final response = api.saveAutomatedResponseSettings(idempotencyKey, automatedResponseSettings);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling MessagingApi->saveAutomatedResponseSettings: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **idempotencyKey** | **String**|  |
+ **automatedResponseSettings** | [**AutomatedResponseSettings**](AutomatedResponseSettings.md)|  |
+
+### Return type
+
+[**AutomatedResponseSettingsEnvelope**](AutomatedResponseSettingsEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [passportBearer](../README.md#passportBearer), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **saveChatQuotationDraft**
 > ChatQuotationPageResponse saveChatQuotationDraft(messagingPortal, conversationId, chatDraftSave)
 
@@ -1365,6 +1728,51 @@ Name | Type | Description  | Notes
 ### HTTP request headers
 
  - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **shareChatWorkPackage**
+> ChatIdResponse shareChatWorkPackage(conversationId, idempotencyKey)
+
+
+
+Buyer-only Message action. Reuses the normal store chat and posts its locked Work Package attachment; never changes an order, quotation or procurement selection.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+
+final api = MateryalphApiClient().getMessagingApi();
+final String conversationId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final String idempotencyKey = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+
+try {
+    final response = api.shareChatWorkPackage(conversationId, idempotencyKey);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling MessagingApi->shareChatWorkPackage: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **conversationId** | **String**|  |
+ **idempotencyKey** | **String**|  |
+
+### Return type
+
+[**ChatIdResponse**](ChatIdResponse.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)

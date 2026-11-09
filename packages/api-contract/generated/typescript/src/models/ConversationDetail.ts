@@ -49,6 +49,14 @@ import {
  */
 export interface ConversationDetail {
     /**
+     * Opaque authorized-context epoch for the combined Vendor timeline. Discard retained pages when it changes; it is never an authorization credential.
+     */
+    threadAuthority?: string;
+    /**
+     * Authorized original references used to resolve older messages, quotations, files and receipts within the single chat. No reply-subject selector is shown.
+     */
+    threadContexts?: Array<ConversationView>;
+    /**
      *
      */
     conversation: ConversationView;
@@ -86,6 +94,8 @@ export function ConversationDetailFromJSONTyped(json: any, ignoreDiscriminator: 
     }
     return {
 
+        'threadAuthority': json['thread_authority'] == null ? undefined : json['thread_authority'],
+        'threadContexts': json['thread_contexts'] == null ? undefined : ((json['thread_contexts'] as Array<any>).map(ConversationViewFromJSON)),
         'conversation': ConversationViewFromJSON(json['conversation']),
         'messages': ChatMessagePageFromJSON(json['messages']),
         'quotations': ChatQuotationPageFromJSON(json['quotations']),
@@ -104,6 +114,8 @@ export function ConversationDetailToJSONTyped(value?: ConversationDetail | null,
 
     return {
 
+        'thread_authority': value['threadAuthority'],
+        'thread_contexts': value['threadContexts'] == null ? undefined : ((value['threadContexts'] as Array<any>).map(ConversationViewToJSON)),
         'conversation': ConversationViewToJSON(value['conversation']),
         'messages': ChatMessagePageToJSON(value['messages']),
         'quotations': ChatQuotationPageToJSON(value['quotations']),

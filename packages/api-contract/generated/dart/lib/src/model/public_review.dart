@@ -11,7 +11,7 @@ import 'package:built_value/serializer.dart';
 
 part 'public_review.g.dart';
 
-/// Privacy-safe public review: first name and last initial or Verified Buyer; no reviewer id or contact.
+/// Public review with the Buyer's full profile name (including legacy submissions); no reviewer account id or contact.
 ///
 /// Properties:
 /// * [id]

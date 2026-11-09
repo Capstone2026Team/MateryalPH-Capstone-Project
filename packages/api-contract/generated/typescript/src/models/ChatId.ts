@@ -23,6 +23,10 @@ export interface ChatId {
      *
      */
     id: string;
+    /**
+     * Normal Buyer/store chat to open after sharing a Work Package. The id field preserves historical quotation linkage.
+     */
+    storeConversationId?: string;
 }
 
 /**
@@ -44,6 +48,7 @@ export function ChatIdFromJSONTyped(json: any, ignoreDiscriminator: boolean): Ch
     return {
 
         'id': json['id'],
+        'storeConversationId': json['store_conversation_id'] == null ? undefined : json['store_conversation_id'],
     };
 }
 
@@ -59,6 +64,7 @@ export function ChatIdToJSONTyped(value?: ChatId | null, ignoreDiscriminator: bo
     return {
 
         'id': value['id'],
+        'store_conversation_id': value['storeConversationId'],
     };
 }
 

@@ -59,7 +59,7 @@ final class ReviewService
     /**
      * Buyer submission: any not-yet-submitted subset of the Vendor rating and line reviews, once each.
      *
-     * @param  array{display_name_choice: string, vendor_rating?: ?array{service_quality: int, speed_rating: int, comment?: ?string}, product_reviews?: list<array{order_line_id: string, rating: int, comment?: ?string}>}  $input
+     * @param  array{display_name_choice?: string, vendor_rating?: ?array{service_quality: int, speed_rating: int, comment?: ?string}, product_reviews?: list<array{order_line_id: string, rating: int, comment?: ?string}>}  $input
      * @return array<string, mixed>
      */
     public function submitBuyer(Request $request, string $orderId, array $input): array
@@ -76,7 +76,7 @@ final class ReviewService
             }
             $order = $this->access->buyerOrder($request, $orderId, true);
             $window = $this->lockOpenWindow($order);
-            $name = ReviewRules::publicName($this->fullName($userId), $input['display_name_choice']);
+            $name = ReviewRules::publicName($this->fullName($userId));
             $now = CarbonImmutable::now();
             $created = [];
             if (($input['vendor_rating'] ?? null) !== null) {
@@ -86,7 +86,7 @@ final class ReviewService
                 $rating = $input['vendor_rating'];
                 $created[] = $this->insert($order, ReviewRules::VENDOR, $userId, 'BUYER', 'BUYER', $profileId, $now, [
                     'service_quality' => (int) $rating['service_quality'], 'speed_rating' => (int) $rating['speed_rating'], 'speed_kind' => ReviewRules::speedKind((string) $order->fulfillment_method),
-                    'comment' => self::comment($rating['comment'] ?? null), 'display_name_choice' => $input['display_name_choice'], 'public_display_name' => $name,
+                    'comment' => self::comment($rating['comment'] ?? null), 'display_name_choice' => 'FULL_NAME', 'public_display_name' => $name,
                 ]);
             }
             $seen = [];
@@ -106,7 +106,7 @@ final class ReviewService
                 }
                 $created[] = $this->insert($order, ReviewRules::PRODUCT, $userId, 'BUYER', 'BUYER', $profileId, $now, [
                     'order_line_id' => $line->id, 'vendor_listing_id' => $line->vendor_listing_id, 'rating' => (int) $review['rating'], 'comment' => self::comment($review['comment'] ?? null),
-                    'display_name_choice' => $input['display_name_choice'], 'public_display_name' => $name,
+                    'display_name_choice' => 'FULL_NAME', 'public_display_name' => $name,
                 ]);
             }
             $this->revealIfReady($window, $now);

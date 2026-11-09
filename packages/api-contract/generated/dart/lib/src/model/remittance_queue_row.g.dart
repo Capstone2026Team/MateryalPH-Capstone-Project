@@ -6,6 +6,68 @@ part of 'remittance_queue_row.dart';
 // BuiltValueGenerator
 // **************************************************************************
 
+const RemittanceQueueRowReconciliationMethodEnum
+    _$remittanceQueueRowReconciliationMethodEnum_AUTOMATIC =
+    const RemittanceQueueRowReconciliationMethodEnum._('AUTOMATIC');
+const RemittanceQueueRowReconciliationMethodEnum
+    _$remittanceQueueRowReconciliationMethodEnum_BACKUP_APPROVAL =
+    const RemittanceQueueRowReconciliationMethodEnum._('BACKUP_APPROVAL');
+
+RemittanceQueueRowReconciliationMethodEnum
+    _$remittanceQueueRowReconciliationMethodEnumValueOf(String name) {
+  switch (name) {
+    case 'AUTOMATIC':
+      return _$remittanceQueueRowReconciliationMethodEnum_AUTOMATIC;
+    case 'BACKUP_APPROVAL':
+      return _$remittanceQueueRowReconciliationMethodEnum_BACKUP_APPROVAL;
+    default:
+      throw ArgumentError(name);
+  }
+}
+
+final BuiltSet<RemittanceQueueRowReconciliationMethodEnum>
+    _$remittanceQueueRowReconciliationMethodEnumValues = BuiltSet<
+        RemittanceQueueRowReconciliationMethodEnum>(const <RemittanceQueueRowReconciliationMethodEnum>[
+  _$remittanceQueueRowReconciliationMethodEnum_AUTOMATIC,
+  _$remittanceQueueRowReconciliationMethodEnum_BACKUP_APPROVAL,
+]);
+
+Serializer<RemittanceQueueRowReconciliationMethodEnum>
+    _$remittanceQueueRowReconciliationMethodEnumSerializer =
+    _$RemittanceQueueRowReconciliationMethodEnumSerializer();
+
+class _$RemittanceQueueRowReconciliationMethodEnumSerializer
+    implements PrimitiveSerializer<RemittanceQueueRowReconciliationMethodEnum> {
+  static const Map<String, Object> _toWire = const <String, Object>{
+    'AUTOMATIC': 'AUTOMATIC',
+    'BACKUP_APPROVAL': 'BACKUP_APPROVAL',
+  };
+  static const Map<Object, String> _fromWire = const <Object, String>{
+    'AUTOMATIC': 'AUTOMATIC',
+    'BACKUP_APPROVAL': 'BACKUP_APPROVAL',
+  };
+
+  @override
+  final Iterable<Type> types = const <Type>[
+    RemittanceQueueRowReconciliationMethodEnum
+  ];
+  @override
+  final String wireName = 'RemittanceQueueRowReconciliationMethodEnum';
+
+  @override
+  Object serialize(Serializers serializers,
+          RemittanceQueueRowReconciliationMethodEnum object,
+          {FullType specifiedType = FullType.unspecified}) =>
+      _toWire[object.name] ?? object.name;
+
+  @override
+  RemittanceQueueRowReconciliationMethodEnum deserialize(
+          Serializers serializers, Object serialized,
+          {FullType specifiedType = FullType.unspecified}) =>
+      RemittanceQueueRowReconciliationMethodEnum.valueOf(
+          _fromWire[serialized] ?? (serialized is String ? serialized : ''));
+}
+
 class _$RemittanceQueueRow extends RemittanceQueueRow {
   @override
   final String id;
@@ -36,6 +98,16 @@ class _$RemittanceQueueRow extends RemittanceQueueRow {
   @override
   final String reconciliationState;
   @override
+  final String sourceVersion;
+  @override
+  final bool canApproveReconciliation;
+  @override
+  final RemittanceQueueRowReconciliationMethodEnum? reconciliationMethod;
+  @override
+  final String? reconciliationActorRole;
+  @override
+  final DateTime? reconciledAt;
+  @override
   final String? reviewItemId;
   @override
   final String reason;
@@ -61,6 +133,11 @@ class _$RemittanceQueueRow extends RemittanceQueueRow {
       required this.calculationState,
       required this.deductionEvidenceState,
       required this.reconciliationState,
+      required this.sourceVersion,
+      required this.canApproveReconciliation,
+      this.reconciliationMethod,
+      this.reconciliationActorRole,
+      this.reconciledAt,
       this.reviewItemId,
       required this.reason,
       required this.createdAt})
@@ -92,6 +169,11 @@ class _$RemittanceQueueRow extends RemittanceQueueRow {
         calculationState == other.calculationState &&
         deductionEvidenceState == other.deductionEvidenceState &&
         reconciliationState == other.reconciliationState &&
+        sourceVersion == other.sourceVersion &&
+        canApproveReconciliation == other.canApproveReconciliation &&
+        reconciliationMethod == other.reconciliationMethod &&
+        reconciliationActorRole == other.reconciliationActorRole &&
+        reconciledAt == other.reconciledAt &&
         reviewItemId == other.reviewItemId &&
         reason == other.reason &&
         createdAt == other.createdAt;
@@ -114,6 +196,11 @@ class _$RemittanceQueueRow extends RemittanceQueueRow {
     _$hash = $jc(_$hash, calculationState.hashCode);
     _$hash = $jc(_$hash, deductionEvidenceState.hashCode);
     _$hash = $jc(_$hash, reconciliationState.hashCode);
+    _$hash = $jc(_$hash, sourceVersion.hashCode);
+    _$hash = $jc(_$hash, canApproveReconciliation.hashCode);
+    _$hash = $jc(_$hash, reconciliationMethod.hashCode);
+    _$hash = $jc(_$hash, reconciliationActorRole.hashCode);
+    _$hash = $jc(_$hash, reconciledAt.hashCode);
     _$hash = $jc(_$hash, reviewItemId.hashCode);
     _$hash = $jc(_$hash, reason.hashCode);
     _$hash = $jc(_$hash, createdAt.hashCode);
@@ -138,6 +225,11 @@ class _$RemittanceQueueRow extends RemittanceQueueRow {
           ..add('calculationState', calculationState)
           ..add('deductionEvidenceState', deductionEvidenceState)
           ..add('reconciliationState', reconciliationState)
+          ..add('sourceVersion', sourceVersion)
+          ..add('canApproveReconciliation', canApproveReconciliation)
+          ..add('reconciliationMethod', reconciliationMethod)
+          ..add('reconciliationActorRole', reconciliationActorRole)
+          ..add('reconciledAt', reconciledAt)
           ..add('reviewItemId', reviewItemId)
           ..add('reason', reason)
           ..add('createdAt', createdAt))
@@ -216,6 +308,33 @@ class RemittanceQueueRowBuilder
   set reconciliationState(String? reconciliationState) =>
       _$this._reconciliationState = reconciliationState;
 
+  String? _sourceVersion;
+  String? get sourceVersion => _$this._sourceVersion;
+  set sourceVersion(String? sourceVersion) =>
+      _$this._sourceVersion = sourceVersion;
+
+  bool? _canApproveReconciliation;
+  bool? get canApproveReconciliation => _$this._canApproveReconciliation;
+  set canApproveReconciliation(bool? canApproveReconciliation) =>
+      _$this._canApproveReconciliation = canApproveReconciliation;
+
+  RemittanceQueueRowReconciliationMethodEnum? _reconciliationMethod;
+  RemittanceQueueRowReconciliationMethodEnum? get reconciliationMethod =>
+      _$this._reconciliationMethod;
+  set reconciliationMethod(
+          RemittanceQueueRowReconciliationMethodEnum? reconciliationMethod) =>
+      _$this._reconciliationMethod = reconciliationMethod;
+
+  String? _reconciliationActorRole;
+  String? get reconciliationActorRole => _$this._reconciliationActorRole;
+  set reconciliationActorRole(String? reconciliationActorRole) =>
+      _$this._reconciliationActorRole = reconciliationActorRole;
+
+  DateTime? _reconciledAt;
+  DateTime? get reconciledAt => _$this._reconciledAt;
+  set reconciledAt(DateTime? reconciledAt) =>
+      _$this._reconciledAt = reconciledAt;
+
   String? _reviewItemId;
   String? get reviewItemId => _$this._reviewItemId;
   set reviewItemId(String? reviewItemId) => _$this._reviewItemId = reviewItemId;
@@ -249,6 +368,11 @@ class RemittanceQueueRowBuilder
       _calculationState = $v.calculationState;
       _deductionEvidenceState = $v.deductionEvidenceState;
       _reconciliationState = $v.reconciliationState;
+      _sourceVersion = $v.sourceVersion;
+      _canApproveReconciliation = $v.canApproveReconciliation;
+      _reconciliationMethod = $v.reconciliationMethod;
+      _reconciliationActorRole = $v.reconciliationActorRole;
+      _reconciledAt = $v.reconciledAt;
       _reviewItemId = $v.reviewItemId;
       _reason = $v.reason;
       _createdAt = $v.createdAt;
@@ -301,6 +425,15 @@ class RemittanceQueueRowBuilder
                 reconciliationState,
                 r'RemittanceQueueRow',
                 'reconciliationState'),
+            sourceVersion: BuiltValueNullFieldError.checkNotNull(
+                sourceVersion, r'RemittanceQueueRow', 'sourceVersion'),
+            canApproveReconciliation: BuiltValueNullFieldError.checkNotNull(
+                canApproveReconciliation,
+                r'RemittanceQueueRow',
+                'canApproveReconciliation'),
+            reconciliationMethod: reconciliationMethod,
+            reconciliationActorRole: reconciliationActorRole,
+            reconciledAt: reconciledAt,
             reviewItemId: reviewItemId,
             reason: BuiltValueNullFieldError.checkNotNull(
                 reason, r'RemittanceQueueRow', 'reason'),

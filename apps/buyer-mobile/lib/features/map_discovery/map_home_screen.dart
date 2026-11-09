@@ -611,7 +611,7 @@ class _MapHomeScreenState extends State<MapHomeScreen>
           _LegendRow(
             icon: LucideIcons.badgeCheck,
             text:
-                'Verified Vendor: orange pin with a check, labelled VPS or New Vendor',
+                'Verified Vendor: orange pin with a check, labelled with a star and Vendor performance score, or New Vendor',
           ),
           _LegendRow(
             icon: LucideIcons.building2,

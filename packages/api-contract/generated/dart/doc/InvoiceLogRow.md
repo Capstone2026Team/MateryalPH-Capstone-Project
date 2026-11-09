@@ -8,6 +8,7 @@ import 'package:materyalph_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
+**buyerName** | **String** | The order Buyer's display name on Vendor DUE rows, including orders without a Buyer invoice request. | [optional]
 **id** | **String** |  | [optional]
 **orderId** | **String** |  | [optional]
 **orderReference** | **String** |  | [optional]

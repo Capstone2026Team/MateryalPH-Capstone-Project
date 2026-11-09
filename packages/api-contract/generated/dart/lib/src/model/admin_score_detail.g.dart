@@ -8,6 +8,14 @@ part of 'admin_score_detail.dart';
 
 class _$AdminScoreDetail extends AdminScoreDetail {
   @override
+  final BuiltMap<String, JsonObject?>? ratingComponents;
+  @override
+  final BuiltMap<String, JsonObject?>? completedOrders;
+  @override
+  final Date? ohsCalculatedOn;
+  @override
+  final Date? nextOhsRecalculationOn;
+  @override
   final String? vendorId;
   @override
   final String? storeName;
@@ -43,7 +51,11 @@ class _$AdminScoreDetail extends AdminScoreDetail {
       (AdminScoreDetailBuilder()..update(updates))._build();
 
   _$AdminScoreDetail._(
-      {this.vendorId,
+      {this.ratingComponents,
+      this.completedOrders,
+      this.ohsCalculatedOn,
+      this.nextOhsRecalculationOn,
+      this.vendorId,
       this.storeName,
       this.calculated,
       this.asOf,
@@ -71,6 +83,10 @@ class _$AdminScoreDetail extends AdminScoreDetail {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is AdminScoreDetail &&
+        ratingComponents == other.ratingComponents &&
+        completedOrders == other.completedOrders &&
+        ohsCalculatedOn == other.ohsCalculatedOn &&
+        nextOhsRecalculationOn == other.nextOhsRecalculationOn &&
         vendorId == other.vendorId &&
         storeName == other.storeName &&
         calculated == other.calculated &&
@@ -91,6 +107,10 @@ class _$AdminScoreDetail extends AdminScoreDetail {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, ratingComponents.hashCode);
+    _$hash = $jc(_$hash, completedOrders.hashCode);
+    _$hash = $jc(_$hash, ohsCalculatedOn.hashCode);
+    _$hash = $jc(_$hash, nextOhsRecalculationOn.hashCode);
     _$hash = $jc(_$hash, vendorId.hashCode);
     _$hash = $jc(_$hash, storeName.hashCode);
     _$hash = $jc(_$hash, calculated.hashCode);
@@ -113,6 +133,10 @@ class _$AdminScoreDetail extends AdminScoreDetail {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'AdminScoreDetail')
+          ..add('ratingComponents', ratingComponents)
+          ..add('completedOrders', completedOrders)
+          ..add('ohsCalculatedOn', ohsCalculatedOn)
+          ..add('nextOhsRecalculationOn', nextOhsRecalculationOn)
           ..add('vendorId', vendorId)
           ..add('storeName', storeName)
           ..add('calculated', calculated)
@@ -135,6 +159,28 @@ class _$AdminScoreDetail extends AdminScoreDetail {
 class AdminScoreDetailBuilder
     implements Builder<AdminScoreDetail, AdminScoreDetailBuilder> {
   _$AdminScoreDetail? _$v;
+
+  MapBuilder<String, JsonObject?>? _ratingComponents;
+  MapBuilder<String, JsonObject?> get ratingComponents =>
+      _$this._ratingComponents ??= MapBuilder<String, JsonObject?>();
+  set ratingComponents(MapBuilder<String, JsonObject?>? ratingComponents) =>
+      _$this._ratingComponents = ratingComponents;
+
+  MapBuilder<String, JsonObject?>? _completedOrders;
+  MapBuilder<String, JsonObject?> get completedOrders =>
+      _$this._completedOrders ??= MapBuilder<String, JsonObject?>();
+  set completedOrders(MapBuilder<String, JsonObject?>? completedOrders) =>
+      _$this._completedOrders = completedOrders;
+
+  Date? _ohsCalculatedOn;
+  Date? get ohsCalculatedOn => _$this._ohsCalculatedOn;
+  set ohsCalculatedOn(Date? ohsCalculatedOn) =>
+      _$this._ohsCalculatedOn = ohsCalculatedOn;
+
+  Date? _nextOhsRecalculationOn;
+  Date? get nextOhsRecalculationOn => _$this._nextOhsRecalculationOn;
+  set nextOhsRecalculationOn(Date? nextOhsRecalculationOn) =>
+      _$this._nextOhsRecalculationOn = nextOhsRecalculationOn;
 
   String? _vendorId;
   String? get vendorId => _$this._vendorId;
@@ -220,6 +266,10 @@ class AdminScoreDetailBuilder
   AdminScoreDetailBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _ratingComponents = $v.ratingComponents?.toBuilder();
+      _completedOrders = $v.completedOrders?.toBuilder();
+      _ohsCalculatedOn = $v.ohsCalculatedOn;
+      _nextOhsRecalculationOn = $v.nextOhsRecalculationOn;
       _vendorId = $v.vendorId;
       _storeName = $v.storeName;
       _calculated = $v.calculated;
@@ -258,6 +308,10 @@ class AdminScoreDetailBuilder
     try {
       _$result = _$v ??
           _$AdminScoreDetail._(
+            ratingComponents: _ratingComponents?.build(),
+            completedOrders: _completedOrders?.build(),
+            ohsCalculatedOn: ohsCalculatedOn,
+            nextOhsRecalculationOn: nextOhsRecalculationOn,
             vendorId: vendorId,
             storeName: storeName,
             calculated: calculated,
@@ -277,6 +331,11 @@ class AdminScoreDetailBuilder
     } catch (_) {
       late String _$failedField;
       try {
+        _$failedField = 'ratingComponents';
+        _ratingComponents?.build();
+        _$failedField = 'completedOrders';
+        _completedOrders?.build();
+
         _$failedField = 'scores';
         _scores?.build();
         _$failedField = 'operations';

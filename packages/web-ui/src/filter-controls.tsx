@@ -1,12 +1,20 @@
 import { forwardRef, useId, useState, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from 'react'
 import { ChevronDown, Search, SlidersHorizontal, X } from 'lucide-react'
 import { Button } from './button'
+import './filter-panel.css'
+
+export function MultiSelectFilter({ label = 'Status', legend, options, value, onChange }: { label?: string; legend: string; options: readonly { value: string; label: string }[]; value: string[]; onChange: (value: string[]) => void }) {
+  return <details className="relative" onKeyDown={event => { if (event.key === 'Escape') { event.currentTarget.open = false; event.currentTarget.querySelector('summary')?.focus() } }}>
+    <summary className="inline-flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-control border border-border-default bg-surface-primary px-3 text-sm font-semibold [&::-webkit-details-marker]:hidden">{label} {value.length > 0 ? `(${value.length})` : '· All'}<ChevronDown size={14} aria-hidden="true" /></summary>
+    <fieldset className="absolute left-0 z-50 min-w-52 max-w-[calc(100vw-3rem)] rounded-control border border-border-default bg-surface-primary p-2 shadow-sm md:left-auto md:right-0"><legend className="sr-only">{legend}</legend>{options.map(option => <label key={option.value} className="flex min-h-11 items-center gap-3 px-3 text-sm"><input type="checkbox" checked={value.includes(option.value)} onChange={event => onChange(event.target.checked ? [...value, option.value] : value.filter(item => item !== option.value))} />{option.label}</label>)}</fieldset>
+  </details>
+}
 
 /** Keeps applied context visible while retaining drafts inside a collapsed filter panel. */
 export function FilterDisclosure({ label = 'Filters', summary, children }: { label?: string; summary?: ReactNode; children: ReactNode }) {
   const [open, setOpen] = useState(false)
   const panelId = useId()
-  return <section aria-label={`${label} panel`} className="min-w-0 rounded-surface border border-border-default bg-surface-primary">
+  return <section aria-label={`${label} panel`} className="min-w-0 mp-card">
     <div className="flex min-w-0 flex-wrap items-center gap-x-5 gap-y-3 p-4 sm:px-6">
       <Button variant="secondary" aria-expanded={open} aria-controls={panelId} onClick={() => setOpen(value => !value)}><SlidersHorizontal size={16} aria-hidden="true" />{label}<ChevronDown size={16} aria-hidden="true" className={open ? 'rotate-180' : ''} /></Button>
       {summary && <div className="min-w-0 text-[13px] text-text-secondary">{summary}</div>}
@@ -15,12 +23,12 @@ export function FilterDisclosure({ label = 'Filters', summary, children }: { lab
   </section>
 }
 
-export function FilterPanel({ label, children, footer, actions }: { label: string; children: ReactNode; footer?: ReactNode; actions?: ReactNode }) {
-  return <section aria-label={label} className="min-w-0 rounded-surface border border-border-default bg-surface-primary p-4 sm:p-6">
-    <div className="grid min-w-0 grid-cols-1 items-end gap-x-4 gap-y-5 sm:grid-cols-[repeat(auto-fit,minmax(min(100%,17rem),1fr))]">{children}</div>
-    {(footer || actions) && <div className="mt-5 flex min-w-0 flex-col gap-4 border-t border-border-default pt-5 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
-      {footer && <div className="min-w-0 max-w-full">{footer}</div>}
-      {actions && <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">{actions}</div>}
+export function FilterPanel({ label, children, footer, actions, compact = false, columns = 4 }: { label: string; children?: ReactNode; footer?: ReactNode; actions?: ReactNode; compact?: boolean; columns?: 2 | 3 | 4 }) {
+  return <section aria-label={label} className={`min-w-0 mp-card mp-card-padded${compact ? ' mp-filter-panel-compact' : ''}`}>
+    {children && <div data-columns={columns} className={compact ? 'mp-filter-panel-fields' : 'grid min-w-0 grid-cols-1 items-end gap-x-4 gap-y-5 sm:grid-cols-[repeat(auto-fit,minmax(min(100%,17rem),1fr))]'}>{children}</div>}
+    {(footer || actions) && <div data-fields={Boolean(children)} className={compact ? 'mp-filter-panel-footer' : 'mt-5 flex min-w-0 flex-col gap-4 border-t border-border-default pt-5 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between'}>
+      {footer && <div className={compact ? 'mp-filter-panel-context' : 'min-w-0 max-w-full'}>{footer}</div>}
+      {actions && <div className={compact ? 'mp-filter-panel-actions' : 'flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center'}>{actions}</div>}
     </div>}
   </section>
 }
@@ -59,5 +67,5 @@ export function Pagination({ page, lastPage, hasMore, busy = false, total, onCha
 }
 
 export function DataTable({ caption, headers, children, minWidth = '46rem' }: { caption: string; headers: ReactNode[]; children: ReactNode; minWidth?: string }) {
-  return <div role="region" aria-label={caption} tabIndex={0} className="min-w-0 max-w-full overflow-x-auto rounded-surface border border-border-default bg-surface-primary"><table style={{ minWidth }} className="w-full border-collapse text-left text-sm"><caption className="sr-only">{caption}</caption><thead><tr>{headers.map((header, index) => <th key={index} scope="col">{header}</th>)}</tr></thead><tbody>{children}</tbody></table></div>
+  return <div role="region" aria-label={caption} tabIndex={0} className="min-w-0 max-w-full overflow-x-auto mp-card"><table style={{ minWidth }} className="w-full border-collapse text-left text-sm"><caption className="sr-only">{caption}</caption><thead><tr>{headers.map((header, index) => <th key={index} scope="col">{header}</th>)}</tr></thead><tbody>{children}</tbody></table></div>
 }

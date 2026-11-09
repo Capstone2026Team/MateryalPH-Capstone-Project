@@ -267,6 +267,7 @@ class _BuyerAppState extends State<BuyerApp> {
         value: BuyerTheme.systemUi,
         child: NotificationScope(
           repository: _notifications,
+          navigatorKey: _navigatorKey,
           active: _stage == _AppStage.home,
           child: child ?? const SizedBox.shrink(),
         ),

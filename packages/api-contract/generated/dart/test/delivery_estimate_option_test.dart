@@ -7,6 +7,12 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(DeliveryEstimateOption, () {
+    // Frozen display details when available; older snapshots may omit them. Image bytes require the existing authorized order file endpoint.
+    // DeliveryVehicleProfile vehicleDetails
+    test('to test the property `vehicleDetails`', () async {
+      // TODO
+    });
+
     // Recommended registered vehicle; absent in historical estimates.
     // String vehicleId
     test('to test the property `vehicleId`', () async {

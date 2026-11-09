@@ -18,7 +18,7 @@ Name | Type | Description | Notes
 **physicalPayments** | [**BuiltMap&lt;String, JsonObject&gt;**](JsonObject.md) |  |
 **refundCapability** | [**BuiltMap&lt;String, JsonObject&gt;**](JsonObject.md) |  |
 **statements** | [**BuiltMap&lt;String, JsonObject&gt;**](JsonObject.md) |  |
-**notices** | [**BuiltList&lt;VendorFinanceNotice&gt;**](VendorFinanceNotice.md) |  |
+**notices** | [**BuiltList&lt;VendorFinanceNotice&gt;**](VendorFinanceNotice.md) | Recent Owner finance notices, newest first, limited to 10 after excluding notices linked to this store's fully PAID fee statements. Issued, due and overdue notices remain visible while the linked statement is unpaid or partially paid. Notification history is retained. |
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

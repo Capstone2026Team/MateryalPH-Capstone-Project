@@ -16,6 +16,7 @@ Name | Type
 `restorationCondition` | string
 `continuationPlan` | string
 `continuationNote` | string
+`evidenceFileIds` | Set&lt;string&gt;
 
 ## Example
 
@@ -33,6 +34,7 @@ const example = {
   "restorationCondition": null,
   "continuationPlan": null,
   "continuationNote": null,
+  "evidenceFileIds": null,
 } satisfies EnforcementRecordRequest
 
 console.log(example)

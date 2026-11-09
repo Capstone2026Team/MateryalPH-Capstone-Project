@@ -5,6 +5,7 @@
 // ignore_for_file: unused_element
 import 'package:materyalph_api_client/src/model/buyer_invoice_billing_details.dart';
 import 'package:materyalph_api_client/src/model/invoice_request_view.dart';
+import 'package:materyalph_api_client/src/model/invoice_order_summary.dart';
 import 'package:materyalph_api_client/src/model/invoice_record_view.dart';
 import 'package:materyalph_api_client/src/model/platform_document_ref.dart';
 import 'package:built_collection/built_collection.dart';
@@ -25,8 +26,9 @@ part 'buyer_order_invoices.g.dart';
 /// * [platformDocuments]
 /// * [billingDetails]
 /// * [canEditBillingDetails]
-/// * [canRequestCopy]
+/// * [canRequestCopy] - False once a Vendor sales invoice copy has been sent, including legacy uploaded copies. Corrections remain a separate action.
 /// * [canRequestCorrection]
+/// * [orderSummary]
 @BuiltValue()
 abstract class BuyerOrderInvoices implements Built<BuyerOrderInvoices, BuyerOrderInvoicesBuilder> {
   @BuiltValueField(wireName: r'order_id')
@@ -57,11 +59,15 @@ abstract class BuyerOrderInvoices implements Built<BuyerOrderInvoices, BuyerOrde
   @BuiltValueField(wireName: r'can_edit_billing_details')
   bool get canEditBillingDetails;
 
+  /// False once a Vendor sales invoice copy has been sent, including legacy uploaded copies. Corrections remain a separate action.
   @BuiltValueField(wireName: r'can_request_copy')
   bool get canRequestCopy;
 
   @BuiltValueField(wireName: r'can_request_correction')
   bool get canRequestCorrection;
+
+  @BuiltValueField(wireName: r'order_summary')
+  InvoiceOrderSummary? get orderSummary;
 
   BuyerOrderInvoices._();
 
@@ -143,6 +149,13 @@ class _$BuyerOrderInvoicesSerializer implements PrimitiveSerializer<BuyerOrderIn
       object.canRequestCorrection,
       specifiedType: const FullType(bool),
     );
+    if (object.orderSummary != null) {
+      yield r'order_summary';
+      yield serializers.serialize(
+        object.orderSummary,
+        specifiedType: const FullType(InvoiceOrderSummary),
+      );
+    }
   }
 
   @override
@@ -243,6 +256,14 @@ class _$BuyerOrderInvoicesSerializer implements PrimitiveSerializer<BuyerOrderIn
             specifiedType: const FullType(bool),
           ) as bool;
           result.canRequestCorrection = valueDes;
+          break;
+        case r'order_summary':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(InvoiceOrderSummary),
+          ) as InvoiceOrderSummary?;
+          if (valueDes == null) continue;
+          result.orderSummary.replace(valueDes);
           break;
         default:
           unhandled.add(key);

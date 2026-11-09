@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Domain\Finance;
 
-use App\Domain\Analytics\Geo\GeoFactsBuilder;
 use App\Support\PortalDateRange;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
@@ -39,10 +38,10 @@ final class PlatformMoneyFlow
     public static function sources(): array
     {
         return [
-            ['query' => static fn (): Builder => self::confirmedOrders(), 'column' => 'COALESCE(h.confirmed_at, o.accepted_at, o.created_at)',
+            ['query' => static fn (): Builder => SalesReporting::orders(), 'column' => SalesReporting::CONFIRMED_AT,
                 'sums' => ['gross_gmv' => 'o.commercial_total_centavos', 'confirmed_orders' => '1',
                     'cancelled_gmv' => "CASE WHEN o.order_state = 'CANCELLED' THEN o.commercial_total_centavos ELSE 0 END",
-                    'refunded_gmv' => "CASE WHEN o.order_state = 'CANCELLED' THEN 0 ELSE LEAST(o.commercial_total_centavos, COALESCE(rf.refunded_centavos, 0) + COALESCE(rc.refunded_centavos, 0)) END"],
+                    'refunded_gmv' => "CASE WHEN o.order_state = 'CANCELLED' THEN 0 ELSE ".SalesReporting::REFUNDS.' END'],
                 'trend' => ['gmv_centavos' => 'o.commercial_total_centavos']],
             ['query' => static fn (): Builder => self::onlinePayments(), 'column' => 'p.paid_at',
                 'sums' => ['online_payments' => 'p.total_centavos', 'buyer_processing_fees' => 'p.processing_fee_centavos', 'online_payment_count' => '1'],
@@ -142,19 +141,6 @@ final class PlatformMoneyFlow
         }
 
         return $buckets;
-    }
-
-    /** Orders that reached CONFIRMED, with their non-cancellation online refunds and dispute cash reimbursements. */
-    private static function confirmedOrders(): Builder
-    {
-        $confirmed = DB::table('order_status_history')->where('state_family', 'ORDER')->where('to_state', 'CONFIRMED')->groupBy('order_id')->selectRaw('order_id, MIN(created_at) AS confirmed_at');
-        $refunds = DB::table('refunds')->where('target_type', 'ORDER')->where('state', 'REFUNDED')->where('trigger', '<>', 'CANCELLATION')->whereNotNull('order_id')
-            ->groupBy('order_id')->selectRaw('order_id, SUM(COALESCE(principal_centavos, amount_centavos)) AS refunded_centavos');
-        $cash = DB::table('physical_reimbursements')->where('state', 'REIMBURSEMENT_CONFIRMED')->whereNotNull('dispute_decision_id')
-            ->groupBy('order_id')->selectRaw('order_id, SUM(amount_centavos) AS refunded_centavos');
-
-        return DB::table('orders as o')->leftJoinSub($confirmed, 'h', 'h.order_id', '=', 'o.id')->leftJoinSub($refunds, 'rf', 'rf.order_id', '=', 'o.id')->leftJoinSub($cash, 'rc', 'rc.order_id', '=', 'o.id')
-            ->where(fn (Builder $q) => $q->whereNotNull('h.confirmed_at')->orWhereIn('o.order_state', GeoFactsBuilder::POST_CONFIRMATION));
     }
 
     /** Verified Buyer captures for orders (full, NRPC assurance and balance payments), never platform fee payments. */

@@ -16,6 +16,7 @@ Name | Type
 `recentOrders` | [Array&lt;DirectoryBuyerProfileRecentOrdersInner&gt;](DirectoryBuyerProfileRecentOrdersInner.md)
 `sanctions` | [Array&lt;DirectorySanction&gt;](DirectorySanction.md)
 `canViewEnforcement` | boolean
+`rating` | [BuyerRatingSummary](BuyerRatingSummary.md)
 
 ## Example
 
@@ -34,6 +35,7 @@ const example = {
   "recentOrders": null,
   "sanctions": null,
   "canViewEnforcement": null,
+  "rating": null,
 } satisfies DirectoryBuyerProfile
 
 console.log(example)

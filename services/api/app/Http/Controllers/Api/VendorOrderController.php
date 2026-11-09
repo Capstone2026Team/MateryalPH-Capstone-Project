@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api;
 
 use App\Domain\Finance\VendorDiscount;
+use App\Domain\Fulfillment\DeliveryBuyerContact;
+use App\Domain\Fulfillment\DeliveryWorkspace;
 use App\Domain\Orders\OrderConfirmationService;
 use App\Domain\Orders\OrderQueries;
 use App\Http\ApiResponse;
@@ -13,6 +15,7 @@ use App\Support\PortalDateRange;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /** Vendor order workspace: status-filtered list, job-order detail, confirmation, revision, NRPC and decline. */
 final class VendorOrderController extends Controller
@@ -35,6 +38,18 @@ final class VendorOrderController extends Controller
     public function show(Request $request, string $orderId): JsonResponse
     {
         return ApiResponse::success($this->queries->vendorDetail($request, $orderId));
+    }
+
+    public function buyerPhoto(Request $request, string $orderId, DeliveryBuyerContact $contact): StreamedResponse
+    {
+        $input = $request->validate(['version' => ['required', 'integer', 'min:1']]);
+
+        return $contact->orderPhoto($request, $orderId, (int) $input['version']);
+    }
+
+    public function route(Request $request, string $orderId, DeliveryWorkspace $workspace): JsonResponse
+    {
+        return ApiResponse::success($workspace->orderRoute($request, $orderId));
     }
 
     public function deliveryPlan(Request $request, string $orderId): JsonResponse

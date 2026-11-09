@@ -13,6 +13,13 @@
  */
 
 import { mapValues } from '../runtime';
+import type { InvoiceDraft } from './InvoiceDraft';
+import {
+    InvoiceDraftFromJSON,
+    InvoiceDraftFromJSONTyped,
+    InvoiceDraftToJSON,
+    InvoiceDraftToJSONTyped,
+} from './InvoiceDraft';
 import type { InvoiceRequestView } from './InvoiceRequestView';
 import {
     InvoiceRequestViewFromJSON,
@@ -20,6 +27,13 @@ import {
     InvoiceRequestViewToJSON,
     InvoiceRequestViewToJSONTyped,
 } from './InvoiceRequestView';
+import type { InvoiceOrderSummary } from './InvoiceOrderSummary';
+import {
+    InvoiceOrderSummaryFromJSON,
+    InvoiceOrderSummaryFromJSONTyped,
+    InvoiceOrderSummaryToJSON,
+    InvoiceOrderSummaryToJSONTyped,
+} from './InvoiceOrderSummary';
 import type { InvoiceRecordView } from './InvoiceRecordView';
 import {
     InvoiceRecordViewFromJSON,
@@ -27,6 +41,13 @@ import {
     InvoiceRecordViewToJSON,
     InvoiceRecordViewToJSONTyped,
 } from './InvoiceRecordView';
+import type { VendorInvoicePreset } from './VendorInvoicePreset';
+import {
+    VendorInvoicePresetFromJSON,
+    VendorInvoicePresetFromJSONTyped,
+    VendorInvoicePresetToJSON,
+    VendorInvoicePresetToJSONTyped,
+} from './VendorInvoicePreset';
 import type { PlatformDocumentRef } from './PlatformDocumentRef';
 import {
     PlatformDocumentRefFromJSON,
@@ -55,6 +76,10 @@ import {
  * @interface VendorOrderInvoices
  */
 export interface VendorOrderInvoices {
+    /**
+     * The order Buyer's display name, available without an invoice request. This is separate from supplied invoice billing details.
+     */
+    buyerName?: string;
     /**
      *
      */
@@ -115,6 +140,22 @@ export interface VendorOrderInvoices {
      *
      */
     lines: Array<InvoiceOrderLine>;
+    /**
+     *
+     */
+    canSend?: boolean;
+    /**
+     *
+     */
+    draft?: InvoiceDraft | null;
+    /**
+     *
+     */
+    preset?: VendorInvoicePreset;
+    /**
+     *
+     */
+    orderSummary?: InvoiceOrderSummary;
 }
 
 
@@ -190,6 +231,7 @@ export function VendorOrderInvoicesFromJSONTyped(json: any, ignoreDiscriminator:
     }
     return {
 
+        'buyerName': json['buyer_name'] == null ? undefined : json['buyer_name'],
         'orderId': json['order_id'],
         'orderReference': json['order_reference'],
         'status': json['status'],
@@ -205,6 +247,10 @@ export function VendorOrderInvoicesFromJSONTyped(json: any, ignoreDiscriminator:
         'sourceSystems': json['source_systems'],
         'invoicingMethods': json['invoicing_methods'],
         'lines': ((json['lines'] as Array<any>).map(InvoiceOrderLineFromJSON)),
+        'canSend': json['can_send'] == null ? undefined : json['can_send'],
+        'draft': json['draft'] === undefined ? undefined : json['draft'] === null ? null : InvoiceDraftFromJSON(json['draft']),
+        'preset': json['preset'] == null ? undefined : VendorInvoicePresetFromJSON(json['preset']),
+        'orderSummary': json['order_summary'] == null ? undefined : InvoiceOrderSummaryFromJSON(json['order_summary']),
     };
 }
 
@@ -219,6 +265,7 @@ export function VendorOrderInvoicesToJSONTyped(value?: VendorOrderInvoices | nul
 
     return {
 
+        'buyer_name': value['buyerName'],
         'order_id': value['orderId'],
         'order_reference': value['orderReference'],
         'status': value['status'],
@@ -234,6 +281,10 @@ export function VendorOrderInvoicesToJSONTyped(value?: VendorOrderInvoices | nul
         'source_systems': value['sourceSystems'],
         'invoicing_methods': value['invoicingMethods'],
         'lines': ((value['lines'] as Array<any>).map(InvoiceOrderLineToJSON)),
+        'can_send': value['canSend'],
+        'draft': InvoiceDraftToJSON(value['draft']),
+        'preset': VendorInvoicePresetToJSON(value['preset']),
+        'order_summary': InvoiceOrderSummaryToJSON(value['orderSummary']),
     };
 }
 

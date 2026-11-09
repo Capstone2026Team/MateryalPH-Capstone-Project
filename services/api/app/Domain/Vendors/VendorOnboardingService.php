@@ -8,6 +8,7 @@ use App\Domain\Agreements\AccountAgreements;
 use App\Domain\Authorization\AccountAccess;
 use App\Domain\Catalog\MarketplaceDiscoverability;
 use App\Domain\Catalog\RentalServicePolicy;
+use App\Domain\Finance\CommissionPolicyService;
 use App\Domain\Finance\TaxpayerIdentityHash;
 use App\Domain\Finance\WithholdingThresholdService;
 use App\Domain\Identity\AuditRecorder;
@@ -1873,7 +1874,8 @@ final class VendorOnboardingService
         $eligible = $this->vendorScope($request)['role'] === 'OWNER' && in_array($type, self::BUSINESS_TYPES, true)
             && (! $authorityRequired || $this->authority->hasCurrentApproval($organizationId, 'COMMISSION_AGREEMENT', (int) $request->user()->getKey()));
 
-        return ['agreement' => $agreement, 'can_accept' => $eligible, 'accepted' => $eligible && ($agreement['accepted_at'] ?? null) !== null];
+        return ['agreement' => $agreement, 'can_accept' => $eligible, 'accepted' => $eligible && ($agreement['accepted_at'] ?? null) !== null,
+            'upcoming' => CommissionPolicyService::present(CommissionPolicyService::next())];
     }
 
     /** @param array<string, mixed> $input

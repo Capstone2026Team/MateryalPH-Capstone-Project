@@ -13,7 +13,7 @@ Open the order in MateryalPH to review its current status. Deadlines are shown i
 @endsection
 
 @section('action')
-@include('mail.notification-link')
+@include('mail.notification-link', ['purposeLabel' => 'View order'])
 @endsection
 
 @section('security', 'MateryalPH will never ask you to send a password, one-time code or payment details by email.')

@@ -106,17 +106,15 @@ export function TeamPerformanceStatistics({ data }: { data: VendorTeamPerformanc
   const formatLabel = monthly ? formatChartMonth : formatChartDay
   const cards = breakdown(data)
   return <div className="grid gap-5">
-    <dl className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{headline(data).map((card, index) => <KpiCard key={card.key} label={card.label} value={card.value} hint={card.hint} icon={card.icon} accent={index === 0} />)}</dl>
+    <dl className="mp-card-group grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{headline(data).map((card, index) => <KpiCard key={card.key} label={card.label} value={card.value} hint={card.hint} icon={card.icon} accent={index === 0} />)}</dl>
     <DashboardPanel title={trend.title} description={`${monthly ? 'By month' : 'By day'}, ${formatChartDay(data.trend.from)} to ${formatChartDay(data.trend.to)} (Asia/Manila).`}>
       <div className="grid gap-4">
-        {values.some(value => value > 0)
-          ? <TrendLineChart title={trend.title} labels={labels} formatLabel={formatLabel} formatValue={value => formatCount(value, true)} emptyReason={trend.empty}
-            series={[{ key: 'value', label: trend.title, colorVar: '--mp-viz-series-1', values, kind: 'bar' }]} />
-          : <p className="rounded-control border border-dashed border-border-default px-4 py-8 text-center text-sm text-text-secondary">{trend.empty}</p>}
+        <TrendLineChart variant="bar" title={trend.title} labels={labels} formatLabel={formatLabel} formatValue={value => formatCount(value, true)} emptyReason={trend.empty}
+          series={[{ key: 'value', label: trend.title, colorVar: '--mp-viz-series-1', values, kind: 'bar' }]} />
         <ChartDataTable caption={`${trend.title} by ${monthly ? 'month' : 'day'}`} rowHeader={monthly ? 'Month' : 'Day'} rows={labels.map(formatLabel)} columns={[{ key: 'value', header: trend.title, values: values.map(value => formatCount(value)) }]} />
       </div>
     </DashboardPanel>
-    {cards.length > 0 && <div className="grid gap-5 lg:grid-cols-2">{cards.map(card => <DashboardPanel key={card.title} title={card.title} description={card.description}><StatRows rows={card.rows} /></DashboardPanel>)}</div>}
+    {cards.length > 0 && <div className="mp-card-group grid gap-5 lg:grid-cols-2">{cards.map(card => <DashboardPanel key={card.title} title={card.title} description={card.description}><StatRows rows={card.rows} /></DashboardPanel>)}</div>}
     <MethodNote>
       <p>Figures come only from records that store who did the work. A sale counts once the order is confirmed: a quotation order belongs to whoever handled the inquiry when the Buyer accepted, any other order to the person who confirmed it, and auto-accepted orders belong to no one.</p>
       <p className="mt-2">Reply time runs from the first unanswered Buyer message to the next store reply and is credited to whoever sent that reply. It is elapsed time, including hours the store is closed. On-time handovers compare the delivery or pickup date with the order&apos;s promised fulfillment date.</p>

@@ -1,3 +1,4 @@
+import { dateFilterPreset } from '@materyalph/web-ui'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, expect, test, vi } from 'vitest'
@@ -35,12 +36,12 @@ test('tab badges include processed refunds and confirmed reimbursements while ca
   expect(statuses.queryByRole('button', { name: 'All' })).not.toBeInTheDocument()
   expect(screen.queryByRole('combobox', { name: 'Status' })).not.toBeInTheDocument()
   fireEvent.click(statuses.getByRole('button', { name: 'Processed' }))
-  await waitFor(() => expect(operations.listRefunds).toHaveBeenLastCalledWith(1, 'REFUNDED', { label: 'All dates', from: '', to: '' }))
+  await waitFor(() => expect(operations.listRefunds).toHaveBeenLastCalledWith(1, 'REFUNDED', dateFilterPreset(30)))
   expect(statuses.getByRole('button', { name: 'Processed', pressed: true })).toBeInTheDocument()
   fireEvent.click(statuses.getByRole('button', { name: 'Awaiting provider' }))
-  await waitFor(() => expect(operations.listRefunds).toHaveBeenLastCalledWith(1, 'REFUND_PENDING', { label: 'All dates', from: '', to: '' }))
+  await waitFor(() => expect(operations.listRefunds).toHaveBeenLastCalledWith(1, 'REFUND_PENDING', dateFilterPreset(30)))
   fireEvent.click(screen.getByRole('button', { name: 'Reset filters' }))
-  await waitFor(() => expect(operations.listRefunds).toHaveBeenLastCalledWith(1, 'REFUND_FAILED', { label: 'All dates', from: '', to: '' }))
+  await waitFor(() => expect(operations.listRefunds).toHaveBeenLastCalledWith(1, 'REFUND_FAILED', dateFilterPreset(30)))
   expect(statuses.getByRole('button', { name: 'Failed', pressed: true })).toBeInTheDocument()
   expect(screen.getByRole('tab', { name: 'Refunds 1' })).toBeInTheDocument()
 })
@@ -87,7 +88,7 @@ test('Refresh updates the summary and current list without resetting its filters
   at('/order-operations')
   await screen.findByText('No refunds in this status.')
   fireEvent.click(screen.getByRole('button', { name: 'Processed' }))
-  await waitFor(() => expect(operations.listRefunds).toHaveBeenLastCalledWith(1, 'REFUNDED', { label: 'All dates', from: '', to: '' }))
+  await waitFor(() => expect(operations.listRefunds).toHaveBeenLastCalledWith(1, 'REFUNDED', dateFilterPreset(30)))
   vi.mocked(operations.getSummary).mockResolvedValue({ refundsTotal: 6, refundsFailed: 0, refundsPending: 2, reimbursementsTotal: 2, reimbursementsPending: 1, cancellationRequestsOpen: 0, nfrEvents30Days: 3 })
   vi.mocked(operations.listRefunds).mockResolvedValue({ items: [refund({ state: 'REFUNDED', displayState: 'PROCESSED', canRetry: false })], hasMore: false })
   const callsBefore = vi.mocked(operations.listRefunds).mock.calls.length
@@ -106,7 +107,7 @@ test('failed refunds come first with a retry to the original payment that stays 
   expect(records.getByText('Refund failed — action required')).toBeInTheDocument()
   expect(screen.getByRole('tab', { name: 'Refunds 5' })).toBeInTheDocument()
   expect(records.getByText(/INSUFFICIENT_BALANCE/)).toBeInTheDocument()
-  expect(operations.listRefunds).toHaveBeenCalledWith(1, 'REFUND_FAILED', { label: 'All dates', from: '', to: '' })
+  expect(operations.listRefunds).toHaveBeenCalledWith(1, 'REFUND_FAILED', dateFilterPreset(30))
   fireEvent.click(records.getByRole('button', { name: 'Retry after funding is resolved' }))
   await waitFor(() => expect(operations.retryRefund).toHaveBeenCalledWith('refund-1'))
   expect(await screen.findByText(/stays pending until the provider confirms it/)).toBeInTheDocument()

@@ -16,12 +16,22 @@ part 'conversation_detail.g.dart';
 /// ConversationDetail
 ///
 /// Properties:
+/// * [threadAuthority] - Opaque authorized-context epoch for the combined Vendor timeline. Discard retained pages when it changes; it is never an authorization credential.
+/// * [threadContexts] - Authorized original references used to resolve older messages, quotations, files and receipts within the single chat. No reply-subject selector is shown.
 /// * [conversation]
 /// * [messages]
 /// * [quotations]
 /// * [siteInspections] - The Item-Based conversation's ten most recent free site inspection requests, newest first; empty for other conversations.
 @BuiltValue()
 abstract class ConversationDetail implements Built<ConversationDetail, ConversationDetailBuilder> {
+  /// Opaque authorized-context epoch for the combined Vendor timeline. Discard retained pages when it changes; it is never an authorization credential.
+  @BuiltValueField(wireName: r'thread_authority')
+  String? get threadAuthority;
+
+  /// Authorized original references used to resolve older messages, quotations, files and receipts within the single chat. No reply-subject selector is shown.
+  @BuiltValueField(wireName: r'thread_contexts')
+  BuiltList<ConversationView>? get threadContexts;
+
   @BuiltValueField(wireName: r'conversation')
   ConversationView get conversation;
 
@@ -58,6 +68,20 @@ class _$ConversationDetailSerializer implements PrimitiveSerializer<Conversation
     ConversationDetail object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.threadAuthority != null) {
+      yield r'thread_authority';
+      yield serializers.serialize(
+        object.threadAuthority,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.threadContexts != null) {
+      yield r'thread_contexts';
+      yield serializers.serialize(
+        object.threadContexts,
+        specifiedType: const FullType(BuiltList, [FullType(ConversationView)]),
+      );
+    }
     yield r'conversation';
     yield serializers.serialize(
       object.conversation,
@@ -103,6 +127,22 @@ class _$ConversationDetailSerializer implements PrimitiveSerializer<Conversation
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'thread_authority':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.threadAuthority = valueDes;
+          break;
+        case r'thread_contexts':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltList, [FullType(ConversationView)]),
+          ) as BuiltList<ConversationView>?;
+          if (valueDes == null) continue;
+          result.threadContexts.replace(valueDes);
+          break;
         case r'conversation':
           final valueDes = serializers.deserialize(
             value,

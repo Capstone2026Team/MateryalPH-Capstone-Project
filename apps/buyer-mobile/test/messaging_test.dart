@@ -235,6 +235,7 @@ void main() {
     expect(find.text('What changed'), findsOneWidget);
     expect(find.textContaining('fields'), findsNothing);
     expect(find.textContaining('Manila'), findsOneWidget);
+    await tester.ensureVisible(find.text('Review & accept'));
     await tester.tap(find.text('Review & accept'));
     expect(action, 'accept');
     expect(tester.takeException(), isNull);

@@ -6,6 +6,7 @@
 
 Name | Type
 ------------ | -------------
+`salesBreakdown` | [VendorProductSalesBreakdown](VendorProductSalesBreakdown.md)
 `top` | [Array&lt;VendorDashboardProduct&gt;](VendorDashboardProduct.md)
 `categories` | [Array&lt;VendorDashboardOrdersProductsCategoriesInner&gt;](VendorDashboardOrdersProductsCategoriesInner.md)
 `segments` | [VendorDashboardOrdersProductsSegments](VendorDashboardOrdersProductsSegments.md)
@@ -18,6 +19,7 @@ import type { VendorDashboardOrdersProducts } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "salesBreakdown": null,
   "top": null,
   "categories": null,
   "segments": null,

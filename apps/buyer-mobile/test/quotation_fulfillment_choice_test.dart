@@ -142,9 +142,14 @@ ProjectsRepository repository(
           requests.add(options);
           final path = options.uri.path;
           final Object? data = path.endsWith('/selection-preview')
-              ? candidate(
-                  method: (options.data as Map)['fulfillment_method'] as String,
-                )
+              ? {
+                  ...candidate(
+                    method:
+                        (options.data as Map)['fulfillment_method'] as String,
+                  ),
+                  if (requests.any((r) => r.uri.path.endsWith('/selection')))
+                    'primary_order_id': orderId,
+                }
               : path.endsWith('/selection') || path.endsWith('/inquiries')
               ? {'id': orderId}
               : path.endsWith('/work-packages/$packageId')
@@ -265,6 +270,8 @@ void main() {
       expect((select.data as Map)['fulfillment_method'], 'DELIVERY');
       expect((select.data as Map)['payment_method'], 'ONLINE');
       await tester.tap(find.text('View primary request'));
+      await tester.pumpAndSettle();
+      expect(find.text('View primary request'), findsOneWidget);
       expect(order, orderId);
       expect(tester.takeException(), isNull);
     },

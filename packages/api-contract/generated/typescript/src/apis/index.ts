@@ -36,6 +36,7 @@ export * from './BuyerReviewsApi';
 export * from './MessagingApi';
 export * from './NotificationsApi';
 export * from './PaymentWebhooksApi';
+export * from './PublicFinanceApi';
 export * from './ReportingApi';
 export * from './StoresApi';
 export * from './SupportApi';

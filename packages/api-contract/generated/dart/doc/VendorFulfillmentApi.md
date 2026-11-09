@@ -410,7 +410,7 @@ Name | Type | Description  | Notes
 
 
 
-Order evidence for authorized Vendor users of this order; Fulfillment Staff only while assigned.
+Order evidence and frozen delivery vehicle images for authorized Vendor users of this order; Fulfillment Staff only while assigned. Vehicle images must be referenced by the saved order arrangement or submitted estimate.
 
 ### Example
 ```dart

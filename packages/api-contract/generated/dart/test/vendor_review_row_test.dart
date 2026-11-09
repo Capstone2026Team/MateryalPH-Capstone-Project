@@ -7,6 +7,12 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(VendorReviewRow, () {
+    // Five-minute signed review-scoped Buyer photo URL, including for legacy reviews now shown with full identity. Null for store-authored Buyer ratings or missing photos. Fetch with the current Vendor session; never use a private storage URL.
+    // String buyerAvatarUrl
+    test('to test the property `buyerAvatarUrl`', () async {
+      // TODO
+    });
+
     // String id
     test('to test the property `id`', () async {
       // TODO

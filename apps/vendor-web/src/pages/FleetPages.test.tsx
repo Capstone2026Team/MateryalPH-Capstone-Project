@@ -7,6 +7,9 @@ import type { FleetVehicle, FleetVehicleListMeta } from '../lib/inventory-api'
 import * as onboarding from '../lib/onboarding-api'
 import { VendorFleetPage } from './FleetPages'
 import { watchConversation } from '../lib/messaging-api'
+import { loadFleetCapacitySources } from '../lib/fleet-capacity'
+
+vi.mock('../lib/fleet-capacity', () => ({ loadFleetCapacitySources: vi.fn() }))
 
 vi.mock('../lib/messaging-api', () => ({ watchConversation: vi.fn() }))
 
@@ -31,16 +34,17 @@ function error(status: number, body: unknown): ResponseError {
 }
 
 beforeEach(() => {
-  vi.clearAllMocks()
+  vi.resetAllMocks()
   vi.mocked(watchConversation).mockResolvedValue(vi.fn())
   vi.mocked(onboarding.getVendorOnboarding).mockResolvedValue(snapshot(['portal.vehicles', 'vehicles.manage']))
   vi.mocked(onboarding.getVendorPrivateFileUrl).mockResolvedValue({ url: 'https://example.test/logo', expiresAt: new Date() })
   vi.mocked(inventory.listFleet).mockResolvedValue({ items: [vehicle(), vehicle({ id: 'vehicle-2', name: 'Spare van', vehicleCategory: 'VAN', vehicleType: 'MID_SIZE_CARGO_VAN', available: false, lockVersion: 1, eligibility: { eligible: false, reasons: ['VEHICLE_UNAVAILABLE'] } })], meta })
   vi.mocked(inventory.fleetImageUrl).mockResolvedValue('https://example.test/truck.png')
+  vi.mocked(loadFleetCapacitySources).mockResolvedValue([])
 })
 
-function open() {
-  return render(<MemoryRouter initialEntries={['/vehicles']}><Routes><Route path="/vehicles" element={<VendorFleetPage />} /></Routes></MemoryRouter>)
+function open(path = '/vehicles') {
+  return render(<MemoryRouter initialEntries={[path]}><Routes><Route path="/vehicles" element={<VendorFleetPage />} /></Routes></MemoryRouter>)
 }
 
 test('managers land on the vehicle overview and open one editor at a time', async () => {
@@ -50,11 +54,13 @@ test('managers land on the vehicle overview and open one editor at a time', asyn
   expect(screen.getByRole('article', { name: 'Box truck' })).toHaveTextContent('1,000 kg')
   expect(screen.queryByLabelText('Vehicle Category')).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Save vehicles' })).not.toBeInTheDocument()
+  screen.getByRole('button', { name: 'Edit Box truck' }).focus()
   fireEvent.click(screen.getByRole('button', { name: 'Edit Box truck' }))
   expect(screen.getByRole('heading', { name: 'Edit Box truck' })).toHaveFocus()
   expect(screen.getByLabelText('Maximum Delivery Distance (km)')).toHaveValue(40)
   fireEvent.click(screen.getByRole('button', { name: 'Back to vehicles' }))
-  expect(screen.getByRole('heading', { name: 'Your vehicles' })).toHaveFocus()
+  expect(screen.queryByRole('dialog', { name: 'Edit Box truck' })).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Edit Box truck' })).toHaveFocus()
   fireEvent.click(screen.getByRole('button', { name: 'Edit Spare van' }))
   expect(screen.getByRole('checkbox', { name: 'Available now' })).not.toBeChecked()
   expect(screen.getAllByRole('combobox', { name: 'Vehicle Category' })).toHaveLength(1)
@@ -81,7 +87,8 @@ test('per-vehicle validation stays on its own vehicle and only changed vehicles 
   expect(sent).toHaveLength(2)
   expect(sent[0]).toMatchObject({ id: 'vehicle-1', lockVersion: 3, baseFeeCentavos: 60000, maximumDistanceKm: 40, active: true, available: true })
   expect(sent[1]).toMatchObject({ id: 'vehicle-2', lockVersion: 1, capacityKg: 800, available: false })
-  expect(await screen.findByText(/accepted orders keep their confirmed vehicle, rate and address/)).toBeInTheDocument()
+  await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Edit Box truck' })).not.toBeInTheDocument())
+  await waitFor(() => expect(screen.getByText(/accepted orders keep their confirmed vehicle, rate and address/)).toBeVisible())
 })
 
 test('removing a saved vehicle asks for confirmation and sends only its removal', async () => {
@@ -214,4 +221,58 @@ test('adding from an empty overview retains draft edits and discarding returns t
   expect(screen.getByText('No vehicles yet.')).toBeVisible()
   expect(screen.queryByRole('textbox', { name: 'Vehicle Name' })).not.toBeInTheDocument()
   expect(inventory.saveFleet).not.toHaveBeenCalled()
+})
+
+test('background refresh keeps image elements, signed URLs and the open editor stable', async () => {
+  open()
+  const row = await screen.findByRole('article', { name: 'Box truck' })
+  const thumbnail = await within(row).findByRole('img', { name: 'Box truck' })
+  fireEvent.click(screen.getByRole('button', { name: 'Edit Box truck' }))
+  const editor = screen.getByRole('dialog', { name: 'Edit Box truck' })
+  await within(editor).findByRole('img', { name: /Vehicle image preview/ })
+  const imageRequests = vi.mocked(inventory.fleetImageUrl).mock.calls.length
+  const changed = vi.mocked(watchConversation).mock.calls[0]![1]
+  await act(async () => { changed() })
+  await waitFor(() => expect(inventory.listFleet).toHaveBeenCalledTimes(2))
+  expect(screen.getByRole('dialog', { name: 'Edit Box truck' })).toBe(editor)
+  expect(within(row).getByRole('img', { name: 'Box truck' })).toBe(thumbnail)
+  expect(inventory.fleetImageUrl).toHaveBeenCalledTimes(imageRequests)
+  fireEvent.change(within(editor).getByLabelText('Vehicle Name'), { target: { value: 'Truck draft' } })
+  await act(async () => { changed() })
+  expect(screen.getByLabelText('Vehicle Name')).toHaveValue('Truck draft')
+  expect(inventory.fleetImageUrl).toHaveBeenCalledTimes(imageRequests)
+})
+
+test('ready-mix setup prefills a proposed mixer volume but leaves payload and access for explicit confirmation', async () => {
+  vi.mocked(onboarding.getVendorOnboarding).mockResolvedValue(snapshot(['portal.vehicles', 'vehicles.manage', 'catalog.manage']))
+  vi.mocked(loadFleetCapacitySources).mockResolvedValue([{ id: 'variant-rmc', label: 'Ready-mixed concrete · 3000 PSI', volumeM3: '6', kgPerM3: '2400' }])
+  open('/vehicles?listing=listing-rmc&variant=variant-rmc')
+  const dialog = await screen.findByRole('dialog', { name: 'Add vehicle' })
+  expect(loadFleetCapacitySources).toHaveBeenCalledWith('listing-rmc')
+  expect(within(dialog).getByLabelText('Vehicle Type')).toHaveValue('CONCRETE_MIXER')
+  expect(within(dialog).getByLabelText('Mixer Capacity (m³)')).toHaveValue(6)
+  expect(within(dialog).getByLabelText('Maximum Weight Capacity (kg)')).toHaveValue(null)
+  expect(within(dialog).getByLabelText('Heavy Vehicle Classification')).toHaveValue('')
+  expect(within(dialog).getByText('Suggested payload: 14,400 kg')).toBeVisible()
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Save vehicles' }))
+  expect(await within(dialog).findByText('Confirm the proposed mixer capacity or enter the actual truck capacity.')).toBeVisible()
+  expect(inventory.saveFleet).not.toHaveBeenCalled()
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Use suggested payload' }))
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm heavy vehicle' }))
+  expect(within(dialog).getByLabelText('Maximum Weight Capacity (kg)')).toHaveValue(14400)
+  expect(within(dialog).getByLabelText('Heavy Vehicle Classification')).toHaveValue('HEAVY')
+  // Actual drum size can be entered instead of accepting the proposed batch volume.
+  fireEvent.change(within(dialog).getByLabelText('Mixer Capacity (m³)'), { target: { value: '4' } })
+  expect(within(dialog).getByText('Suggested payload: 9,600 kg')).toBeVisible()
+  expect(within(dialog).getByLabelText('Maximum Weight Capacity (kg)')).toHaveValue(14400)
+  expect(within(dialog).getByRole('checkbox', { name: /I checked this mixer capacity/ })).toBeChecked()
+})
+
+test('failed listing suggestions retain the fleet and allow retry without granting catalog access', async () => {
+  vi.mocked(onboarding.getVendorOnboarding).mockResolvedValue(snapshot(['portal.vehicles', 'vehicles.manage', 'catalog.manage']))
+  vi.mocked(loadFleetCapacitySources).mockRejectedValueOnce(new Error('Offline')).mockResolvedValueOnce([])
+  open()
+  fireEvent.click(await screen.findByRole('button', { name: 'Retry listing suggestions' }))
+  await waitFor(() => expect(loadFleetCapacitySources).toHaveBeenCalledTimes(2))
+  expect(screen.getByRole('article', { name: 'Box truck' })).toBeVisible()
 })

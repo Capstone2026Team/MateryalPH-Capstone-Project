@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { AlertCircle, Banknote, Clock, FileText, RefreshCw, Undo2, XCircle } from 'lucide-react'
-import { ALL_DATES, Button, ConfirmDialog, ControlBar, DateFilter, DocumentExportButton, EmptyState, FilterChips, FilterPanel, FilterTabs, Pagination, RefundStatusBadge, ResponsiveRecordList, StatCard, StatusBadge, StatusMessage, buttonClassName, formatManilaDateTime, formatPesoCentavos, type RecordColumn } from '@materyalph/web-ui'
+import { dateFilterPreset, Button, ConfirmDialog, ControlBar, DateFilter, DocumentExportButton, EmptyState, FilterChips, FilterPanel, FilterTabs, Pagination, RefundStatusBadge, ResponsiveRecordList, StatCard, StatusBadge, StatusMessage, buttonClassName, formatManilaDateTime, formatPesoCentavos, type RecordColumn } from '@materyalph/web-ui'
 import {
   confirmReimbursement, getSummary, listCancellationRequests, listRefunds, listReimbursements, retryRefund,
   type AdminCancellationRequestRow, type AdminOrderOperationsSummary, type AdminRefundRow, type AdminReimbursementRow,
@@ -47,7 +47,7 @@ export function AdminOrderOperationsPage() {
     <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-6 gap-y-2 rounded-control border border-border-default bg-surface-primary px-4 py-3 text-xs leading-5 text-text-secondary"><span>TEST records · Refunds return to the original payment method.</span><span>Dates and deadlines in Asia/Manila</span></div>
     <section aria-labelledby="order-summary-heading" className="grid gap-3">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1"><h2 id="order-summary-heading" className="text-sm font-semibold">Activity overview</h2><p className="text-xs text-text-secondary">Current exceptions · Vendor cancellations over the last 30 days</p></div>
-      {summaryError ? <ErrorState message={summaryError} onRetry={reload} /> : !summary ? <LoadingState /> : <dl aria-label="Order operations summary" className="grid min-w-0 gap-3 sm:grid-cols-2 sm:[&>div:last-child]:col-span-2 lg:grid-cols-3 xl:grid-cols-5 xl:[&>div:last-child]:col-span-1 xl:[&_dt]:min-h-10 xl:[&_dt]:items-start">
+      {summaryError ? <ErrorState message={summaryError} onRetry={reload} /> : !summary ? <LoadingState /> : <dl aria-label="Order operations summary" className="mp-card-group grid min-w-0 gap-3 sm:grid-cols-2 sm:[&>div:last-child]:col-span-2 lg:grid-cols-3 xl:grid-cols-5 xl:[&>div:last-child]:col-span-1 xl:[&_dt]:min-h-10 xl:[&_dt]:items-start">
         <StatCard label="Failed refunds" value={summary.refundsFailed} icon={<AlertCircle size={16} aria-hidden="true" />} />
         <StatCard label="Refunds awaiting provider" value={summary.refundsPending} icon={<Clock size={16} aria-hidden="true" />} />
         <StatCard label="Reimbursements pending" value={summary.reimbursementsPending} icon={<Banknote size={16} aria-hidden="true" />} />
@@ -64,7 +64,7 @@ export function AdminOrderOperationsPage() {
 
 function RefundList({ onChanged, refreshVersion }: { onChanged: () => void; refreshVersion: number }) {
   const [state, setState] = useState<RefundState>('REFUND_FAILED')
-  const [range, setRange] = useState(ALL_DATES)
+  const [range, setRange] = useState(() => dateFilterPreset(30))
   const [page, setPage] = useState(1)
   const [rows, setRows] = useState<AdminRefundRow[] | null>(null)
   const [more, setMore] = useState(false)
@@ -89,7 +89,7 @@ function RefundList({ onChanged, refreshVersion }: { onChanged: () => void; refr
     { key: 'amount', header: 'Refund amount', className: amountClass, cell: row => <span className={amountClass}>{formatPesoCentavos(row.amountCentavos)}</span> },
     { key: 'status', header: 'Status', cell: row => <div className="grid gap-2 lg:min-w-44"><RefundStatusBadge displayState={row.displayState} />{row.evidenceOrigin === 'SIMULATED' && <span><StatusBadge label="SIMULATED" tone="warning" /></span>}{row.attemptNumber > 1 && <span className="text-xs text-text-secondary">Attempt {row.attemptNumber}</span>}{row.failureCode && <span className="break-all text-xs text-status-error">{row.failureCode}</span>}</div> },
     { key: 'requested', header: 'Requested', cell: row => <span className="text-text-secondary">{row.requestedAt ? formatManilaDateTime(row.requestedAt) : 'Not recorded'}</span> },
-    { key: 'actions', header: 'Actions', cell: row => <div className="flex min-w-0 flex-wrap gap-2">{row.orderId && <DocumentExportButton basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} audience="admin" types={['PURCHASE_ORDER', 'OPERATIONAL_ORDER', 'PAYMENT_CONFIRMATION']} resourceId={row.orderId} title={row.orderReference ?? 'Order'} />}{row.canRetry && <Button variant="secondary" className="max-w-56 whitespace-normal text-left" disabled={retrying === row.id} onClick={() => void retry(row)}>{retrying === row.id ? 'Retrying…' : 'Retry after funding is resolved'}</Button>}{!row.orderId && !row.canRetry && <span className="text-xs text-text-secondary">No actions available</span>}</div> },
+    { key: 'actions', header: 'Actions', cell: row => <div className="flex min-w-0 flex-wrap gap-2">{row.orderId && <DocumentExportButton basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} audience="admin" types={['PURCHASE_ORDER']} resourceId={row.orderId} title={row.orderReference ?? 'Order'} />}{row.canRetry && <Button variant="secondary" className="max-w-56 whitespace-normal text-left" disabled={retrying === row.id} onClick={() => void retry(row)}>{retrying === row.id ? 'Retrying…' : 'Retry after funding is resolved'}</Button>}{!row.orderId && !row.canRetry && <span className="text-xs text-text-secondary">No actions available</span>}</div> },
   ]
   return <section className="grid min-w-0 gap-4" aria-label="Refunds">
     <div><h2 className="text-lg font-semibold">Refund log</h2><p className="mt-1 text-sm leading-6 text-text-secondary">Track refund instructions, provider confirmations and failed attempts.</p></div>
@@ -99,7 +99,7 @@ function RefundList({ onChanged, refreshVersion }: { onChanged: () => void; refr
         <FilterChips label="Refund status" chips={REFUND_STATUSES} value={state} onChange={value => { setPage(1); setState(value as RefundState) }} />
       </div>} actions={<>
         <div className="grid min-w-0 gap-2"><p className="text-sm font-semibold">Requested dates</p><div className="flex min-w-0"><DateFilter title="Refund requested dates" value={range} onChange={value => { setRange(value); setPage(1) }} /></div></div>
-        {(state !== 'REFUND_FAILED' || range.from || range.to) && <Button variant="quiet" className="self-end" onClick={() => { setState('REFUND_FAILED'); setRange(ALL_DATES); setPage(1) }}>Reset filters</Button>}
+        {(state !== 'REFUND_FAILED') && <Button variant="quiet" className="self-end" onClick={() => { setState('REFUND_FAILED'); setRange(dateFilterPreset(30)); setPage(1) }}>Reset filters</Button>}
       </>} />
     </FilterPanel>
     {notice && <StatusMessage tone={notice.tone}>{notice.text}</StatusMessage>}
@@ -111,7 +111,7 @@ function RefundList({ onChanged, refreshVersion }: { onChanged: () => void; refr
 }
 
 function ReimbursementList({ onChanged, refreshVersion }: { onChanged: () => void; refreshVersion: number }) {
-  const [range, setRange] = useState(ALL_DATES)
+  const [range, setRange] = useState(() => dateFilterPreset(30))
   const [rows, setRows] = useState<AdminReimbursementRow[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [target, setTarget] = useState<AdminReimbursementRow | null>(null)
@@ -140,7 +140,7 @@ function ReimbursementList({ onChanged, refreshVersion }: { onChanged: () => voi
     { key: 'date', header: 'Reimbursed', cell: row => <span className="text-text-secondary">{row.reimbursedAt ? formatManilaDateTime(row.reimbursedAt) : 'Not recorded'}</span> },
     { key: 'actions', header: 'Action', cell: row => row.canDecide ? <Button variant="secondary" className="whitespace-normal" onClick={() => { setTarget(row); setDialogError(null) }}>Confirm with reason</Button> : <span className="text-xs text-text-secondary">{row.state === 'REIMBURSEMENT_CONFIRMED' ? 'Confirmation recorded' : 'Awaiting confirmation'}</span> },
   ]
-  const filters = <FilterPanel label="Reimbursement filters"><div className="flex min-w-0 flex-wrap items-end gap-4"><div className="grid min-w-0 gap-2"><p className="text-sm font-semibold">Recorded dates</p><div className="flex min-w-0"><DateFilter title="Reimbursement recorded dates" value={range} onChange={setRange} /></div></div>{(range.from || range.to) && <Button variant="quiet" className="sm:ml-auto" onClick={() => setRange(ALL_DATES)}>Reset dates</Button>}</div></FilterPanel>
+  const filters = <FilterPanel label="Reimbursement filters"><div className="flex min-w-0 flex-wrap items-end gap-4"><div className="grid min-w-0 gap-2"><p className="text-sm font-semibold">Recorded dates</p><div className="flex min-w-0"><DateFilter title="Reimbursement recorded dates" value={range} onChange={setRange} /></div></div></div></FilterPanel>
   if (error) return <section className="grid gap-4">{filters}<ErrorState message={error} onRetry={() => setAttempt(value => value + 1)} /></section>
   if (rows === null) return <section className="grid gap-4">{filters}<LoadingState /></section>
   return <section className="grid min-w-0 gap-4" aria-label="Cash reimbursements">
@@ -159,7 +159,7 @@ function ReimbursementList({ onChanged, refreshVersion }: { onChanged: () => voi
 }
 
 function RequestList({ refreshVersion }: { refreshVersion: number }) {
-  const [range, setRange] = useState(ALL_DATES)
+  const [range, setRange] = useState(() => dateFilterPreset(30))
   const [rows, setRows] = useState<AdminCancellationRequestRow[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [attempt, setAttempt] = useState(0)
@@ -169,14 +169,14 @@ function RequestList({ refreshVersion }: { refreshVersion: number }) {
     listCancellationRequests(range).then(value => { if (active) setRows(value) }).catch(async cause => { const text = await readableVerificationError(cause); if (active) setError(text) })
     return () => { active = false }
   }, [attempt, range, refreshVersion])
-  const filters = <FilterPanel label="Cancellation request filters"><div className="flex min-w-0 flex-wrap items-end gap-4"><div className="grid min-w-0 gap-2"><p className="text-sm font-semibold">Requested dates</p><div className="flex min-w-0"><DateFilter title="Cancellation request dates" value={range} onChange={setRange} /></div></div>{(range.from || range.to) && <Button variant="quiet" className="sm:ml-auto" onClick={() => setRange(ALL_DATES)}>Reset dates</Button>}</div></FilterPanel>
+  const filters = <FilterPanel label="Cancellation request filters"><div className="flex min-w-0 flex-wrap items-end gap-4"><div className="grid min-w-0 gap-2"><p className="text-sm font-semibold">Requested dates</p><div className="flex min-w-0"><DateFilter title="Cancellation request dates" value={range} onChange={setRange} /></div></div></div></FilterPanel>
   const columns: RecordColumn<AdminCancellationRequestRow>[] = [
     { key: 'reference', header: 'Order', cell: row => <span className={referenceClass}>{row.orderReference}</span> },
     { key: 'vendor', header: 'Vendor', cell: row => row.vendorName ?? 'Vendor' },
     { key: 'reason', header: 'Cancellation reason', cell: row => row.reasonCode.toLowerCase().replaceAll('_', ' ') },
     { key: 'deadline', header: 'Vendor response due', cell: row => <span className="text-text-secondary">{row.responseDueAt ? formatManilaDateTime(row.responseDueAt) : 'Not recorded'}</span> },
     { key: 'status', header: 'Status', cell: row => <StatusBadge label={row.overdue ? 'Past due — finalizing automatically' : 'Awaiting Vendor response'} tone={row.overdue ? 'warning' : 'neutral'} /> },
-    { key: 'documents', header: 'Documents', cell: row => row.orderId ? <DocumentExportButton basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} audience="admin" types={['PURCHASE_ORDER', 'OPERATIONAL_ORDER', 'PAYMENT_CONFIRMATION']} resourceId={row.orderId} title={row.orderReference} /> : <span className="text-xs text-text-secondary">No linked order</span> },
+    { key: 'documents', header: 'Documents', cell: row => row.orderId ? <DocumentExportButton basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} audience="admin" types={['PURCHASE_ORDER']} resourceId={row.orderId} title={row.orderReference} /> : <span className="text-xs text-text-secondary">No linked order</span> },
   ]
   if (error) return <section className="grid gap-4">{filters}<ErrorState message={error} onRetry={() => setAttempt(value => value + 1)} /></section>
   if (rows === null) return <section className="grid gap-4">{filters}<LoadingState /></section>

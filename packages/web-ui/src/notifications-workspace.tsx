@@ -33,7 +33,7 @@ export function NotificationsWorkspace({ basePath, audience, navigate, enablePus
   }, [open])
   return <section className="grid gap-6" aria-busy={busy}>
     <PageHeader eyebrow={audience === 'vendor' ? 'Vendor Portal' : 'Admin Portal'} title="Notifications" description="Updates that need your attention, with secure links to your work." actions={headerActions} />
-    {error && <div role="alert" className="grid gap-2 rounded-surface border border-border-default bg-surface-primary p-4"><p>{error}</p><Button variant="secondary" onClick={() => { setError(''); window.dispatchEvent(new Event('materyalph:notifications-refresh')) }}>Retry</Button></div>}
+    {error && <div role="alert" className="grid gap-2 mp-card mp-card-padded"><p>{error}</p><Button variant="secondary" onClick={() => { setError(''); window.dispatchEvent(new Event('materyalph:notifications-refresh')) }}>Retry</Button></div>}
     <NotificationInbox api={api} audience={audience} disabled={busy} onOpen={open} onPreferences={() => setPreferencesOpen(true)} {...(watchUpdates ? { watchUpdates } : {})} />
     {preferencesOpen && <NotificationPreferencesDialog api={api} audience={audience} onClose={() => setPreferencesOpen(false)} {...(enablePush ? { enablePush } : {})} />}
   </section>

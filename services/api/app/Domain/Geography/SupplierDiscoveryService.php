@@ -150,6 +150,7 @@ final class SupplierDiscoveryService
             'is_favorite' => $favorite,
             'vendor' => [
                 'logo_url' => $summary['logo_url'],
+                'badges' => $summary['badges'],
                 'supplier_type' => $summary['supplier_type'],
                 'niches' => array_slice($summary['niches'], 0, 6),
                 'fulfillment_method' => $summary['fulfillment_method'],

@@ -123,6 +123,10 @@ class _$ConversationViewContextTypeEnumSerializer
 
 class _$ConversationView extends ConversationView {
   @override
+  final String? buyerThreadId;
+  @override
+  final int? conversationCount;
+  @override
   final String id;
   @override
   final ConversationViewPurposeEnum purpose;
@@ -180,13 +184,25 @@ class _$ConversationView extends ConversationView {
   final bool? legacyHasMore;
   @override
   final int? legacyPage;
+  @override
+  final bool? needsHumanResponse;
+  @override
+  final bool? canConfigureAutomatedResponse;
+  @override
+  final bool? canPrepareOrderQuotation;
+  @override
+  final int? orderLockVersion;
+  @override
+  final String? pendingOrderId;
 
   factory _$ConversationView(
           [void Function(ConversationViewBuilder)? updates]) =>
       (ConversationViewBuilder()..update(updates))._build();
 
   _$ConversationView._(
-      {required this.id,
+      {this.buyerThreadId,
+      this.conversationCount,
+      required this.id,
       required this.purpose,
       required this.contextType,
       this.orderId,
@@ -214,7 +230,12 @@ class _$ConversationView extends ConversationView {
       this.canonicalConversationId,
       this.legacyConversationIds,
       this.legacyHasMore,
-      this.legacyPage})
+      this.legacyPage,
+      this.needsHumanResponse,
+      this.canConfigureAutomatedResponse,
+      this.canPrepareOrderQuotation,
+      this.orderLockVersion,
+      this.pendingOrderId})
       : super._();
   @override
   ConversationView rebuild(void Function(ConversationViewBuilder) updates) =>
@@ -228,6 +249,8 @@ class _$ConversationView extends ConversationView {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is ConversationView &&
+        buyerThreadId == other.buyerThreadId &&
+        conversationCount == other.conversationCount &&
         id == other.id &&
         purpose == other.purpose &&
         contextType == other.contextType &&
@@ -257,12 +280,19 @@ class _$ConversationView extends ConversationView {
         canonicalConversationId == other.canonicalConversationId &&
         legacyConversationIds == other.legacyConversationIds &&
         legacyHasMore == other.legacyHasMore &&
-        legacyPage == other.legacyPage;
+        legacyPage == other.legacyPage &&
+        needsHumanResponse == other.needsHumanResponse &&
+        canConfigureAutomatedResponse == other.canConfigureAutomatedResponse &&
+        canPrepareOrderQuotation == other.canPrepareOrderQuotation &&
+        orderLockVersion == other.orderLockVersion &&
+        pendingOrderId == other.pendingOrderId;
   }
 
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, buyerThreadId.hashCode);
+    _$hash = $jc(_$hash, conversationCount.hashCode);
     _$hash = $jc(_$hash, id.hashCode);
     _$hash = $jc(_$hash, purpose.hashCode);
     _$hash = $jc(_$hash, contextType.hashCode);
@@ -292,6 +322,11 @@ class _$ConversationView extends ConversationView {
     _$hash = $jc(_$hash, legacyConversationIds.hashCode);
     _$hash = $jc(_$hash, legacyHasMore.hashCode);
     _$hash = $jc(_$hash, legacyPage.hashCode);
+    _$hash = $jc(_$hash, needsHumanResponse.hashCode);
+    _$hash = $jc(_$hash, canConfigureAutomatedResponse.hashCode);
+    _$hash = $jc(_$hash, canPrepareOrderQuotation.hashCode);
+    _$hash = $jc(_$hash, orderLockVersion.hashCode);
+    _$hash = $jc(_$hash, pendingOrderId.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -299,6 +334,8 @@ class _$ConversationView extends ConversationView {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'ConversationView')
+          ..add('buyerThreadId', buyerThreadId)
+          ..add('conversationCount', conversationCount)
           ..add('id', id)
           ..add('purpose', purpose)
           ..add('contextType', contextType)
@@ -328,7 +365,12 @@ class _$ConversationView extends ConversationView {
           ..add('canonicalConversationId', canonicalConversationId)
           ..add('legacyConversationIds', legacyConversationIds)
           ..add('legacyHasMore', legacyHasMore)
-          ..add('legacyPage', legacyPage))
+          ..add('legacyPage', legacyPage)
+          ..add('needsHumanResponse', needsHumanResponse)
+          ..add('canConfigureAutomatedResponse', canConfigureAutomatedResponse)
+          ..add('canPrepareOrderQuotation', canPrepareOrderQuotation)
+          ..add('orderLockVersion', orderLockVersion)
+          ..add('pendingOrderId', pendingOrderId))
         .toString();
   }
 }
@@ -336,6 +378,16 @@ class _$ConversationView extends ConversationView {
 class ConversationViewBuilder
     implements Builder<ConversationView, ConversationViewBuilder> {
   _$ConversationView? _$v;
+
+  String? _buyerThreadId;
+  String? get buyerThreadId => _$this._buyerThreadId;
+  set buyerThreadId(String? buyerThreadId) =>
+      _$this._buyerThreadId = buyerThreadId;
+
+  int? _conversationCount;
+  int? get conversationCount => _$this._conversationCount;
+  set conversationCount(int? conversationCount) =>
+      _$this._conversationCount = conversationCount;
 
   String? _id;
   String? get id => _$this._id;
@@ -472,6 +524,32 @@ class ConversationViewBuilder
   int? get legacyPage => _$this._legacyPage;
   set legacyPage(int? legacyPage) => _$this._legacyPage = legacyPage;
 
+  bool? _needsHumanResponse;
+  bool? get needsHumanResponse => _$this._needsHumanResponse;
+  set needsHumanResponse(bool? needsHumanResponse) =>
+      _$this._needsHumanResponse = needsHumanResponse;
+
+  bool? _canConfigureAutomatedResponse;
+  bool? get canConfigureAutomatedResponse =>
+      _$this._canConfigureAutomatedResponse;
+  set canConfigureAutomatedResponse(bool? canConfigureAutomatedResponse) =>
+      _$this._canConfigureAutomatedResponse = canConfigureAutomatedResponse;
+
+  bool? _canPrepareOrderQuotation;
+  bool? get canPrepareOrderQuotation => _$this._canPrepareOrderQuotation;
+  set canPrepareOrderQuotation(bool? canPrepareOrderQuotation) =>
+      _$this._canPrepareOrderQuotation = canPrepareOrderQuotation;
+
+  int? _orderLockVersion;
+  int? get orderLockVersion => _$this._orderLockVersion;
+  set orderLockVersion(int? orderLockVersion) =>
+      _$this._orderLockVersion = orderLockVersion;
+
+  String? _pendingOrderId;
+  String? get pendingOrderId => _$this._pendingOrderId;
+  set pendingOrderId(String? pendingOrderId) =>
+      _$this._pendingOrderId = pendingOrderId;
+
   ConversationViewBuilder() {
     ConversationView._defaults(this);
   }
@@ -479,6 +557,8 @@ class ConversationViewBuilder
   ConversationViewBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _buyerThreadId = $v.buyerThreadId;
+      _conversationCount = $v.conversationCount;
       _id = $v.id;
       _purpose = $v.purpose;
       _contextType = $v.contextType;
@@ -508,6 +588,11 @@ class ConversationViewBuilder
       _legacyConversationIds = $v.legacyConversationIds?.toBuilder();
       _legacyHasMore = $v.legacyHasMore;
       _legacyPage = $v.legacyPage;
+      _needsHumanResponse = $v.needsHumanResponse;
+      _canConfigureAutomatedResponse = $v.canConfigureAutomatedResponse;
+      _canPrepareOrderQuotation = $v.canPrepareOrderQuotation;
+      _orderLockVersion = $v.orderLockVersion;
+      _pendingOrderId = $v.pendingOrderId;
       _$v = null;
     }
     return this;
@@ -531,6 +616,8 @@ class ConversationViewBuilder
     try {
       _$result = _$v ??
           _$ConversationView._(
+            buyerThreadId: buyerThreadId,
+            conversationCount: conversationCount,
             id: BuiltValueNullFieldError.checkNotNull(
                 id, r'ConversationView', 'id'),
             purpose: BuiltValueNullFieldError.checkNotNull(
@@ -572,6 +659,11 @@ class ConversationViewBuilder
             legacyConversationIds: _legacyConversationIds?.build(),
             legacyHasMore: legacyHasMore,
             legacyPage: legacyPage,
+            needsHumanResponse: needsHumanResponse,
+            canConfigureAutomatedResponse: canConfigureAutomatedResponse,
+            canPrepareOrderQuotation: canPrepareOrderQuotation,
+            orderLockVersion: orderLockVersion,
+            pendingOrderId: pendingOrderId,
           );
     } catch (_) {
       late String _$failedField;

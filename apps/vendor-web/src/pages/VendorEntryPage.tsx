@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ResponseError } from '@materyalph/api-client-ts'
-import { Button, StatusMessage } from '@materyalph/web-ui'
+import { AsyncLoading, ConnectionNotice, RequestErrorState } from '@materyalph/web-ui'
 import { getVendorOnboarding, readableOnboardingError } from '../lib/onboarding-api'
 import { vendorLoginDestination } from '../lib/vendor-destination'
 
@@ -20,5 +20,5 @@ export function VendorEntryPage() {
     })
     return () => { active = false }
   }, [navigate, attempt])
-  return <main className="mx-auto max-w-xl p-8"><h1 className="text-2xl font-semibold">Opening your Vendor workspace</h1>{error ? <><StatusMessage tone="error">{error}</StatusMessage><Button onClick={() => { setError(null); setAttempt(value => value + 1) }}>Retry</Button></> : <p role="status">Checking your onboarding progress…</p>}</main>
+  return <main className="mx-auto max-w-xl p-8"><ConnectionNotice /><h1 className="text-2xl font-semibold">Opening your Vendor workspace</h1>{error ? <RequestErrorState message={error} retryLabel="Retry" onRetry={() => { setError(null); setAttempt(value => value + 1) }} /> : <AsyncLoading label="Checking your onboarding progress…" />}</main>
 }

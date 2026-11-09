@@ -1,7 +1,10 @@
 import { createContext, useId, useState, type FormEventHandler, type ReactNode } from 'react'
-import { Info, SearchX, X, MoreHorizontal } from 'lucide-react'
+import { Info, SearchX, X, MoreHorizontal, ReceiptText } from 'lucide-react'
 import type { FilterChip, SummaryTile } from './catalog-patterns'
 import { SearchInput } from './filter-controls'
+import { KpiCard } from './chart-patterns'
+import './portal-card.css'
+import './compact-page-patterns.css'
 
 export const PortalPagePatterns = createContext(false)
 
@@ -13,18 +16,20 @@ export function PageHeader({ eyebrow, title, description, actions, status, compa
   </header>
 }
 
-export function StatCard({ label, value, icon, hint, active, onClick, disabled }: { label: string; value: ReactNode; icon?: ReactNode; hint?: string; active?: boolean; onClick?: () => void; disabled?: boolean }) {
+export function StatCard({ label, value, icon, hint, active, onClick, disabled, compact = false }: { label: string; value: ReactNode; icon?: ReactNode; hint?: string; active?: boolean; onClick?: () => void; disabled?: boolean; compact?: boolean }) {
   const id = useId()
   const [dismissed, setDismissed] = useState(false)
-  return <div className={`relative min-w-0 rounded-xl border bg-surface-primary p-4 ${active ? 'border-action-primary ring-1 ring-action-primary' : 'border-border-default'}`}>
+  return <div className={`mp-metric-card relative h-full min-w-0 self-stretch ${compact ? 'mp-metric-card-compact' : ''}`} data-active={Boolean(active)}>
     {onClick && <button type="button" aria-label={`Filter: ${label}`} aria-pressed={Boolean(active)} disabled={disabled} onClick={onClick} className="absolute inset-0 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring disabled:cursor-wait" />}
-    <dt className="flex items-center justify-between gap-2 text-[13px] font-medium text-text-secondary"><span>{label}</span><span className="flex items-center gap-2">{icon}{hint && <span className="group relative z-10"><button type="button" aria-label={`About ${label}`} aria-describedby={dismissed ? undefined : id} onFocus={() => setDismissed(false)} onMouseEnter={() => setDismissed(false)} onKeyDown={event => { if (event.key === 'Escape') setDismissed(true) }} className="grid min-h-11 min-w-11 place-items-center rounded-control"><Info size={16} aria-hidden="true" /></button>{!dismissed && <span id={id} role="tooltip" className="absolute right-0 top-full z-20 hidden w-56 max-w-[75vw] rounded-control border border-border-default bg-surface-primary p-2 text-[13px] font-normal leading-5 text-text-strong shadow-md group-hover:block group-focus-within:block">{hint}</span>}</span>}</span></dt>
-    <dd className="mt-2 break-words text-[28px] font-semibold leading-tight tabular-nums text-text-strong">{value}</dd>
+    <dt className="mp-kpi-label"><span>{label}</span><span className="flex shrink-0 items-center gap-1">{icon && <span className="mp-kpi-icon" aria-hidden="true">{icon}</span>}{hint && <span className="group relative z-10"><button type="button" aria-label={`About ${label}`} aria-describedby={dismissed ? undefined : id} onFocus={() => setDismissed(false)} onMouseEnter={() => setDismissed(false)} onKeyDown={event => { if (event.key === 'Escape') setDismissed(true) }} className="grid min-h-11 min-w-11 place-items-center rounded-control focus-visible:outline-2 focus-visible:outline-focus-ring"><Info size={16} aria-hidden="true" /></button>{!dismissed && <span id={id} role="tooltip" className="absolute right-0 top-full z-20 hidden w-56 max-w-[75vw] rounded-control border border-border-default bg-surface-primary p-2 text-[13px] font-normal leading-5 text-text-strong shadow-md group-hover:block group-focus-within:block">{hint}</span>}</span>}</span></dt>
+    <dd className="mp-kpi-value">{value}</dd>
   </div>
 }
 
-export function StatCards({ label, tiles }: { label: string; tiles: SummaryTile[] }) {
-  return <dl aria-label={label} className="grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 xl:grid-cols-4">{tiles.map(tile => <StatCard key={tile.key} label={tile.label} value={tile.value} hint={tile.hint} />)}</dl>
+export function StatCards({ label, tiles, appearance = 'standard' }: { label: string; tiles: SummaryTile[]; appearance?: 'standard' | 'financial' }) {
+  return <dl aria-label={label} className="mp-card-group grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 xl:grid-cols-4">{tiles.map((tile, index) => appearance === 'financial'
+    ? <KpiCard key={tile.key} appearance="financial" label={tile.label} value={tile.value} hint={tile.hint} icon={<ReceiptText size={16} />} accent={index === 0} />
+    : <StatCard key={tile.key} label={tile.label} value={tile.value} hint={tile.hint} />)}</dl>
 }
 
 /** Arrow keys, Home and End activate and focus the corresponding tab. */
@@ -44,9 +49,9 @@ export function FilterTabs({ label, chips, value, onChange, disabled = false, ap
   </div>
 }
 
-export function Toolbar({ filters, search, viewToggle, searchFirst = false, alignEnd = false }: { searchFirst?: boolean; alignEnd?: boolean; filters?: ReactNode; search?: { label: string; placeholder: string; value: string; onChange: (value: string) => void; onSubmit: FormEventHandler<HTMLFormElement>; maxLength?: number; disabled?: boolean }; viewToggle?: ReactNode }) {
+export function Toolbar({ filters, search, viewToggle, searchFirst = false, alignEnd = false, compact = false }: { searchFirst?: boolean; alignEnd?: boolean; compact?: boolean; filters?: ReactNode; search?: { label: string; placeholder: string; value: string; onChange: (value: string) => void; onSubmit: FormEventHandler<HTMLFormElement>; maxLength?: number; disabled?: boolean }; viewToggle?: ReactNode }) {
   const searchField = search && <form role="search" aria-label={search.label} onSubmit={search.onSubmit} className="min-w-0 flex-1 xl:min-w-48 xl:max-w-sm"><SearchInput label={search.label} placeholder={search.placeholder} value={search.value} onChange={search.onChange} maxLength={search.maxLength} disabled={search.disabled} /></form>
-  return <div className={`flex min-w-0 flex-col gap-4 rounded-xl border border-border-default bg-surface-primary p-4 xl:flex-row ${alignEnd ? 'xl:items-end' : 'xl:items-center'}`}>
+  return <div className={`flex min-w-0 flex-col gap-4 mp-card mp-card-padded xl:flex-row ${alignEnd ? 'xl:items-end' : 'xl:items-center'} ${compact ? 'mp-toolbar-compact' : ''}`}>
     {searchFirst && searchField}
     {filters && <div className="flex min-w-0 flex-wrap items-center gap-2 [&>select]:w-auto [&>select]:max-w-full [&>select]:min-h-12 sm:[&>select]:min-h-11">{filters}</div>}
     {!searchFirst && <div className="flex min-w-0 flex-1 xl:justify-end">{searchField}</div>}
@@ -65,7 +70,7 @@ export function ControlBar({ tabs, actions }: { tabs: ReactNode; actions?: React
 export function InfoNote({ children, dismissible = false }: { children: ReactNode; dismissible?: boolean }) {
   const [dismissed, setDismissed] = useState(false)
   if (dismissed) return null
-  return <aside aria-label="Information" className="flex items-start gap-2 rounded-xl border border-border-default bg-surface-primary px-4 py-2 text-[13px] leading-5 text-text-secondary"><Info size={16} aria-hidden="true" className="mt-0.5 shrink-0 text-action-primary" /><div className="min-w-0 flex-1">{children}</div>{dismissible && <button type="button" aria-label="Dismiss information" onClick={() => setDismissed(true)} className="-my-2 grid min-h-11 min-w-11 shrink-0 place-items-center rounded-control"><X size={16} aria-hidden="true" /></button>}</aside>
+  return <aside aria-label="Information" className="flex items-start gap-2 mp-card px-4 py-2 text-[13px] leading-5 text-text-secondary"><Info size={16} aria-hidden="true" className="mt-0.5 shrink-0 text-action-primary" /><div className="min-w-0 flex-1">{children}</div>{dismissible && <button type="button" aria-label="Dismiss information" onClick={() => setDismissed(true)} className="-my-2 grid min-h-11 min-w-11 shrink-0 place-items-center rounded-control"><X size={16} aria-hidden="true" /></button>}</aside>
 }
 
 export function EmptyState({ icon, message, action }: { icon?: ReactNode; message: string; action?: ReactNode }) {

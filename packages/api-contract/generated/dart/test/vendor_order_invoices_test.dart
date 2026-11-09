@@ -7,6 +7,12 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(VendorOrderInvoices, () {
+    // The order Buyer's display name, available without an invoice request. This is separate from supplied invoice billing details.
+    // String buyerName
+    test('to test the property `buyerName`', () async {
+      // TODO
+    });
+
     // String orderId
     test('to test the property `orderId`', () async {
       // TODO
@@ -79,6 +85,26 @@ void main() {
 
     // BuiltList<InvoiceOrderLine> lines
     test('to test the property `lines`', () async {
+      // TODO
+    });
+
+    // bool canSend
+    test('to test the property `canSend`', () async {
+      // TODO
+    });
+
+    // InvoiceDraft draft
+    test('to test the property `draft`', () async {
+      // TODO
+    });
+
+    // VendorInvoicePreset preset
+    test('to test the property `preset`', () async {
+      // TODO
+    });
+
+    // InvoiceOrderSummary orderSummary
+    test('to test the property `orderSummary`', () async {
       // TODO
     });
 

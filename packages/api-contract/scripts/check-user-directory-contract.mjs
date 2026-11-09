@@ -57,6 +57,18 @@ const photoRoute = routes.find(route => route.uri === 'api/v1/admin/buyers/{buye
 assert.ok(photoRoute.middleware.some(name => /(^signed$|ValidateSignature$)/.test(name)), 'Private Buyer photo needs a signed URL')
 assert.ok(spec.components.schemas.DirectoryBuyerProfile.properties.profile.required.includes('avatar_url'))
 assert.ok(spec.components.schemas.DirectoryVendorProfile.properties.store.required.includes('banner_url'))
+for (const [schema, field] of [['DirectoryBuyerRow', 'avatar_url'], ['DirectoryVendorRow', 'logo_url']]) {
+  assert.ok(spec.components.schemas[schema].required.includes(field))
+  assert.deepEqual(spec.components.schemas[schema].properties[field].type, ['string', 'null'])
+}
+for (const schema of ['DirectoryBuyerRow', 'DirectoryBuyerProfile']) {
+  assert.ok(spec.components.schemas[schema].required.includes('rating'))
+  assert.equal(spec.components.schemas[schema].properties.rating.$ref, '#/components/schemas/BuyerRatingSummary')
+}
+assert.ok(spec.components.schemas.DirectoryVendorRow.required.includes('vps'))
+assert.deepEqual(spec.components.schemas.DirectoryVendorRow.properties.vps.type, ['string', 'null'])
+assert.ok(spec.components.schemas.DirectoryVendorProfile.required.includes('can_view_scores'))
+assert.equal(spec.components.schemas.DirectoryVendorProfile.properties.can_view_scores.type, 'boolean')
 
 const documented = /^api\/v1\/admin\/(buyers|vendors)(\/|$)/
 for (const route of routes.filter(route => documented.test(route.uri))) {

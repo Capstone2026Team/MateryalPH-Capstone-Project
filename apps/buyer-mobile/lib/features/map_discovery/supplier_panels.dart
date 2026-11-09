@@ -6,6 +6,7 @@ import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../design_system/components/discovery_controls.dart';
+import '../../design_system/components/vendor_performance.dart';
 import '../../design_system/components/procurement_components.dart';
 import '../../design_system/generated/color_tokens.dart';
 import '../../design_system/theme.dart';
@@ -418,9 +419,14 @@ class _SupplierRowState extends State<SupplierRow> {
                             ScoreBadge(
                               kind: item.scoreKind,
                               text: item.scoreText,
+                              value: item.scoreValue,
                             ),
                         ],
                       ),
+                      if (item.isVerified && item.badges.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        VendorBadges(badges: item.badges, compact: true),
+                      ],
                       if (!item.isVerified && item.googleRating != null) ...[
                         const SizedBox(height: 4),
                         Semantics(
@@ -626,27 +632,15 @@ class _FailureState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final offline = failure?.kind == DiscoveryFailureKind.offline;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        AuthNotice(
-          message: offline
-              ? 'You are offline. Suppliers will load when your connection returns.'
-              : failure?.message ?? 'Suppliers could not be loaded.',
-          isError: true,
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          children: [
-            FilledButton(onPressed: onRetry, child: const Text('Retry')),
-            OutlinedButton(
-              onPressed: onChangeLocation,
-              child: const Text('Change location'),
-            ),
-          ],
-        ),
-      ],
+    return StateMessage(
+      kind: offline ? StateKind.offline : StateKind.error,
+      title: offline ? "You're offline" : 'Unable to load suppliers',
+      message: failure?.message ?? 'Suppliers could not be loaded.',
+      actionLabel: 'Retry',
+      onAction: onRetry,
+      secondaryLabel: 'Change location',
+      onSecondary: onChangeLocation,
+      compact: true,
     );
   }
 }
@@ -825,9 +819,14 @@ class _SupplierPreviewState extends State<SupplierPreview> {
             text: item.scoreKind == ScoreKind.newVendor
                 ? 'New Vendor — Building Track Record'
                 : item.scoreText,
+            value: item.scoreValue,
           ),
         ],
       ),
+      if (item.badges.isNotEmpty) ...[
+        const SizedBox(height: 10),
+        VendorBadges(badges: item.badges, compact: true),
+      ],
       const SizedBox(height: 16),
       if (item.openState != null) ...[
         _OpenStatusLine.vendor(item.openState!),
@@ -949,7 +948,7 @@ class _SupplierPreviewState extends State<SupplierPreview> {
       if (controller.directoryLoading)
         Semantics(
           label: 'Loading place details',
-          child: const LinearProgressIndicator(),
+          child: const BuyerLoadingProgress(),
         )
       else if (controller.directoryFailure != null) ...[
         Text(controller.directoryFailure!.message),
@@ -1479,7 +1478,7 @@ class _RouteLine extends StatelessWidget {
         leading: const SizedBox(
           width: 16,
           height: 16,
-          child: CircularProgressIndicator(strokeWidth: 2),
+          child: BuyerLoadingIndicator(strokeWidth: 2),
         ),
         child: Text(
           '${formatDistance(item.distanceMeters)} straight-line · Calculating driving time…',

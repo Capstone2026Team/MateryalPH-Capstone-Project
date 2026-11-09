@@ -8,6 +8,8 @@ part of 'verified_vendor_summary.dart';
 
 class _$VerifiedVendorSummary extends VerifiedVendorSummary {
   @override
+  final BuiltList<PublicBadge>? badges;
+  @override
   final String? logoUrl;
   @override
   final String? supplierType;
@@ -31,7 +33,8 @@ class _$VerifiedVendorSummary extends VerifiedVendorSummary {
       (VerifiedVendorSummaryBuilder()..update(updates))._build();
 
   _$VerifiedVendorSummary._(
-      {this.logoUrl,
+      {this.badges,
+      this.logoUrl,
       this.supplierType,
       required this.niches,
       this.fulfillmentMethod,
@@ -54,6 +57,7 @@ class _$VerifiedVendorSummary extends VerifiedVendorSummary {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is VerifiedVendorSummary &&
+        badges == other.badges &&
         logoUrl == other.logoUrl &&
         supplierType == other.supplierType &&
         niches == other.niches &&
@@ -68,6 +72,7 @@ class _$VerifiedVendorSummary extends VerifiedVendorSummary {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, badges.hashCode);
     _$hash = $jc(_$hash, logoUrl.hashCode);
     _$hash = $jc(_$hash, supplierType.hashCode);
     _$hash = $jc(_$hash, niches.hashCode);
@@ -84,6 +89,7 @@ class _$VerifiedVendorSummary extends VerifiedVendorSummary {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'VerifiedVendorSummary')
+          ..add('badges', badges)
           ..add('logoUrl', logoUrl)
           ..add('supplierType', supplierType)
           ..add('niches', niches)
@@ -100,6 +106,11 @@ class _$VerifiedVendorSummary extends VerifiedVendorSummary {
 class VerifiedVendorSummaryBuilder
     implements Builder<VerifiedVendorSummary, VerifiedVendorSummaryBuilder> {
   _$VerifiedVendorSummary? _$v;
+
+  ListBuilder<PublicBadge>? _badges;
+  ListBuilder<PublicBadge> get badges =>
+      _$this._badges ??= ListBuilder<PublicBadge>();
+  set badges(ListBuilder<PublicBadge>? badges) => _$this._badges = badges;
 
   String? _logoUrl;
   String? get logoUrl => _$this._logoUrl;
@@ -151,6 +162,7 @@ class VerifiedVendorSummaryBuilder
   VerifiedVendorSummaryBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _badges = $v.badges?.toBuilder();
       _logoUrl = $v.logoUrl;
       _supplierType = $v.supplierType;
       _niches = $v.niches.toBuilder();
@@ -183,6 +195,7 @@ class VerifiedVendorSummaryBuilder
     try {
       _$result = _$v ??
           _$VerifiedVendorSummary._(
+            badges: _badges?.build(),
             logoUrl: logoUrl,
             supplierType: supplierType,
             niches: niches.build(),
@@ -197,6 +210,9 @@ class VerifiedVendorSummaryBuilder
     } catch (_) {
       late String _$failedField;
       try {
+        _$failedField = 'badges';
+        _badges?.build();
+
         _$failedField = 'niches';
         niches.build();
 

@@ -35,6 +35,26 @@ export interface CommissionPolicyPublishRequest {
      *
      */
     reason: string;
+    /**
+     *
+     */
+    vendorMessage?: string | null;
+    /**
+     *
+     */
+    noticeOverride?: boolean;
+    /**
+     *
+     */
+    noticeOverrideReason?: string | null;
+    /**
+     *
+     */
+    supersedesPolicyId?: string | null;
+    /**
+     *
+     */
+    cancelScheduled?: boolean;
 }
 
 /**
@@ -61,6 +81,11 @@ export function CommissionPolicyPublishRequestFromJSONTyped(json: any, ignoreDis
         'expectedVersion': json['expected_version'],
         'effectiveFrom': json['effective_from'] === undefined ? undefined : json['effective_from'] === null ? null : (parseDateTime(json['effective_from'])),
         'reason': json['reason'],
+        'vendorMessage': json['vendor_message'] === undefined ? undefined : json['vendor_message'] === null ? null : json['vendor_message'],
+        'noticeOverride': json['notice_override'] == null ? undefined : json['notice_override'],
+        'noticeOverrideReason': json['notice_override_reason'] === undefined ? undefined : json['notice_override_reason'] === null ? null : json['notice_override_reason'],
+        'supersedesPolicyId': json['supersedes_policy_id'] === undefined ? undefined : json['supersedes_policy_id'] === null ? null : json['supersedes_policy_id'],
+        'cancelScheduled': json['cancel_scheduled'] == null ? undefined : json['cancel_scheduled'],
     };
 }
 
@@ -79,6 +104,11 @@ export function CommissionPolicyPublishRequestToJSONTyped(value?: CommissionPoli
         'expected_version': value['expectedVersion'],
         'effective_from': value['effectiveFrom'] == null ? value['effectiveFrom'] : serializeDateTime(value['effectiveFrom']),
         'reason': value['reason'],
+        'vendor_message': value['vendorMessage'],
+        'notice_override': value['noticeOverride'],
+        'notice_override_reason': value['noticeOverrideReason'],
+        'supersedes_policy_id': value['supersedesPolicyId'],
+        'cancel_scheduled': value['cancelScheduled'],
     };
 }
 

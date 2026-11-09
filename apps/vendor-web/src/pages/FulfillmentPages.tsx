@@ -1,7 +1,8 @@
+import { AsyncLoading } from '@materyalph/web-ui'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import type { DeliveryNavigationRoute, DeliveryWorkspacePage, ListAssignedFulfillmentsStatusEnum, ListAssignedFulfillmentsSortEnum } from '@materyalph/api-client-ts'
-import { ActiveFilters, Button, ChatAvatar, CopyableText, CountBadge, DashboardPanel, DeliveryRouteMap, EmptyState, FilterPanel, FilterTabs, FulfillmentAssignmentCard, Pagination, SearchInput, Select, StatusMessage, formatCount, formatManilaDateTime, fulfillmentDestinationLabel as destinationText, fulfillmentScheduledDate, useNavigationRefresh } from '@materyalph/web-ui'
+import { BackNavigation, ActiveFilters, Button, ChatAvatar, CopyableText, CountBadge, DashboardPanel, DeliveryRouteMap, EmptyState, FilterPanel, FilterTabs, FulfillmentAssignmentCard, Pagination, SearchInput, Select, StatusMessage, formatCount, formatManilaDateTime, fulfillmentDestinationLabel as destinationText, fulfillmentScheduledDate, useNavigationRefresh } from '@materyalph/web-ui'
 import { ArrowRight, CalendarDays, Clock3, MapPin, MessageSquare, Navigation, Route as RouteIcon, Truck, UserRound } from 'lucide-react'
 import { acknowledgeAssignment, apiFailure, getDeliveryDirections, getOrder, listAssignedFulfillments, quantityText, readDeliveryBuyerPhoto, readableOrderError, type OrderDetail } from '../lib/orders-api'
 import { newIdempotencyKey } from '../lib/onboarding-api'
@@ -103,7 +104,7 @@ function AssignedDelivery({ orderId }: { orderId: string }) {
     return () => { active = false }
   }, [orderId, attempt])
   return <div className="grid min-w-0 gap-5">
-    <Link to={`/fulfillment${params.size ? `?${params.toString()}` : ''}`} className="inline-flex min-h-11 items-center text-action-primary">← Assigned deliveries</Link>
+    <BackNavigation><Link to={`/fulfillment${params.size ? `?${params.toString()}` : ''}`}>Assigned deliveries</Link></BackNavigation>
     {error && <StatusMessage tone="error">{error} <Button variant="quiet" onClick={reload}>Retry</Button></StatusMessage>}
     {!order ? !error && <LoadingState label="Loading delivery…" /> : <>
       <PageHeader eyebrow="Assigned fulfillment" title={order.reference} status={order.fulfillment?.state ?? ''} description={`${order.buyer?.displayName ?? 'Buyer'} · ${fulfillmentScheduledDate(order.fulfillment?.expectedDate)}`} />
@@ -131,7 +132,7 @@ function DeliveryInformation({ order, busy, onMessage, onAcknowledge }: { order:
   const alternate = order.destination?.heavyVehicleRestriction === 'YES' || order.destination?.vehicleEndpoint === 'ALTERNATE_DROP_OFF'
   const address = String(intended?.formattedAddress ?? intended?.label ?? destinationText(order))
   const buyer = order.buyer
-  return <section aria-label="Delivery coordination" className="grid min-w-0 gap-5 rounded-surface border border-border-default bg-surface-primary p-4 sm:p-5">
+  return <section aria-label="Delivery coordination" className="grid min-w-0 gap-5 mp-card mp-card-padded">
     <header className="flex items-center gap-2"><UserRound size={20} className="shrink-0 text-action-primary" aria-hidden="true" /><h2 className="text-lg font-semibold">Delivery information</h2></header>
     <div className="grid min-w-0 gap-3">
       <div className="flex min-w-0 items-center gap-3"><ChatAvatar name={buyer?.displayName ?? 'Buyer'} path={buyer?.avatarPath} load={readDeliveryBuyerPhoto} /><div className="min-w-0"><p className="text-xs font-semibold text-text-secondary">Buyer</p><p className="break-words text-lg font-semibold">{buyer?.displayName ?? 'Buyer'}</p></div></div>
@@ -174,7 +175,7 @@ function DeliveryDirections({ orderId, fallbackDestination }: { orderId: string;
     return () => { active = false }
   }, [orderId, attempt])
   const navigation = route ? `https://www.google.com/maps/dir/?api=1&origin=${route.origin.latitude},${route.origin.longitude}&destination=${route.destination.latitude},${route.destination.longitude}&travelmode=driving` : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(fallbackDestination)}&travelmode=driving`
-  return <section aria-label="Delivery directions" className="grid min-w-0 gap-5 rounded-surface border border-border-default bg-surface-primary p-4 sm:p-5">
+  return <section aria-label="Delivery directions" className="grid min-w-0 gap-5 mp-card mp-card-padded">
     <header className="grid gap-2"><h2 className="flex items-center gap-2 text-lg font-semibold"><Navigation size={20} className="shrink-0 text-action-primary" aria-hidden="true" />Route and navigation</h2><p className="text-sm leading-6 text-text-secondary">Registered store to the confirmed drop-off. No live GPS tracking.</p></header>
     {route ? <>
       <dl className="grid min-w-0 grid-cols-2 gap-4 rounded-control bg-surface-canvas p-4 text-sm" aria-label="Driving estimate">
@@ -185,7 +186,7 @@ function DeliveryDirections({ orderId, fallbackDestination }: { orderId: string;
       <p className="text-xs leading-5 text-text-secondary">Google Routes estimate · {formatManilaDateTime(route.computedAt)}. Travel time may change.</p>
     </> : <div className="grid min-w-0 gap-4">
       <div className="grid gap-1.5 rounded-control bg-surface-canvas p-4 text-sm"><p className="font-semibold">Confirmed drop-off</p><p className="break-words leading-6 text-text-secondary">{fallbackDestination}</p></div>
-      {error ? <StatusMessage tone="error">{error}<Button variant="quiet" className="mt-2 w-full sm:w-auto" onClick={() => setAttempt(value => value + 1)}>Retry route</Button></StatusMessage> : <p role="status" className="text-sm text-text-secondary">Loading delivery route…</p>}
+      {error ? <StatusMessage tone="error">{error}<Button variant="quiet" className="mt-2 w-full sm:w-auto" onClick={() => setAttempt(value => value + 1)}>Retry route</Button></StatusMessage> : <AsyncLoading compact label="Loading delivery route…" />}
     </div>}
     <footer className="grid min-w-0 gap-3 border-t border-border-default pt-4">
       <a className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-control bg-action-primary px-4 py-2 text-sm font-semibold text-white hover:bg-action-primary-pressed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring sm:min-h-11 sm:w-fit" href={navigation} target="_blank" rel="noopener noreferrer"><Navigation size={16} aria-hidden="true" />Open directions</a>

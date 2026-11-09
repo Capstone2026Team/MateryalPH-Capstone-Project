@@ -1,4 +1,6 @@
 import 'package:flutter/foundation.dart';
+import '../../core/vendor_score_display.dart';
+import '../trust/trust_models.dart' show StoreBadgeView;
 
 /// Approved Buyer radius allowlist; 5 km is the default and 50 km the platform maximum.
 const List<int> kDiscoveryRadiiKm = [5, 10, 20, 30, 40, 50];
@@ -166,6 +168,7 @@ class SupplierResultView {
     this.directoryType,
     this.googleRating,
     this.googleRatingCount,
+    this.badges = const [],
   });
 
   final String resultId;
@@ -199,11 +202,28 @@ class SupplierResultView {
   /// Google-sourced Directory data; separate from MateryalPH scores.
   final String? googleRating;
   final int? googleRatingCount;
+  final List<StoreBadgeView> badges;
 
   bool get isVerified => tier == SupplierTier.verified;
 
   /// Label shown with the store name on the marker and list row.
-  String get markerLabel => '$name · $scoreText';
+  String get markerLabel =>
+      '$name · ${isVerified ? vendorScoreDisplayText(scoreText, value: scoreKind == ScoreKind.vps ? scoreValue : null) : scoreText}';
+
+  /// Keep the star and published value visible when a long store name is shortened.
+  String compactMarkerLabel(int maxCharacters) {
+    if (!isVerified || scoreKind != ScoreKind.vps) {
+      return markerLabel.length > maxCharacters
+          ? '${markerLabel.substring(0, maxCharacters - 1)}…'
+          : markerLabel;
+    }
+    final suffix = ' · ${vendorScoreDisplayText(scoreText, value: scoreValue)}';
+    final available = (maxCharacters - suffix.length).clamp(2, maxCharacters);
+    final storeName = name.length > available
+        ? '${name.substring(0, available - 1)}…'
+        : name;
+    return '$storeName$suffix';
+  }
 
   SupplierResultView withFavorite(bool favorite) => SupplierResultView(
     resultId: resultId,
@@ -231,6 +251,7 @@ class SupplierResultView {
     directoryType: directoryType,
     googleRating: googleRating,
     googleRatingCount: googleRatingCount,
+    badges: badges,
   );
 }
 

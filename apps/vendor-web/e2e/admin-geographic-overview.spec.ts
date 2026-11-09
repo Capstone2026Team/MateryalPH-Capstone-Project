@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test'
 import reference from '../../../packages/web-ui/src/geography/philippines-regions.json' with { type: 'json' }
+import { FinanceKpisToJSON } from '@materyalph/api-client-ts'
+import { marketplacePaymentsFixture } from '../../admin-web/src/test/marketplace-payments-fixture'
 
 // Synthetic authorized aggregates; actual reference shapes test the key-free national map.
 const cell = (value: number | null, suppressed = false) => ({ value, suppressed, reason: suppressed ? 'Sample small-cell protection.' : null })
@@ -22,6 +24,7 @@ test('the compact Philippine map aligns with the header beside KPIs and stacks c
     if (path.endsWith('/profile')) data = { id: 'sample-admin', full_name: 'Sample Admin', account_type: 'ADMIN', account_status: 'ACTIVE', role: 'ADMIN_SUPERADMIN' }
     else if (path.endsWith('/auth/csrf')) data = { csrf_token: 'synthetic-overview-csrf' }
     else if (path.endsWith('/notifications/unread-count')) data = { count: 0 }
+    else if (path.endsWith('/admin/finance/kpis')) data = FinanceKpisToJSON(marketplacePaymentsFixture())
     else if (path.endsWith('/geo-analytics/filter-options')) { data = []; meta = { current_page: 1, last_page: 1, total: 0 } }
     else if (path.endsWith('/geo-analytics/boundaries')) data = { type: 'FeatureCollection', features: [], missing_codes: area ? ['1380600000'] : children.map(child => child.code), psgc_version: { id: 'sample', label: 'Sample PSGC' } }
     else if (path.endsWith('/geo-analytics')) {
@@ -33,17 +36,18 @@ test('the compact Philippine map aligns with the header beside KPIs and stacks c
         kpis: { vendor_count: cell(23), registered_buyers: cell(2), gross_gmv_centavos: cell(selected ? 100000 : 3487020), net_gmv_centavos: cell(3062275), order_volume: cell(8), fulfillment_rate: rate, cancellation_rate: rate, dispute_rate: rate,
           response_time: { suppressed: false, mean_seconds: 200, median_seconds: 180, p90_seconds: 400, answered: 30, unanswered: 13 }, active_users: { buyer: activity, vendor: activity } },
         children: selected ? selected.code === '1800000000' ? [] : [{ ...children[0], code: '1380600000', name: 'Sample city', level: 'CITY', level_label: 'City', drillable: false }] : children,
-        trends: [], activity_trend: [], unresolved: { orders: 0, vendors: 0, registered_buyers: 0, responses: 0, activity: 0 }, definitions: {},
+        trends: [], activity_trend: [], unresolved: { orders: 0, vendors: 0, registered_buyers: 0, responses: 0, activity: 0 },
+        definitions: { gross_gmv: 'Confirmed Vendor child-order value before cancellations and refunds. Excludes the E-wallet transaction fee.', net_gmv: 'Confirmed value less cancelled sales and completed principal refunds.', order_volume: 'Confirmed Vendor child orders first confirmed in the period.', fulfillment_rate: 'Completed eligible orders divided by confirmed, non-cancelled orders due in the period.', active_users: 'Distinct qualifying human users. DAU: the end date; WAU: 7 days; MAU: 30 days ending on the end date.' },
       }
     }
     await route.fulfill({ json: { data, meta, errors: [] } })
   })
-  await page.goto('http://127.0.0.1:4174/analytics?paymentMethod=ONLINE')
+  await page.goto(`${process.env.ADMIN_FINANCE_PREVIEW_URL ?? 'http://127.0.0.1:4174'}/analytics?paymentMethod=ONLINE`)
   const overview = page.getByRole('region', { name: 'Philippines overview', exact: true })
   const metrics = overview.getByRole('region', { name: 'Key metrics for Philippines', exact: true })
   const header = page.getByRole('region', { name: 'Analytics header', exact: true })
   const mapPanel = overview.getByRole('region', { name: 'Interactive map for Philippines', exact: true })
-  const map = mapPanel.getByRole('group', { name: 'Interactive Philippine map: Gross GMV by area', exact: true })
+  const map = mapPanel.getByRole('group', { name: 'Interactive Philippine map: Gross sales by area', exact: true })
   await expect(map).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Philippines overview', exact: true })).toHaveCount(0)
   await expect(page.getByText('The selected area applies to every panel, including Materials Analytics.', { exact: true })).toHaveCount(0)
@@ -58,8 +62,31 @@ test('the compact Philippine map aligns with the header beside KPIs and stacks c
   })
   expect(nationalShapeBounds).toBeGreaterThan(portraitBounds.width * 0.85)
   await expect(metrics.getByText('₱34,870.20', { exact: true })).toBeVisible()
+  const grossHelp = metrics.getByRole('button', { name: 'How this is calculated: Gross sales', exact: true })
+  await grossHelp.click()
+  const explanation = page.getByRole('dialog', { name: 'Gross sales', exact: true })
+  await expect(explanation).toContainText('Excludes the E-wallet transaction fee.')
+  await expect(explanation).toContainText('Philippines')
+  const explanationBounds = (await explanation.boundingBox())!
+  expect(explanationBounds.x).toBeGreaterThanOrEqual(12)
+  expect(explanationBounds.x + explanationBounds.width).toBeLessThanOrEqual(page.viewportSize()!.width - 12)
+  await page.keyboard.press('Escape')
+  await expect(explanation).toHaveCount(0)
+  await expect(grossHelp).toBeFocused()
+  const comparison = overview.getByRole('region', { name: 'Regions in Philippines', exact: true })
+  expect((await comparison.boundingBox())!.height).toBeLessThanOrEqual(321)
+  await expect(comparison.getByRole('row')).toHaveCount(children.length + 1)
+  await expect(comparison.getByRole('columnheader', { name: /Gross sales/ })).toHaveAttribute('aria-sort', 'descending')
+  await page.getByRole('heading', { name: 'Philippine geographic analytics', exact: true }).click()
+  await page.evaluate(() => window.scrollTo(0, 0))
   const metricBounds = (await metrics.boundingBox())!, mapBounds = (await mapPanel.boundingBox())!, headerBounds = (await header.boundingBox())!
   if (page.viewportSize()!.width >= 1280) {
+    const comparisonSection = (await overview.locator('.mp-geo-comparison').boundingBox())!
+    expect(Math.abs(comparisonSection.x - metricBounds.x)).toBeLessThanOrEqual(1)
+    expect(Math.abs(comparisonSection.width - metricBounds.width)).toBeLessThanOrEqual(1)
+    expect(comparisonSection.y - (metricBounds.y + metricBounds.height)).toBeGreaterThanOrEqual(11)
+    expect(comparisonSection.y - (metricBounds.y + metricBounds.height)).toBeLessThanOrEqual(13)
+    if (page.viewportSize()!.width >= 1440) expect(comparisonSection.y).toBeLessThan(mapBounds.y + mapBounds.height)
     expect(metricBounds.x + metricBounds.width).toBeLessThanOrEqual(mapBounds.x)
     expect(Math.abs(headerBounds.y - mapBounds.y)).toBeLessThanOrEqual(2)
     expect(metricBounds.y).toBeGreaterThan(headerBounds.y + headerBounds.height)
@@ -69,9 +96,11 @@ test('the compact Philippine map aligns with the header beside KPIs and stacks c
   } else {
     expect(headerBounds.y + headerBounds.height).toBeLessThanOrEqual(mapBounds.y)
     expect(mapBounds.y + mapBounds.height).toBeLessThanOrEqual(metricBounds.y)
+    expect((await comparison.boundingBox())!.y).toBeGreaterThan(metricBounds.y + metricBounds.height)
   }
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await page.screenshot({ path: test.info().outputPath('analytics-top-layout.png') })
+  await page.screenshot({ path: test.info().outputPath('analytics-full-layout.png'), fullPage: true })
   await overview.screenshot({ path: test.info().outputPath('geographic-overview.png') })
 
   await mapPanel.getByRole('combobox', { name: 'Map metric', exact: true }).selectOption('orders')
@@ -87,7 +116,7 @@ test('the compact Philippine map aligns with the header beside KPIs and stacks c
   expect(new URL(page.url()).searchParams.get('paymentMethod')).toBe('ONLINE')
   await expect(page.getByRole('region', { name: 'Key metrics for National Capital Region (NCR)' }).getByText('₱1,000.00', { exact: true })).toBeVisible()
   const regionalPanel = page.getByRole('region', { name: 'Interactive map for National Capital Region (NCR)', exact: true })
-  const regionalMap = regionalPanel.getByRole('group', { name: 'Interactive National Capital Region (NCR) map: Gross GMV by area', exact: true })
+  const regionalMap = regionalPanel.getByRole('group', { name: 'Interactive National Capital Region (NCR) map: Gross sales by area', exact: true })
   const outline = regionalMap.getByRole('img', { name: 'Outline of National Capital Region (NCR)' })
   await expect(outline).toBeVisible()
   expect((await outline.boundingBox())!.height).toBeGreaterThan((await regionalMap.boundingBox())!.height * 0.75)
@@ -120,4 +149,21 @@ test('the compact Philippine map aligns with the header beside KPIs and stacks c
   await expect(page.getByRole('img', { name: 'Boundary of Cagayan' })).toBeVisible()
   await expect(page.locator('[data-area-label="0201500000"] text')).toContainText('Cagayan')
   expect(basemapRequests).toBe(0)
+  await page.getByRole('button', { name: 'Back to Philippines', exact: true }).click()
+  await metrics.screenshot({ path: test.info().outputPath('geographic-metrics.png') })
+  await comparison.screenshot({ path: test.info().outputPath('area-comparison.png') })
+  await mapPanel.getByRole('combobox', { name: 'Map metric', exact: true }).selectOption('orders')
+  await expect(page.getByRole('tab', { name: 'Marketplace payments', exact: true })).toBeVisible()
+  await page.getByRole('tab', { name: 'Marketplace payments', exact: true }).click()
+  await expect(page).toHaveURL(/view=payments/)
+  await expect(page.getByRole('heading', { name: 'Philippine geographic analytics', level: 1 })).toBeVisible()
+  await expect(overview).toBeVisible()
+  await expect(metrics).toBeVisible()
+  await expect(mapPanel.getByRole('combobox', { name: 'Map metric', exact: true })).toHaveValue('orders')
+  await expect(page.getByRole('heading', { name: 'Marketplace payments', level: 2 })).toBeVisible()
+  await page.getByRole('tab', { name: 'Trends & activity', exact: true }).click()
+  await expect(page).toHaveURL(/view=trends/)
+  await expect(page.getByRole('region', { name: 'Philippines overview', exact: true })).toBeVisible()
+  await expect(mapPanel.getByRole('combobox', { name: 'Map metric', exact: true })).toHaveValue('orders')
+  expect(new URL(page.url()).searchParams.get('paymentMethod')).toBe('ONLINE')
 })

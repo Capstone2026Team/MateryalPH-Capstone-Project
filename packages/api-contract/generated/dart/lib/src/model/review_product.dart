@@ -14,6 +14,7 @@ part 'review_product.g.dart';
 /// * [listingId]
 /// * [name] - Purchased product name preserved in the order line snapshot.
 /// * [variantLabel]
+/// * [imageUrl] - Current listing photo included in Vendor review details. Uses existing catalog media delivery; null when no ready, clean photo is available. Purchased name and variant remain the order snapshot.
 @BuiltValue()
 abstract class ReviewProduct implements Built<ReviewProduct, ReviewProductBuilder> {
   @BuiltValueField(wireName: r'listing_id')
@@ -25,6 +26,10 @@ abstract class ReviewProduct implements Built<ReviewProduct, ReviewProductBuilde
 
   @BuiltValueField(wireName: r'variant_label')
   String? get variantLabel;
+
+  /// Current listing photo included in Vendor review details. Uses existing catalog media delivery; null when no ready, clean photo is available. Purchased name and variant remain the order snapshot.
+  @BuiltValueField(wireName: r'image_url')
+  String? get imageUrl;
 
   ReviewProduct._();
 
@@ -64,6 +69,13 @@ class _$ReviewProductSerializer implements PrimitiveSerializer<ReviewProduct> {
       object.variantLabel,
       specifiedType: const FullType.nullable(String),
     );
+    if (object.imageUrl != null) {
+      yield r'image_url';
+      yield serializers.serialize(
+        object.imageUrl,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
   }
 
   @override
@@ -108,6 +120,14 @@ class _$ReviewProductSerializer implements PrimitiveSerializer<ReviewProduct> {
           ) as String?;
           if (valueDes == null) continue;
           result.variantLabel = valueDes;
+          break;
+        case r'image_url':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.imageUrl = valueDes;
           break;
         default:
           unhandled.add(key);

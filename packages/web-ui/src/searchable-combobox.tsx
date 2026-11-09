@@ -1,3 +1,4 @@
+import { AsyncLoading } from './async-state'
 import { useEffect, useId, useRef, useState } from 'react'
 import { Button } from './button'
 
@@ -47,7 +48,7 @@ export function SearchableCombobox({ label, value, disabled = false, load, onCha
       <ul id={`${id}-options`} role="listbox" aria-label={`${label} suggestions`} className="max-h-64 overflow-y-auto">
         {options.map((option, index) => <li id={`${id}-${index}`} key={option.code} role="option" aria-selected={value?.code === option.code} className={`min-h-11 cursor-pointer px-3 py-3 ${index === active ? 'bg-surface-canvas' : ''}`} onMouseDown={event => event.preventDefault()} onClick={() => select(option)}>{option.name}{option.level === 'REGION' ? ' (no province)' : ''}</li>)}
       </ul>
-      {busy && <p role="status">Loading locations…</p>}
+      {busy && <AsyncLoading compact label="Loading locations…" />}
       {error && <div role="alert">{error}<Button variant="secondary" onClick={() => setRetry(value => value + 1)}>Retry locations</Button></div>}
       {!busy && !error && options.length === 0 && <p role="status">No matching official locations.</p>}
       {more && !busy && <Button variant="quiet" onClick={() => setPage(value => value + 1)}>Load more locations</Button>}

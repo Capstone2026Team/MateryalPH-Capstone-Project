@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { FulfillmentConversationPage } from '@materyalph/api-client-ts'
-import { Button, CountBadge, FormDialog, useNavigationRefresh, formatManilaDateTime, orderStateLabel } from '@materyalph/web-ui'
-import { ArrowLeft } from 'lucide-react'
+import { BackNavigation, Button, CountBadge, FormDialog, useNavigationRefresh, formatManilaDateTime, orderStateLabel } from '@materyalph/web-ui'
 import { chatApi, readableChatError } from '../lib/messaging-api'
 import { ErrorState, LoadingState } from './PhaseThreeVendorPages'
 import { ConversationThread } from './ConversationThread'
@@ -33,11 +32,11 @@ export function FulfillmentConversationDialog({ inquiryId, conversationId, onClo
   return <FormDialog open title="Fulfillment conversations" description={selected ? 'Order-specific pickup and delivery coordination' : 'Active order conversations first, followed by read-only history.'}
     onClose={onClose} footer={null} bodyClassName="flex h-[min(44rem,75dvh)] min-h-0 flex-col overflow-hidden">
     {selected ? <>
-      {inquiryId && <div className="shrink-0 border-b border-border-default px-4"><Button variant="quiet" onClick={() => setSelected(null)}><ArrowLeft size={16} aria-hidden="true" />Back to conversations</Button></div>}
-      <ConversationThread key={selected} selected={selected} role="FULFILLMENT" />
+      {inquiryId && <div className="shrink-0 border-b border-border-default px-4"><BackNavigation><button type="button" onClick={() => setSelected(null)}>Back to conversations</button></BackNavigation></div>}
+      <ConversationThread key={selected} selected={selected} role="PUBLISHER" onOpenQuotationInquiry={setSelected} />
     </> : <div className="min-h-0 overflow-y-auto p-5">
       {loading && result?.page !== page ? <LoadingState label="Loading fulfillment conversations…" /> : error ? <ErrorState message={error} onRetry={() => setAttempt(value => value + 1)} /> : <>
-        {result?.items.length === 0 && <p className="py-8 text-sm text-text-secondary">No fulfillment conversations yet. They open when an order is ready for pickup or out for delivery.</p>}
+        {result?.items.length === 0 && <p className="py-8 text-sm text-text-secondary">No fulfillment conversations yet. They open when an order is submitted.</p>}
         <ul aria-label="Buyer fulfillment conversations" className="divide-y divide-border-default">
           {result?.items.map(row => <li key={row.conversationId}>
             <button type="button" className="flex min-h-11 w-full flex-wrap items-center justify-between gap-3 rounded-control p-4 text-left hover:bg-surface-canvas" onClick={() => setSelected(row.conversationId)}>

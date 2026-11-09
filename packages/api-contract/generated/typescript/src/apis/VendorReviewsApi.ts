@@ -79,6 +79,21 @@ export interface GetVendorReviewRequest {
     reviewId: string;
 }
 
+export interface GetVendorReviewBuyerPhotoRequest {
+    /**
+     *
+     */
+    reviewId: string;
+    /**
+     *
+     */
+    expires: number;
+    /**
+     *
+     */
+    signature: string;
+}
+
 export interface GetVendorReviewPhotoRequest {
     /**
      *
@@ -310,6 +325,77 @@ export class VendorReviewsApi extends runtime.BaseAPI {
      */
     async getVendorReview(requestParameters: GetVendorReviewRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorReviewEnvelope> {
         const response = await this.getVendorReviewRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for getVendorReviewBuyerPhoto without sending the request
+     */
+    async getVendorReviewBuyerPhotoRequestOpts(requestParameters: GetVendorReviewBuyerPhotoRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['reviewId'] == null) {
+            throw new runtime.RequiredError(
+                'reviewId',
+                'Required parameter "reviewId" was null or undefined when calling getVendorReviewBuyerPhoto().'
+            );
+        }
+
+        if (requestParameters['expires'] == null) {
+            throw new runtime.RequiredError(
+                'expires',
+                'Required parameter "expires" was null or undefined when calling getVendorReviewBuyerPhoto().'
+            );
+        }
+
+        if (requestParameters['signature'] == null) {
+            throw new runtime.RequiredError(
+                'signature',
+                'Required parameter "signature" was null or undefined when calling getVendorReviewBuyerPhoto().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['expires'] != null) {
+            queryParameters['expires'] = requestParameters['expires'];
+        }
+
+        if (requestParameters['signature'] != null) {
+            queryParameters['signature'] = requestParameters['signature'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/vendor/reviews/{reviewId}/buyer-photo`;
+        urlPath = urlPath.replace('{reviewId}', encodeURIComponent(String(requestParameters['reviewId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * reviews.view. Five-minute signed Buyer profile photo for a named received review in the current store. Rechecks blind reveal, dispute withholding, moderation, score exclusions and current membership on every fetch. Legacy anonymous reviews now show the actual Buyer identity. Store-authored Buyer ratings, missing photos and foreign reviews return 404. Returns only the sanitized PNG; no Buyer ID, contact or private storage key is exposed.
+     */
+    async getVendorReviewBuyerPhotoRaw(requestParameters: GetVendorReviewBuyerPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Blob>> {
+        const requestOptions = await this.getVendorReviewBuyerPhotoRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.BlobApiResponse(response);
+    }
+
+    /**
+     * reviews.view. Five-minute signed Buyer profile photo for a named received review in the current store. Rechecks blind reveal, dispute withholding, moderation, score exclusions and current membership on every fetch. Legacy anonymous reviews now show the actual Buyer identity. Store-authored Buyer ratings, missing photos and foreign reviews return 404. Returns only the sanitized PNG; no Buyer ID, contact or private storage key is exposed.
+     */
+    async getVendorReviewBuyerPhoto(requestParameters: GetVendorReviewBuyerPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Blob> {
+        const response = await this.getVendorReviewBuyerPhotoRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

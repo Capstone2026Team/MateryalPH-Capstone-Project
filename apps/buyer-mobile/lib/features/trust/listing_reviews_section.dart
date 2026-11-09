@@ -1,3 +1,4 @@
+import '../../design_system/components/async_state.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -192,7 +193,7 @@ class _ListingReviewsSectionState extends State<ListingReviewsSection> {
     if (reviews == null) {
       return Semantics(
         label: 'Loading product reviews',
-        child: const LinearProgressIndicator(),
+        child: const BuyerLoadingProgress(),
       );
     }
     return Column(

@@ -10,7 +10,7 @@ class _$EnforcementListEnvelope extends EnforcementListEnvelope {
   @override
   final BuiltList<EnforcementSummary> data;
   @override
-  final BuiltMap<String, JsonObject?> meta;
+  final EnforcementListEnvelopeMeta meta;
   @override
   final BuiltList<ApiError> errors;
 
@@ -69,10 +69,10 @@ class EnforcementListEnvelopeBuilder
       _$this._data ??= ListBuilder<EnforcementSummary>();
   set data(ListBuilder<EnforcementSummary>? data) => _$this._data = data;
 
-  MapBuilder<String, JsonObject?>? _meta;
-  MapBuilder<String, JsonObject?> get meta =>
-      _$this._meta ??= MapBuilder<String, JsonObject?>();
-  set meta(MapBuilder<String, JsonObject?>? meta) => _$this._meta = meta;
+  EnforcementListEnvelopeMetaBuilder? _meta;
+  EnforcementListEnvelopeMetaBuilder get meta =>
+      _$this._meta ??= EnforcementListEnvelopeMetaBuilder();
+  set meta(EnforcementListEnvelopeMetaBuilder? meta) => _$this._meta = meta;
 
   ListBuilder<ApiError>? _errors;
   ListBuilder<ApiError> get errors =>

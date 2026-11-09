@@ -20,6 +20,13 @@ import {
     EnforcementEventToJSON,
     EnforcementEventToJSONTyped,
 } from './EnforcementEvent';
+import type { EnforcementEvidence } from './EnforcementEvidence';
+import {
+    EnforcementEvidenceFromJSON,
+    EnforcementEvidenceFromJSONTyped,
+    EnforcementEvidenceToJSON,
+    EnforcementEvidenceToJSONTyped,
+} from './EnforcementEvidence';
 import type { SubjectReview } from './SubjectReview';
 import {
     SubjectReviewFromJSON,
@@ -146,6 +153,10 @@ export interface EnforcementDetail {
      *
      */
     allowedActions: Array<EnforcementDetailAllowedActionsEnum>;
+    /**
+     *
+     */
+    evidence: Array<EnforcementEvidence>;
 }
 
 
@@ -233,6 +244,7 @@ export function instanceOfEnforcementDetail(value: object): value is Enforcement
     if ((!('subjectReview' in (value as Record<string, any>)) && !('subject_review' in (value as Record<string, any>))) || ((value as Record<string, any>)['subjectReview'] === undefined && (value as Record<string, any>)['subject_review'] === undefined)) return false;
     if (!('events' in value) || value['events'] === undefined) return false;
     if ((!('allowedActions' in (value as Record<string, any>)) && !('allowed_actions' in (value as Record<string, any>))) || ((value as Record<string, any>)['allowedActions'] === undefined && (value as Record<string, any>)['allowed_actions'] === undefined)) return false;
+    if (!('evidence' in value) || value['evidence'] === undefined) return false;
     return true;
 }
 
@@ -274,6 +286,7 @@ export function EnforcementDetailFromJSONTyped(json: any, ignoreDiscriminator: b
         'subjectReview': SubjectReviewFromJSON(json['subject_review']),
         'events': ((json['events'] as Array<any>).map(EnforcementEventFromJSON)),
         'allowedActions': json['allowed_actions'],
+        'evidence': ((json['evidence'] as Array<any>).map(EnforcementEvidenceFromJSON)),
     };
 }
 
@@ -316,6 +329,7 @@ export function EnforcementDetailToJSONTyped(value?: EnforcementDetail | null, i
         'subject_review': SubjectReviewToJSON(value['subjectReview']),
         'events': ((value['events'] as Array<any>).map(EnforcementEventToJSON)),
         'allowed_actions': value['allowedActions'],
+        'evidence': ((value['evidence'] as Array<any>).map(EnforcementEvidenceToJSON)),
     };
 }
 

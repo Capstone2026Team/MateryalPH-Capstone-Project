@@ -124,6 +124,8 @@ import 'package:materyalph_api_client/src/model/analytics_trend.dart';
 import 'package:materyalph_api_client/src/model/analytics_unit.dart';
 import 'package:materyalph_api_client/src/model/analytics_window.dart';
 import 'package:materyalph_api_client/src/model/api_error.dart';
+import 'package:materyalph_api_client/src/model/assessed_online_payment.dart';
+import 'package:materyalph_api_client/src/model/assessed_online_payment_totals.dart';
 import 'package:materyalph_api_client/src/model/audit_action_list_envelope.dart';
 import 'package:materyalph_api_client/src/model/audit_event.dart';
 import 'package:materyalph_api_client/src/model/audit_event_detail.dart';
@@ -146,6 +148,10 @@ import 'package:materyalph_api_client/src/model/auto_accept_policy_version.dart'
 import 'package:materyalph_api_client/src/model/auto_accept_reason.dart';
 import 'package:materyalph_api_client/src/model/auto_accept_resume.dart';
 import 'package:materyalph_api_client/src/model/auto_accept_status.dart';
+import 'package:materyalph_api_client/src/model/automated_response_option.dart';
+import 'package:materyalph_api_client/src/model/automated_response_settings.dart';
+import 'package:materyalph_api_client/src/model/automated_response_settings_envelope.dart';
+import 'package:materyalph_api_client/src/model/automatic_recovery_health.dart';
 import 'package:materyalph_api_client/src/model/badge_metric.dart';
 import 'package:materyalph_api_client/src/model/badge_state.dart';
 import 'package:materyalph_api_client/src/model/badge_state_scopes_inner.dart';
@@ -216,6 +222,10 @@ import 'package:materyalph_api_client/src/model/buyer_order_invoices_envelope.da
 import 'package:materyalph_api_client/src/model/buyer_order_reviews.dart';
 import 'package:materyalph_api_client/src/model/buyer_order_reviews_envelope.dart';
 import 'package:materyalph_api_client/src/model/buyer_origin_request.dart';
+import 'package:materyalph_api_client/src/model/buyer_rating_summary.dart';
+import 'package:materyalph_api_client/src/model/buyer_received_rating.dart';
+import 'package:materyalph_api_client/src/model/buyer_received_ratings_envelope.dart';
+import 'package:materyalph_api_client/src/model/buyer_received_ratings_meta.dart';
 import 'package:materyalph_api_client/src/model/buyer_review_edit_request.dart';
 import 'package:materyalph_api_client/src/model/buyer_review_submit_request.dart';
 import 'package:materyalph_api_client/src/model/buyer_review_submit_request_product_reviews_inner.dart';
@@ -286,6 +296,9 @@ import 'package:materyalph_api_client/src/model/catalog_volume_tier_input.dart';
 import 'package:materyalph_api_client/src/model/channel_fee_version.dart';
 import 'package:materyalph_api_client/src/model/channel_fee_version_list_envelope.dart';
 import 'package:materyalph_api_client/src/model/chat_attachment.dart';
+import 'package:materyalph_api_client/src/model/chat_automated_choice.dart';
+import 'package:materyalph_api_client/src/model/chat_automated_option.dart';
+import 'package:materyalph_api_client/src/model/chat_automated_reply.dart';
 import 'package:materyalph_api_client/src/model/chat_channel_auth.dart';
 import 'package:materyalph_api_client/src/model/chat_channel_signature.dart';
 import 'package:materyalph_api_client/src/model/chat_create.dart';
@@ -327,6 +340,7 @@ import 'package:materyalph_api_client/src/model/chat_send.dart';
 import 'package:materyalph_api_client/src/model/chat_store.dart';
 import 'package:materyalph_api_client/src/model/chat_transfer.dart';
 import 'package:materyalph_api_client/src/model/chat_typing.dart';
+import 'package:materyalph_api_client/src/model/chat_work_package_attachment.dart';
 import 'package:materyalph_api_client/src/model/checkout_child_order.dart';
 import 'package:materyalph_api_client/src/model/checkout_group_preview.dart';
 import 'package:materyalph_api_client/src/model/checkout_invoice_details.dart';
@@ -338,10 +352,13 @@ import 'package:materyalph_api_client/src/model/checkout_submission.dart';
 import 'package:materyalph_api_client/src/model/checkout_submission_envelope.dart';
 import 'package:materyalph_api_client/src/model/checkout_submit_request.dart';
 import 'package:materyalph_api_client/src/model/checkout_vendor_ref.dart';
+import 'package:materyalph_api_client/src/model/commission_email_summary.dart';
 import 'package:materyalph_api_client/src/model/commission_policies.dart';
 import 'package:materyalph_api_client/src/model/commission_policies_envelope.dart';
 import 'package:materyalph_api_client/src/model/commission_policy.dart';
 import 'package:materyalph_api_client/src/model/commission_policy_envelope.dart';
+import 'package:materyalph_api_client/src/model/commission_policy_preview.dart';
+import 'package:materyalph_api_client/src/model/commission_policy_preview_envelope.dart';
 import 'package:materyalph_api_client/src/model/commission_policy_publish_request.dart';
 import 'package:materyalph_api_client/src/model/commission_trend_point.dart';
 import 'package:materyalph_api_client/src/model/comparable_group_create.dart';
@@ -409,6 +426,7 @@ import 'package:materyalph_api_client/src/model/delivery_preview_envelope.dart';
 import 'package:materyalph_api_client/src/model/delivery_route.dart';
 import 'package:materyalph_api_client/src/model/delivery_vehicle_option.dart';
 import 'package:materyalph_api_client/src/model/delivery_vehicle_options_envelope.dart';
+import 'package:materyalph_api_client/src/model/delivery_vehicle_profile.dart';
 import 'package:materyalph_api_client/src/model/delivery_vehicle_selection.dart';
 import 'package:materyalph_api_client/src/model/delivery_workspace_page.dart';
 import 'package:materyalph_api_client/src/model/delivery_workspace_page_meta.dart';
@@ -499,7 +517,12 @@ import 'package:materyalph_api_client/src/model/enforcement_apply_request.dart';
 import 'package:materyalph_api_client/src/model/enforcement_detail.dart';
 import 'package:materyalph_api_client/src/model/enforcement_detail_envelope.dart';
 import 'package:materyalph_api_client/src/model/enforcement_event.dart';
+import 'package:materyalph_api_client/src/model/enforcement_evidence.dart';
+import 'package:materyalph_api_client/src/model/enforcement_evidence_envelope.dart';
+import 'package:materyalph_api_client/src/model/enforcement_evidence_link_envelope.dart';
+import 'package:materyalph_api_client/src/model/enforcement_evidence_link_envelope_data.dart';
 import 'package:materyalph_api_client/src/model/enforcement_list_envelope.dart';
+import 'package:materyalph_api_client/src/model/enforcement_list_envelope_meta.dart';
 import 'package:materyalph_api_client/src/model/enforcement_record_request.dart';
 import 'package:materyalph_api_client/src/model/enforcement_subject_envelope.dart';
 import 'package:materyalph_api_client/src/model/enforcement_subject_envelope_data.dart';
@@ -635,18 +658,24 @@ import 'package:materyalph_api_client/src/model/inventory_settings_update.dart';
 import 'package:materyalph_api_client/src/model/investigation_ack_envelope.dart';
 import 'package:materyalph_api_client/src/model/investigation_reason_request.dart';
 import 'package:materyalph_api_client/src/model/invoice_billing_details_request.dart';
+import 'package:materyalph_api_client/src/model/invoice_billing_snapshot.dart';
+import 'package:materyalph_api_client/src/model/invoice_draft.dart';
 import 'package:materyalph_api_client/src/model/invoice_explanation_request.dart';
 import 'package:materyalph_api_client/src/model/invoice_list_meta.dart';
 import 'package:materyalph_api_client/src/model/invoice_log_envelope.dart';
 import 'package:materyalph_api_client/src/model/invoice_log_row.dart';
 import 'package:materyalph_api_client/src/model/invoice_order_line.dart';
+import 'package:materyalph_api_client/src/model/invoice_order_summary.dart';
+import 'package:materyalph_api_client/src/model/invoice_preset_input.dart';
 import 'package:materyalph_api_client/src/model/invoice_record_view.dart';
 import 'package:materyalph_api_client/src/model/invoice_request_answer.dart';
 import 'package:materyalph_api_client/src/model/invoice_request_create.dart';
 import 'package:materyalph_api_client/src/model/invoice_request_view.dart';
+import 'package:materyalph_api_client/src/model/invoice_send_input.dart';
 import 'package:materyalph_api_client/src/model/list_document_exports200_response.dart';
 import 'package:materyalph_api_client/src/model/list_notification_failures200_response.dart';
 import 'package:materyalph_api_client/src/model/list_notifications200_response.dart';
+import 'package:materyalph_api_client/src/model/list_order_documents200_response.dart';
 import 'package:materyalph_api_client/src/model/list_tax_packages200_response.dart';
 import 'package:materyalph_api_client/src/model/listing_attribute_label.dart';
 import 'package:materyalph_api_client/src/model/listing_category_ref.dart';
@@ -758,6 +787,7 @@ import 'package:materyalph_api_client/src/model/order_line_inventory.dart';
 import 'package:materyalph_api_client/src/model/order_line_quantity.dart';
 import 'package:materyalph_api_client/src/model/order_list_envelope.dart';
 import 'package:materyalph_api_client/src/model/order_list_meta.dart';
+import 'package:materyalph_api_client/src/model/order_location_map.dart';
 import 'package:materyalph_api_client/src/model/order_nrpc.dart';
 import 'package:materyalph_api_client/src/model/order_payment_availability.dart';
 import 'package:materyalph_api_client/src/model/order_payment_state.dart';
@@ -788,6 +818,7 @@ import 'package:materyalph_api_client/src/model/payment_options_envelope.dart';
 import 'package:materyalph_api_client/src/model/payment_webhook_ack.dart';
 import 'package:materyalph_api_client/src/model/payment_webhook_ack_envelope.dart';
 import 'package:materyalph_api_client/src/model/payment_webhook_payload.dart';
+import 'package:materyalph_api_client/src/model/pending_order_quotation_input.dart';
 import 'package:materyalph_api_client/src/model/physical_handover_cash.dart';
 import 'package:materyalph_api_client/src/model/physical_payment_record.dart';
 import 'package:materyalph_api_client/src/model/physical_payment_settings.dart';
@@ -813,6 +844,7 @@ import 'package:materyalph_api_client/src/model/problem_response_request.dart';
 import 'package:materyalph_api_client/src/model/processing_fee.dart';
 import 'package:materyalph_api_client/src/model/processing_fee_amount.dart';
 import 'package:materyalph_api_client/src/model/product_analytics_period.dart';
+import 'package:materyalph_api_client/src/model/product_analytics_rated_product.dart';
 import 'package:materyalph_api_client/src/model/product_analytics_row.dart';
 import 'package:materyalph_api_client/src/model/product_analytics_segments.dart';
 import 'package:materyalph_api_client/src/model/product_analytics_segments_points_inner.dart';
@@ -824,6 +856,7 @@ import 'package:materyalph_api_client/src/model/product_compliance_case_envelope
 import 'package:materyalph_api_client/src/model/product_compliance_case_envelope_data.dart';
 import 'package:materyalph_api_client/src/model/product_compliance_decision.dart';
 import 'package:materyalph_api_client/src/model/product_compliance_queue_envelope.dart';
+import 'package:materyalph_api_client/src/model/product_compliance_queue_envelope_meta.dart';
 import 'package:materyalph_api_client/src/model/product_compliance_queue_item.dart';
 import 'package:materyalph_api_client/src/model/product_delivery_preview_request.dart';
 import 'package:materyalph_api_client/src/model/product_rating_summary.dart';
@@ -890,6 +923,8 @@ import 'package:materyalph_api_client/src/model/psgc_search_envelope.dart';
 import 'package:materyalph_api_client/src/model/psgc_search_envelope_data.dart';
 import 'package:materyalph_api_client/src/model/public_address_summary.dart';
 import 'package:materyalph_api_client/src/model/public_badge.dart';
+import 'package:materyalph_api_client/src/model/public_commission_policy.dart';
+import 'package:materyalph_api_client/src/model/public_commission_policy_envelope.dart';
 import 'package:materyalph_api_client/src/model/public_review.dart';
 import 'package:materyalph_api_client/src/model/public_review_list_envelope.dart';
 import 'package:materyalph_api_client/src/model/public_scores.dart';
@@ -924,6 +959,9 @@ import 'package:materyalph_api_client/src/model/regulated_material_rule.dart';
 import 'package:materyalph_api_client/src/model/reimbursement_timeline_item.dart';
 import 'package:materyalph_api_client/src/model/remittance_queue_envelope.dart';
 import 'package:materyalph_api_client/src/model/remittance_queue_row.dart';
+import 'package:materyalph_api_client/src/model/remittance_reconciliation_approval.dart';
+import 'package:materyalph_api_client/src/model/remittance_reconciliation_decision.dart';
+import 'package:materyalph_api_client/src/model/remittance_reconciliation_decision_envelope.dart';
 import 'package:materyalph_api_client/src/model/request_document_export202_response.dart';
 import 'package:materyalph_api_client/src/model/resend_bot_challenge_request.dart';
 import 'package:materyalph_api_client/src/model/resolve_notification200_response.dart';
@@ -964,6 +1002,7 @@ import 'package:materyalph_api_client/src/model/site_inspection_variant.dart';
 import 'package:materyalph_api_client/src/model/site_inspection_version.dart';
 import 'package:materyalph_api_client/src/model/stale_listing.dart';
 import 'package:materyalph_api_client/src/model/statement_approve_request.dart';
+import 'package:materyalph_api_client/src/model/statement_invoice_update_request.dart';
 import 'package:materyalph_api_client/src/model/statement_payment_request.dart';
 import 'package:materyalph_api_client/src/model/stock_confirmation_item.dart';
 import 'package:materyalph_api_client/src/model/stock_confirmation_request.dart';
@@ -1024,6 +1063,13 @@ import 'package:materyalph_api_client/src/model/tax_package_review.dart';
 import 'package:materyalph_api_client/src/model/threshold_status_event.dart';
 import 'package:materyalph_api_client/src/model/user_identity.dart';
 import 'package:materyalph_api_client/src/model/vehicle_issue_request.dart';
+import 'package:materyalph_api_client/src/model/vendor_account_deletion_blockers.dart';
+import 'package:materyalph_api_client/src/model/vendor_account_deletion_preview.dart';
+import 'package:materyalph_api_client/src/model/vendor_account_deletion_preview_envelope.dart';
+import 'package:materyalph_api_client/src/model/vendor_account_deletion_request.dart';
+import 'package:materyalph_api_client/src/model/vendor_account_deletion_result.dart';
+import 'package:materyalph_api_client/src/model/vendor_account_deletion_result_envelope.dart';
+import 'package:materyalph_api_client/src/model/vendor_account_retained_record.dart';
 import 'package:materyalph_api_client/src/model/vendor_activation_snapshot.dart';
 import 'package:materyalph_api_client/src/model/vendor_address_geocode.dart';
 import 'package:materyalph_api_client/src/model/vendor_address_geocode_envelope.dart';
@@ -1100,6 +1146,8 @@ import 'package:materyalph_api_client/src/model/vendor_invitation_acceptance.dar
 import 'package:materyalph_api_client/src/model/vendor_invitation_envelope.dart';
 import 'package:materyalph_api_client/src/model/vendor_invitation_request.dart';
 import 'package:materyalph_api_client/src/model/vendor_invoice_billing_details.dart';
+import 'package:materyalph_api_client/src/model/vendor_invoice_preset.dart';
+import 'package:materyalph_api_client/src/model/vendor_invoice_preset_envelope.dart';
 import 'package:materyalph_api_client/src/model/vendor_materials_analytics_detail.dart';
 import 'package:materyalph_api_client/src/model/vendor_materials_analytics_detail_envelope.dart';
 import 'package:materyalph_api_client/src/model/vendor_materials_analytics_detail_group.dart';
@@ -1143,6 +1191,7 @@ import 'package:materyalph_api_client/src/model/vendor_product_analytics_product
 import 'package:materyalph_api_client/src/model/vendor_product_analytics_summaries.dart';
 import 'package:materyalph_api_client/src/model/vendor_product_analytics_summaries_envelope.dart';
 import 'package:materyalph_api_client/src/model/vendor_product_analytics_summaries_items_inner.dart';
+import 'package:materyalph_api_client/src/model/vendor_product_sales_breakdown.dart';
 import 'package:materyalph_api_client/src/model/vendor_restriction.dart';
 import 'package:materyalph_api_client/src/model/vendor_restriction_envelope.dart';
 import 'package:materyalph_api_client/src/model/vendor_review_edit_request.dart';
@@ -1178,6 +1227,8 @@ import 'package:materyalph_api_client/src/model/vendor_team_performance_trend_po
 import 'package:materyalph_api_client/src/model/vendor_team_quotation_performance.dart';
 import 'package:materyalph_api_client/src/model/vendor_team_reply_time.dart';
 import 'package:materyalph_api_client/src/model/vendor_team_sales_performance.dart';
+import 'package:materyalph_api_client/src/model/vendor_threshold_payments.dart';
+import 'package:materyalph_api_client/src/model/vendor_threshold_payments_envelope.dart';
 import 'package:materyalph_api_client/src/model/vendor_tin_reveal.dart';
 import 'package:materyalph_api_client/src/model/vendor_tin_reveal_envelope.dart';
 import 'package:materyalph_api_client/src/model/vendor_verification_draft.dart';
@@ -1206,8 +1257,19 @@ import 'package:materyalph_api_client/src/model/withholding_accumulator_detail.d
 import 'package:materyalph_api_client/src/model/withholding_accumulator_detail_envelope.dart';
 import 'package:materyalph_api_client/src/model/withholding_accumulator_list_envelope.dart';
 import 'package:materyalph_api_client/src/model/withholding_accumulator_view.dart';
+import 'package:materyalph_api_client/src/model/withholding_calculation.dart';
+import 'package:materyalph_api_client/src/model/withholding_calculation_breakdown.dart';
+import 'package:materyalph_api_client/src/model/withholding_payment_calculation.dart';
+import 'package:materyalph_api_client/src/model/withholding_recorded_payment.dart';
+import 'package:materyalph_api_client/src/model/withholding_register.dart';
+import 'package:materyalph_api_client/src/model/withholding_register_envelope.dart';
 import 'package:materyalph_api_client/src/model/withholding_threshold_calculation.dart';
 import 'package:materyalph_api_client/src/model/withholding_threshold_panel.dart';
+import 'package:materyalph_api_client/src/model/withholding_vendor_detail.dart';
+import 'package:materyalph_api_client/src/model/withholding_vendor_detail_envelope.dart';
+import 'package:materyalph_api_client/src/model/withholding_vendor_detail_envelope_meta.dart';
+import 'package:materyalph_api_client/src/model/withholding_vendor_row.dart';
+import 'package:materyalph_api_client/src/model/withholding_year_limit.dart';
 import 'package:materyalph_api_client/src/model/work_package_alternative.dart';
 import 'package:materyalph_api_client/src/model/work_package_alternative_page.dart';
 import 'package:materyalph_api_client/src/model/work_package_alternative_page_excluded.dart';
@@ -1342,6 +1404,8 @@ part 'serializers.g.dart';
   AnalyticsUnit,
   AnalyticsWindow,
   ApiError,
+  AssessedOnlinePayment,
+  AssessedOnlinePaymentTotals,
   AuditActionListEnvelope,
   AuditEvent,$AuditEvent,
   AuditEventDetail,
@@ -1364,6 +1428,10 @@ part 'serializers.g.dart';
   AutoAcceptReason,
   AutoAcceptResume,
   AutoAcceptStatus,
+  AutomatedResponseOption,
+  AutomatedResponseSettings,
+  AutomatedResponseSettingsEnvelope,
+  AutomaticRecoveryHealth,
   BadgeMetric,
   BadgeState,
   BadgeStateScopesInner,
@@ -1434,6 +1502,10 @@ part 'serializers.g.dart';
   BuyerOrderReviews,
   BuyerOrderReviewsEnvelope,
   BuyerOriginRequest,
+  BuyerRatingSummary,
+  BuyerReceivedRating,
+  BuyerReceivedRatingsEnvelope,
+  BuyerReceivedRatingsMeta,
   BuyerReviewEditRequest,
   BuyerReviewSubmitRequest,
   BuyerReviewSubmitRequestProductReviewsInner,
@@ -1504,6 +1576,9 @@ part 'serializers.g.dart';
   ChannelFeeVersion,
   ChannelFeeVersionListEnvelope,
   ChatAttachment,
+  ChatAutomatedChoice,
+  ChatAutomatedOption,
+  ChatAutomatedReply,
   ChatChannelAuth,
   ChatChannelSignature,
   ChatCreate,
@@ -1545,6 +1620,7 @@ part 'serializers.g.dart';
   ChatStore,
   ChatTransfer,
   ChatTyping,
+  ChatWorkPackageAttachment,
   CheckoutChildOrder,
   CheckoutGroupPreview,
   CheckoutInvoiceDetails,
@@ -1556,10 +1632,13 @@ part 'serializers.g.dart';
   CheckoutSubmissionEnvelope,
   CheckoutSubmitRequest,
   CheckoutVendorRef,
+  CommissionEmailSummary,
   CommissionPolicies,
   CommissionPoliciesEnvelope,
   CommissionPolicy,
   CommissionPolicyEnvelope,
+  CommissionPolicyPreview,
+  CommissionPolicyPreviewEnvelope,
   CommissionPolicyPublishRequest,
   CommissionTrendPoint,
   ComparableGroupCreate,
@@ -1627,6 +1706,7 @@ part 'serializers.g.dart';
   DeliveryRoute,
   DeliveryVehicleOption,
   DeliveryVehicleOptionsEnvelope,
+  DeliveryVehicleProfile,
   DeliveryVehicleSelection,
   DeliveryWorkspacePage,
   DeliveryWorkspacePageMeta,
@@ -1717,7 +1797,12 @@ part 'serializers.g.dart';
   EnforcementDetail,
   EnforcementDetailEnvelope,
   EnforcementEvent,
+  EnforcementEvidence,
+  EnforcementEvidenceEnvelope,
+  EnforcementEvidenceLinkEnvelope,
+  EnforcementEvidenceLinkEnvelopeData,
   EnforcementListEnvelope,
+  EnforcementListEnvelopeMeta,
   EnforcementRecordRequest,
   EnforcementSubjectEnvelope,
   EnforcementSubjectEnvelopeData,
@@ -1853,18 +1938,24 @@ part 'serializers.g.dart';
   InvestigationAckEnvelope,
   InvestigationReasonRequest,
   InvoiceBillingDetailsRequest,
+  InvoiceBillingSnapshot,
+  InvoiceDraft,
   InvoiceExplanationRequest,
   InvoiceListMeta,
   InvoiceLogEnvelope,
   InvoiceLogRow,
   InvoiceOrderLine,
+  InvoiceOrderSummary,
+  InvoicePresetInput,
   InvoiceRecordView,
   InvoiceRequestAnswer,
   InvoiceRequestCreate,
   InvoiceRequestView,
+  InvoiceSendInput,
   ListDocumentExports200Response,
   ListNotificationFailures200Response,
   ListNotifications200Response,
+  ListOrderDocuments200Response,
   ListTaxPackages200Response,
   ListingAttributeLabel,
   ListingCategoryRef,
@@ -1976,6 +2067,7 @@ part 'serializers.g.dart';
   OrderLineQuantity,
   OrderListEnvelope,
   OrderListMeta,
+  OrderLocationMap,
   OrderNrpc,
   OrderPaymentAvailability,
   OrderPaymentState,
@@ -2006,6 +2098,7 @@ part 'serializers.g.dart';
   PaymentWebhookAck,
   PaymentWebhookAckEnvelope,
   PaymentWebhookPayload,
+  PendingOrderQuotationInput,
   PhysicalHandoverCash,
   PhysicalPaymentRecord,
   PhysicalPaymentSettings,
@@ -2031,6 +2124,7 @@ part 'serializers.g.dart';
   ProcessingFee,
   ProcessingFeeAmount,
   ProductAnalyticsPeriod,
+  ProductAnalyticsRatedProduct,
   ProductAnalyticsRow,
   ProductAnalyticsSegments,
   ProductAnalyticsSegmentsPointsInner,
@@ -2042,6 +2136,7 @@ part 'serializers.g.dart';
   ProductComplianceCaseEnvelopeData,
   ProductComplianceDecision,
   ProductComplianceQueueEnvelope,
+  ProductComplianceQueueEnvelopeMeta,
   ProductComplianceQueueItem,
   ProductDeliveryPreviewRequest,
   ProductRatingSummary,
@@ -2108,6 +2203,8 @@ part 'serializers.g.dart';
   PsgcSearchEnvelopeData,
   PublicAddressSummary,
   PublicBadge,
+  PublicCommissionPolicy,
+  PublicCommissionPolicyEnvelope,
   PublicReview,
   PublicReviewListEnvelope,
   PublicScores,
@@ -2142,6 +2239,9 @@ part 'serializers.g.dart';
   ReimbursementTimelineItem,
   RemittanceQueueEnvelope,
   RemittanceQueueRow,
+  RemittanceReconciliationApproval,
+  RemittanceReconciliationDecision,
+  RemittanceReconciliationDecisionEnvelope,
   RequestDocumentExport202Response,
   ResendBotChallengeRequest,
   ResolveNotification200Response,
@@ -2182,6 +2282,7 @@ part 'serializers.g.dart';
   SiteInspectionVersion,
   StaleListing,
   StatementApproveRequest,
+  StatementInvoiceUpdateRequest,
   StatementPaymentRequest,
   StockConfirmationItem,
   StockConfirmationRequest,
@@ -2242,6 +2343,13 @@ part 'serializers.g.dart';
   ThresholdStatusEvent,
   UserIdentity,
   VehicleIssueRequest,
+  VendorAccountDeletionBlockers,
+  VendorAccountDeletionPreview,
+  VendorAccountDeletionPreviewEnvelope,
+  VendorAccountDeletionRequest,
+  VendorAccountDeletionResult,
+  VendorAccountDeletionResultEnvelope,
+  VendorAccountRetainedRecord,
   VendorActivationSnapshot,
   VendorAddressGeocode,
   VendorAddressGeocodeEnvelope,
@@ -2318,6 +2426,8 @@ part 'serializers.g.dart';
   VendorInvitationEnvelope,
   VendorInvitationRequest,
   VendorInvoiceBillingDetails,
+  VendorInvoicePreset,
+  VendorInvoicePresetEnvelope,
   VendorMaterialsAnalyticsDetail,
   VendorMaterialsAnalyticsDetailEnvelope,
   VendorMaterialsAnalyticsDetailGroup,
@@ -2361,6 +2471,7 @@ part 'serializers.g.dart';
   VendorProductAnalyticsSummaries,
   VendorProductAnalyticsSummariesEnvelope,
   VendorProductAnalyticsSummariesItemsInner,
+  VendorProductSalesBreakdown,
   VendorRestriction,
   VendorRestrictionEnvelope,
   VendorReviewEditRequest,
@@ -2396,6 +2507,8 @@ part 'serializers.g.dart';
   VendorTeamQuotationPerformance,
   VendorTeamReplyTime,
   VendorTeamSalesPerformance,
+  VendorThresholdPayments,
+  VendorThresholdPaymentsEnvelope,
   VendorTinReveal,
   VendorTinRevealEnvelope,
   VendorVerificationDraft,
@@ -2424,8 +2537,19 @@ part 'serializers.g.dart';
   WithholdingAccumulatorDetailEnvelope,
   WithholdingAccumulatorListEnvelope,
   WithholdingAccumulatorView,
+  WithholdingCalculation,
+  WithholdingCalculationBreakdown,
+  WithholdingPaymentCalculation,
+  WithholdingRecordedPayment,
+  WithholdingRegister,
+  WithholdingRegisterEnvelope,
   WithholdingThresholdCalculation,
   WithholdingThresholdPanel,
+  WithholdingVendorDetail,
+  WithholdingVendorDetailEnvelope,
+  WithholdingVendorDetailEnvelopeMeta,
+  WithholdingVendorRow,
+  WithholdingYearLimit,
   WorkPackageAlternative,
   WorkPackageAlternativePage,
   WorkPackageAlternativePageExcluded,
@@ -2564,6 +2688,10 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<DirectorySanction>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(WithholdingRecordedPayment)]),
+        () => ListBuilder<WithholdingRecordedPayment>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(ActivationBlocker)]),
         () => ListBuilder<ActivationBlocker>(),
       )
@@ -2678,6 +2806,14 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(DashboardCount)]),
         () => ListBuilder<DashboardCount>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(WithholdingPaymentCalculation)]),
+        () => ListBuilder<WithholdingPaymentCalculation>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(VendorAccountRetainedRecord)]),
+        () => ListBuilder<VendorAccountRetainedRecord>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(GooglePlacePhoto)]),
@@ -2832,6 +2968,10 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<FavoriteSupplier>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ChatAutomatedOption)]),
+        () => ListBuilder<ChatAutomatedOption>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(OrderDeliveryVehicle)]),
         () => ListBuilder<OrderDeliveryVehicle>(),
       )
@@ -2940,6 +3080,10 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<AdminAnalyticsPoint>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(AutomatedResponseOption)]),
+        () => ListBuilder<AutomatedResponseOption>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(FulfillmentArrangementVehicle)]),
         () => ListBuilder<FulfillmentArrangementVehicle>(),
       )
@@ -3006,6 +3150,10 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(CancellationRemedy)]),
         () => ListBuilder<CancellationRemedy>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(ProductAnalyticsRatedProduct)]),
+        () => ListBuilder<ProductAnalyticsRatedProduct>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(WorkPackageSummary)]),
@@ -3260,12 +3408,20 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<ProjectArrangement>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(WithholdingVendorRow)]),
+        () => ListBuilder<WithholdingVendorRow>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(PsgcAreaOption)]),
         () => ListBuilder<PsgcAreaOption>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(VendorDashboardProduct)]),
         () => ListBuilder<VendorDashboardProduct>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(AssessedOnlinePayment)]),
+        () => ListBuilder<AssessedOnlinePayment>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(GeoBreadcrumb)]),
@@ -3310,6 +3466,10 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(ProductAnalyticsSeriesPoint)]),
         () => ListBuilder<ProductAnalyticsSeriesPoint>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(EnforcementEvidence)]),
+        () => ListBuilder<EnforcementEvidence>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(DisputeEvidence)]),
@@ -3524,6 +3684,10 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<GooglePlaceAttribute>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(BuyerReceivedRating)]),
+        () => ListBuilder<BuyerReceivedRating>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(CatalogBlocker)]),
         () => ListBuilder<CatalogBlocker>(),
       )
@@ -3640,6 +3804,7 @@ Serializers serializers = (_$serializers.toBuilder()
       ..add(_BooleanConstSerializer<NrpcAcceptRequestAcknowledgedEnum>(NrpcAcceptRequestAcknowledgedEnum.true_, true))
       ..add(_BooleanConstSerializer<RegisterRequestTermsAcceptedEnum>(RegisterRequestTermsAcceptedEnum.true_, true))
       ..add(_BooleanConstSerializer<RegisterRequestPrivacyAcceptedEnum>(RegisterRequestPrivacyAcceptedEnum.true_, true))
+      ..add(_BooleanConstSerializer<VendorAccountDeletionResultSignInRequiredEnum>(VendorAccountDeletionResultSignInRequiredEnum.true_, true))
       ..add(_BooleanConstSerializer<VendorCommissionAcceptanceAcceptedEnum>(VendorCommissionAcceptanceAcceptedEnum.true_, true))
       ..add(_BooleanConstSerializer<VendorVerificationSubmitPrivacyAcknowledgedEnum>(VendorVerificationSubmitPrivacyAcknowledgedEnum.true_, true))
       ..add(const DateSerializer())

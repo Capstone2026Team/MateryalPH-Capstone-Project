@@ -7,6 +7,12 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(VerifiedVendorSummary, () {
+    // Current active automatic awards; suppressed or revoked badges are omitted. Tier 2 only.
+    // BuiltList<PublicBadge> badges
+    test('to test the property `badges`', () async {
+      // TODO
+    });
+
     // String logoUrl
     test('to test the property `logoUrl`', () async {
       // TODO

@@ -10,6 +10,7 @@ use App\Domain\Disputes\DisputeRules;
 use App\Domain\Fulfillment\OrderEvidenceFiles;
 use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
+use App\Domain\Notifications\NotificationService;
 use App\Domain\Orders\OrderAccess;
 use App\Domain\Orders\OrderNotifier;
 use App\Domain\Orders\OrderStates;
@@ -77,29 +78,143 @@ final class InvoiceService
      * @param  array{invoice_type: string, issuer_name: string, invoice_number: string, issued_on: string, amount_centavos: int, vat_centavos?: int|null, vat_exempt_centavos?: int|null,
      *               zero_rated_centavos?: int|null, related_line_ids?: list<string>, source_system: string, invoicing_method: string, amends_invoice_record_id?: string|null, invoice_request_id?: string|null}  $input
      */
-    public function upload(Request $request, string $orderId, array $input, UploadedFile $file): string
+    public function upload(Request $request, string $orderId, array $input, ?UploadedFile $file, int $version): string
     {
         $scope = $this->vendorScope($request, self::UPLOAD, 'Only the Owner, Store Manager or Store Staff can upload the official invoice. Customer Service can follow its status.');
         $key = $this->keys->requireIdempotencyKey($request);
         $preview = $this->orders->vendorOrder($scope, $orderId);
-        $fileId = $this->files->store($file, (string) $preview->id, self::PURPOSE, (int) $request->user()->getKey(), false);
+        if ($file !== null) {
+            // The shared multipart replay hash omits files. Include the actual file digest for this use case.
+            $request->merge(['_invoice_file_sha256' => hash_file('sha256', (string) $file->getRealPath())]);
+        }
+        if ($this->keys->replayed($request, 'INVOICE_DRAFT', $key, $orderId)) {
+            return (string) DB::table('invoice_drafts')->where('order_id', $orderId)->value('id');
+        }
+        $this->assertEditable($preview);
+        $fileId = $file === null ? null : $this->files->store($file, (string) $preview->id, self::PURPOSE, (int) $request->user()->getKey(), false);
+        $used = false;
         try {
-            return DB::transaction(function () use ($request, $scope, $orderId, $input, $key, $fileId): string {
-                if ($this->keys->replayed($request, 'INVOICE_UPLOAD', $key, $orderId)) {
-                    return (string) DB::table('invoice_records')->where('order_id', $orderId)->orderByDesc('created_at')->value('id');
-                }
+            $id = DB::transaction(function () use ($request, $scope, $orderId, $input, $key, $fileId, $version, &$used): string {
                 $order = $this->orders->vendorOrder($scope, $orderId, true);
-                if (in_array($order->order_state, self::NOT_YET_A_SALE, true)) {
-                    throw new AuthenticationException('INVOICE_NOT_DUE', 'An invoice is recorded once the sale is confirmed.', 409, ['order_state' => $order->order_state]);
+                if ($this->keys->replayed($request, 'INVOICE_DRAFT', $key, $orderId)) {
+                    return (string) DB::table('invoice_drafts')->where('order_id', $orderId)->value('id');
                 }
-                $id = $this->insertRecord($order, $scope, $input, $fileId, $request);
-                $this->keys->claim($request, 'INVOICE_UPLOAD', $key, $orderId, 201);
+                $this->assertEditable($order);
+                $draft = DB::table('invoice_drafts')->where('order_id', $order->id)->lockForUpdate()->first();
+                $this->requireVersion($draft, $version);
+                $values = $input;
+                $latest = $this->latestRecord((string) $order->id);
+                if ($latest !== null) {
+                    $values['amends_invoice_record_id'] = (string) $latest->id;
+                }
+                $this->validateMetadata($order, $values);
+                $nextFile = $fileId ?? $draft?->file_id;
+                if ($nextFile === null) {
+                    throw new AuthenticationException('VALIDATION_FAILED', 'Upload the invoice copy before saving.', 422, ['file' => ['Attach a PDF, JPG or PNG copy.']]);
+                }
+                $id = $draft->id ?? (string) Str::uuid7();
+                $fields = ['payload' => json_encode($values, JSON_THROW_ON_ERROR), 'file_id' => $nextFile, 'sent_record_id' => null, 'sent_at' => null,
+                    'lock_version' => $version + 1, 'updated_by_user_id' => $request->user()->getKey(), 'updated_at' => now()];
+                if ($draft === null) {
+                    DB::table('invoice_drafts')->insert($fields + ['id' => $id, 'order_id' => $order->id, 'vendor_organization_id' => $scope['organization_id'], 'created_at' => now()]);
+                } else {
+                    DB::table('invoice_drafts')->where('id', $id)->update($fields);
+                }
+                $used = true;
+                $this->keys->claim($request, 'INVOICE_DRAFT', $key, $orderId, 201);
+                $this->audit->account($request, 'INVOICE_DRAFT_SAVED', 'ORDER', (string) $order->id, after: ['draft_id' => $id, 'lock_version' => $version + 1]);
 
-                return $id;
+                return (string) $id;
             });
+            if (! $used && $fileId !== null) {
+                $this->files->discard([$fileId]);
+            }
+
+            return $id;
         } catch (Throwable $exception) {
             $this->files->discard([$fileId]);
             throw $exception;
+        }
+    }
+
+    public function send(Request $request, string $orderId, int $version): void
+    {
+        $scope = $this->vendorScope($request, self::UPLOAD, 'Only the Owner, Store Manager or Store Staff can send an invoice copy.');
+        $key = $this->keys->requireIdempotencyKey($request);
+        DB::transaction(function () use ($request, $scope, $orderId, $version, $key): void {
+            $order = $this->orders->vendorOrder($scope, $orderId, true);
+            if ($this->keys->replayed($request, 'INVOICE_SEND', $key, $orderId)) {
+                return;
+            }
+            $this->assertEditable($order);
+            $draft = DB::table('invoice_drafts')->where('order_id', $orderId)->lockForUpdate()->first();
+            $this->requireVersion($draft, $version);
+            if ($draft === null || $draft->sent_record_id !== null
+                || ! DB::table('files')->where('id', $draft->file_id)->where('scan_state', 'CLEAN')->where('visibility', 'PRIVATE')->exists()) {
+                throw new AuthenticationException('INVOICE_DRAFT_NOT_READY', 'Upload and save an invoice copy before sending.', 409);
+            }
+            $payload = json_decode((string) $draft->payload, true, flags: JSON_THROW_ON_ERROR);
+            $id = $this->insertRecord($order, $scope, $payload, (string) $draft->file_id, $request);
+            DB::table('invoice_drafts')->where('id', $draft->id)->update(['sent_record_id' => $id, 'sent_at' => now(), 'lock_version' => $version + 1, 'updated_at' => now()]);
+            $this->keys->claim($request, 'INVOICE_SEND', $key, $orderId, 200);
+            $this->audit->account($request, 'INVOICE_SENT', 'INVOICE_RECORD', $id, after: ['order_id' => $orderId, 'draft_id' => $draft->id]);
+        });
+    }
+
+    /** @param array<string, mixed> $defaults */
+    public function savePreset(Request $request, array $defaults, int $version): void
+    {
+        $scope = $this->vendorScope($request, self::UPLOAD, 'Your role cannot change invoice presets.');
+        $key = $this->keys->requireIdempotencyKey($request);
+        DB::transaction(function () use ($request, $scope, $defaults, $version, $key): void {
+            DB::table('vendor_organizations')->where('id', $scope['organization_id'])->lockForUpdate()->first();
+            if ($this->keys->replayed($request, 'INVOICE_PRESET', $key, $scope['organization_id'])) {
+                return;
+            }
+            $this->registeredIssuer($scope['organization_id'], (string) $defaults['issuer_name']);
+            $preset = DB::table('vendor_invoice_presets')->where('vendor_organization_id', $scope['organization_id'])->lockForUpdate()->first();
+            $this->requireVersion($preset, $version);
+            $fields = ['defaults' => json_encode($defaults, JSON_THROW_ON_ERROR), 'lock_version' => $version + 1, 'updated_by_user_id' => $request->user()->getKey(), 'updated_at' => now()];
+            if ($preset === null) {
+                DB::table('vendor_invoice_presets')->insert($fields + ['id' => (string) Str::uuid7(), 'vendor_organization_id' => $scope['organization_id'], 'created_at' => now()]);
+            } else {
+                DB::table('vendor_invoice_presets')->where('id', $preset->id)->update($fields);
+            }
+            $this->keys->claim($request, 'INVOICE_PRESET', $key, $scope['organization_id'], 200);
+            $this->audit->account($request, 'INVOICE_PRESET_SAVED', 'VENDOR_ORGANIZATION', $scope['organization_id'], after: ['lock_version' => $version + 1]);
+        });
+    }
+
+    public function canPrepare(object $order): bool
+    {
+        if (in_array($order->order_state, self::NOT_YET_A_SALE, true)) {
+            return false;
+        }
+        $latest = $this->latestRecord((string) $order->id);
+
+        return $latest === null || DB::table('invoice_requests')->where('order_id', $order->id)
+            ->where(function ($query) use ($latest): void {
+                $query->where(fn ($q) => $q->where('kind', 'CORRECTION')->where('state', 'REQUESTED')->where('invoice_record_id', $latest->id))
+                    ->orWhere(fn ($q) => $q->where('state', 'RETURNED_FOR_CORRECTION')->where('fulfilled_invoice_record_id', $latest->id));
+            })->exists();
+    }
+
+    private function assertEditable(object $order): void
+    {
+        if (! $this->canPrepare($order)) {
+            throw new AuthenticationException('INVOICE_EDIT_LOCKED', 'This sent invoice is locked. A Buyer correction or return is required before preparing a new version.', 409);
+        }
+    }
+
+    private function latestRecord(string $orderId): ?object
+    {
+        return DB::table('invoice_records')->where('order_id', $orderId)->orderByDesc('created_at')->orderByDesc('id')->first();
+    }
+
+    private function requireVersion(?object $row, int $version): void
+    {
+        if (($row === null ? 0 : (int) $row->lock_version) !== $version) {
+            throw new AuthenticationException('RESOURCE_VERSION_CONFLICT', 'This invoice or preset changed. Reload the latest version before saving.', 409);
         }
     }
 
@@ -162,10 +277,16 @@ final class InvoiceService
                 throw new AuthenticationException('INVOICE_NOT_DUE', 'You can request an invoice once the Vendor confirms the sale.', 409);
             }
             $recordId = null;
+            if ($input['kind'] === 'COPY' && DB::table('invoice_records')->where('order_id', $orderId)->where('invoice_type', 'VENDOR_GOODS_INVOICE')->exists()) {
+                throw new AuthenticationException('INVOICE_COPY_ALREADY_SENT', 'The Vendor has already sent the invoice copy. Open it or request a correction.', 409);
+            }
             if ($input['kind'] === 'CORRECTION') {
                 $recordId = DB::table('invoice_records')->where('id', self::uuid((string) ($input['invoice_record_id'] ?? '')))->where('order_id', $order->id)->value('id');
                 if ($recordId === null) {
                     throw new AuthenticationException('VALIDATION_FAILED', 'Choose the invoice that needs a correction.', 422, ['invoice_record_id' => ['Choose an uploaded invoice.']]);
+                }
+                if ($recordId !== $this->latestRecord((string) $order->id)?->id) {
+                    throw new AuthenticationException('INVOICE_REQUEST_STATE_CONFLICT', 'A newer invoice copy is available. Refresh and request a correction to the latest version.', 409);
                 }
             }
             if (DB::table('invoice_requests')->where('order_id', $order->id)->where('kind', $input['kind'])->where('state', '<>', 'CLOSED')->exists()) {
@@ -199,7 +320,8 @@ final class InvoiceService
                 throw new AuthenticationException('INVOICE_REQUEST_NOT_FOUND', 'This request is unavailable.', 404);
             }
             if ($action === 'RETURN') {
-                if (! in_array($row->state, ['UPLOADED', 'DOWNLOADED'], true) || mb_strlen(trim((string) $reason)) < 10) {
+                if (! in_array($row->state, ['UPLOADED', 'DOWNLOADED'], true) || mb_strlen(trim((string) $reason)) < 10
+                    || $row->fulfilled_invoice_record_id !== $this->latestRecord((string) $order->id)?->id) {
                     throw new AuthenticationException('INVOICE_REQUEST_STATE_CONFLICT', 'Return an uploaded document with the correction needed (at least 10 characters).', 409);
                 }
                 DB::table('invoice_requests')->where('id', $row->id)->update(['state' => 'RETURNED_FOR_CORRECTION', 'details' => mb_substr(trim((string) $row->details)."\n\nReturned: ".trim((string) $reason), 0, 4000),
@@ -223,6 +345,40 @@ final class InvoiceService
         $expires = now()->addMinutes(5);
 
         return ['url' => URL::temporarySignedRoute(self::ROUTES[$audience], $expires, ['recordId' => $recordId]), 'expires_at' => $expires->toIso8601String()];
+    }
+
+    /** @return array{url: string, expires_at: string} */
+    public function draftLink(string $draftId, string $fileId): array
+    {
+        $expires = now()->addMinutes(5);
+
+        return ['url' => URL::temporarySignedRoute('invoices.vendor.draft.file', $expires, ['draftId' => $draftId, 'fileId' => $fileId]), 'expires_at' => $expires->toIso8601String()];
+    }
+
+    public function streamDraft(Request $request, string $draftId, string $fileId): StreamedResponse
+    {
+        $scope = $this->vendorScope($request, self::UPLOAD, 'Your role cannot open invoice drafts.');
+        $draft = DB::table('invoice_drafts')->where('id', self::uuid($draftId))->where('file_id', self::uuid($fileId))->where('vendor_organization_id', $scope['organization_id'])->first();
+        if ($draft === null) {
+            throw new AuthenticationException('FILE_NOT_FOUND', 'This draft file is unavailable.', 404);
+        }
+        $this->orders->vendorOrder($scope, (string) $draft->order_id);
+        $file = DB::table('files')->where('id', $draft->file_id)->where('scan_state', 'CLEAN')->where('visibility', 'PRIVATE')->first();
+        if ($file === null) {
+            throw new AuthenticationException('FILE_NOT_FOUND', 'This draft file is unavailable.', 404);
+        }
+        $metadata = json_decode((string) ($file->metadata ?? '{}'), true) ?: [];
+        $stream = Storage::disk(is_string($metadata['disk'] ?? null) ? $metadata['disk'] : $this->store->privateDisk())->readStream($file->object_key);
+        if (! is_resource($stream)) {
+            throw new AuthenticationException('FILE_UNAVAILABLE', 'The invoice file is temporarily unavailable.', 503);
+        }
+        $this->audit->account($request, 'INVOICE_DRAFT_OPENED', 'ORDER', (string) $draft->order_id, after: ['draft_id' => $draftId]);
+
+        return response()->streamDownload(static function () use ($stream): void {
+            fpassthru($stream);
+            fclose($stream);
+        }, 'invoice-copy',
+            ['Content-Type' => $file->content_type, 'Cache-Control' => 'private, no-store', 'X-Content-Type-Options' => 'nosniff', 'Content-Disposition' => 'inline']);
     }
 
     /** Streams an invoice copy after re-authorizing the caller and records the download with the actual user. */
@@ -287,29 +443,7 @@ final class InvoiceService
      */
     private function insertRecord(object $order, array $scope, array $input, string $fileId, Request $request): string
     {
-        if (! in_array($input['invoice_type'], self::VENDOR_TYPES, true)) {
-            throw new AuthenticationException('INVOICE_TYPE_NOT_ALLOWED', 'Upload a Vendor goods invoice or a Vendor adjustment document. Platform, processor and Form 2307 documents are separate records.', 422);
-        }
-        $organization = DB::table('vendor_organizations')->where('id', $order->vendor_organization_id)->first(['legal_business_name', 'legal_name']);
-        $registered = (string) ($organization->legal_business_name ?? $organization->legal_name ?? '');
-        if ($registered === '' || self::normalize((string) $input['issuer_name']) !== self::normalize($registered)) {
-            throw new AuthenticationException('INVOICE_ISSUER_MISMATCH', 'The issuer must be your registered business name exactly as verified: '.$registered.'.', 422, ['issuer_name' => ['Use the registered business name: '.$registered.'.']]);
-        }
-        $amends = null;
-        if (($input['amends_invoice_record_id'] ?? null) !== null) {
-            $amends = DB::table('invoice_records')->where('id', self::uuid((string) $input['amends_invoice_record_id']))->where('order_id', $order->id)->first();
-            if ($amends === null) {
-                throw new AuthenticationException('VALIDATION_FAILED', 'Choose an invoice of this order to amend.', 422, ['amends_invoice_record_id' => ['Choose an uploaded invoice of this order.']]);
-            }
-        }
-        if ($input['invoice_type'] === 'VENDOR_ADJUSTMENT_DOCUMENT' && $amends === null) {
-            throw new AuthenticationException('VALIDATION_FAILED', 'An adjustment document references the invoice it adjusts.', 422, ['amends_invoice_record_id' => ['Choose the invoice this document adjusts.']]);
-        }
-        $issuerKey = hash_hmac('sha256', 'INVOICE_ISSUER|'.$order->vendor_organization_id, (string) config('app.key'));
-        $numberHash = hash_hmac('sha256', 'INVOICE_NUMBER|'.Str::upper(trim((string) $input['invoice_number'])), (string) config('app.key'));
-        if (DB::table('invoice_records')->where('environment', 'TEST')->where('issuer_taxpayer_key_hash', $issuerKey)->where('invoice_number_hash', $numberHash)->exists()) {
-            throw new AuthenticationException('INVOICE_NUMBER_DUPLICATE', 'This invoice number is already recorded for your store. Upload a correction with its own number.', 409);
-        }
+        [$registered, $amends, $issuerKey, $numberHash] = $this->validateMetadata($order, $input);
         $lines = DB::table('order_lines')->where('order_id', $order->id)->pluck('id')->map(fn ($id): string => (string) $id)->all();
         $related = array_values(array_intersect($input['related_line_ids'] ?? [], $lines)) ?: $lines;
         [$expectedTotal, $expectedVat] = self::expected($order, $related, count($related) === count($lines));
@@ -330,22 +464,66 @@ final class InvoiceService
                 'expected_vat_centavos' => $expectedVat], JSON_THROW_ON_ERROR),
             'related_line_ids' => json_encode($related, JSON_THROW_ON_ERROR), 'source_system' => $input['source_system'], 'invoicing_method' => $input['invoicing_method'],
             'e_invoicing_coverage' => 'REVIEW_REQUIRED', 'amends_invoice_record_id' => $amends?->id, 'expected_total_centavos' => $expectedTotal, 'reconciliation_difference_centavos' => $difference,
-            'reconciliation_state' => $state, 'invoice_request_id' => $requestRow?->id, 'created_at' => now(), 'updated_at' => now(),
+            'reconciliation_state' => $state, 'invoice_request_id' => $requestRow?->id, 'commercial_snapshot' => json_encode(InvoiceOrderSummary::forOrder((string) $order->id), JSON_THROW_ON_ERROR),
+            'created_at' => now(), 'updated_at' => now(),
         ]);
         if ($requestRow !== null) {
             DB::table('invoice_requests')->where('id', $requestRow->id)->update(['state' => 'UPLOADED', 'fulfilled_invoice_record_id' => $id, 'uploaded_at' => now(), 'lock_version' => (int) $requestRow->lock_version + 1, 'updated_at' => now()]);
         }
         if ($amends !== null && $amends->reconciliation_state === 'INVOICE_RECONCILIATION_REQUIRED') {
-            DB::table('invoice_records')->where('id', $amends->id)->update(['reconciliation_state' => 'CORRECTED', 'reconciliation_note' => 'Corrected by a later uploaded document.', 'updated_at' => now()]);
+            DB::table('invoice_records')->where('id', $amends->id)->update(['reconciliation_state' => 'CORRECTED', 'reconciliation_note' => 'Corrected by a later sent document.', 'updated_at' => now()]);
         }
         $this->audit->account($request, 'INVOICE_UPLOADED', 'INVOICE_RECORD', $id, after: ['order_id' => (string) $order->id, 'invoice_type' => $input['invoice_type'],
             'invoice_number' => mb_substr(trim((string) $input['invoice_number']), 0, 64), 'issued_on' => (string) $input['issued_on'], 'reconciliation_state' => $state, 'file_sha256' => (string) DB::table('files')->where('id', $fileId)->value('checksum_sha256')]);
-        $this->notifier->buyer($order, 'Invoice copy available for order '.$order->reference, 'The Vendor uploaded a copy of its invoice. Open the order to view it. MateryalPH stores the copy; the Vendor issues the invoice through its registered process.');
+        $buyerId = DB::table('buyer_profiles')->where('id', $order->buyer_profile_id)->value('user_id');
+        if ($buyerId !== null) {
+            app(NotificationService::class)->record((int) $buyerId, 'INVOICES', 'Invoice copy for order '.$order->reference,
+                'The Vendor sent its invoice copy. Open the order to view the file and details.', 'INVOICE_RECORD', $id, 'invoice-sent|'.$id);
+        }
         if ($state === 'INVOICE_RECONCILIATION_REQUIRED') {
-            $this->notifier->vendor($order, 'Invoice difference on order '.$order->reference, 'The uploaded invoice totals differ from the accepted order. Explain or upload a correction; the Buyer\'s agreed amount does not change.', ['OWNER', 'STORE_MANAGER', 'STORE_STAFF'], category: 'INVOICES');
+            $this->notifier->vendor($order, 'Invoice difference on order '.$order->reference, 'The sent invoice totals differ from the accepted order. Explain the difference; the Buyer\'s agreed amount does not change.', ['OWNER', 'STORE_MANAGER', 'STORE_STAFF'], category: 'INVOICES');
         }
 
         return $id;
+    }
+
+    /** @param array<string, mixed> $input
+     * @return array{string, ?object, string, string}
+     */
+    private function validateMetadata(object $order, array $input): array
+    {
+        if (! in_array($input['invoice_type'], self::VENDOR_TYPES, true)) {
+            throw new AuthenticationException('INVOICE_TYPE_NOT_ALLOWED', 'Upload a Vendor goods invoice or a Vendor adjustment document. Platform, processor and Form 2307 documents are separate records.', 422);
+        }
+        $registered = $this->registeredIssuer((string) $order->vendor_organization_id, (string) $input['issuer_name']);
+        $amends = null;
+        if (($input['amends_invoice_record_id'] ?? null) !== null) {
+            $amends = DB::table('invoice_records')->where('id', self::uuid((string) $input['amends_invoice_record_id']))->where('order_id', $order->id)->first();
+            if ($amends === null) {
+                throw new AuthenticationException('VALIDATION_FAILED', 'Choose an invoice of this order to amend.', 422, ['amends_invoice_record_id' => ['Choose an uploaded invoice of this order.']]);
+            }
+        }
+        if ($input['invoice_type'] === 'VENDOR_ADJUSTMENT_DOCUMENT' && $amends === null) {
+            throw new AuthenticationException('VALIDATION_FAILED', 'An adjustment document references the invoice it adjusts.', 422, ['amends_invoice_record_id' => ['Choose the invoice this document adjusts.']]);
+        }
+        $issuerKey = hash_hmac('sha256', 'INVOICE_ISSUER|'.$order->vendor_organization_id, (string) config('app.key'));
+        $numberHash = hash_hmac('sha256', 'INVOICE_NUMBER|'.Str::upper(trim((string) $input['invoice_number'])), (string) config('app.key'));
+        if (DB::table('invoice_records')->where('environment', 'TEST')->where('issuer_taxpayer_key_hash', $issuerKey)->where('invoice_number_hash', $numberHash)->exists()) {
+            throw new AuthenticationException('INVOICE_NUMBER_DUPLICATE', 'This invoice number is already recorded for your store. Upload a correction with its own number.', 409);
+        }
+
+        return [$registered, $amends, $issuerKey, $numberHash];
+    }
+
+    private function registeredIssuer(string $organizationId, string $issuer): string
+    {
+        $organization = DB::table('vendor_organizations')->where('id', $organizationId)->first(['legal_business_name', 'legal_name']);
+        $registered = (string) ($organization->legal_business_name ?? $organization->legal_name ?? '');
+        if ($registered === '' || self::normalize($issuer) !== self::normalize($registered)) {
+            throw new AuthenticationException('INVOICE_ISSUER_MISMATCH', 'Use the registered business name: '.$registered.'.', 422, ['issuer_name' => ['Use the registered business name: '.$registered.'.']]);
+        }
+
+        return $registered;
     }
 
     private function openRequest(object $order, ?string $requestId, ?object $amends): ?object
@@ -360,7 +538,14 @@ final class InvoiceService
             return $row;
         }
 
-        return (clone $query)->where('kind', $amends === null ? 'COPY' : 'CORRECTION')->orderBy('created_at')->first();
+        return (clone $query)->where(function ($q) use ($amends): void {
+            if ($amends === null) {
+                $q->where('kind', 'COPY');
+            } else {
+                $q->where(fn ($correction) => $correction->where('kind', 'CORRECTION')->where('invoice_record_id', $amends->id))
+                    ->orWhere(fn ($returned) => $returned->where('state', 'RETURNED_FOR_CORRECTION')->where('fulfilled_invoice_record_id', $amends->id));
+            }
+        })->orderBy('created_at')->first();
     }
 
     /**

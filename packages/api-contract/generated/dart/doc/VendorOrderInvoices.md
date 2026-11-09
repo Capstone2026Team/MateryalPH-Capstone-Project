@@ -8,6 +8,7 @@ import 'package:materyalph_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
+**buyerName** | **String** | The order Buyer's display name, available without an invoice request. This is separate from supplied invoice billing details. | [optional]
 **orderId** | **String** |  |
 **orderReference** | **String** |  |
 **status** | **String** |  |
@@ -23,6 +24,10 @@ Name | Type | Description | Notes
 **sourceSystems** | **BuiltList&lt;String&gt;** |  |
 **invoicingMethods** | **BuiltList&lt;String&gt;** |  |
 **lines** | [**BuiltList&lt;InvoiceOrderLine&gt;**](InvoiceOrderLine.md) |  |
+**canSend** | **bool** |  | [optional]
+**draft** | [**InvoiceDraft**](InvoiceDraft.md) |  | [optional]
+**preset** | [**VendorInvoicePreset**](VendorInvoicePreset.md) |  | [optional]
+**orderSummary** | [**InvoiceOrderSummary**](InvoiceOrderSummary.md) |  | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

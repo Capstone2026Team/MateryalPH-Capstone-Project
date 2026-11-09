@@ -1,3 +1,4 @@
+import { AsyncLoading } from './async-state'
 import { useEffect, useId, useRef, useState } from 'react'
 import { loadGoogleMaps as loadSharedGoogleMaps } from './google-maps'
 
@@ -136,7 +137,7 @@ export function LocationPinMap({ latitude, longitude, onCoordinatesChange, brows
 
   return <div className="grid gap-3" aria-describedby={helpId}>
     <div ref={containerRef} style={state === 'unavailable' ? { height: 0 } : undefined} className={`w-full overflow-hidden rounded-control border border-border-default ${className}`} aria-label={label} />
-    {state !== 'ready' && <div role="status" className="text-sm text-text-secondary">{state === 'loading' ? 'Loading Google Maps…' : error ?? unavailableMessage}</div>}
+    {state === 'loading' ? <AsyncLoading compact label="Loading Google Maps…" /> : state !== 'ready' && <div role="status" className="text-sm text-text-secondary">{error ?? unavailableMessage}</div>}
     {state === 'unavailable' && <button type="button" className="min-h-11 text-action-primary underline" onClick={() => setAttempt(value => value + 1)}>Retry map</button>}
     <p id={helpId} className="text-xs text-text-secondary">{instructions}</p>
   </div>

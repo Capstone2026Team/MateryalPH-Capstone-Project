@@ -211,7 +211,7 @@ class _CheckoutProjectScreenState extends State<CheckoutProjectScreen> {
           if (_loading)
             const Padding(
               padding: EdgeInsets.all(24),
-              child: Center(child: CircularProgressIndicator()),
+              child: Center(child: BuyerLoadingIndicator()),
             ),
           if (_hasMore && !_loading && _failure == null)
             OutlinedButton(onPressed: _load, child: const Text('Load more')),

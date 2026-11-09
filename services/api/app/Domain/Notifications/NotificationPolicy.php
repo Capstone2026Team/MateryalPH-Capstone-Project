@@ -6,7 +6,9 @@ namespace App\Domain\Notifications;
 
 use App\Domain\Authorization\AccountAccess;
 use App\Domain\Disputes\DisputeAccess;
+use App\Domain\Finance\CommissionEmails;
 use App\Domain\Identity\AuthenticationException;
+use App\Domain\Invoices\InvoiceAccess;
 use App\Domain\Messaging\ConversationAccess;
 use App\Domain\Orders\OrderAccess;
 use App\Domain\Support\SupportAccess;
@@ -42,6 +44,15 @@ final class NotificationPolicy
         if ($user->account_status !== 'ACTIVE') {
             return false;
         }
+        // A policy notice contains public terms, and must still reach a verified Owner of an inactive
+        // organization with an unsettled bill. It grants no portal or private-document access.
+        $commissionEvent = $notice->resource_type === 'VENDOR_ORGANIZATION' && $notice->category === 'FINANCE_MANDATORY' && is_string($notice->id ?? null)
+            ? DB::table('commission_email_events')->where('notification_id', $notice->id)->where('subject_type', 'POLICY')->first() : null;
+        if ($commissionEvent !== null && $user->account_type === 'VENDOR' && $user->email_verified_at !== null) {
+            return DB::table('vendor_memberships')->where('user_id', $user->getKey())->where('vendor_organization_id', $commissionEvent->vendor_organization_id)
+                ->where('role', 'OWNER')->where('status', 'ACTIVE')->whereNull('deleted_at')->exists()
+                && app(CommissionEmails::class)->eligible()->where('id', $commissionEvent->vendor_organization_id)->exists();
+        }
         if ($notice->category === 'SECURITY' && $notice->resource_type === 'ACCOUNT') {
             return true;
         }
@@ -52,6 +63,11 @@ final class NotificationPolicy
         }
         $type = $notice->resource_type;
         $id = $notice->resource_id;
+        if ($type === 'INVOICE_RECORD') {
+            $order = DB::table('orders as o')->join('invoice_records as i', 'i.order_id', '=', 'o.id')->where('i.id', $id)->first(['o.*']);
+
+            return $order !== null && InvoiceAccess::canDownload($user, 'BUYER', $order);
+        }
         if ($type === 'SUPPORT_TICKET') {
             return is_string($id) && app(SupportAccess::class)->allows($user, $id);
         }
@@ -132,6 +148,7 @@ final class NotificationPolicy
         }
 
         return match ($notice->resource_type) {
+            'INVOICE_RECORD' => '/orders/'.DB::table('invoice_records')->where('id', $notice->resource_id)->value('order_id'),
             'SUPPORT_TICKET' => '/support/'.$notice->resource_id,
             'CONVERSATION' => '/messages/'.$notice->resource_id,
             'VENDOR_LISTING', 'LISTING_VARIANT' => '/products/inventory',
@@ -153,6 +170,7 @@ final class NotificationPolicy
                 'SUSPENSION' => '/dashboard',
                 'INVENTORY', 'AUTO_ACCEPT', 'STOCK_CONFIRMATION' => '/products/inventory',
                 'PRODUCT_COMPLIANCE' => '/products',
+                'FINANCE_MANDATORY', 'FINANCE' => '/finance/commissions',
                 default => '/onboarding/verification'.($notice->resume_key === null ? '' : '?requirement='.rawurlencode($notice->resume_key)),
             },
             default => str_starts_with((string) $notice->category, 'FINANCE') ? '/finance' : ($user->account_type === 'ADMIN' ? '/workspace' : '/settings'),

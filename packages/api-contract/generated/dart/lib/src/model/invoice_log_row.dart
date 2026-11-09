@@ -12,6 +12,7 @@ part 'invoice_log_row.g.dart';
 /// One row of the selected view: an open request, an order without an invoice copy yet, an uploaded record or a reconciliation item.
 ///
 /// Properties:
+/// * [buyerName] - The order Buyer's display name on Vendor DUE rows, including orders without a Buyer invoice request.
 /// * [id]
 /// * [orderId]
 /// * [orderReference]
@@ -42,6 +43,10 @@ part 'invoice_log_row.g.dart';
 /// * [download]
 @BuiltValue()
 abstract class InvoiceLogRow implements Built<InvoiceLogRow, InvoiceLogRowBuilder> {
+  /// The order Buyer's display name on Vendor DUE rows, including orders without a Buyer invoice request.
+  @BuiltValueField(wireName: r'buyer_name')
+  String? get buyerName;
+
   @BuiltValueField(wireName: r'id')
   String? get id;
 
@@ -149,6 +154,13 @@ class _$InvoiceLogRowSerializer implements PrimitiveSerializer<InvoiceLogRow> {
     InvoiceLogRow object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.buyerName != null) {
+      yield r'buyer_name';
+      yield serializers.serialize(
+        object.buyerName,
+        specifiedType: const FullType(String),
+      );
+    }
     if (object.id != null) {
       yield r'id';
       yield serializers.serialize(
@@ -368,6 +380,14 @@ class _$InvoiceLogRowSerializer implements PrimitiveSerializer<InvoiceLogRow> {
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'buyer_name':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.buyerName = valueDes;
+          break;
         case r'id':
           final valueDes = serializers.deserialize(
             value,

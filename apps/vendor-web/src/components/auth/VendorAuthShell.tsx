@@ -1,5 +1,5 @@
-import { AuthLayout, LoginLayout, PortalBrand } from '@materyalph/web-ui'
-import { ArrowLeft, FileCheck2, PackageCheck, ReceiptText, Star } from 'lucide-react'
+import { BackNavigation, AuthLayout, LoginLayout, PortalBrand } from '@materyalph/web-ui'
+import { FileCheck2, PackageCheck, ReceiptText, Star } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 
@@ -8,7 +8,7 @@ export function VendorAuthShell({ title, description, children, scrollPanel = fa
   if (login) return <LoginLayout
     portal="vendor"
     brand={brand}
-    navigation={<nav aria-label="Vendor portal navigation"><Link className="login-layout__return-link" to="/" aria-label="Return to Vendor home" title="Return to Vendor home"><ArrowLeft aria-hidden="true" /></Link></nav>}
+    navigation={<nav aria-label="Vendor portal navigation"><BackNavigation><Link to="/" aria-label="Return to Vendor home" title="Return to Vendor home">Return</Link></BackNavigation></nav>}
     title={title}
     description={description}
   >{children}</LoginLayout>

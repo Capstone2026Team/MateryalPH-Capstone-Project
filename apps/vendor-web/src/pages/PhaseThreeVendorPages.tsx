@@ -1,5 +1,6 @@
-import { DashboardHeader, PageHeader as SharedPageHeader, InfoNote, PortalPagePatterns, FinanceSection, PhysicalPaymentOptions, VendorDeliverySetup } from '@materyalph/web-ui'
+import { BackNavigation, DashboardHeader, EnforcementNoticePopup, PageHeader as SharedPageHeader, InfoNote, PortalPagePatterns, FinanceSection, PhysicalPaymentOptions, VendorDeliverySetup } from '@materyalph/web-ui'
 import { useParams } from 'react-router-dom'
+import { AsyncLoading, RequestErrorState } from '@materyalph/web-ui'
 import { VendorInsightsWorkspace } from './VendorDashboardInsights'
 import { VendorStaffDashboard } from './VendorStaffDashboard'
 import { staffDashboardCopy } from '../lib/staff-dashboard'
@@ -14,9 +15,7 @@ import {
   Scale,
   Truck,
   Wallet,
-  AlertCircle,
   ArrowRight,
-  ArrowLeft,
   CheckCircle2,
   CreditCard,
   FileCheck2,
@@ -25,7 +24,6 @@ import {
   LayoutDashboard,
   Package,
   Pencil,
-  RefreshCw,
   Store,
   UploadCloud,
   Users,
@@ -60,6 +58,7 @@ import { useSidebarScore } from '../lib/sidebar-score'
 import { StoreScoreLine } from '../components/StoreScoreLine'
 import { verificationSteps, setupSteps } from '../lib/onboarding-steps'
 import { StoreBusinessInformation, StoreLocation, StoreVacationMode } from '../components/StoreProfileSections'
+import { VendorAccountDeletion } from '../components/VendorAccountDeletion'
 import { getFinanceOverview, section, updatePhysicalPayments, type PhysicalPaymentSettings } from '../lib/finance-api'
 import { VendorBusinessAddress } from '../components/VendorBusinessAddress'
 import {
@@ -88,11 +87,11 @@ import {
 type JsonRecord = Record<string, ReactNode>
 type OnboardingSectionKey = 'STORE_VERIFICATION' | 'STORE_SETUP'
 
-const vendorModules: Record<string, string> = { orders: 'Orders', fulfillment: 'Fulfillment', messages: 'Messages', invoices: 'E-Invoices', notifications: 'Notifications', disputes: 'Disputes & Appeals', products: 'My Products', vehicles: 'Vehicles', wallet: 'Finance', tracking: 'Team Tracking', performance: 'Store Performance', materials_analytics: 'Materials Analytics', reviews: 'Ratings & Reviews', earnings: 'Earnings' }
-const vendorModuleIcons = { orders: FileText, fulfillment: Truck, messages: MessageSquare, invoices: ReceiptText, disputes: Scale, products: Package, vehicles: Truck, wallet: Wallet, performance: ChartNoAxesCombined, materials_analytics: LineChart, reviews: Star, earnings: CreditCard }
+const vendorModules: Record<string, string> = { orders: 'Orders', fulfillment: 'Fulfillment', messages: 'Messages', invoices: 'E-Invoices', notifications: 'Notifications', disputes: 'Disputes & Appeals', products: 'My Products', vehicles: 'Vehicles', wallet: 'Finance', tracking: 'Team Tracking', performance: 'Store Performance', product_analytics: 'Product Analytics', reviews: 'Ratings & Reviews', earnings: 'Earnings' }
+const vendorModuleIcons = { orders: FileText, fulfillment: Truck, messages: MessageSquare, invoices: ReceiptText, disputes: Scale, products: Package, vehicles: Truck, wallet: Wallet, performance: ChartNoAxesCombined, product_analytics: LineChart, reviews: Star, earnings: CreditCard }
 const vendorNavigation: PortalNavSection[] = [
   { label: 'Overview', items: [{ label: 'Dashboard', href: '/dashboard', icon: <LayoutDashboard size={16} aria-hidden="true" /> }] },
-  ...[['Store Operations', ['orders', 'fulfillment', 'messages', 'invoices', 'disputes', 'reviews']], ['Store Management', ['products', 'vehicles', 'wallet']], ['Analytics', ['performance', 'materials_analytics']]].map(([label, keys]) => ({ label: label as string, items: (keys as string[]).map(key => ({ label: vendorModules[key] ?? key, href: key === 'fulfillment' ? '/fulfillment' : key === 'products' ? '/products' : key === 'vehicles' ? '/vehicles' : key === 'orders' ? '/orders' : key === 'disputes' ? '/disputes' : key === 'invoices' ? '/invoices' : key === 'messages' ? '/messages' : key === 'wallet' ? '/finance' : key === 'earnings' ? '/finance/earnings' : key === 'performance' ? '/performance' : key === 'materials_analytics' ? '/analytics/materials' : key === 'reviews' ? '/reviews' : `/preview/${key}`, icon: (() => { const Icon = vendorModuleIcons[key as keyof typeof vendorModuleIcons]; return <Icon size={18} aria-hidden="true" /> })() })) })),
+  ...[['Store Operations', ['orders', 'fulfillment', 'messages', 'invoices', 'disputes', 'reviews']], ['Store Management', ['products', 'vehicles', 'wallet']], ['Analytics', ['performance', 'product_analytics']]].map(([label, keys]) => ({ label: label as string, items: (keys as string[]).map(key => ({ label: vendorModules[key] ?? key, href: key === 'fulfillment' ? '/fulfillment' : key === 'products' ? '/products' : key === 'vehicles' ? '/vehicles' : key === 'orders' ? '/orders' : key === 'disputes' ? '/disputes' : key === 'invoices' ? '/invoices' : key === 'messages' ? '/messages' : key === 'wallet' ? '/finance' : key === 'earnings' ? '/finance/earnings' : key === 'performance' ? '/performance' : key === 'product_analytics' ? '/analytics/products' : key === 'reviews' ? '/reviews' : `/preview/${key}`, icon: (() => { const Icon = vendorModuleIcons[key as keyof typeof vendorModuleIcons]; return <Icon size={18} aria-hidden="true" /> })() })) })),
   { label: 'Vendor Team Accounts', items: [{ label: 'Team Accounts', href: '/team', icon: <Users size={16} aria-hidden="true" /> }, { label: 'Team Tracking', href: '/preview/tracking', icon: <Activity size={16} aria-hidden="true" /> }] },
   { label: 'Store Profile', items: [{ label: 'Store Profile', href: '/store-profile', icon: <Store size={16} aria-hidden="true" /> }] },
 ]
@@ -159,11 +158,11 @@ function dateInput(value: unknown): string {
 }
 
 export function LoadingState({ label = 'Loading onboarding workspace…' }: { label?: string }) {
-  return <div className="grid min-h-64 place-items-center rounded-surface border border-border-default bg-surface-primary p-8 text-center"><RefreshCw className="animate-spin text-action-primary" size={24} aria-hidden="true" /><p className="mt-3 text-sm text-text-secondary">{label}</p></div>
+  return <AsyncLoading label={label} framed />
 }
 
 export function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
-  return <div className="grid gap-4 rounded-surface border border-status-error/30 bg-red-50 p-6 text-sm text-red-900" role="alert"><div className="flex items-start gap-3"><AlertCircle className="mt-0.5 shrink-0" size={20} aria-hidden="true" /><p>{message}</p></div><Button className="w-fit" variant="secondary" onClick={onRetry}><RefreshCw size={16} aria-hidden="true" /> Try again</Button></div>
+  return <RequestErrorState message={message} onRetry={onRetry} />
 }
 
 export function PageHeader({ eyebrow, title, description, status, actions, compact }: { eyebrow: string; title: string; description: string; status?: string; actions?: ReactNode; compact?: boolean }) {
@@ -206,9 +205,9 @@ export function VendorShell({ activeHref, accountLabel, accountStatus, children,
       if (item.href === '/finance/earnings') return navigationSnapshot.permissions.includes('portal.earnings')
       if (item.href === '/disputes') return navigationSnapshot.permissions.includes('portal.disputes')
       if (item.href === '/invoices') return navigationSnapshot.permissions.includes('portal.invoices')
-      if (item.href === '/performance') return navigationSnapshot.permissions.includes('portal.performance')
-      // Materials Analytics is installed (Phase 14) and shown only to Owner and Store Manager; the API enforces it again.
-      if (item.href === '/analytics/materials') return navigationSnapshot.permissions.includes('materials_analytics.view_competitors')
+      if (item.href === '/performance') return navigationSnapshot.permissions.includes('scores.view_store')
+      // Product Analytics uses the existing product-management grant; the API enforces it again.
+      if (item.href === '/analytics/products') return navigationSnapshot.permissions.includes('catalog.manage')
       if (item.href === '/reviews') return navigationSnapshot.permissions.includes('portal.reviews')
       if (item.href.startsWith('/preview/')) return navigationSnapshot.permissions.includes(`portal.${item.href.split('/').at(-1)}`)
       return true
@@ -217,9 +216,9 @@ export function VendorShell({ activeHref, accountLabel, accountStatus, children,
       ...(item.href === '/messages' ? { updateCountLabel: 'unread message' } : {}),
       ...(item.href === '/disputes' ? { updateCountLabel: 'active dispute' } : {}),
       ...(item.href === '/fulfillment' ? { updateCountLabel: 'pending fulfillment order' } : {}),
-      ...(item.href === '/invoices' ? { updateCountLabel: 'pending invoice request' } : {}),
+      ...(item.href === '/invoices' ? { updateCountLabel: 'pending invoice task' } : {}),
       updateCount: ['/orders', '/messages', '/fulfillment', '/disputes', '/invoices', '/products'].includes(item.href) ? navigationUpdates?.[item.href] ?? 0 : 0,
-      ...item, disabled: item.disabled || ((item.href.startsWith('/preview/') || item.href.startsWith('/finance') || item.href === '/disputes' || item.href === '/invoices' || item.href === '/performance' || item.href === '/analytics/materials' || item.href === '/reviews' || item.href === '/products' || item.href === '/vehicles') && item.href !== '/preview/tracking' && record(navigationSnapshot?.activation).status !== 'ACTIVE'),
+      ...item, disabled: item.disabled || ((item.href.startsWith('/preview/') || item.href.startsWith('/finance') || item.href === '/disputes' || item.href === '/invoices' || item.href === '/performance' || item.href === '/analytics/products' || item.href === '/reviews' || item.href === '/products' || item.href === '/vehicles') && item.href !== '/preview/tracking' && record(navigationSnapshot?.activation).status !== 'ACTIVE'),
     })),
   })).filter(section => section.items.length > 0)
   const [logoutError, setLogoutError] = useState<string | null>(null)
@@ -231,7 +230,7 @@ export function VendorShell({ activeHref, accountLabel, accountStatus, children,
     finally { setSigningOut(false) }
   }
   if (activeHref === '/welcome' || activeHref.startsWith('/onboarding')) return <div className="min-h-screen bg-surface-canvas text-text-strong"><header className="flex flex-wrap items-center justify-between gap-3 border-b border-border-default bg-surface-primary px-6 py-4"><Link to="/dashboard" className="text-xl font-bold">Materyal<span className="text-action-primary">PH</span></Link><p className="text-xs text-text-secondary" aria-label="System date">{portalDate()}</p><PortalAccountMenu portal="vendors" basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} onNavigate={navigate} onSignOut={logout} /></header><main className="mx-auto max-w-7xl p-5 sm:p-8">{refreshError && <StatusMessage tone="error">{refreshError}</StatusMessage>}{children}</main></div>
-  return <PortalShell contentLayout={activeHref === '/preview/tracking' ? 'full' : 'standard'} apiBasePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} onSignOut={logout} onNavigate={navigate} notificationUnreadCount={navigationUpdates?.['/notifications'] ?? 0} portalLabel="VENDOR PORTAL" pageTitle={activeHref === '/settings' ? 'Settings' : activeHref === '/notifications' ? 'Notifications' : activeHref === '/store-profile' ? 'Store Profile' : activeHref.includes('onboarding') ? 'Vendor Onboarding' : vendorNavigation.flatMap(section => section.items).find(item => item.href === activeHref)?.label ?? 'Dashboard'} dateLabel={portalDate()} sections={navigation} activeHref={activeHref} accountLabel={accountLabel} accountStatus={accountStatus ?? 'Vendor account'} accountAvatarUrl={storeLogoUrl} accountScore={accountScore} headerActions={<><Link className="inline-flex min-h-11 items-center px-3 text-sm font-semibold" to="/support/requests">Support</Link><Link className="inline-flex min-h-11 items-center px-3 text-sm font-semibold" to="/settings">Account</Link><Button variant="secondary" disabled={signingOut} onClick={() => void logout()}>{signingOut ? 'Signing out…' : 'Sign out'}</Button></>}>{logoutError && <StatusMessage tone="error">{logoutError}</StatusMessage>}{refreshError && navigationSnapshot && <StatusMessage tone="error">{refreshError}</StatusMessage>}<PortalPagePatterns.Provider value><div className="vendor-page text-sm">{children}</div></PortalPagePatterns.Provider></PortalShell>
+  return <PortalShell contentLayout={activeHref === '/preview/tracking' ? 'full' : 'standard'} apiBasePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} onSignOut={logout} onNavigate={navigate} notificationUnreadCount={navigationUpdates?.['/notifications'] ?? 0} portalLabel="VENDOR PORTAL" pageTitle={activeHref === '/settings' ? 'Settings' : activeHref === '/notifications' ? 'Notifications' : activeHref === '/store-profile' ? 'Store Profile' : activeHref.includes('onboarding') ? 'Vendor Onboarding' : vendorNavigation.flatMap(section => section.items).find(item => item.href === activeHref)?.label ?? 'Dashboard'} dateLabel={portalDate()} sections={navigation} activeHref={activeHref} accountLabel={accountLabel} accountStatus={accountStatus ?? 'Vendor account'} accountAvatarUrl={storeLogoUrl} accountScore={accountScore} headerActions={<><Link className="inline-flex min-h-11 items-center px-3 text-sm font-semibold" to="/support/requests">Support</Link><Link className="inline-flex min-h-11 items-center px-3 text-sm font-semibold" to="/settings">Account</Link><Button variant="secondary" disabled={signingOut} onClick={() => void logout()}>{signingOut ? 'Signing out…' : 'Sign out'}</Button></>}>{logoutError && <StatusMessage tone="error">{logoutError}</StatusMessage>}{refreshError && navigationSnapshot && <StatusMessage tone="error">{refreshError}</StatusMessage>}<EnforcementNoticePopup basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} enabled={Boolean(navigationSnapshot) && !signingOut} /><PortalPagePatterns.Provider value><div className="vendor-page text-sm">{children}</div></PortalPagePatterns.Provider></PortalShell>
 }
 
 export function VendorWelcomePage() {
@@ -296,16 +295,19 @@ export function VendorDashboardPage() {
       {activation.status === 'ACTIVE' && <VendorStaffDashboard permissions={snapshot.permissions} />}
     </div></VendorShell>
   }
-  if (activation.status === 'ACTIVE') return <VendorShell refreshError={error} navigationData={snapshot} activeHref="/dashboard" accountLabel={accountLabel} accountStatus="Store Active"><div className="space-y-4"><DashboardHeader eyebrow={accountLabel} description="Your store at a glance. Switch sections to focus on the work that matters today." status={<StatusBadge label="Active" tone="success" />} /><VendorInsightsWorkspace canViewProductAnalytics={Array.isArray(snapshot?.permissions) && snapshot.permissions.includes('catalog.manage')} overviewAside={<DashboardPanel title="Marketplace readiness" description="Activation and discoverability are separate."><dl className="space-y-6"><div><dt className="text-xs text-text-secondary">Store activation</dt><dd className="mt-2"><StatusBadge label="Active" tone="success" /></dd></div><div className="border-t border-border-default pt-4"><dt className="text-xs text-text-secondary">Marketplace discoverability</dt><dd className="mt-2 text-sm font-semibold">{statusLabel(stringValue(activation.marketplaceDiscoverabilityStatus, 'NO_ACTIVE_LISTINGS'))}</dd></div></dl><p className="mt-4 text-xs leading-5 text-text-secondary">Eligible published listings remain required for marketplace discovery.</p></DashboardPanel>} overviewFooter={
-      <div className="grid items-start gap-5 xl:grid-cols-3">
-        <div className="xl:col-span-3"><DashboardPanel title="Store workspace" description="Keep your store details and requirements up to date.">
-          <div className="divide-y divide-border-default">{[
-            { title: 'Store profile', description: 'Manage your public information and store configuration.', href: '/store-profile', icon: Store },
-            { title: 'Store Verification', description: `Review status: ${statusLabel(verificationStatus)}`, href: '/onboarding/verification', icon: FileCheck2 },
-            { title: 'Store Setup', description: `Setup status: ${statusLabel(setupStatus)}`, href: '/onboarding/setup', icon: Package },
-          ].map(({ title, description, href, icon: Icon }) => <Link key={href} to={href} className="group flex min-h-11 items-center gap-3 rounded-control py-4 first:pt-0 last:pb-0"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-control bg-surface-canvas text-action-primary"><Icon size={18} aria-hidden="true" /></span><span className="min-w-0 flex-1"><span className="text-sm font-semibold group-hover:text-action-primary">{title}</span><span className="mt-1 block text-xs leading-5 text-text-secondary">{description}</span></span><ArrowRight size={16} className="shrink-0 text-text-secondary" aria-hidden="true" /></Link>)}</div>
-        </DashboardPanel></div>
-      </div>} /></div></VendorShell>
+  if (activation.status === 'ACTIVE') return <VendorShell refreshError={error} navigationData={snapshot} activeHref="/dashboard" accountLabel={accountLabel} accountStatus="Store Active">
+    <VendorInsightsWorkspace storeName={accountLabel} canViewRecentActivity={snapshot.permissions.includes('staff.manage')} canViewProductAnalytics={Array.isArray(snapshot?.permissions) && snapshot.permissions.includes('catalog.manage')} overviewAside={
+      <DashboardPanel density="compact" title="Marketplace readiness">
+        <dl className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 text-xs leading-4">
+          <dt className="text-text-secondary">Store activation</dt>
+          <dd className="inline-flex items-center justify-end gap-1.5 font-semibold text-status-success"><CheckCircle2 size={14} aria-hidden="true" />Active</dd>
+          <dt className="text-text-secondary">Marketplace discoverability</dt>
+          <dd className="max-w-32 text-right font-semibold text-text-strong">{statusLabel(stringValue(activation.marketplaceDiscoverabilityStatus, 'NO_ACTIVE_LISTINGS'))}</dd>
+        </dl>
+        <p className="mt-2 border-t border-border-default pt-2 text-xs leading-4 text-text-secondary">Discovery needs eligible listings.</p>
+      </DashboardPanel>
+    } />
+  </VendorShell>
 
   return <VendorShell refreshError={error} navigationData={snapshot} activeHref="/dashboard" accountLabel={accountLabel} accountStatus={activationReady ? activationLabel : `${activationLabel} activation`}>
     <div className="phase3-page space-y-6">
@@ -342,7 +344,7 @@ function VendorOnboardingPage({ initialSection }: { initialSection: OnboardingSe
   const activeHref = activeSection === 'STORE_SETUP' ? '/onboarding/setup' : '/onboarding/verification'
 
   return <VendorShell refreshError={error} navigationData={snapshot} activeHref={activeHref} accountLabel={accountLabel} accountStatus="Onboarding in progress"><div className="phase3-page mx-auto max-w-[1120px] space-y-8"><header className="space-y-4">
-        <Link className="inline-flex min-h-11 items-center gap-2 text-sm font-medium text-text-secondary hover:text-action-primary" to="/dashboard"><ArrowLeft size={16} aria-hidden="true" />Back to dashboard</Link>
+        <BackNavigation><Link to="/dashboard">Back to dashboard</Link></BackNavigation>
         <PageHeader eyebrow="Store onboarding" title={activeSection === 'STORE_SETUP' ? 'Store Setup' : 'Store Verification'} status={stringValue(record(activeSection === 'STORE_SETUP' ? snapshot.setup : snapshot.verification).status, 'NOT_STARTED')} description={activeSection === 'STORE_SETUP' ? 'Configure your public profile, fulfillment and TEST payment connection.' : 'Provide business information and private evidence for Admin review.'} />
       </header>{activeSection === 'STORE_VERIFICATION' ? <VerificationWorkspace snapshot={snapshot} onSaved={setSnapshot} onRefresh={refresh} /> : <SetupWorkspace snapshot={snapshot} onSaved={setSnapshot} onRefresh={refresh} />}</div></VendorShell>
 }
@@ -1032,7 +1034,7 @@ function MediaUploader({ snapshot, onRefresh, beforeUpload, embedded = false }: 
     catch (cause) { setMessage(`Failed to remove image. ${await readableOnboardingError(cause)}`) }
     finally { setBusy(false) }
   }
-  return <section className={embedded ? '' : 'rounded-surface border border-border-default bg-surface-primary p-5 sm:p-7'} aria-labelledby="media-title"><div className="flex items-start gap-3"><ImagePlus className="mt-1 shrink-0 text-action-primary" size={22} aria-hidden="true" /><div><h2 id="media-title" className="text-lg font-semibold">Store media</h2><p className="mt-2 text-sm leading-6 text-text-secondary">A logo and banner are required for Public Store Profile completion. Save your profile details before uploading. JPEG, PNG or WebP images are supported.</p></div></div><div className="mt-6 grid gap-4 sm:grid-cols-2">{(['LOGO', 'BANNER'] as const).map((kind) => { const current = media.filter(item => stringValue(item.kind) === kind).at(-1); return <div className="min-w-0 rounded-control border border-border-default p-4" key={kind}><p className="font-semibold">{statusLabel(kind)}</p><StoreMediaPreview media={current} kind={kind} /><p className="mt-1 text-sm text-text-secondary">{current ? 'Asset uploaded' : 'No asset uploaded'}</p><div className="mt-4 flex flex-wrap gap-2"><label className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-control border border-border-default px-4 text-sm font-semibold hover:bg-brand-orange-50 focus-within:ring-2 focus-within:ring-focus-ring"><UploadCloud size={16} aria-hidden="true" />{busy ? 'Uploading…' : 'Upload image'}<input className="sr-only" type="file" accept="image/jpeg,image/png,image/webp" disabled={busy} onChange={(event) => void upload(kind, event.target.files?.[0], event.currentTarget)} /></label>{current && <Button type="button" variant="secondary" disabled={busy} onClick={() => void remove(stringValue(current.id))}>Remove {kind.toLowerCase()}</Button>}</div></div> })}</div>{message && <div className="mt-4"><StatusMessage tone={retry || message.startsWith('Failed') ? 'error' : 'success'}>{message}</StatusMessage>{retry && <Button className="mt-3" type="button" variant="secondary" disabled={busy} onClick={() => void upload(retry.kind, retry.file)}>Retry {retry.kind.toLowerCase()} upload</Button>}</div>}</section>
+  return <section className={embedded ? '' : 'mp-card mp-card-padded'} aria-labelledby="media-title"><div className="flex items-start gap-3"><ImagePlus className="mt-1 shrink-0 text-action-primary" size={22} aria-hidden="true" /><div><h2 id="media-title" className="text-lg font-semibold">Store media</h2><p className="mt-2 text-sm leading-6 text-text-secondary">A logo and banner are required for Public Store Profile completion. Save your profile details before uploading. JPEG, PNG or WebP images are supported.</p></div></div><div className="mt-6 grid gap-4 sm:grid-cols-2">{(['LOGO', 'BANNER'] as const).map((kind) => { const current = media.filter(item => stringValue(item.kind) === kind).at(-1); return <div className="min-w-0 rounded-control border border-border-default p-4" key={kind}><p className="font-semibold">{statusLabel(kind)}</p><StoreMediaPreview media={current} kind={kind} /><p className="mt-1 text-sm text-text-secondary">{current ? 'Asset uploaded' : 'No asset uploaded'}</p><div className="mt-4 flex flex-wrap gap-2"><label className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-control border border-border-default px-4 text-sm font-semibold hover:bg-brand-orange-50 focus-within:ring-2 focus-within:ring-focus-ring"><UploadCloud size={16} aria-hidden="true" />{busy ? 'Uploading…' : 'Upload image'}<input className="sr-only" type="file" accept="image/jpeg,image/png,image/webp" disabled={busy} onChange={(event) => void upload(kind, event.target.files?.[0], event.currentTarget)} /></label>{current && <Button type="button" variant="secondary" disabled={busy} onClick={() => void remove(stringValue(current.id))}>Remove {kind.toLowerCase()}</Button>}</div></div> })}</div>{message && <div className="mt-4"><StatusMessage tone={retry || message.startsWith('Failed') ? 'error' : 'success'}>{message}</StatusMessage>{retry && <Button className="mt-3" type="button" variant="secondary" disabled={busy} onClick={() => void upload(retry.kind, retry.file)}>Retry {retry.kind.toLowerCase()} upload</Button>}</div>}</section>
 }
 
 function SetupCompletion({ snapshot, onSaved, dirty }: { snapshot: VendorOnboardingSnapshot; onSaved: (snapshot: VendorOnboardingSnapshot) => void; dirty: boolean }) {
@@ -1084,13 +1086,14 @@ export function VendorStoreProfilePage() {
   if (record(snapshot.activation).status !== 'ACTIVE') return <Navigate to="/dashboard" replace />
   const org = record(snapshot.organization)
   const profile = record(record(snapshot.setup).profile)
-  return <VendorShell refreshError={error} navigationData={snapshot} activeHref="/store-profile" accountLabel={stringValue(org.storeName, 'Your store')}><div className="mx-auto max-w-[1600px] space-y-6"><header className="rounded-surface border border-border-default bg-surface-primary p-6"><div className="mb-5 min-h-24 overflow-hidden rounded-control bg-surface-canvas"><StoreMediaPreview media={arrayValue(record(snapshot.setup).media).filter(item => stringValue(item.kind) === 'BANNER').at(-1)} kind="BANNER" fill /></div><div className="flex flex-col gap-5 sm:flex-row sm:items-center"><div className="w-24 shrink-0"><StoreMediaPreview media={arrayValue(record(snapshot.setup).media).filter(item => stringValue(item.kind) === 'LOGO').at(-1)} kind="LOGO" /></div><div className="min-w-0 flex-1"><p className="text-xs font-semibold uppercase tracking-widest text-text-secondary">Store profile</p><h1 className="mt-2 break-words text-h1 font-semibold">{stringValue(profile.publicStoreName, stringValue(org.storeName, 'Store Profile'))}</h1><p className="mt-2 break-words text-text-secondary">{stringValue(profile.description, 'Your marketplace business profile')}</p>{storeScore && <StoreScoreLine score={storeScore} />}</div><StatusBadge label={record(snapshot.setup).vacationMode === true ? 'Vacation Mode on' : 'Active store'} /></div></header><div className="rounded-surface border border-border-default bg-surface-primary p-4 sm:p-7"><SectionWorkspace beforeSectionChange={() => businessSave.current?.() ?? configurationSave.current?.() ?? true} sections={[
+  return <VendorShell refreshError={error} navigationData={snapshot} activeHref="/store-profile" accountLabel={stringValue(org.storeName, 'Your store')}><div className="mx-auto max-w-[1600px] space-y-6"><header className="mp-card mp-card-padded"><div className="mb-5 min-h-24 overflow-hidden rounded-control bg-surface-canvas"><StoreMediaPreview media={arrayValue(record(snapshot.setup).media).filter(item => stringValue(item.kind) === 'BANNER').at(-1)} kind="BANNER" fill /></div><div className="flex flex-col gap-5 sm:flex-row sm:items-center"><div className="w-24 shrink-0"><StoreMediaPreview media={arrayValue(record(snapshot.setup).media).filter(item => stringValue(item.kind) === 'LOGO').at(-1)} kind="LOGO" /></div><div className="min-w-0 flex-1"><p className="text-xs font-semibold uppercase tracking-widest text-text-secondary">Store profile</p><h1 className="mt-2 break-words text-h1 font-semibold">{stringValue(profile.publicStoreName, stringValue(org.storeName, 'Store Profile'))}</h1><p className="mt-2 break-words text-text-secondary">{stringValue(profile.description, 'Your marketplace business profile')}</p>{storeScore && <StoreScoreLine score={storeScore} />}</div><StatusBadge label={record(snapshot.setup).vacationMode === true ? 'Vacation Mode on' : 'Active store'} /></div></header><div className="mp-card mp-card-padded"><SectionWorkspace beforeSectionChange={() => businessSave.current?.() ?? configurationSave.current?.() ?? true} sections={[
     { label: 'Store Information', content: <div className="grid items-start gap-8 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]"><PublicStoreProfileEditor snapshot={snapshot} onSaved={setSnapshot} /><MediaUploader embedded snapshot={snapshot} onRefresh={refresh} /></div> },
     { label: 'Business Information', content: <StoreBusinessInformation snapshot={snapshot} renderEditor={() => <VerificationForm editing registerBeforeLeave={registerBeforeLeave} snapshot={snapshot} onSaved={setSnapshot} onRefresh={refresh} />} /> },
     { label: 'Store Location', content: <StoreLocation snapshot={snapshot} /> },
     { label: 'Vacation Mode', content: <StoreVacationMode snapshot={snapshot} onSaved={setSnapshot} /> },
     { label: 'Operating Hours', content: <StoreOperationEditor snapshot={snapshot} onSaved={setSnapshot} /> },
     { label: 'Fulfillment Configuration', content: <StoreFulfillmentEditor snapshot={snapshot} onSaved={setSnapshot} registerBeforeLeave={registerConfigurationSave} /> },
+    ...(snapshot.permissions.includes('organization.delete') ? [{ label: 'Account Deletion', content: <VendorAccountDeletion /> }] : []),
   ]} /></div></div></VendorShell>
 }
 type ProfileSectionEditorProps = { snapshot: VendorOnboardingSnapshot; onSaved: (snapshot: VendorOnboardingSnapshot) => void; registerBeforeLeave: (save: (() => Promise<boolean>) | null) => void }
@@ -1182,7 +1185,7 @@ function StoreFulfillmentEditor({ snapshot, onSaved, registerBeforeLeave }: Prof
         <p className="text-sm leading-6 text-text-secondary">Payment options follow Services Capability automatically. Save fulfillment configuration to apply them.</p>
       </FinanceSection>}
     </fieldset>
-    {paymentLoading && (paymentLoadError ? <div className="grid gap-3"><StatusMessage tone="error">{paymentLoadError}</StatusMessage><div><Button variant="secondary" onClick={() => setPaymentLoadAttempt(attempt => attempt + 1)}>Retry loading payment options</Button></div></div> : <p role="status" className="text-sm text-text-secondary">Loading physical payment options…</p>)}
+    {paymentLoading && (paymentLoadError ? <div className="grid gap-3"><StatusMessage tone="error">{paymentLoadError}</StatusMessage><div><Button variant="secondary" onClick={() => setPaymentLoadAttempt(attempt => attempt + 1)}>Retry loading payment options</Button></div></div> : <AsyncLoading compact label="Loading physical payment options…" />)}
     <div className="flex flex-col gap-4 border-t border-border-default pt-5 sm:flex-row sm:items-center sm:justify-between">
       <p className="text-sm text-text-secondary">Changes apply to future procurement.</p>
       <Button className="w-full sm:w-auto" disabled={busy || paymentLoading || (!dirty && !paymentsDirty)} onClick={() => void save()}>{busy ? 'Saving…' : 'Save fulfillment configuration'}</Button>
@@ -1247,7 +1250,7 @@ function StoreProfilePreview({ snapshot, profile }: { snapshot: VendorOnboarding
   return <aside className="min-w-0 xl:sticky xl:top-6" aria-labelledby="store-preview-title">
     <h3 id="store-preview-title" className="text-lg font-semibold">Store Profile Preview</h3>
     <p className="mt-2 text-sm leading-6 text-text-secondary">Preview how your Store Profile may appear to Buyers after Store Activation.</p>
-    <div className="mt-5 overflow-hidden rounded-surface border border-border-default bg-surface-primary">
+    <div className="mt-5 overflow-hidden mp-card">
       <StoreMediaPreview media={media.filter(item => stringValue(item.kind) === 'BANNER').at(-1)} kind="BANNER" storefront />
       <div className="px-5 pb-6">
         <div className="relative -mt-9 mb-4 w-24 rounded-control border-4 border-surface-primary bg-surface-primary"><StoreMediaPreview media={media.filter(item => stringValue(item.kind) === 'LOGO').at(-1)} kind="LOGO" storefront /></div>
@@ -1273,7 +1276,7 @@ function StoreMediaPreview({ media, kind, storefront = false, fill = false }: { 
   }, [fileId, attempt])
   if (!storefront) {
     if (!fileId) return null
-    return <div className={fill ? undefined : 'my-3'}>{url && !failed ? <img src={url} alt={stringValue(media?.altText, `Store ${kind.toLowerCase()}`)} className={kind === 'LOGO' ? 'h-24 w-24 object-contain' : fill ? 'h-40 w-full object-cover sm:h-48' : 'max-h-48 w-full object-contain'} onError={() => setFailed(true)} /> : failed ? <Button type="button" variant="secondary" onClick={() => setAttempt(value => value + 1)}>Reload image</Button> : <p role="status">Loading image…</p>}</div>
+    return <div className={fill ? undefined : 'my-3'}>{url && !failed ? <img src={url} alt={stringValue(media?.altText, `Store ${kind.toLowerCase()}`)} className={kind === 'LOGO' ? 'h-24 w-24 object-contain' : fill ? 'h-40 w-full object-cover sm:h-48' : 'max-h-48 w-full object-contain'} onError={() => setFailed(true)} /> : failed ? <Button type="button" variant="secondary" onClick={() => setAttempt(value => value + 1)}>Reload image</Button> : <AsyncLoading compact label="Loading image…" />}</div>
   }
   const size = kind === 'LOGO' ? 'aspect-square w-full max-w-24' : 'aspect-[3/1] w-full'
   return <div className={`${storefront ? '' : 'my-3'} ${size} flex items-center justify-center overflow-hidden bg-surface-canvas`}>

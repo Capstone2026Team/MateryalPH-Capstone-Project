@@ -440,6 +440,16 @@ class _$InvoiceRecordView extends InvoiceRecordView {
   final int? downloads;
   @override
   final DateTime? lastDownloadAt;
+  @override
+  final String? fileName;
+  @override
+  final String? contentType;
+  @override
+  final int? fileSizeBytes;
+  @override
+  final DateTime? sentAt;
+  @override
+  final InvoiceOrderSummary? orderSummary;
 
   factory _$InvoiceRecordView(
           [void Function(InvoiceRecordViewBuilder)? updates]) =>
@@ -473,7 +483,12 @@ class _$InvoiceRecordView extends InvoiceRecordView {
       this.orderReference,
       this.vendorName,
       this.downloads,
-      this.lastDownloadAt})
+      this.lastDownloadAt,
+      this.fileName,
+      this.contentType,
+      this.fileSizeBytes,
+      this.sentAt,
+      this.orderSummary})
       : super._();
   @override
   InvoiceRecordView rebuild(void Function(InvoiceRecordViewBuilder) updates) =>
@@ -515,7 +530,12 @@ class _$InvoiceRecordView extends InvoiceRecordView {
         orderReference == other.orderReference &&
         vendorName == other.vendorName &&
         downloads == other.downloads &&
-        lastDownloadAt == other.lastDownloadAt;
+        lastDownloadAt == other.lastDownloadAt &&
+        fileName == other.fileName &&
+        contentType == other.contentType &&
+        fileSizeBytes == other.fileSizeBytes &&
+        sentAt == other.sentAt &&
+        orderSummary == other.orderSummary;
   }
 
   @override
@@ -549,6 +569,11 @@ class _$InvoiceRecordView extends InvoiceRecordView {
     _$hash = $jc(_$hash, vendorName.hashCode);
     _$hash = $jc(_$hash, downloads.hashCode);
     _$hash = $jc(_$hash, lastDownloadAt.hashCode);
+    _$hash = $jc(_$hash, fileName.hashCode);
+    _$hash = $jc(_$hash, contentType.hashCode);
+    _$hash = $jc(_$hash, fileSizeBytes.hashCode);
+    _$hash = $jc(_$hash, sentAt.hashCode);
+    _$hash = $jc(_$hash, orderSummary.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -584,7 +609,12 @@ class _$InvoiceRecordView extends InvoiceRecordView {
           ..add('orderReference', orderReference)
           ..add('vendorName', vendorName)
           ..add('downloads', downloads)
-          ..add('lastDownloadAt', lastDownloadAt))
+          ..add('lastDownloadAt', lastDownloadAt)
+          ..add('fileName', fileName)
+          ..add('contentType', contentType)
+          ..add('fileSizeBytes', fileSizeBytes)
+          ..add('sentAt', sentAt)
+          ..add('orderSummary', orderSummary))
         .toString();
   }
 }
@@ -731,6 +761,29 @@ class InvoiceRecordViewBuilder
   set lastDownloadAt(DateTime? lastDownloadAt) =>
       _$this._lastDownloadAt = lastDownloadAt;
 
+  String? _fileName;
+  String? get fileName => _$this._fileName;
+  set fileName(String? fileName) => _$this._fileName = fileName;
+
+  String? _contentType;
+  String? get contentType => _$this._contentType;
+  set contentType(String? contentType) => _$this._contentType = contentType;
+
+  int? _fileSizeBytes;
+  int? get fileSizeBytes => _$this._fileSizeBytes;
+  set fileSizeBytes(int? fileSizeBytes) =>
+      _$this._fileSizeBytes = fileSizeBytes;
+
+  DateTime? _sentAt;
+  DateTime? get sentAt => _$this._sentAt;
+  set sentAt(DateTime? sentAt) => _$this._sentAt = sentAt;
+
+  InvoiceOrderSummaryBuilder? _orderSummary;
+  InvoiceOrderSummaryBuilder get orderSummary =>
+      _$this._orderSummary ??= InvoiceOrderSummaryBuilder();
+  set orderSummary(InvoiceOrderSummaryBuilder? orderSummary) =>
+      _$this._orderSummary = orderSummary;
+
   InvoiceRecordViewBuilder() {
     InvoiceRecordView._defaults(this);
   }
@@ -766,6 +819,11 @@ class InvoiceRecordViewBuilder
       _vendorName = $v.vendorName;
       _downloads = $v.downloads;
       _lastDownloadAt = $v.lastDownloadAt;
+      _fileName = $v.fileName;
+      _contentType = $v.contentType;
+      _fileSizeBytes = $v.fileSizeBytes;
+      _sentAt = $v.sentAt;
+      _orderSummary = $v.orderSummary?.toBuilder();
       _$v = null;
     }
     return this;
@@ -839,12 +897,20 @@ class InvoiceRecordViewBuilder
             vendorName: vendorName,
             downloads: downloads,
             lastDownloadAt: lastDownloadAt,
+            fileName: fileName,
+            contentType: contentType,
+            fileSizeBytes: fileSizeBytes,
+            sentAt: sentAt,
+            orderSummary: _orderSummary?.build(),
           );
     } catch (_) {
       late String _$failedField;
       try {
         _$failedField = 'download';
         _download?.build();
+
+        _$failedField = 'orderSummary';
+        _orderSummary?.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
             r'InvoiceRecordView', _$failedField, e.toString());

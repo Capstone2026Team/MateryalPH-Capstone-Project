@@ -3,6 +3,8 @@ import { AuthenticationApi, Configuration, FetchError, ResponseError } from '@ma
 type WebApiOptions = {
   refreshSession?: boolean
   readOnlyPostPaths?: readonly string[]
+  /** Optional panels handle a missing permission locally; 401 still clears the session. */
+  localForbidden?: boolean
 }
 
 const csrfTokens = new Map<string, string>()
@@ -176,7 +178,7 @@ export function createWebApiConfiguration(basePath: string, options: WebApiOptio
     basePath: key,
     credentials: 'include',
     apiKey: () => getWebCsrfToken(key),
-    fetchApi: (input, init) => coordinatedFetch(key, Boolean(options.refreshSession), input, init, options.readOnlyPostPaths),
+    fetchApi: (input, init) => coordinatedFetch(key, Boolean(options.refreshSession), input, init, options.readOnlyPostPaths, { localForbidden: Boolean(options.localForbidden) }),
   })
 }
 
@@ -347,16 +349,16 @@ function csrfTokenFrom(payload: unknown): string | null {
  */
 export async function readOrderEvidenceFile(basePath: string, evidencePath: string): Promise<Blob> {
   const base = new URL(basePath, window.location.origin)
-  if (!/^\/vendor\/orders\/[0-9a-f-]{36}\/files\/[0-9a-f-]{36}$/i.test(evidencePath)) {
+  if (!/^\/(?:vendor\/orders\/[0-9a-f-]{36}\/files\/[0-9a-f-]{36}|admin\/order-operations\/orders\/[0-9a-f-]{36}\/files\/[0-9a-f-]{36}(?:\?case_id=[0-9a-f-]{36})?)$/i.test(evidencePath)) {
     throw new Error('The evidence path is invalid. Refresh and try again.')
   }
   const url = new URL(`${base.pathname.replace(/\/$/, '')}${evidencePath}`, base)
   const response = await coordinatedFetch(normalizedBasePath(base.href), true, url, {
-    credentials: 'include', cache: 'no-store', referrerPolicy: 'origin', headers: { Accept: 'application/pdf,image/jpeg,image/png' },
+    credentials: 'include', cache: 'no-store', referrerPolicy: 'origin', headers: { Accept: 'application/pdf,image/jpeg,image/png,image/webp' },
   })
   if (!response.ok) throw new ResponseError(response)
   const blob = await response.blob()
-  if (!['application/pdf', 'image/jpeg', 'image/png'].includes(blob.type.split(';')[0] ?? '')) {
+  if (!['application/pdf', 'image/jpeg', 'image/png', 'image/webp'].includes(blob.type.split(';')[0] ?? '')) {
     throw new Error('This file type cannot be previewed.')
   }
   return blob
@@ -369,9 +371,10 @@ export async function readAccountPhoto(basePath: string, portal: 'vendors' | 'ad
   if (url.origin !== base.origin || url.pathname !== `${base.pathname.replace(/\/$/, '')}/${portal}/account/photo`) {
     throw new Error('The profile picture URL is invalid. Refresh and try again.')
   }
+  // Expired photo links renew locally; they must not invalidate dashboard data or navigation permissions.
   const response = await coordinatedFetch(normalizedBasePath(base.href), true, url, {
     credentials: 'include', cache: 'no-store', referrerPolicy: 'origin', headers: { Accept: 'image/png' },
-  })
+  }, [], { localForbidden: true })
   if (!response.ok) throw new ResponseError(response)
   const blob = await response.blob()
   if (blob.type.split(';')[0] !== 'image/png') throw new Error('The profile picture cannot be previewed.')
@@ -396,9 +399,28 @@ export async function readDirectoryBuyerPhoto(basePath: string, buyerId: string,
   return blob
 }
 
+/** Buyer photos are authorized through the exact review, without exposing the Buyer's account identifier. */
+export async function readReviewBuyerPhoto(basePath: string, reviewId: string, signedUrl: string): Promise<Blob> {
+  const base = new URL(basePath, window.location.origin)
+  const url = new URL(signedUrl, base)
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(reviewId)
+    || url.origin !== base.origin || url.username || url.password
+    || url.pathname !== `${base.pathname.replace(/\/$/, '')}/vendor/reviews/${reviewId}/buyer-photo`) {
+    throw new Error('The Buyer profile picture URL is invalid.')
+  }
+  const response = await coordinatedFetch(normalizedBasePath(base.href), true, url, {
+    credentials: 'include', cache: 'no-store', referrerPolicy: 'origin', headers: { Accept: 'image/png' },
+  }, [], { localForbidden: true })
+  if (!response.ok) throw new ResponseError(response)
+  const blob = await response.blob()
+  if (blob.type.split(';')[0] !== 'image/png') throw new Error('The Buyer profile picture cannot be previewed.')
+  return blob
+}
+
 const SIGNED_CASE_CONTENT = [
   /\/(vendor|admin)\/disputes\/[0-9a-f-]{36}\/files\/[0-9a-f-]{36}\/content$/i,
   /\/(vendor|admin)\/invoice-records\/[0-9a-f-]{36}\/content$/i,
+  /\/vendor\/invoice-drafts\/[0-9a-f-]{36}\/files\/[0-9a-f-]{36}$/i,
 ]
 
 /**
@@ -413,7 +435,7 @@ export async function readSignedCaseFile(basePath: string, signedUrl: string): P
   }
   const response = await coordinatedFetch(normalizedBasePath(base.href), true, url, {
     credentials: 'include', cache: 'no-store', referrerPolicy: 'origin', headers: { Accept: 'application/pdf,image/jpeg,image/png' },
-  })
+  }, [], { localForbidden: true })
   if (!response.ok) throw new ResponseError(response)
   const blob = await response.blob()
   if (!['application/pdf', 'image/jpeg', 'image/png'].includes(blob.type.split(';')[0] ?? '')) {
@@ -446,7 +468,7 @@ export async function readReviewMediaFile(basePath: string, signedUrl: string): 
 }
 
 /** Signed private-content routes the evidence previews may read: onboarding documents and catalog files (PS/ICC evidence). */
-const PRIVATE_CONTENT_ROUTES = ['vendor-onboarding-files', 'catalog-files']
+const PRIVATE_CONTENT_ROUTES = ['vendor-onboarding-files', 'catalog-files', 'admin/enforcement']
 
 export async function readWebPrivateFile(basePath: string, signedUrl: string): Promise<Blob> {
   const base = new URL(basePath, window.location.origin)
@@ -456,11 +478,11 @@ export async function readWebPrivateFile(basePath: string, signedUrl: string): P
     throw new Error('The private evidence URL is invalid. Refresh and try again.')
   }
   const response = await coordinatedFetch(normalizedBasePath(base.href), true, url, {
-    credentials: 'include', cache: 'no-store', referrerPolicy: 'origin', headers: { Accept: 'application/pdf,image/jpeg,image/png,image/webp' },
-  })
+    credentials: 'include', cache: 'no-store', referrerPolicy: 'origin', headers: { Accept: 'application/pdf,image/jpeg,image/png,image/webp,video/mp4,video/quicktime' },
+  }, [], { localForbidden: true })
   if (!response.ok) throw new ResponseError(response)
   const blob = await response.blob()
-  if (!['application/pdf', 'image/jpeg', 'image/png', 'image/webp'].includes(blob.type.split(';')[0] ?? '')) {
+  if (!['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/quicktime'].includes(blob.type.split(';')[0] ?? '')) {
     throw new Error('This file type cannot be previewed.')
   }
   return blob

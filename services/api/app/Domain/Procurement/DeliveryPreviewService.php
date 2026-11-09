@@ -8,6 +8,7 @@ use App\Domain\Geography\GeographyProviderUnavailable;
 use App\Domain\Geography\RadiusPolicy;
 use App\Domain\Geography\RouteProvider;
 use App\Domain\Vendors\DeliveryRecommendationService;
+use App\Domain\Vendors\DeliveryVehicleProfile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -203,7 +204,7 @@ final class DeliveryPreviewService
             $summary['vehicles_max'] += max($vehicles);
             foreach ($group['candidates'] as $candidate) {
                 $vehicle = $candidate['vehicle'];
-                $option = ['load_key' => (string) $group['key'], 'vehicle_id' => (string) $vehicle['id'], 'vehicle_name' => (string) $vehicle['name'], 'vehicle_type' => (string) $vehicle['vehicle_type'],
+                $option = ['vehicle_details' => DeliveryVehicleProfile::from($vehicle), 'load_key' => (string) $group['key'], 'vehicle_id' => (string) $vehicle['id'], 'vehicle_name' => (string) $vehicle['name'], 'vehicle_type' => (string) $vehicle['vehicle_type'],
                     'vehicles' => (int) $candidate['number_of_vehicles'], 'trips' => (int) $candidate['total_vehicle_trips'], 'fee_centavos' => (int) $candidate['estimated_charge_centavos'],
                     'fee_per_trip_centavos' => (int) $candidate['fee']['per_trip_centavos'],
                     'mobilization_basis' => $candidate['fee']['mobilization_basis'], 'mobilization_fee_centavos' => (int) $candidate['fee']['mobilization_fee_centavos'],

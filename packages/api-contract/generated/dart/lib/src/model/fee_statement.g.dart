@@ -82,6 +82,10 @@ class _$FeeStatementStateEnumSerializer
 
 class _$FeeStatement extends FeeStatement {
   @override
+  final String? invoiceHeading;
+  @override
+  final String? invoiceMessage;
+  @override
   final String id;
   @override
   final String reference;
@@ -116,7 +120,9 @@ class _$FeeStatement extends FeeStatement {
       (FeeStatementBuilder()..update(updates))._build();
 
   _$FeeStatement._(
-      {required this.id,
+      {this.invoiceHeading,
+      this.invoiceMessage,
+      required this.id,
       required this.reference,
       required this.state,
       required this.overdue,
@@ -143,6 +149,8 @@ class _$FeeStatement extends FeeStatement {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is FeeStatement &&
+        invoiceHeading == other.invoiceHeading &&
+        invoiceMessage == other.invoiceMessage &&
         id == other.id &&
         reference == other.reference &&
         state == other.state &&
@@ -163,6 +171,8 @@ class _$FeeStatement extends FeeStatement {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, invoiceHeading.hashCode);
+    _$hash = $jc(_$hash, invoiceMessage.hashCode);
     _$hash = $jc(_$hash, id.hashCode);
     _$hash = $jc(_$hash, reference.hashCode);
     _$hash = $jc(_$hash, state.hashCode);
@@ -185,6 +195,8 @@ class _$FeeStatement extends FeeStatement {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'FeeStatement')
+          ..add('invoiceHeading', invoiceHeading)
+          ..add('invoiceMessage', invoiceMessage)
           ..add('id', id)
           ..add('reference', reference)
           ..add('state', state)
@@ -207,6 +219,16 @@ class _$FeeStatement extends FeeStatement {
 class FeeStatementBuilder
     implements Builder<FeeStatement, FeeStatementBuilder> {
   _$FeeStatement? _$v;
+
+  String? _invoiceHeading;
+  String? get invoiceHeading => _$this._invoiceHeading;
+  set invoiceHeading(String? invoiceHeading) =>
+      _$this._invoiceHeading = invoiceHeading;
+
+  String? _invoiceMessage;
+  String? get invoiceMessage => _$this._invoiceMessage;
+  set invoiceMessage(String? invoiceMessage) =>
+      _$this._invoiceMessage = invoiceMessage;
 
   String? _id;
   String? get id => _$this._id;
@@ -279,6 +301,8 @@ class FeeStatementBuilder
   FeeStatementBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _invoiceHeading = $v.invoiceHeading;
+      _invoiceMessage = $v.invoiceMessage;
       _id = $v.id;
       _reference = $v.reference;
       _state = $v.state;
@@ -315,6 +339,8 @@ class FeeStatementBuilder
   _$FeeStatement _build() {
     final _$result = _$v ??
         _$FeeStatement._(
+          invoiceHeading: invoiceHeading,
+          invoiceMessage: invoiceMessage,
           id: BuiltValueNullFieldError.checkNotNull(id, r'FeeStatement', 'id'),
           reference: BuiltValueNullFieldError.checkNotNull(
               reference, r'FeeStatement', 'reference'),

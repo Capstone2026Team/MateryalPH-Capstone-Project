@@ -90,6 +90,13 @@ import {
     OrderNrpcToJSON,
     OrderNrpcToJSONTyped,
 } from './OrderNrpc';
+import type { OrderLocationMap } from './OrderLocationMap';
+import {
+    OrderLocationMapFromJSON,
+    OrderLocationMapFromJSONTyped,
+    OrderLocationMapToJSON,
+    OrderLocationMapToJSONTyped,
+} from './OrderLocationMap';
 import type { OrderChange } from './OrderChange';
 import {
     OrderChangeFromJSON,
@@ -310,6 +317,10 @@ export interface OrderDetail {
     /**
      *
      */
+    locationMap?: OrderLocationMap;
+    /**
+     *
+     */
     autoAccept?: AutoAcceptOutcome | null;
     /**
      *
@@ -485,6 +496,7 @@ export function OrderDetailFromJSONTyped(json: any, ignoreDiscriminator: boolean
         'availableActions': json['available_actions'] == null ? undefined : json['available_actions'],
         'payment': json['payment'] == null ? undefined : OrderPaymentAvailabilityFromJSON(json['payment']),
         'buyer': json['buyer'] == null ? undefined : OrderBuyerRefFromJSON(json['buyer']),
+        'locationMap': json['location_map'] == null ? undefined : OrderLocationMapFromJSON(json['location_map']),
         'autoAccept': json['auto_accept'] === undefined ? undefined : json['auto_accept'] === null ? null : AutoAcceptOutcomeFromJSON(json['auto_accept']),
         'reservations': json['reservations'] == null ? undefined : ((json['reservations'] as Array<any>).map(OrderReservationFromJSON)),
         'permissions': json['permissions'] == null ? undefined : VendorOrderPermissionsFromJSON(json['permissions']),
@@ -538,6 +550,7 @@ export function OrderDetailToJSONTyped(value?: OrderDetail | null, ignoreDiscrim
         'available_actions': value['availableActions'],
         'payment': OrderPaymentAvailabilityToJSON(value['payment']),
         'buyer': OrderBuyerRefToJSON(value['buyer']),
+        'location_map': OrderLocationMapToJSON(value['locationMap']),
         'auto_accept': AutoAcceptOutcomeToJSON(value['autoAccept']),
         'reservations': value['reservations'] == null ? undefined : ((value['reservations'] as Array<any>).map(OrderReservationToJSON)),
         'permissions': VendorOrderPermissionsToJSON(value['permissions']),

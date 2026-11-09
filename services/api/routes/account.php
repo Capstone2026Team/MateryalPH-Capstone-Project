@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AccountAdministrationController;
 use App\Http\Controllers\Api\AccountController;
 use App\Http\Controllers\Api\BuyerAccountSecurityController;
+use App\Http\Controllers\Api\VendorAccountDeletionController;
 use App\Http\Middleware\VerifyAccountCsrf;
 use Illuminate\Support\Facades\Route;
 
@@ -40,6 +41,8 @@ foreach (['buyers' => ['BUYER', 'MOBILE'], 'vendors' => ['VENDOR', 'WEB'], 'admi
             Route::post('/deletion', [BuyerAccountSecurityController::class, 'deleteAccount'])->middleware('throttle:account-security');
         }
         if ($portal === 'VENDOR') {
+            Route::get('/deletion', [VendorAccountDeletionController::class, 'preview']);
+            Route::post('/deletion', [VendorAccountDeletionController::class, 'deleteAccount'])->middleware('throttle:account-security');
             Route::get('/invitations', [AccountAdministrationController::class, 'vendorInvitations']);
             Route::delete('/invitations/{invitationId}', [AccountAdministrationController::class, 'deleteVendorInvitation'])->whereUuid('invitationId');
             Route::delete('/memberships/{membershipId}', [AccountAdministrationController::class, 'deleteStaff'])->whereUuid('membershipId');

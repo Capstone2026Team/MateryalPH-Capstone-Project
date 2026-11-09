@@ -18,7 +18,7 @@ part 'review_display_option.g.dart';
 abstract class ReviewDisplayOption implements Built<ReviewDisplayOption, ReviewDisplayOptionBuilder> {
   @BuiltValueField(wireName: r'choice')
   ReviewDisplayOptionChoiceEnum get choice;
-  // enum choiceEnum {  FIRST_NAME_LAST_INITIAL,  VERIFIED_BUYER,  };
+  // enum choiceEnum {  FULL_NAME,  };
 
   @BuiltValueField(wireName: r'preview')
   String get preview;
@@ -125,10 +125,8 @@ class _$ReviewDisplayOptionSerializer implements PrimitiveSerializer<ReviewDispl
 
 class ReviewDisplayOptionChoiceEnum extends EnumClass {
 
-  @BuiltValueEnumConst(wireName: r'FIRST_NAME_LAST_INITIAL')
-  static const ReviewDisplayOptionChoiceEnum FIRST_NAME_LAST_INITIAL = _$reviewDisplayOptionChoiceEnum_FIRST_NAME_LAST_INITIAL;
-  @BuiltValueEnumConst(wireName: r'VERIFIED_BUYER')
-  static const ReviewDisplayOptionChoiceEnum VERIFIED_BUYER = _$reviewDisplayOptionChoiceEnum_VERIFIED_BUYER;
+  @BuiltValueEnumConst(wireName: r'FULL_NAME')
+  static const ReviewDisplayOptionChoiceEnum FULL_NAME = _$reviewDisplayOptionChoiceEnum_FULL_NAME;
 
   static Serializer<ReviewDisplayOptionChoiceEnum> get serializer => _$reviewDisplayOptionChoiceEnumSerializer;
 

@@ -14,17 +14,17 @@ const HEALTH: Record<HealthState, { label: string; className: string; Icon: type
 }
 
 /** Health is always an icon and a word, never colour alone. */
-export function HealthBadge({ state, label }: { state: string; label?: string }) {
+export function HealthBadge({ state, label, density = 'default' }: { state: string; label?: string; density?: 'default' | 'compact' }) {
   const health = HEALTH[(state in HEALTH ? state : 'UNKNOWN') as HealthState]
   const { Icon } = health
-  return <span className={`inline-flex min-h-8 items-center gap-2 rounded-pill border px-3 text-xs font-semibold ${health.className}`}><Icon size={14} aria-hidden="true" />{label ?? health.label}</span>
+  return <span className={`inline-flex items-center rounded-pill border text-xs ${density === 'compact' ? 'min-h-6 shrink-0 gap-1.5 whitespace-nowrap px-2 font-medium' : 'min-h-8 gap-2 px-3 font-semibold'} ${health.className}`}><Icon size={density === 'compact' ? 12 : 14} aria-hidden="true" />{label ?? health.label}</span>
 }
 
 /** Read-only label/value pairs; values wrap instead of truncating. */
-export function FactList({ facts, columns = 2 }: { facts: { label: string; value: ReactNode }[]; columns?: 1 | 2 | 3 }) {
+export function FactList({ facts, columns = 2, layout = 'grid' }: { facts: { label: string; value: ReactNode }[]; columns?: 1 | 2 | 3; layout?: 'grid' | 'rows' }) {
   const grid = columns === 3 ? 'sm:grid-cols-2 xl:grid-cols-3' : columns === 2 ? 'sm:grid-cols-2' : ''
-  return <dl className={`grid min-w-0 gap-x-6 gap-y-4 ${grid}`}>
-    {facts.map(fact => <div key={fact.label} className="min-w-0"><dt className="text-[13px] font-medium text-text-secondary">{fact.label}</dt><dd className="mt-1 break-words text-sm text-text-strong">{fact.value ?? '—'}</dd></div>)}
+  return <dl className={`grid min-w-0 gap-x-6 gap-y-4 ${layout === 'rows' ? '' : grid}`}>
+    {facts.map(fact => <div key={fact.label} className={`min-w-0 ${layout === 'rows' ? 'flex items-baseline justify-between gap-3' : ''}`}><dt className="text-[13px] font-medium text-text-secondary">{fact.label}</dt><dd className={`min-w-0 break-words text-sm text-text-strong ${layout === 'rows' ? 'text-right' : 'mt-1'}`}>{fact.value ?? '—'}</dd></div>)}
   </dl>
 }
 
@@ -51,9 +51,10 @@ export function EventTimeline({ label, events, formatDate, empty = 'No events ha
  * before → after change, requires a written reason, and surfaces a stale-version conflict instead of retrying.
  * Authorization is enforced by the API; this form only reflects it.
  */
-export function ReasonedDecisionForm({ title, target, version, before, after, submitLabel, variant = 'primary', minReason = 10, maxReason = 1000, busy = false, submitDisabled = false, error, conflict, onReload, onSubmit, children }: {
+export function ReasonedDecisionForm({ title, target, version, before, after, submitLabel, variant = 'primary', minReason = 10, maxReason = 1000, busy = false, submitDisabled = false, error, conflict, onReload, onSubmit, children, id, appearance = 'card', hideSubmit = false, afterReason }: {
   title: string; target: string; version?: number | string | null; before?: ReactNode; after?: ReactNode; submitLabel: string; variant?: 'primary' | 'danger'
   minReason?: number; maxReason?: number; busy?: boolean; submitDisabled?: boolean; error?: string | null; conflict?: string | null; onReload?: () => void; onSubmit: (reason: string) => void; children?: ReactNode
+  id?: string; appearance?: 'card' | 'plain'; hideSubmit?: boolean; afterReason?: ReactNode
 }) {
   const [reason, setReason] = useState('')
   const [touched, setTouched] = useState(false)
@@ -66,7 +67,7 @@ export function ReasonedDecisionForm({ title, target, version, before, after, su
     if (invalid || busy || submitDisabled) return
     onSubmit(trimmed)
   }
-  return <form onSubmit={submit} aria-labelledby={headingId} noValidate className="grid min-w-0 gap-4 rounded-surface border border-border-default bg-surface-primary p-4">
+  return <form id={id} onSubmit={submit} aria-labelledby={headingId} noValidate className={`grid min-w-0 gap-4 ${appearance === 'card' ? 'mp-card mp-card-padded' : ''}`}>
     <div>
       <h3 id={headingId} className="text-base font-semibold text-text-strong">{title}</h3>
       <p className="mt-1 break-words text-sm text-text-secondary">Decision target: <span className="font-semibold text-text-strong">{target}</span>{version !== undefined && version !== null ? <> · version <span className="tabular-nums">{version}</span></> : null}</p>
@@ -84,10 +85,11 @@ export function ReasonedDecisionForm({ title, target, version, before, after, su
       {touched && invalid ? <span id={errorId} role="alert" className="text-sm text-status-error">Enter a reason of at least {minReason} characters.</span>
         : <span id={hintId} className="text-sm text-text-secondary">The reason is recorded in the audit history with your name. {trimmed.length}/{maxReason}</span>}
     </div>
+    {afterReason}
     {conflict && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-control border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
       <span className="min-w-0 flex-1">{conflict}</span>{onReload && <Button variant="secondary" onClick={onReload}>Reload latest</Button>}
     </div>}
     {error && !conflict && <p role="alert" className="rounded-control border border-status-error/30 bg-red-50 px-4 py-3 text-sm text-red-900">{error}</p>}
-    <div className="flex justify-end"><Button type="submit" variant={variant} disabled={busy || submitDisabled}>{busy ? 'Saving…' : submitLabel}</Button></div>
+    {!hideSubmit && <div className="flex justify-end"><Button type="submit" variant={variant} disabled={busy || submitDisabled}>{busy ? 'Saving…' : submitLabel}</Button></div>}
   </form>
 }

@@ -20,6 +20,7 @@ Name | Type | Description | Notes
 **disputesOpen** | **int** |  | [optional]
 **commerceRestrictedUntil** | [**DateTime**](DateTime.md) |  | [optional]
 **sanctions** | [**BuiltList&lt;EnforcementSummary&gt;**](EnforcementSummary.md) |  |
+**recordableActions** | **BuiltList&lt;String&gt;** |  |
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

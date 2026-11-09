@@ -173,7 +173,7 @@ final class ReceiptService
         if (DB::table('fee_assessments')->where('order_id', $order->id)->exists()) {
             $this->fees->earnOnCompletion((string) $order->id, $actor->correlationId);
             // A dispute award on this order credits the earned commission through its own reviewed proposal.
-            app(DisputeFeeCredits::class)->proposePending((string) $order->id, $actor);
+            app(DisputeFeeCredits::class)->applyPending((string) $order->id, $actor);
         }
         $this->threads->close($order, $actor->userId, OrderStates::COMPLETED);
         $this->outbox->publish('ORDER_COMPLETED', 'ORDER', (string) $order->id, ['order_id' => (string) $order->id, 'source' => $source]);

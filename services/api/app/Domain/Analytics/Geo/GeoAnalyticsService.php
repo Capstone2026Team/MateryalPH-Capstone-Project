@@ -30,8 +30,8 @@ final class GeoAnalyticsService
     public const DEFINITIONS = [
         'vendor_count' => 'Active Tier 2 storefronts (active account and Store Activation) placed at their verified business address, as of the latest daily snapshot on or before the end date. Not suppressed: storefronts are public.',
         'registered_buyers' => 'Active Buyer accounts placed at their current primary saved location, as of the latest daily snapshot on or before the end date. Buyers without a primary location are counted as unresolved geography.',
-        'gross_gmv' => 'Sum of confirmed Vendor child-order value (materials, NRPC and delivery) for Online, COD and In-Store Payment orders first confirmed in the period. Excludes the Buyer processing fee; measured before cancellations and refunds.',
-        'net_gmv' => 'Gross GMV minus the value of orders finalized as cancelled and minus completed Dispute-Conclusion refunds and confirmed dispute reimbursements (principal only), never below zero per order.',
+        'gross_gmv' => 'Sum of confirmed Vendor child-order value (materials, NRPC and delivery) for Online, COD and In-Store Payment orders first confirmed in the period. Excludes the E-wallet transaction fee; measured before cancellations and refunds.',
+        'net_gmv' => 'Net sales: confirmed order value less cancelled sales, completed principal refunds and confirmed cash reimbursements, never below zero per order. Uses the same sales projection as Vendor Finance and dashboards.',
         'order_volume' => 'Count of confirmed Vendor child orders first confirmed in the period.',
         'fulfillment_rate' => 'Numerator: confirmed, non-cancelled orders whose expected fulfillment date falls in the period and that were completed on or before the end date. Denominator: confirmed, non-cancelled orders whose expected fulfillment date falls in the period.',
         'cancellation_rate' => 'Numerator: orders first confirmed in the period that were finalized as cancelled. Denominator: orders first confirmed in the period.',

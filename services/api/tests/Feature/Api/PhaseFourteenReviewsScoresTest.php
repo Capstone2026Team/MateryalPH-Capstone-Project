@@ -53,6 +53,36 @@ final class PhaseFourteenReviewsScoresTest extends TestCase
 
     private MockInterface $mediaScanner;
 
+    public function test_moderation_tab_counts_respect_dates_and_count_each_review_once_before_state_and_pagination(): void
+    {
+        [$store, $owner] = $this->pickupStore('Moderation Count Store');
+        $buyer = $this->buyer();
+        $profile = (string) DB::table('buyer_profiles')->where('user_id', $buyer->getKey())->value('id');
+        for ($index = 0; $index < 29; $index++) {
+            $order = $this->ratedOrder($store, $profile, $buyer->getKey(), 4, 4, null, CarbonImmutable::parse($index === 28 ? '2026-09-01T04:00:00Z' : '2026-10-05T04:00:00Z'));
+            $state = match ($index) {
+                25 => 'CORRECTION_REQUESTED', 26 => 'REMOVED', 27 => 'NONE', default => 'FLAGGED'
+            };
+            DB::table('reviews')->where('order_id', $order)->update(['moderation_state' => $state]);
+            if ($index === 27) {
+                $review = DB::table('reviews')->where('order_id', $order)->value('id');
+                foreach ([$buyer, $owner] as $reporter) {
+                    DB::table('review_flags')->insert(['id' => (string) Str::uuid7(), 'review_id' => $review, 'reporter_user_id' => $reporter->getKey(),
+                        'reporter_party' => $reporter->is($buyer) ? 'BUYER' : 'VENDOR', 'reason_code' => 'PERSONAL_INFORMATION', 'state' => 'OPEN', 'created_at' => now(), 'updated_at' => now()]);
+                }
+            }
+        }
+        $this->signInAdmin($this->admin('ADMIN_USER_MANAGEMENT'));
+        $base = '/api/v1/admin/reviews?from=2026-10-01&to=2026-10-31';
+        $first = $this->getJson($base.'&state=NEEDS_ACTION')->assertOk()->assertJsonCount(20, 'data')->assertJsonPath('meta.total', 26)
+            ->assertJsonPath('meta.counts.NEEDS_ACTION', 26)->assertJsonPath('meta.counts.CORRECTION_REQUESTED', 1)
+            ->assertJsonPath('meta.counts.REMOVED', 1)->assertJsonPath('meta.counts.ALL', 28);
+        $this->getJson($base.'&state=NEEDS_ACTION&page=2')->assertOk()->assertJsonCount(6, 'data')->assertJsonPath('meta.counts', $first->json('meta.counts'));
+        $this->getJson($base.'&state=REMOVED')->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('meta.counts', $first->json('meta.counts'));
+        $this->signInAdmin($this->admin('ADMIN_SUPPORT'));
+        $this->getJson($base)->assertForbidden()->assertJsonMissingPath('meta.counts');
+    }
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -152,12 +182,17 @@ final class PhaseFourteenReviewsScoresTest extends TestCase
         $this->signInStoreMember($owner);
         $this->getJson('/api/v1/vendor/reviews/'.$reviewId)->assertNotFound();
         $this->postJson('/api/v1/vendor/orders/'.$orderId.'/buyer-rating', ['inquiry_seriousness' => 5, 'communication_quality' => 4, 'payment_reliability' => 5], ['Idempotency-Key' => (string) Str::uuid7()])->assertCreated();
+        DB::table('listing_media')->where('vendor_listing_id', $listing)->update(['status' => 'REMOVED']);
+        $this->getJson('/api/v1/vendor/reviews/'.$reviewId)->assertOk()->assertJsonPath('data.product.image_url', null);
+        $photo = $this->post('/api/v1/vendor/catalog/listings/'.$listing.'/media', ['file' => UploadedFile::fake()->image('product.png')])->assertCreated();
+        $mediaId = $photo->json('data.uploaded_media_id');
+        $fileId = DB::table('listing_media')->where('id', $mediaId)->value('file_id');
         DB::table('vendor_listings')->where('id', $listing)->update(['display_name' => 'Renamed after purchase']);
         DB::table('listing_variants')->where('id', $line->listing_variant_id)->update(['label' => 'Renamed variant']);
         $detail = $this->getJson('/api/v1/vendor/reviews/'.$reviewId)->assertOk()
             ->assertJsonPath('data.product.listing_id', $listing)->assertJsonPath('data.product.name', $snapshot['display_name'])
             ->assertJsonPath('data.product.variant_label', $snapshot['variant_label'])->assertJsonPath('data.variant_label', $snapshot['variant_label'])
-            ->assertJsonPath('data.display_name', 'Verified Buyer')->assertJsonPath('data.comment', 'Arrived in good condition.')
+            ->assertJsonPath('data.display_name', $buyer->name)->assertJsonPath('data.comment', 'Arrived in good condition.')
             ->assertJsonPath('data.ratings.product_quality', 4)->assertJsonPath('data.can_report', true)->json('data');
         self::assertSame(['image/png', 'video/mp4'], array_column($detail['media'], 'content_type'));
         self::assertNotEmpty($detail['submitted_at']);
@@ -165,6 +200,15 @@ final class PhaseFourteenReviewsScoresTest extends TestCase
         self::assertStringNotContainsString((string) $buyer->email, json_encode($detail, JSON_THROW_ON_ERROR));
         $this->get($detail['media'][0]['url'])->assertOk()->assertHeader('Content-Type', 'image/png');
         $this->get($detail['media'][1]['url'])->assertOk()->assertHeader('Content-Type', 'video/mp4');
+        self::assertStringContainsString('/catalog-files/'.$fileId.'/content?', $detail['product']['image_url']);
+        $this->get($detail['product']['image_url'])->assertOk()->assertHeader('Content-Type', 'image/png');
+        DB::table('files')->where('id', $fileId)->update(['scan_state' => 'PENDING']);
+        $this->getJson('/api/v1/vendor/reviews/'.$reviewId)->assertOk()->assertJsonPath('data.product.image_url', null);
+        $this->get($detail['product']['image_url'])->assertNotFound();
+        DB::table('files')->where('id', $fileId)->update(['scan_state' => 'CLEAN']);
+        DB::table('listing_media')->where('id', $mediaId)->update(['status' => 'REMOVED']);
+        $this->getJson('/api/v1/vendor/reviews/'.$reviewId)->assertOk()->assertJsonPath('data.product.image_url', null);
+        DB::table('listing_media')->where('id', $mediaId)->update(['status' => 'READY']);
         $ownId = (string) DB::table('reviews')->where('order_id', $orderId)->where('review_type', 'BUYER')->value('id');
         DB::table('reviews')->where('id', $ownId)->update(['revealed_at' => null]);
         $this->getJson('/api/v1/vendor/reviews/'.$ownId)->assertOk()->assertJsonPath('data.product', null)->assertJsonPath('data.can_report', false);
@@ -173,9 +217,11 @@ final class PhaseFourteenReviewsScoresTest extends TestCase
         $this->signInStoreMember($otherOwner);
         $this->getJson('/api/v1/vendor/reviews/'.$reviewId)->assertNotFound();
         $this->get($detail['media'][1]['url'])->assertNotFound();
+        $this->get($detail['product']['image_url'])->assertNotFound();
         $member = $this->teamMember($store, 'CUSTOMER_SERVICE');
         $this->signInStoreMember($member);
         $this->getJson('/api/v1/vendor/reviews/'.$reviewId)->assertOk();
+        $this->get($detail['product']['image_url'])->assertOk()->assertHeader('Content-Type', 'image/png');
         DB::table('vendor_memberships')->where('user_id', $member->id)->update(['role' => 'INVENTORY']);
         $this->getJson('/api/v1/vendor/reviews/'.$reviewId)->assertForbidden();
         $this->get($detail['media'][0]['url'])->assertNotFound();
@@ -220,6 +266,98 @@ final class PhaseFourteenReviewsScoresTest extends TestCase
         [, $otherOwner] = $this->activeStore('Different Review Store', false);
         $this->signInStoreMember($otherOwner);
         $this->getJson($url)->assertNotFound();
+    }
+
+    public function test_buyer_profile_ratings_are_self_scoped_paginated_and_use_the_ccs_sample_and_window_rules(): void
+    {
+        $this->freeze(CarbonImmutable::now());
+        [$store, $owner] = $this->pickupStore('Store rating the Buyer');
+        $buyer = $this->buyer();
+        $profile = $this->buyerProfileId($buyer);
+        $insert = function (CarbonImmutable $submitted) use ($store, $owner, $profile): string {
+            $orderId = $this->bareOrder($store, $profile, 'COMPLETED');
+            DB::table('reviews')->insert(['id' => (string) Str::uuid7(), 'order_id' => $orderId, 'vendor_organization_id' => $store->id, 'buyer_profile_id' => $profile,
+                'review_type' => 'BUYER', 'reviewer_party' => 'VENDOR', 'reviewer_user_id' => $owner->id, 'reviewer_role' => 'OWNER',
+                'inquiry_seriousness' => 3, 'communication_quality' => 4, 'payment_reliability' => 5, 'public_display_name' => 'Store rating the Buyer', 'display_name_choice' => 'STORE_NAME',
+                'submitted_at' => $submitted, 'revealed_at' => $submitted, 'created_at' => now(), 'updated_at' => now()]);
+
+            return $orderId;
+        };
+        for ($index = 0; $index < 4; $index++) {
+            $insert(CarbonImmutable::now()->subDays(1));
+        }
+        $this->signInBuyer($buyer);
+        $this->getJson('/api/v1/buyers/ratings')->assertOk()->assertJsonPath('meta.summary.count', 4)->assertJsonPath('meta.summary.score', null)->assertJsonPath('meta.summary.inquiry_seriousness', null);
+        $latestOrder = $insert(CarbonImmutable::now());
+        $this->getJson('/api/v1/buyers/ratings')->assertOk()->assertJsonPath('meta.summary.score', 4)->assertJsonPath('meta.summary.inquiry_seriousness', 3)
+            ->assertJsonPath('meta.summary.communication_quality', 4)->assertJsonPath('meta.summary.payment_reliability', 5)->assertJsonPath('data.0.store_name', 'Store rating the Buyer');
+        $oldOrder = $insert(CarbonImmutable::now()->subDays(91));
+        for ($index = 0; $index < 16; $index++) {
+            $insert(CarbonImmutable::now()->subHours(1));
+        }
+        $first = $this->getJson('/api/v1/buyers/ratings')->assertOk()->assertJsonPath('meta.total', 22)->assertJsonPath('meta.summary.count', 21)->assertJsonPath('meta.summary.score', 4);
+        self::assertCount(20, $first->json('data'));
+        $second = $this->getJson('/api/v1/buyers/ratings?page=2')->assertOk()->assertJsonPath('meta.summary.count', 21);
+        self::assertCount(2, $second->json('data'));
+        self::assertContains($oldOrder, array_column($second->json('data'), 'order_id'), 'Older published feedback stays in history but not in the 90-day score.');
+        DB::table('reviews')->where('order_id', $latestOrder)->update(['revealed_at' => null]);
+        $this->getJson('/api/v1/buyers/ratings')->assertOk()->assertJsonPath('meta.total', 21)->assertJsonPath('meta.summary.count', 20);
+        DB::table('reviews')->where('order_id', $latestOrder)->update(['revealed_at' => now(), 'moderation_state' => 'REMOVED']);
+        $this->getJson('/api/v1/buyers/ratings')->assertOk()->assertJsonPath('meta.summary.count', 20);
+        $this->signInBuyer($this->buyer());
+        $this->getJson('/api/v1/buyers/ratings')->assertOk()->assertJsonCount(0, 'data')->assertJsonPath('meta.summary.score', null);
+        $this->signInStoreMember($owner);
+        $this->getJson('/api/v1/buyers/ratings')->assertForbidden();
+    }
+
+    public function test_vendor_review_buyer_photo_rechecks_identity_visibility_store_and_current_role(): void
+    {
+        $this->freeze(CarbonImmutable::now());
+        [$store, $owner, $listing] = $this->pickupStore('Buyer Review Photos');
+        $buyer = $this->buyer();
+        $orderId = $this->ratedOrder($store, $this->buyerProfileId($buyer), (int) $buyer->id, 4, 5, 5, CarbonImmutable::now(), $listing);
+        $reviewId = (string) DB::table('reviews')->where('order_id', $orderId)->where('review_type', 'PRODUCT')->value('id');
+        DB::table('reviews')->where('order_id', $orderId)->update(['public_display_name' => 'Sample B.', 'display_name_choice' => 'FIRST_NAME_LAST_INITIAL']);
+        $buyer->forceFill(['profile_photo_disk' => 'local', 'profile_photo_key' => 'private/profile-photos/review-buyer.png'])->save();
+        Storage::disk('local')->put('private/profile-photos/review-buyer.png', base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aHd8AAAAASUVORK5CYII='));
+        $this->signInStoreMember($owner);
+        $detail = '/api/v1/vendor/reviews/'.$reviewId;
+        $photo = $this->getJson($detail)->assertOk()->json('data.buyer_avatar_url');
+        self::assertIsString($photo);
+        self::assertStringContainsString('/vendor/reviews/'.$reviewId.'/buyer-photo?', $photo);
+        self::assertStringNotContainsString('profile-photos', $photo);
+        $this->get($photo)->assertOk()->assertHeader('Content-Type', 'image/png')->assertHeader('X-Content-Type-Options', 'nosniff');
+        $this->get($detail.'/buyer-photo')->assertForbidden();
+        $this->getJson('/api/v1/vendor/reviews?type=PRODUCT')->assertOk()->assertJsonPath('data.0.buyer_avatar_url', $photo);
+        $this->getJson('/api/v1/vendor/reviews?type=VENDOR')->assertOk()->assertJson(fn ($json) => $json->whereType('data.0.buyer_avatar_url', 'string')->etc());
+
+        DB::table('reviews')->where('id', $reviewId)->update(['display_name_choice' => 'VERIFIED_BUYER', 'public_display_name' => 'Verified Buyer']);
+        $this->getJson($detail)->assertOk()->assertJsonPath('data.buyer_avatar_url', $photo)->assertJsonPath('data.display_name', $buyer->name);
+        $this->get($photo)->assertOk();
+        self::assertSame('Verified Buyer', DB::table('reviews')->where('id', $reviewId)->value('public_display_name'), 'The original anonymous submission remains in history.');
+        DB::table('reviews')->where('id', $reviewId)->update(['display_name_choice' => 'FIRST_NAME_LAST_INITIAL', 'public_display_name' => 'Sample B.']);
+        foreach (['HIDDEN_PENDING_REVIEW', 'CORRECTION_REQUESTED', 'REMOVED'] as $state) {
+            DB::table('reviews')->where('id', $reviewId)->update(['moderation_state' => $state]);
+            $this->get($photo)->assertNotFound();
+        }
+        DB::table('reviews')->where('id', $reviewId)->update(['moderation_state' => 'NONE', 'revealed_at' => null]);
+        $this->get($photo)->assertNotFound();
+        DB::table('reviews')->where('id', $reviewId)->update(['revealed_at' => now()]);
+
+        [, $otherOwner] = $this->activeStore('Other Photo Store', false);
+        $this->signInStoreMember($otherOwner);
+        $this->get($photo)->assertNotFound();
+        $member = $this->teamMember($store, 'CUSTOMER_SERVICE');
+        $this->signInStoreMember($member);
+        $this->get($photo)->assertOk();
+        DB::table('vendor_memberships')->where('user_id', $member->id)->update(['role' => 'INVENTORY']);
+        $this->get($photo)->assertForbidden();
+        $this->signInStoreMember($owner);
+        $buyer->forceFill(['profile_photo_key' => null])->save();
+        $this->getJson($detail)->assertOk()->assertJsonPath('data.buyer_avatar_url', null);
+        $this->get($photo)->assertNotFound();
+        $this->freeze(CarbonImmutable::now()->addMinutes(6));
+        $this->get($photo)->assertForbidden();
     }
 
     public function test_vendor_review_detail_and_summary_withhold_disputes_exclusions_and_unrevealed_reviews(): void
@@ -293,7 +431,8 @@ final class PhaseFourteenReviewsScoresTest extends TestCase
 
         $this->signInBuyer($other);
         $public = $this->getJson('/api/v1/buyers/listings/'.$listing.'/reviews')->assertOk();
-        $public->assertJsonPath('meta.summary.count', 1)->assertJsonPath('data.0.display_name', 'Verified Buyer')->assertJsonPath('data.0.verified_purchase', true);
+        $public->assertJsonPath('meta.summary.count', 1)->assertJsonPath('data.0.display_name', $buyer->name)->assertJsonPath('data.0.verified_purchase', true);
+        self::assertSame('FULL_NAME', DB::table('reviews')->where('order_id', $orderId)->where('review_type', 'VENDOR')->value('display_name_choice'));
         self::assertArrayNotHasKey('reviewer_user_id', $public->json('data.0'));
         $this->getJson('/api/v1/buyers/stores/'.$store->id.'/reviews')->assertOk()->assertJsonPath('meta.summary.count', 1)->assertJsonPath('meta.scores.label', ScoreRules::NEW_VENDOR_LABEL);
         $this->signInBuyer($buyer);
@@ -574,7 +713,7 @@ final class PhaseFourteenReviewsScoresTest extends TestCase
     }
 
     /** @param array<string, mixed> $body */
-    private function submitBuyer(string $orderId, array $body, string $choice = 'FIRST_NAME_LAST_INITIAL', ?string $key = null): TestResponse
+    private function submitBuyer(string $orderId, array $body, string $choice = 'FULL_NAME', ?string $key = null): TestResponse
     {
         return $this->postJson('/api/v1/buyers/orders/'.$orderId.'/reviews', ['display_name_choice' => $choice] + $body, ['Idempotency-Key' => $key ?? (string) Str::uuid7()]);
     }

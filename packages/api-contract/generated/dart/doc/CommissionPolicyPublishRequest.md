@@ -12,6 +12,11 @@ Name | Type | Description | Notes
 **expectedVersion** | **int** |  |
 **effectiveFrom** | [**DateTime**](DateTime.md) | Omit or null to apply now; otherwise a future instant. | [optional]
 **reason** | **String** |  |
+**vendorMessage** | **String** |  | [optional]
+**noticeOverride** | **bool** |  | [optional] [default to false]
+**noticeOverrideReason** | **String** |  | [optional]
+**supersedesPolicyId** | **String** |  | [optional]
+**cancelScheduled** | **bool** |  | [optional] [default to false]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

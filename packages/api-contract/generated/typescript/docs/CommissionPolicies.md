@@ -10,6 +10,9 @@ Name | Type
 `next` | [CommissionPolicy](CommissionPolicy.md)
 `latestVersion` | number
 `canManage` | boolean
+`minNoticeDays` | number
+`eligibleVendorCount` | number
+`canExport` | boolean
 `versions` | [Array&lt;CommissionPolicy&gt;](CommissionPolicy.md)
 
 ## Example
@@ -23,6 +26,9 @@ const example = {
   "next": null,
   "latestVersion": null,
   "canManage": null,
+  "minNoticeDays": null,
+  "eligibleVendorCount": null,
+  "canExport": null,
   "versions": null,
 } satisfies CommissionPolicies
 

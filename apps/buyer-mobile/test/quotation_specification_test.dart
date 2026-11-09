@@ -141,52 +141,54 @@ Map<String, Object?> package() => {
   'lock_version': 3,
 };
 
-ProjectsRepository repository(List<RequestOptions> requests) =>
-    ProjectsRepository(
-      client: api.MateryalphApiClient(
-        dio: Dio(BaseOptions(baseUrl: 'https://api.example.test')),
-        interceptors: [
-          InterceptorsWrapper(
-            onRequest: (options, handler) {
-              requests.add(options);
-              final path = options.uri.path;
-              final Object? data = path.endsWith('/selection-preview')
-                  ? candidate(chosen: true)
-                  : path.endsWith('/selection')
-                  ? {'id': '01995000-0000-7000-8000-0000000000d9'}
-                  : path.endsWith('/work-packages/$packageId')
-                  ? packageView(method: 'PICKUP')
-                  : null;
-              if (data == null) {
-                handler.reject(
-                  DioException(
-                    requestOptions: options,
-                    response: Response(
-                      requestOptions: options,
-                      statusCode: 503,
-                    ),
-                    type: DioExceptionType.badResponse,
-                  ),
-                );
-                return;
-              }
-              handler.resolve(
-                Response(
-                  requestOptions: options,
-                  statusCode: path.endsWith('/selection') ? 201 : 200,
-                  data: {
-                    'data': data,
-                    'meta': <String, Object?>{},
-                    'errors': <Object?>[],
-                  },
-                ),
-              );
-            },
-          ),
-        ],
+ProjectsRepository repository(
+  List<RequestOptions> requests,
+) => ProjectsRepository(
+  client: api.MateryalphApiClient(
+    dio: Dio(BaseOptions(baseUrl: 'https://api.example.test')),
+    interceptors: [
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          requests.add(options);
+          final path = options.uri.path;
+          final Object? data = path.endsWith('/selection-preview')
+              ? {
+                  ...candidate(chosen: true),
+                  if (requests.any((r) => r.uri.path.endsWith('/selection')))
+                    'primary_order_id': '01995000-0000-7000-8000-0000000000d9',
+                }
+              : path.endsWith('/selection')
+              ? {'id': '01995000-0000-7000-8000-0000000000d9'}
+              : path.endsWith('/work-packages/$packageId')
+              ? packageView(method: 'PICKUP')
+              : null;
+          if (data == null) {
+            handler.reject(
+              DioException(
+                requestOptions: options,
+                response: Response(requestOptions: options, statusCode: 503),
+                type: DioExceptionType.badResponse,
+              ),
+            );
+            return;
+          }
+          handler.resolve(
+            Response(
+              requestOptions: options,
+              statusCode: path.endsWith('/selection') ? 201 : 200,
+              data: {
+                'data': data,
+                'meta': <String, Object?>{},
+                'errors': <Object?>[],
+              },
+            ),
+          );
+        },
       ),
-      onSessionExpired: () async {},
-    );
+    ],
+  ),
+  onSessionExpired: () async {},
+);
 
 void main() {
   testWidgets(
@@ -207,7 +209,9 @@ void main() {
             estimate: typedEstimate(estimate),
             links: ProjectSourcingLinks(
               openConversation: (_, _) {},
-              openOrder: (_, id) => order = id,
+              openOrder: (_, id) {
+                order = id;
+              },
               openStore: (_, _) {},
               openProduct: (_, listing, variant) =>
                   opened.add((listing, variant)),
@@ -255,7 +259,9 @@ void main() {
         {'line_id': lineId, 'option_id': 'bbbbbbbbbbbbbbbb'},
       ]);
       await tester.tap(find.text('View primary request'));
+      await tester.pumpAndSettle();
       expect(order, '01995000-0000-7000-8000-0000000000d9');
+      expect(find.text('View primary request'), findsOneWidget);
       expect(tester.takeException(), isNull);
     },
   );

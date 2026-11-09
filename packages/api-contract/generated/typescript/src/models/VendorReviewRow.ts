@@ -42,6 +42,10 @@ import {
  */
 export interface VendorReviewRow {
     /**
+     * Five-minute signed review-scoped Buyer photo URL, including for legacy reviews now shown with full identity. Null for store-authored Buyer ratings or missing photos. Fetch with the current Vendor session; never use a private storage URL.
+     */
+    buyerAvatarUrl?: string | null;
+    /**
      *
      */
     id?: string;
@@ -145,6 +149,7 @@ export function VendorReviewRowFromJSONTyped(json: any, ignoreDiscriminator: boo
     }
     return {
 
+        'buyerAvatarUrl': json['buyer_avatar_url'] === undefined ? undefined : json['buyer_avatar_url'] === null ? null : json['buyer_avatar_url'],
         'id': json['id'] == null ? undefined : json['id'],
         'type': json['type'] == null ? undefined : json['type'],
         'ratings': json['ratings'] == null ? undefined : ReviewRatingsFromJSON(json['ratings']),
@@ -174,6 +179,7 @@ export function VendorReviewRowToJSONTyped(value?: VendorReviewRow | null, ignor
 
     return {
 
+        'buyer_avatar_url': value['buyerAvatarUrl'],
         'id': value['id'],
         'type': value['type'],
         'ratings': ReviewRatingsToJSON(value['ratings']),

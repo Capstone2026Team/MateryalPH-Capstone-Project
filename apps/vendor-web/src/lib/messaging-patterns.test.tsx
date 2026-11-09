@@ -64,7 +64,7 @@ describe('conversation and quotation presentation', () => {
     expect(screen.getByText('Payment method').closest('div')).toHaveTextContent('Buyer selects before accepting')
     rerender(<QuotationVersionCard version={{ ...version, state: 'ACCEPTED', selectedPaymentMethod: 'IN_STORE', acceptedOrderId: 'order', actions: [] }} />)
     expect(screen.getByText('Payment method').closest('div')).toHaveTextContent('In-Store Payment')
-    expect(screen.getByText('Processing fee', { exact: true }).closest('div')).toHaveTextContent('Not applicable')
+    expect(screen.getByText('E-wallet transaction fee', { exact: true }).closest('div')).toHaveTextContent('Not applicable')
     expect(screen.queryByText('Buyer selects before accepting')).not.toBeInTheDocument()
   })
   it('retains published technical details through the client and shows them beside the material', () => {
@@ -89,8 +89,8 @@ describe('conversation and quotation presentation', () => {
     expect(screen.queryByText(/Vendor discount \(/)).not.toBeInTheDocument()
     expect(screen.queryByText('Materials subtotal')).not.toBeInTheDocument()
     expect(screen.getByText('Included VAT (in materials)').closest('div')).toHaveTextContent('₱7.29')
-    expect(screen.getByText('Total before processing fee').closest('div')).toHaveTextContent('₱68.00')
-    expect(screen.getByText('Processing fee', { exact: true }).closest('div')).toHaveTextContent('Pending')
+    expect(screen.getByText('Total before e-wallet transaction fee').closest('div')).toHaveTextContent('₱68.00')
+    expect(screen.getByText('E-wallet transaction fee', { exact: true }).closest('div')).toHaveTextContent('Pending')
   })
   it('uses saved net amounts and shows materials discounts, included VAT and NRPC without adding them to the total', () => {
     render(<QuotationVersionCard version={{ ...version, content: { ...version.content,
@@ -103,7 +103,7 @@ describe('conversation and quotation presentation', () => {
     expect(payment.getByText('Vendor discount (materials · 10.00%)').closest('div')).toHaveTextContent('− ₱100.00')
     expect(payment.getByText('Materials after discounts').closest('div')).toHaveTextContent('₱900.00')
     expect(payment.getByText('Included VAT (in materials)').closest('div')).toHaveTextContent('₱96.43')
-    expect(payment.getByText('Total before processing fee').closest('div')).toHaveTextContent('₱1,100.00')
+    expect(payment.getByText('Total before e-wallet transaction fee').closest('div')).toHaveTextContent('₱1,100.00')
     expect(payment.getByText('NRPC included in total').closest('div')).toHaveTextContent('₱50.00')
   })
   it('separates the saved delivery discount from the materials amount', () => {
@@ -116,7 +116,7 @@ describe('conversation and quotation presentation', () => {
     expect(screen.getByText('Vendor discount (delivery · 10.00%)').closest('div')).toHaveTextContent('− ₱20.00')
     expect(screen.getByText('Delivery after discounts').closest('div')).toHaveTextContent('₱180.00')
     expect(screen.queryByText(/Vendor discount \(materials/)).not.toBeInTheDocument()
-    expect(screen.getByText('Total before processing fee').closest('div')).toHaveTextContent('₱248.00')
+    expect(screen.getByText('Total before e-wallet transaction fee').closest('div')).toHaveTextContent('₱248.00')
   })
   it('summarizes the initial quotation without calculation data, IDs, coordinates or default discounts', () => {
     const change = (path: string, after: unknown): ChatQuotationChange => ({ path, label: `Raw internal details for ${path}`, before: null, after })

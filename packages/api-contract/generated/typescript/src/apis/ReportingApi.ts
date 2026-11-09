@@ -24,6 +24,11 @@ import {
     ListDocumentExports200ResponseToJSON,
 } from '../models/ListDocumentExports200Response';
 import {
+    type ListOrderDocuments200Response,
+    ListOrderDocuments200ResponseFromJSON,
+    ListOrderDocuments200ResponseToJSON,
+} from '../models/ListOrderDocuments200Response';
+import {
     type ListTaxPackages200Response,
     ListTaxPackages200ResponseFromJSON,
     ListTaxPackages200ResponseToJSON,
@@ -65,6 +70,21 @@ export interface DownloadDocumentExportRequest {
     exportId: string;
 }
 
+export interface DownloadOrderDocumentRequest {
+    /**
+     * Authenticated surface; account type must match.
+     */
+    audience: DownloadOrderDocumentAudienceEnum;
+    /**
+     *
+     */
+    orderId: string;
+    /**
+     *
+     */
+    kind: DownloadOrderDocumentKindEnum;
+}
+
 export interface GetTaxPackageRequest {
     /**
      *
@@ -101,6 +121,17 @@ export interface ListDocumentExportsRequest {
      * Inclusive Asia/Manila calendar date; omitted boundary unrestricted. Export requested_at (created_at); each download rechecks current permissions.
      */
     to?: Date;
+}
+
+export interface ListOrderDocumentsRequest {
+    /**
+     * Authenticated surface; account type must match.
+     */
+    audience: ListOrderDocumentsAudienceEnum;
+    /**
+     *
+     */
+    orderId: string;
 }
 
 export interface ListTaxPackagesRequest {
@@ -227,6 +258,77 @@ export class ReportingApi extends runtime.BaseAPI {
      */
     async downloadDocumentExport(requestParameters: DownloadDocumentExportRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Blob> {
         const response = await this.downloadDocumentExportRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for downloadOrderDocument without sending the request
+     */
+    async downloadOrderDocumentRequestOpts(requestParameters: DownloadOrderDocumentRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['audience'] == null) {
+            throw new runtime.RequiredError(
+                'audience',
+                'Required parameter "audience" was null or undefined when calling downloadOrderDocument().'
+            );
+        }
+
+        if (requestParameters['orderId'] == null) {
+            throw new runtime.RequiredError(
+                'orderId',
+                'Required parameter "orderId" was null or undefined when calling downloadOrderDocument().'
+            );
+        }
+
+        if (requestParameters['kind'] == null) {
+            throw new runtime.RequiredError(
+                'kind',
+                'Required parameter "kind" was null or undefined when calling downloadOrderDocument().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("passportBearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/{audience}/orders/{orderId}/documents/{kind}/download`;
+        urlPath = urlPath.replace('{audience}', encodeURIComponent(String(requestParameters['audience'])));
+        urlPath = urlPath.replace('{orderId}', encodeURIComponent(String(requestParameters['orderId'])));
+        urlPath = urlPath.replace('{kind}', encodeURIComponent(String(requestParameters['kind'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Read-only, private, audited attachment. Rechecks current order access and file checksum; never generates a new report. Canonical files follow commercial-record retention rather than the 24-hour report-copy expiry.
+     * Download an already generated order PDF
+     */
+    async downloadOrderDocumentRaw(requestParameters: DownloadOrderDocumentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Blob>> {
+        const requestOptions = await this.downloadOrderDocumentRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.BlobApiResponse(response);
+    }
+
+    /**
+     * Read-only, private, audited attachment. Rechecks current order access and file checksum; never generates a new report. Canonical files follow commercial-record retention rather than the 24-hour report-copy expiry.
+     * Download an already generated order PDF
+     */
+    async downloadOrderDocument(requestParameters: DownloadOrderDocumentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Blob> {
+        const response = await this.downloadOrderDocumentRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -361,6 +463,69 @@ export class ReportingApi extends runtime.BaseAPI {
      */
     async listDocumentExports(requestParameters: ListDocumentExportsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ListDocumentExports200Response> {
         const response = await this.listDocumentExportsRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for listOrderDocuments without sending the request
+     */
+    async listOrderDocumentsRequestOpts(requestParameters: ListOrderDocumentsRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['audience'] == null) {
+            throw new runtime.RequiredError(
+                'audience',
+                'Required parameter "audience" was null or undefined when calling listOrderDocuments().'
+            );
+        }
+
+        if (requestParameters['orderId'] == null) {
+            throw new runtime.RequiredError(
+                'orderId',
+                'Required parameter "orderId" was null or undefined when calling listOrderDocuments().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("passportBearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/{audience}/orders/{orderId}/documents`;
+        urlPath = urlPath.replace('{audience}', encodeURIComponent(String(requestParameters['audience'])));
+        urlPath = urlPath.replace('{orderId}', encodeURIComponent(String(requestParameters['orderId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Read-only. The Purchase Order includes payment and fulfillment methods, recorded Buyer/Vendor details, and Buyer account email/mobile. Separate payment confirmations are retired. Documents are retained commercial records, not expiring report copies or Vendor tax invoices. No document is generated by this read.
+     * List automatically issued order documents
+     */
+    async listOrderDocumentsRaw(requestParameters: ListOrderDocumentsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ListOrderDocuments200Response>> {
+        const requestOptions = await this.listOrderDocumentsRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ListOrderDocuments200ResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Read-only. The Purchase Order includes payment and fulfillment methods, recorded Buyer/Vendor details, and Buyer account email/mobile. Separate payment confirmations are retired. Documents are retained commercial records, not expiring report copies or Vendor tax invoices. No document is generated by this read.
+     * List automatically issued order documents
+     */
+    async listOrderDocuments(requestParameters: ListOrderDocumentsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ListOrderDocuments200Response> {
+        const response = await this.listOrderDocumentsRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -603,7 +768,7 @@ export class ReportingApi extends runtime.BaseAPI {
     }
 
     /**
-     * Private immutable snapshot. Current access checked at request, generation and download. Admin requires recent authentication. Files expire 24 hours after generation. MAT audience suppression applies.
+     * Private immutable snapshot. Current access checked at request, generation and download. Admin requires recent authentication. Files expire 24 hours after generation. MAT audience suppression applies. Admin TRANSACTION_HISTORY exports only successful Vendor commission payments, with finance.view plus finance.export; from, to and status filters match the commission payment ledger. Monthly statements are created and issued automatically with immutable invoices.
      * request Document Export
      */
     async requestDocumentExportRaw(requestParameters: RequestDocumentExportRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<RequestDocumentExport202Response>> {
@@ -614,7 +779,7 @@ export class ReportingApi extends runtime.BaseAPI {
     }
 
     /**
-     * Private immutable snapshot. Current access checked at request, generation and download. Admin requires recent authentication. Files expire 24 hours after generation. MAT audience suppression applies.
+     * Private immutable snapshot. Current access checked at request, generation and download. Admin requires recent authentication. Files expire 24 hours after generation. MAT audience suppression applies. Admin TRANSACTION_HISTORY exports only successful Vendor commission payments, with finance.view plus finance.export; from, to and status filters match the commission payment ledger. Monthly statements are created and issued automatically with immutable invoices.
      * request Document Export
      */
     async requestDocumentExport(requestParameters: RequestDocumentExportRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<RequestDocumentExport202Response> {
@@ -701,6 +866,22 @@ export type DownloadDocumentExportAudienceEnum = typeof DownloadDocumentExportAu
 /**
  * @export
  */
+export const DownloadOrderDocumentAudienceEnum = {
+    Buyers: 'buyers',
+    Vendor: 'vendor',
+    Admin: 'admin',
+} as const;
+export type DownloadOrderDocumentAudienceEnum = typeof DownloadOrderDocumentAudienceEnum[keyof typeof DownloadOrderDocumentAudienceEnum];
+/**
+ * @export
+ */
+export const DownloadOrderDocumentKindEnum = {
+    PurchaseOrder: 'PURCHASE_ORDER',
+} as const;
+export type DownloadOrderDocumentKindEnum = typeof DownloadOrderDocumentKindEnum[keyof typeof DownloadOrderDocumentKindEnum];
+/**
+ * @export
+ */
 export const ListDocumentExportsAudienceEnum = {
     Buyers: 'buyers',
     Vendor: 'vendor',
@@ -712,7 +893,6 @@ export type ListDocumentExportsAudienceEnum = typeof ListDocumentExportsAudience
  */
 export const ListDocumentExportsTypeEnum = {
     PurchaseOrder: 'PURCHASE_ORDER',
-    PaymentConfirmation: 'PAYMENT_CONFIRMATION',
     ProjectSummary: 'PROJECT_SUMMARY',
     BudgetReport: 'BUDGET_REPORT',
     OperationalOrder: 'OPERATIONAL_ORDER',
@@ -733,6 +913,15 @@ export const ListDocumentExportsFormatEnum = {
     Csv: 'CSV',
 } as const;
 export type ListDocumentExportsFormatEnum = typeof ListDocumentExportsFormatEnum[keyof typeof ListDocumentExportsFormatEnum];
+/**
+ * @export
+ */
+export const ListOrderDocumentsAudienceEnum = {
+    Buyers: 'buyers',
+    Vendor: 'vendor',
+    Admin: 'admin',
+} as const;
+export type ListOrderDocumentsAudienceEnum = typeof ListOrderDocumentsAudienceEnum[keyof typeof ListOrderDocumentsAudienceEnum];
 /**
  * @export
  */

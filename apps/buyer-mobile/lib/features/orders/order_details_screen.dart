@@ -17,6 +17,7 @@ import '../disputes/dispute_models.dart' show DisputeDetailView;
 import '../disputes/dispute_screens.dart';
 import '../trust/order_reviews_screen.dart';
 import '../../design_system/components/order_components.dart';
+import '../../design_system/components/delivery_vehicle_card.dart';
 import '../../design_system/components/procurement_components.dart';
 import '../../design_system/theme.dart';
 import '../item_procurement/procurement_models.dart'
@@ -264,10 +265,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
             BuyerDocumentExportButton(
               repository: NotificationScope.of(context)!,
               resourceId: widget.orderId,
-              types: [
-                export_api.DocumentExportInputTypeEnum.PURCHASE_ORDER,
-                export_api.DocumentExportInputTypeEnum.PAYMENT_CONFIRMATION,
-              ],
+              types: [export_api.DocumentExportInputTypeEnum.PURCHASE_ORDER],
             ),
         ],
       ),
@@ -702,9 +700,6 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                     resourceId: widget.orderId,
                     types: [
                       export_api.DocumentExportInputTypeEnum.PURCHASE_ORDER,
-                      export_api
-                          .DocumentExportInputTypeEnum
-                          .PAYMENT_CONFIRMATION,
                     ],
                   ),
           ),
@@ -810,7 +805,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
         for (final line in order.lines) _LineTile(line: line),
         const SizedBox(height: 16),
         _Heading(order.fulfillmentMethod == 'DELIVERY' ? 'Delivery' : 'Pickup'),
-        _FulfillmentSection(order: order),
+        _FulfillmentSection(order: order, repository: widget.repository),
         const SizedBox(height: 16),
         MoneyBreakdownCard(money: order.money),
         if (order.payment != null && _hasPaymentDetail(order.payment!)) ...[
@@ -1465,14 +1460,31 @@ class _LineTile extends StatelessWidget {
 }
 
 class _FulfillmentSection extends StatelessWidget {
-  const _FulfillmentSection({required this.order});
+  const _FulfillmentSection({required this.order, required this.repository});
 
   final OrderDetailView order;
+  final OrdersRepository repository;
 
   @override
   Widget build(BuildContext context) {
     final destination = order.destination;
     final confirmed = order.confirmedDelivery;
+    Widget vehicleCard(ConfirmedVehicleView vehicle, String status) =>
+        BuyerDeliveryVehicleCard(
+          vehicle: vehicle,
+          status: status,
+          photo: vehicle.imageFileId == null
+              ? null
+              : EvidencePhoto(
+                  key: ValueKey('${order.id}:${vehicle.imageFileId}'),
+                  orderId: order.id,
+                  fileId: vehicle.imageFileId!,
+                  repository: repository,
+                  semanticLabel: '${vehicle.name} vehicle photo',
+                  fit: BoxFit.contain,
+                ),
+        );
+
     Widget point(
       String caption,
       OrderPointView? value, {
@@ -1552,7 +1564,16 @@ class _FulfillmentSection extends StatelessWidget {
                 style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
               ),
             const Divider(height: 20, color: BuyerTheme.border),
-            if (order.deliveryRecommendation.isNotEmpty) ...[
+            if (confirmed == null && order.recommendedVehicles.isNotEmpty) ...[
+              for (final vehicle in order.recommendedVehicles)
+                vehicleCard(
+                  vehicle,
+                  'Recommended · Awaiting Vendor confirmation',
+                ),
+            ],
+            if (order.deliveryRecommendation.isNotEmpty &&
+                confirmed == null &&
+                order.recommendedVehicles.isEmpty) ...[
               BuyerDeliveryRecommendation(lines: order.deliveryRecommendation),
               const SizedBox(height: 12),
             ],
@@ -1570,8 +1591,11 @@ class _FulfillmentSection extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               for (final vehicle in confirmed.vehicles)
-                Text(
-                  '${vehicle.name}${vehicle.brand == null ? '' : ' (${vehicle.brand})'} · ${vehicle.vehicles} vehicle${vehicle.vehicles == 1 ? '' : 's'}, ${vehicle.trips} trip${vehicle.trips == 1 ? '' : 's'}',
+                vehicleCard(
+                  vehicle,
+                  order.state('ORDER') == 'OUT_FOR_DELIVERY'
+                      ? 'Out for Delivery · Vendor-confirmed vehicle'
+                      : 'Vendor confirmed for this order',
                 ),
               Text(
                 'Route ${(confirmed.distanceMeters / 1000).toStringAsFixed(1)} km to the ${confirmed.endpoint == 'ALTERNATE_DROP_OFF' ? 'alternate drop-off' : 'intended destination'}',

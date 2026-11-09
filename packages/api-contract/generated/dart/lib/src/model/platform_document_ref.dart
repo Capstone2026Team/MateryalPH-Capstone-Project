@@ -17,11 +17,14 @@ part 'platform_document_ref.g.dart';
 /// * [notTaxInvoice]
 /// * [label]
 /// * [availability]
+/// * [generatedAt] - UTC generation time of the stored document.
+/// * [checksum]
+/// * [downloadUrl] - Authenticated API download route; null until ready or when files are not available to this role.
 @BuiltValue()
 abstract class PlatformDocumentRef implements Built<PlatformDocumentRef, PlatformDocumentRefBuilder> {
   @BuiltValueField(wireName: r'kind')
   PlatformDocumentRefKindEnum get kind;
-  // enum kindEnum {  PURCHASE_ORDER,  PAYMENT_CONFIRMATION,  };
+  // enum kindEnum {  PURCHASE_ORDER,  };
 
   @BuiltValueField(wireName: r'title')
   String get title;
@@ -35,6 +38,17 @@ abstract class PlatformDocumentRef implements Built<PlatformDocumentRef, Platfor
 
   @BuiltValueField(wireName: r'availability')
   String get availability;
+
+  /// UTC generation time of the stored document.
+  @BuiltValueField(wireName: r'generated_at')
+  String? get generatedAt;
+
+  @BuiltValueField(wireName: r'checksum')
+  String? get checksum;
+
+  /// Authenticated API download route; null until ready or when files are not available to this role.
+  @BuiltValueField(wireName: r'download_url')
+  String? get downloadUrl;
 
   PlatformDocumentRef._();
 
@@ -84,6 +98,27 @@ class _$PlatformDocumentRefSerializer implements PrimitiveSerializer<PlatformDoc
       object.availability,
       specifiedType: const FullType(String),
     );
+    if (object.generatedAt != null) {
+      yield r'generated_at';
+      yield serializers.serialize(
+        object.generatedAt,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.checksum != null) {
+      yield r'checksum';
+      yield serializers.serialize(
+        object.checksum,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.downloadUrl != null) {
+      yield r'download_url';
+      yield serializers.serialize(
+        object.downloadUrl,
+        specifiedType: const FullType(String),
+      );
+    }
   }
 
   @override
@@ -142,6 +177,30 @@ class _$PlatformDocumentRefSerializer implements PrimitiveSerializer<PlatformDoc
           ) as String;
           result.availability = valueDes;
           break;
+        case r'generated_at':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.generatedAt = valueDes;
+          break;
+        case r'checksum':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.checksum = valueDes;
+          break;
+        case r'download_url':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.downloadUrl = valueDes;
+          break;
         default:
           unhandled.add(key);
           unhandled.add(value);
@@ -176,8 +235,6 @@ class PlatformDocumentRefKindEnum extends EnumClass {
 
   @BuiltValueEnumConst(wireName: r'PURCHASE_ORDER')
   static const PlatformDocumentRefKindEnum PURCHASE_ORDER = _$platformDocumentRefKindEnum_PURCHASE_ORDER;
-  @BuiltValueEnumConst(wireName: r'PAYMENT_CONFIRMATION')
-  static const PlatformDocumentRefKindEnum PAYMENT_CONFIRMATION = _$platformDocumentRefKindEnum_PAYMENT_CONFIRMATION;
 
   static Serializer<PlatformDocumentRefKindEnum> get serializer => _$platformDocumentRefKindEnumSerializer;
 

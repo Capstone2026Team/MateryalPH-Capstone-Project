@@ -45,6 +45,7 @@ import 'package:materyalph_api_client/src/api/buyer_reviews_api.dart';
 import 'package:materyalph_api_client/src/api/messaging_api.dart';
 import 'package:materyalph_api_client/src/api/notifications_api.dart';
 import 'package:materyalph_api_client/src/api/payment_webhooks_api.dart';
+import 'package:materyalph_api_client/src/api/public_finance_api.dart';
 import 'package:materyalph_api_client/src/api/reporting_api.dart';
 import 'package:materyalph_api_client/src/api/stores_api.dart';
 import 'package:materyalph_api_client/src/api/support_api.dart';
@@ -374,6 +375,12 @@ class MateryalphApiClient {
   /// by doing that all interceptors will not be executed
   PaymentWebhooksApi getPaymentWebhooksApi() {
     return PaymentWebhooksApi(dio, serializers);
+  }
+
+  /// Get PublicFinanceApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  PublicFinanceApi getPublicFinanceApi() {
+    return PublicFinanceApi(dio, serializers);
   }
 
   /// Get ReportingApi instance, base route and serializer can be overridden by a given but be careful,

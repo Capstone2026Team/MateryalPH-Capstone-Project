@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { CalendarDays } from 'lucide-react'
 import { RangeCalendar } from './range-calendar'
 import { Button } from './button'
 import { Field } from './field'
 import { FormDialog } from './form-dialog'
 import { isCalendarDate, manilaToday } from './calendar-dates'
+import { saveDateFilterRange, useSavedDateFilterRange } from './date-filter-preference'
 
 export { manilaToday } from './calendar-dates'
 
@@ -17,6 +18,18 @@ export function dateFilterPreset(days: number, yesterday = false, now = new Date
   const start = new Date(end)
   start.setUTCDate(start.getUTCDate() - days + 1)
   return { label: yesterday ? 'Yesterday' : days === 1 ? 'Today' : `Last ${days} days`, from: start.toISOString().slice(0, 10), to: end.toISOString().slice(0, 10) }
+}
+
+/** Missing dates use the portal default; an explicit All dates selection survives navigation. */
+export function dateRangeFromParams(params: URLSearchParams): DateFilterRange {
+  const from = params.get('from') ?? ''
+  const to = params.get('to') ?? ''
+  if (from || to) return { label: params.get('date_label') ?? 'Custom range', from, to }
+  return params.get('date_label') === ALL_DATES.label ? ALL_DATES : dateFilterPreset(30)
+}
+
+export function dateRangePatch(range: DateFilterRange): Record<string, string> {
+  return { from: range.from, to: range.to, date_label: range.from || range.to ? range.label : ALL_DATES.label }
 }
 
 /** A comparison period measures an endpoint against N days earlier, with both endpoints included. */
@@ -40,10 +53,39 @@ export function dateFilterLabel(range: DateFilterRange): string {
   return range.from === range.to ? shortDate(range.from) : `${shortDate(range.from)} – ${shortDate(range.to)}`
 }
 
-export function DateFilter({ value = ALL_DATES, onChange, title = 'Date range', disabled = false, allowOpenEnded = true, allowAllDates = true, presetDays = [1, -1, 7, 30, 60, 90, 365], presets: suppliedPresets, minRangeDays = 1, maxRangeDays, minDate, maxDate }: {
+export function DateFilter({ value = dateFilterPreset(30), onChange, title = 'Date range', disabled = false, persistSelection = true, allowOpenEnded = true, allowAllDates = true, presetDays = [1, -1, 7, 30, 60, 90, 365], presets: suppliedPresets, minRangeDays = 1, maxRangeDays, minDate, maxDate }: {
   value?: DateFilterRange; onChange: (value: DateFilterRange) => void; title?: string; disabled?: boolean
-  allowOpenEnded?: boolean; allowAllDates?: boolean; presetDays?: number[]; presets?: DateFilterRange[]; minRangeDays?: number; maxRangeDays?: number; minDate?: string; maxDate?: string
+  persistSelection?: boolean; allowOpenEnded?: boolean; allowAllDates?: boolean; presetDays?: number[]; presets?: DateFilterRange[]; minRangeDays?: number; maxRangeDays?: number; minDate?: string; maxDate?: string
 }) {
+  const sharedRange = useSavedDateFilterRange()
+  // Join dates and other independent scopes must not inherit an analytics period.
+  const savedRange = persistSelection ? sharedRange : null
+  const savedLength = savedRange?.from && savedRange.to ? (Date.parse(`${savedRange.to}T00:00:00Z`) - Date.parse(`${savedRange.from}T00:00:00Z`)) / 86400000 + 1 : null
+  // Bounded analytics retain their workflow limits when a saved selection is incompatible.
+  const canRestore = savedRange !== null
+    && (savedRange.from || savedRange.to ? allowOpenEnded || Boolean(savedRange.from && savedRange.to) : allowAllDates)
+    && (savedLength === null || savedLength >= minRangeDays && (maxRangeDays === undefined || savedLength <= maxRangeDays))
+    && (!minDate || (!savedRange.from || savedRange.from >= minDate) && (!savedRange.to || savedRange.to >= minDate))
+    && (!maxDate || (!savedRange.from || savedRange.from <= maxDate) && (!savedRange.to || savedRange.to <= maxDate))
+  const selected = canRestore ? savedRange : value
+  const appliedHere = useRef<DateFilterRange | null>(null)
+  const previous = useRef<{ from: string; to: string; saved: DateFilterRange | null; disabled: boolean } | null>(null)
+  useEffect(() => {
+    const last = previous.current
+    previous.current = { from: value.from, to: value.to, saved: savedRange, disabled }
+    const preferenceChanged = !last || last.saved !== savedRange
+    const applied = appliedHere.current
+    appliedHere.current = null
+    // Explicit page resets and date-bearing navigation also change the shared selection.
+    if (last && last.saved === savedRange && (last.from !== value.from || last.to !== value.to)
+      && (!savedRange || value.from !== savedRange.from || value.to !== savedRange.to)) {
+      if (persistSelection) saveDateFilterRange(value)
+      return
+    }
+    if (!disabled && canRestore && (preferenceChanged || last?.disabled)
+      && (!applied || applied.from !== savedRange.from || applied.to !== savedRange.to)
+      && (value.from !== savedRange.from || value.to !== savedRange.to)) onChange(savedRange)
+  }, [canRestore, disabled, onChange, persistSelection, savedRange, value])
   const [open, setOpen] = useState(false)
   const [draft, setDraft] = useState(value)
   const [selectingEnd, setSelectingEnd] = useState(false)
@@ -61,11 +103,14 @@ export function DateFilter({ value = ALL_DATES, onChange, title = 'Date range', 
     : maxDate && (draft.from && draft.from > maxDate || draft.to && draft.to > maxDate) ? `Choose dates on or before ${shortDate(maxDate)}.` : null
   const apply = () => {
     if (error) return
-    onChange(!draft.from && !draft.to ? ALL_DATES : draft)
+    const next = !draft.from && !draft.to ? ALL_DATES : draft
+    appliedHere.current = next
+    if (persistSelection) saveDateFilterRange(next)
+    onChange(next)
     setOpen(false)
   }
   return <>
-    <Button variant="secondary" disabled={disabled} aria-haspopup="dialog" aria-expanded={open} className={`max-w-full rounded-full text-sm ${value.from || value.to ? 'border-action-primary bg-brand-orange-50' : ''}`} onClick={() => { setDraft(value); setSelectingEnd(false); setOpen(true) }}><CalendarDays size={18} className="shrink-0 text-action-primary" aria-hidden="true" /><span className="min-w-0 break-words">{dateFilterLabel(value)}</span></Button>
+    <Button variant="secondary" disabled={disabled} aria-haspopup="dialog" aria-expanded={open} className={`max-w-full rounded-full text-sm ${selected.from || selected.to ? 'border-action-primary bg-brand-orange-50' : ''}`} onClick={() => { setDraft(selected); setSelectingEnd(false); setOpen(true) }}><CalendarDays size={18} className="shrink-0 text-action-primary" aria-hidden="true" /><span className="min-w-0 break-words">{dateFilterLabel(selected)}</span></Button>
     <FormDialog open={open} title={title} description="Inclusive calendar dates in Asia/Manila." size="date" onClose={() => setOpen(false)} footer={<div className="flex justify-end gap-3"><Button variant="quiet" onClick={() => setOpen(false)}>Cancel</Button><Button disabled={Boolean(error)} onClick={apply}>Apply</Button></div>}>
       {open && <div className="grid min-w-0 gap-6 sm:grid-cols-[10rem_minmax(0,1fr)]">
         <div role="group" className="flex min-w-0 gap-1 overflow-x-auto py-1 sm:grid sm:content-start sm:overflow-visible sm:py-0" aria-label="Date presets">{presets.map(preset => <Button className="shrink-0 whitespace-nowrap" variant={draft.label === preset.label ? 'primary' : 'quiet'} key={preset.label} aria-pressed={draft.label === preset.label} onClick={() => { setDraft(preset); setSelectingEnd(false); setCalendarRevision(revision => revision + 1) }}>{preset.label}</Button>)}</div>

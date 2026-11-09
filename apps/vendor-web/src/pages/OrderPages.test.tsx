@@ -1,3 +1,4 @@
+import { dateFilterPreset } from '@materyalph/web-ui'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { beforeEach, expect, test, vi } from 'vitest'
@@ -11,10 +12,13 @@ import * as disputes from '../lib/disputes-api'
 import type { OrderDetail, OrderLine, OrderSummary } from '../lib/orders-api'
 import { VendorOrderDetailPage, VendorOrdersPage } from './OrderPages'
 
+const defaultDates = () => ({ from: dateFilterPreset(30).from, to: dateFilterPreset(30).to })
+
+
 vi.mock('../lib/onboarding-api', async original => ({ ...await original<typeof import('../lib/onboarding-api')>(), getVendorOnboarding: vi.fn(), getVendorPrivateFileUrl: vi.fn() }))
 vi.mock('../lib/messaging-api', async original => ({ ...await original<typeof import('../lib/messaging-api')>(), chatApi: { forOrder: vi.fn(), get: vi.fn() } }))
 vi.mock('./FulfillmentConversationDialog', () => ({ FulfillmentConversationDialog: ({ conversationId, onClose }: { conversationId: string; onClose: () => void }) => <div role="dialog" aria-label="Fulfillment conversations"><p>Thread {conversationId}</p><button onClick={onClose}>Close fulfillment popup</button></div> }))
-vi.mock('../lib/orders-api', async original => ({ ...await original<typeof import('../lib/orders-api')>(), listOrders: vi.fn(), getOrder: vi.fn(), confirmOrder: vi.fn(), declineOrder: vi.fn(), getDeliveryPlan: vi.fn(), listAssignees: vi.fn(), listDeliveryVehicles: vi.fn(), assignFulfillment: vi.fn() }))
+vi.mock('../lib/orders-api', async original => ({ ...await original<typeof import('../lib/orders-api')>(), listOrders: vi.fn(), getOrder: vi.fn(), confirmOrder: vi.fn(), declineOrder: vi.fn(), getDeliveryPlan: vi.fn(), listAssignees: vi.fn(), listDeliveryVehicles: vi.fn(), assignFulfillment: vi.fn(), readOrderBuyerPhoto: vi.fn() }))
 vi.mock('../lib/disputes-api', async original => ({ ...await original<typeof import('../lib/disputes-api')>(), getEligibility: vi.fn() }))
 
 const states = (order: string, payment = 'NOT_REQUIRED') => [
@@ -87,6 +91,21 @@ beforeEach(() => {
 
 const openDetail = () => render(<MemoryRouter initialEntries={['/orders/order-1']}><Routes><Route path="/orders/:orderId" element={<VendorOrderDetailPage />} /></Routes></MemoryRouter>)
 
+test.each(['full', 'drawer'])('the %s order shows the private buyer photo and falls back to initials on image failure', async mode => {
+  const create = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:buyer-profile')
+  const revoke = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined)
+  vi.mocked(orders.getOrder).mockResolvedValue(detail({ buyer: { displayName: 'Maria Buyer', profilePhotoPath: '/vendor/orders/00000000-0000-7000-8000-000000000001/buyer-photo?version=1' } }))
+  vi.mocked(orders.readOrderBuyerPhoto).mockResolvedValue(new Blob(['photo'], { type: 'image/png' }))
+  vi.mocked(orders.listOrders).mockResolvedValue({ items: [summary()], meta: { group: 'NEW', counts: { NEW: 1 }, page: 1, perPage: 20, total: 1, hasMore: false, currentAsOf: new Date() } })
+  const view = mode === 'full' ? openDetail() : render(<MemoryRouter initialEntries={['/orders?order=order-1']}><Routes><Route path="/orders" element={<VendorOrdersPage />} /></Routes></MemoryRouter>)
+  await waitFor(() => expect(view.container.querySelector('img[src="blob:buyer-profile"]')).not.toBeNull())
+  fireEvent.error(view.container.querySelector('img[src="blob:buyer-profile"]')!)
+  expect(screen.getByText('MB')).toBeVisible()
+  view.unmount()
+  expect(revoke).toHaveBeenCalledWith('blob:buyer-profile')
+  create.mockRestore(); revoke.mockRestore()
+})
+
 test('a Fulfillment Staff order link opens their assigned workspace for delivery proof', async () => {
   vi.mocked(onboarding.getVendorOnboarding).mockResolvedValue(snapshot(['portal.orders', 'portal.fulfillment', 'portal.messages']))
   render(<MemoryRouter initialEntries={['/orders/order-1']}><Routes><Route path="/orders/:orderId" element={<VendorOrderDetailPage />} /><Route path="/fulfillment/:orderId" element={<MessageDestination />} /></Routes></MemoryRouter>)
@@ -142,7 +161,7 @@ test('staff delivery proof reaches Vendor Order Details after a private invalida
     steps: [{ ...current.fulfillment!.steps[0]!, status: 'COMPLETE', actorRole: 'FULFILLMENT', proof }] } }))
   act(() => window.dispatchEvent(new Event('materyalph:domain-refresh')))
   expect(await screen.findByText('Site Foreman')).toBeVisible()
-  expect(screen.getByRole('button', { name: 'View proof photo' })).toBeVisible()
+  expect(screen.getByRole('region', { name: 'Delivery proof' })).toBeVisible()
   expect(screen.queryByRole('button', { name: 'Record delivery' })).not.toBeInTheDocument()
 })
 
@@ -172,7 +191,11 @@ test.each([
   openDetail()
   const information = await screen.findByRole('region', { name: 'Order information' })
   expect(within(information).getByRole('heading', { name: 'Order information' })).toBeInTheDocument()
-  expect(within(information).getByRole('button', { name: 'Export PDF' })).toBeEnabled()
+  for (const name of ['Purchase order PDF']) {
+    expect(within(information).getByRole('button', { name })).toBeEnabled()
+  }
+  expect(within(information).queryByRole('button', { name: 'Operational order PDF' })).not.toBeInTheDocument()
+  expect(within(information).queryByRole('button', { name: 'Payment confirmation PDF' })).not.toBeInTheDocument()
   expect(within(information).getByText('Maria Buyer')).toBeInTheDocument()
   expect(within(information).getByText('Oct 5, 2026, 9:00 AM (Asia/Manila)')).toBeInTheDocument()
   expect(within(information).getByText(fulfillmentLabel)).toBeInTheDocument()
@@ -188,7 +211,7 @@ test('the status-filtered list shows counts, separate payment state and one domi
   expect(await screen.findByRole('heading', { name: 'Orders' })).toBeInTheDocument()
   const filters = screen.getByRole('tablist', { name: 'Filter orders by status' })
   expect(await within(filters).findByRole('tab', { name: /New requests\s*2/ })).toHaveAttribute('aria-selected', 'true')
-  expect(vi.mocked(orders.listOrders)).toHaveBeenCalledWith({ group: 'NEW', q: '', page: 1 })
+  expect(vi.mocked(orders.listOrders)).toHaveBeenCalledWith({ ...defaultDates(), group: 'NEW', q: '', page: 1 })
   const table = await screen.findByRole('list', { name: 'New requests' })
   expect(within(table).getAllByRole('link', { name: 'Review request' })).toHaveLength(1)
   expect(within(table).getAllByRole('link', { name: 'View order' })).toHaveLength(1)
@@ -201,7 +224,7 @@ test('New requests is the default and the order interface has no All section', a
   vi.mocked(orders.listOrders).mockResolvedValue({ items: [summary()], meta: { group: 'NEW', counts: { ALL: 25, NEW: 25, CLOSED: 0 }, page: 1, perPage: 20, total: 25, hasMore: true, currentAsOf: new Date() } })
   render(<MemoryRouter initialEntries={['/orders']}><Routes><Route path="/orders" element={<VendorOrdersPage />} /></Routes></MemoryRouter>)
   await screen.findByRole('list', { name: 'New requests' })
-  expect(orders.listOrders).toHaveBeenLastCalledWith({ group: 'NEW', q: '', page: 1 })
+  expect(orders.listOrders).toHaveBeenLastCalledWith({ ...defaultDates(), group: 'NEW', q: '', page: 1 })
   const tabs = screen.getByRole('tablist', { name: 'Filter orders by status' })
   expect(within(tabs).getAllByRole('tab')).toHaveLength(5)
   expect(within(tabs).getAllByRole('tab')[0]).toHaveTextContent('New requests')
@@ -209,18 +232,18 @@ test('New requests is the default and the order interface has no All section', a
   expect(within(tabs).queryByRole('tab', { name: /^All/ })).not.toBeInTheDocument()
   expect(screen.queryByRole('combobox', { name: 'Order status' })).not.toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: 'Next' }))
-  await waitFor(() => expect(orders.listOrders).toHaveBeenLastCalledWith({ group: 'NEW', q: '', page: 2 }))
+  await waitFor(() => expect(orders.listOrders).toHaveBeenLastCalledWith({ ...defaultDates(), group: 'NEW', q: '', page: 2 }))
   await waitFor(() => expect(within(tabs).getByRole('tab', { name: /^Closed/ })).not.toBeDisabled())
   fireEvent.click(within(tabs).getByRole('tab', { name: /^Closed/ }))
-  await waitFor(() => expect(orders.listOrders).toHaveBeenLastCalledWith({ group: 'CLOSED', q: '', page: 1 }))
+  await waitFor(() => expect(orders.listOrders).toHaveBeenLastCalledWith({ ...defaultDates(), group: 'CLOSED', q: '', page: 1 }))
   expect(screen.getByRole('combobox', { name: 'Closed status' })).toBeInTheDocument()
 })
 
 test('an old All URL falls back to New requests without exposing the removed section', async () => {
   vi.mocked(orders.listOrders).mockResolvedValue({ items: [], meta: { group: 'NEW', counts: { ALL: 1, NEW: 0 }, page: 1, perPage: 20, total: 0, hasMore: false, currentAsOf: new Date() } })
   render(<MemoryRouter initialEntries={['/orders?group=ALL&status_group=CLOSED&closed_state=EXPIRED']}><Routes><Route path="/orders" element={<VendorOrdersPage />} /></Routes></MemoryRouter>)
-  expect(await screen.findByText('No new requests yet.')).toBeInTheDocument()
-  expect(orders.listOrders).toHaveBeenLastCalledWith({ group: 'NEW', q: '', page: 1 })
+  expect(await screen.findByText('No orders match these filters.')).toBeInTheDocument()
+  expect(orders.listOrders).toHaveBeenLastCalledWith({ ...defaultDates(), group: 'NEW', q: '', page: 1 })
   expect(screen.queryByRole('button', { name: 'View all orders' })).not.toBeInTheDocument()
   expect(screen.queryByRole('combobox', { name: 'Order status' })).not.toBeInTheDocument()
   expect(screen.queryByRole('combobox', { name: 'Closed status' })).not.toBeInTheDocument()
@@ -229,10 +252,10 @@ test('an old All URL falls back to New requests without exposing the removed sec
 test('clearing filters from an empty Closed result retains the Closed section', async () => {
   vi.mocked(orders.listOrders).mockResolvedValue({ items: [], meta: { group: 'CLOSED', counts: { ALL: 1, CLOSED: 1 }, page: 1, perPage: 20, total: 0, hasMore: false, currentAsOf: new Date() } })
   render(<MemoryRouter initialEntries={['/orders?group=CLOSED&closed_state=EXPIRED&page=2']}><Routes><Route path="/orders" element={<VendorOrdersPage />} /></Routes></MemoryRouter>)
-  expect(await screen.findByText('No expired orders yet.')).toBeInTheDocument()
-  expect(orders.listOrders).toHaveBeenLastCalledWith({ group: 'CLOSED', closedState: 'EXPIRED', q: '', page: 2 })
+  expect(await screen.findByText('No orders match these filters.')).toBeInTheDocument()
+  expect(orders.listOrders).toHaveBeenLastCalledWith({ ...defaultDates(), group: 'CLOSED', closedState: 'EXPIRED', q: '', page: 2 })
   fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }))
-  await waitFor(() => expect(orders.listOrders).toHaveBeenLastCalledWith({ group: 'CLOSED', q: '', page: 1 }))
+  await waitFor(() => expect(orders.listOrders).toHaveBeenLastCalledWith({ ...defaultDates(), group: 'CLOSED', q: '', page: 1 }))
   expect(screen.getByRole('combobox', { name: 'Closed status' })).toHaveValue('')
   expect(screen.queryByRole('button', { name: 'View all orders' })).not.toBeInTheDocument()
 })
@@ -243,20 +266,23 @@ test('order dates are inclusive, preserve status and search, and reset paginatio
   vi.mocked(orders.listOrders).mockResolvedValue({ items: [], meta: { group: 'CLOSED', counts: { CLOSED: 1 }, page: 2, perPage: 20, total: 0, hasMore: false, currentAsOf: new Date() } })
   render(<MemoryRouter initialEntries={['/orders?group=CLOSED&closed_state=EXPIRED&q=cement&page=2']}><Routes><Route path="/orders" element={<VendorOrdersPage />} /></Routes></MemoryRouter>)
   await waitFor(() => expect(orders.listOrders).toHaveBeenCalled())
-  fireEvent.click(screen.getByRole('button', { name: 'All dates' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Last 30 days' }))
   fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-10-09' } })
   fireEvent.change(screen.getByLabelText('To'), { target: { value: '2026-10-09' } })
   expect(orders.listOrders).toHaveBeenCalledTimes(1)
   fireEvent.click(screen.getByRole('button', { name: 'Apply' }))
   await waitFor(() => expect(orders.listOrders).toHaveBeenLastCalledWith({ group: 'CLOSED', closedState: 'EXPIRED', q: 'cement', page: 1, from: '2026-10-09', to: '2026-10-09' }))
-  fireEvent.click(screen.getByRole('button', { name: /Remove .*2026 filter/ }))
-  await waitFor(() => expect(orders.listOrders).toHaveBeenLastCalledWith({ group: 'CLOSED', closedState: 'EXPIRED', q: 'cement', page: 1 }))
+  expect(screen.queryByRole('button', { name: /Remove .*2026 filter/ })).not.toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: 'Oct 9, 2026' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Last 30 days' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Apply' }))
+  await waitFor(() => expect(orders.listOrders).toHaveBeenLastCalledWith({ ...defaultDates(), group: 'CLOSED', closedState: 'EXPIRED', q: 'cement', page: 1 }))
 })
 
 test('an empty group explains itself instead of showing a false table', async () => {
   vi.mocked(orders.listOrders).mockResolvedValue({ items: [], meta: { group: 'NEW', counts: { ALL: 0, NEW: 0 }, page: 1, perPage: 20, total: 0, hasMore: false, currentAsOf: new Date() } })
   render(<MemoryRouter initialEntries={['/orders?group=NEW']}><Routes><Route path="/orders" element={<VendorOrdersPage />} /></Routes></MemoryRouter>)
-  expect(await screen.findByText('No new requests yet.')).toBeInTheDocument()
+  expect(await screen.findByText('No orders match these filters.')).toBeInTheDocument()
 })
 
 test('order links open a panel, retain the list, and use the existing confirmation workflow', async () => {
@@ -381,8 +407,28 @@ test('the money breakdown keeps NRPC inside the subtotal, leaves the fee pending
   expect(screen.getByText('Non-Recoverable Preparation Cost')).toBeInTheDocument()
   expect(screen.getByText('Part of the materials subtotal, not an extra charge')).toBeInTheDocument()
   expect(screen.getByText('Shown at payment')).toBeInTheDocument()
-  expect(screen.getByText('Included VAT (already in the subtotal)')).toBeInTheDocument()
+  expect(screen.getByText('Includes ₱19.29 VAT')).toBeInTheDocument()
   expect(screen.queryByText(/commission|withholding/i)).not.toBeInTheDocument()
+})
+
+test('the Buyer breakdown shows one materials amount with included VAT and a separate e-wallet transaction fee', () => {
+  render(<MoneyBreakdown title="Buyer payment breakdown" money={{ ...money, materialsGrossCentavos: 28550, materialsSubtotalCentavos: 28550,
+    includedVatCentavos: 3059, vatExclusiveCentavos: 25491, vatTreatment: 'PRICES_INCLUDE_VAT', commercialTotalCentavos: 28550,
+    processingFee: { status: 'QUOTED', amountCentavos: 755 } }} />)
+  const breakdown = within(screen.getByRole('region', { name: 'Buyer payment breakdown' }))
+  expect(breakdown.getAllByRole('term').map(row => row.textContent)).toEqual([
+    'MaterialsIncludes ₱30.59 VAT', 'Delivery feeSelf-Pickup', 'E-wallet transaction fee', 'Order totalExcludes e-wallet transaction fee',
+  ])
+  expect(breakdown.getAllByRole('definition').map(row => row.textContent)).toEqual(['₱285.50', 'Not applicable', '₱7.55', '₱285.50'])
+})
+
+test('the Buyer breakdown retains the gross, discount and net materials when amounts differ', () => {
+  render(<MoneyBreakdown money={{ ...money, vendorDiscountCentavos: 1800, materialsSubtotalCentavos: 16200, commercialTotalCentavos: 16200 }} />)
+  expect(screen.getByText('Materials').closest('div')).toHaveTextContent('₱180.00')
+  expect(screen.getByText('Vendor discount').closest('div')).toHaveTextContent('− ₱18.00')
+  expect(screen.getByText('Materials after discount').closest('div')).toHaveTextContent('₱162.00')
+  expect(screen.getByText('No VAT included')).toBeInTheDocument()
+  expect(screen.getByText('Order total').closest('div')).toHaveTextContent('₱162.00')
 })
 
 test('five separate state rows name each area in text', () => {
@@ -442,7 +488,7 @@ test.each([
   if (entry === '/orders/order-1') {
     const information = screen.getByRole('region', { name: 'Order information' })
     expect(within(information).getByRole('button', { name: 'Message' })).toBeInTheDocument()
-    expect(within(information).getByRole('button', { name: 'Export PDF' })).toBeEnabled()
+    expect(within(information).getByRole('button', { name: 'Purchase order PDF' })).toBeEnabled()
     expect(screen.getAllByRole('button', { name: 'Message' })).toHaveLength(1)
   }
   expect(screen.queryByText('Open Fulfillment Messages')).not.toBeInTheDocument()

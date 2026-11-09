@@ -12,7 +12,7 @@ export function VersionedAgreementPanel({ title, version, content, accepted, eli
   useEffect(() => {
     if (opened && reader.current && reader.current.scrollHeight <= reader.current.clientHeight + 2) setRead(true)
   }, [opened])
-  return <section aria-labelledby="commission-title" className="overflow-hidden rounded-surface border border-border-default bg-surface-primary">
+  return <section aria-labelledby="commission-title" className="overflow-hidden mp-card">
     <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border-default bg-surface-canvas p-5 sm:p-7">
       <div><p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Vendor agreement · TEST/DEMO</p><h2 id="commission-title" className="mt-2 text-xl font-semibold sm:text-2xl">{title}</h2><p className="mt-2 text-sm text-text-secondary">{version ? `Version ${version}` : 'Current version unavailable'} · Vendor-paid commission</p></div>
     </div>

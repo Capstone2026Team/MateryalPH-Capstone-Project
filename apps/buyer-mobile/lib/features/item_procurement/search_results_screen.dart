@@ -9,6 +9,7 @@ import '../../design_system/components/procurement_components.dart';
 import '../../design_system/components/ranking_indicator.dart';
 import '../../design_system/generated/color_tokens.dart';
 import '../../design_system/theme.dart';
+import '../../core/vendor_score_display.dart';
 import '../map_discovery/discovery_models.dart';
 import 'explore_controller.dart';
 import 'procurement_models.dart';
@@ -551,15 +552,16 @@ class _SearchResultsScreenState extends State<SearchResultsScreen>
           onFavorite: _controller.favoriteBusy(results[index].vendorId)
               ? null
               : () => _favorite(results[index]),
-          onExplain: () =>
-              _explain(results[index], position: ranked ? index + 1 : null),
+          onExplain: ranked
+              ? () => _explain(results[index], position: index + 1)
+              : null,
         ),
       ),
       SliverToBoxAdapter(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
           child: _controller.loadingMore
-              ? const Center(child: CircularProgressIndicator())
+              ? const Center(child: BuyerLoadingIndicator())
               : _controller.page?.hasMore == true
               ? OutlinedButton(
                   onPressed: _controller.loadMore,
@@ -781,7 +783,9 @@ class ListingCard extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        '${card.vendorScore} · ${formatDistance(card.distanceMeters)}',
+                        '${vendorScoreDisplayText(card.vendorScore)} · ${formatDistance(card.distanceMeters)}',
+                        semanticsLabel:
+                            '${card.vendorScore} · ${formatDistance(card.distanceMeters)}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(

@@ -1,0 +1,19 @@
+.mp-product-detail-workspace { display: grid; min-width: 0; overflow: hidden; border: 1px solid var(--mp-color-border-default); border-radius: var(--mp-radius-surface); background: var(--mp-color-surface-primary); }
+.mp-product-detail-workspace > section { display: grid; min-width: 0; align-content: start; gap: 16px; padding: 16px; }
+.mp-product-detail-analysis { border-top: 1px solid var(--mp-color-border-default); }
+.mp-product-gallery { display: grid; min-width: 0; gap: 12px; }
+.mp-product-gallery-main { display: grid; min-width: 0; aspect-ratio: 1; max-height: 420px; overflow: hidden; place-items: center; border-radius: 12px; background: var(--mp-color-surface-canvas); }
+.mp-product-gallery-main > img { width: 100%; height: 100%; min-height: 0; object-fit: contain; }
+.mp-product-gallery-placeholder { display: grid; justify-items: center; gap: 12px; padding: 24px; color: var(--mp-color-text-secondary); font-size: 14px; text-align: center; }
+.mp-product-gallery-thumbnails { display: flex; min-width: 0; gap: 8px; overflow-x: auto; padding: 3px; }
+.mp-product-gallery-thumbnails > button { display: grid; flex: 0 0 56px; width: 56px; height: 56px; place-items: center; overflow: hidden; border: 1px solid var(--mp-color-border-default); border-radius: 8px; background: var(--mp-color-surface-canvas); color: var(--mp-color-text-secondary); }
+.mp-product-gallery-thumbnails > button[aria-pressed="true"] { border-color: var(--mp-color-action-primary); box-shadow: 0 0 0 1px var(--mp-color-action-primary); }
+.mp-product-gallery-thumbnails > button:focus-visible { outline: 2px solid var(--mp-color-focus-ring); outline-offset: 2px; }
+.mp-product-gallery-thumbnails img { width: 100%; height: 100%; object-fit: contain; }
+.mp-product-detail-analysis .mp-review-card > button { gap: 8px; padding: 12px; }
+.mp-product-detail-analysis .mp-review-card-footer { padding: 4px 12px; }
+@media (min-width: 640px) { .mp-product-detail-workspace > section { padding: 20px; } }
+@media (min-width: 1280px) {
+  .mp-product-detail-workspace { grid-template-columns: minmax(280px, 0.85fr) minmax(0, 1.6fr); }
+  .mp-product-detail-analysis { border-top: 0; border-left: 1px solid var(--mp-color-border-default); }
+}

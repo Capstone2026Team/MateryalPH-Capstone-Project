@@ -36,6 +36,7 @@ Name | Type | Description | Notes
 **subjectReview** | [**SubjectReview**](SubjectReview.md) |  |
 **events** | [**BuiltList&lt;EnforcementEvent&gt;**](EnforcementEvent.md) |  |
 **allowedActions** | **BuiltList&lt;String&gt;** |  |
+**evidence** | [**BuiltList&lt;EnforcementEvidence&gt;**](EnforcementEvidence.md) |  |
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

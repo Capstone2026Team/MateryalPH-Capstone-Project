@@ -1,3 +1,4 @@
+import 'async_state.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -176,7 +177,7 @@ class _MediaAttachmentFieldState extends State<MediaAttachmentField> {
           'Up to ${widget.maxFiles} attachments per product. Avoid faces, addresses and other personal information.',
           style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
         ),
-        if (_picking) const LinearProgressIndicator(),
+        if (_picking) const BuyerLoadingProgress(),
         if (_error != null)
           Text(
             _error!,
@@ -303,7 +304,7 @@ class _MediaPreviewState extends State<_MediaPreview> {
                         )
                       : const Padding(
                           padding: EdgeInsets.all(24),
-                          child: CircularProgressIndicator(),
+                          child: BuyerLoadingIndicator(),
                         )
                 : InteractiveViewer(
                     child: widget.bytes != null

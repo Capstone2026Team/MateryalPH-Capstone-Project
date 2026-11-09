@@ -20,6 +20,13 @@ import {
     ProductComplianceQueueItemToJSON,
     ProductComplianceQueueItemToJSONTyped,
 } from './ProductComplianceQueueItem';
+import type { ProductComplianceQueueEnvelopeMeta } from './ProductComplianceQueueEnvelopeMeta';
+import {
+    ProductComplianceQueueEnvelopeMetaFromJSON,
+    ProductComplianceQueueEnvelopeMetaFromJSONTyped,
+    ProductComplianceQueueEnvelopeMetaToJSON,
+    ProductComplianceQueueEnvelopeMetaToJSONTyped,
+} from './ProductComplianceQueueEnvelopeMeta';
 
 /**
  *
@@ -34,7 +41,7 @@ export interface ProductComplianceQueueEnvelope {
     /**
      *
      */
-    meta: { [key: string]: any; };
+    meta: ProductComplianceQueueEnvelopeMeta;
     /**
      *
      */
@@ -62,7 +69,7 @@ export function ProductComplianceQueueEnvelopeFromJSONTyped(json: any, ignoreDis
     return {
 
         'data': ((json['data'] as Array<any>).map(ProductComplianceQueueItemFromJSON)),
-        'meta': json['meta'],
+        'meta': ProductComplianceQueueEnvelopeMetaFromJSON(json['meta']),
         'errors': json['errors'],
     };
 }
@@ -79,7 +86,7 @@ export function ProductComplianceQueueEnvelopeToJSONTyped(value?: ProductComplia
     return {
 
         'data': ((value['data'] as Array<any>).map(ProductComplianceQueueItemToJSON)),
-        'meta': value['meta'],
+        'meta': ProductComplianceQueueEnvelopeMetaToJSON(value['meta']),
         'errors': value['errors'],
     };
 }

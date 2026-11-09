@@ -83,6 +83,49 @@ final class AdminUserDirectoryTest extends TestCase
         self::assertSame(0, DB::table('audit_logs')->where('action', 'USER_DIRECTORY_VIEWED')->where('actor_role', 'ADMIN_ORDER_DISPUTE')->count(), 'A denied request leaves no profile-opening audit.');
     }
 
+    public function test_directory_ratings_reuse_ccs_gates_and_published_vendor_snapshots(): void
+    {
+        [$store, $owner] = $this->pickupStore('Performance Hardware');
+        $buyer = $this->directoryBuyer('Performance Buyer', 'performance@example.com');
+        $profile = $this->buyerProfileId($buyer);
+        $insert = function (int $daysAgo = 1, string $state = 'COMPLETED', array $extra = []) use ($store, $owner, $profile): string {
+            $orderId = (string) Str::uuid7();
+            DB::table('orders')->insert(['id' => $orderId, 'reference' => 'ORD-'.Str::upper(Str::random(10)), 'buyer_profile_id' => $profile, 'vendor_organization_id' => $store->id,
+                'procurement_type' => 'ITEM_BASED', 'order_state' => $state, 'fulfillment_method' => 'PICKUP', 'payment_method' => 'ONLINE',
+                'commercial_total_centavos' => 1000, 'materials_centavos' => 1000, 'created_at' => now(), 'updated_at' => now()]);
+
+            return $this->review($store->id, $profile, $owner->id, $orderId, 'BUYER', ['inquiry_seriousness' => 3, 'communication_quality' => 4, 'payment_reliability' => 5], '',
+                $extra + ['submitted_at' => now()->subDays($daysAgo), 'revealed_at' => now()->subDays($daysAgo), 'editable_until' => now()->subDays($daysAgo)->addDay()]);
+        };
+        for ($index = 0; $index < 4; $index++) {
+            $insert();
+        }
+        $admin = $this->admin('ADMIN_USER_MANAGEMENT');
+        $this->signInAdmin($admin);
+        $this->getJson('/api/v1/admin/buyers?q=Performance')->assertOk()->assertJsonPath('data.0.rating.count', 4)->assertJsonPath('data.0.rating.score', null);
+        $latest = $insert();
+        $insert(91);
+        $insert(1, 'CANCELLED');
+        $insert(1, 'COMPLETED', ['moderation_state' => 'REMOVED']);
+        $insert(1, 'COMPLETED', ['revealed_at' => null]);
+        $summary = $this->getJson('/api/v1/admin/buyers/'.$profile)->assertOk()->assertJsonPath('data.rating.count', 5)->assertJsonPath('data.rating.score', 4)->json('data.rating');
+        self::assertSame($summary, $this->getJson('/api/v1/admin/buyers?q=Performance')->assertOk()->json('data.0.rating'));
+        $this->signInBuyer($buyer);
+        self::assertSame($summary, $this->getJson('/api/v1/buyers/ratings')->assertOk()->json('meta.summary'));
+        DB::table('reviews')->where('id', $latest)->update(['moderation_state' => 'HIDDEN_PENDING_REVIEW']);
+        $this->signInAdmin($admin);
+        $this->getJson('/api/v1/admin/buyers/'.$profile)->assertOk()->assertJsonPath('data.rating.score', null)->assertJsonPath('data.rating.inquiry_seriousness', null);
+
+        $this->getJson('/api/v1/admin/vendors?q=Performance')->assertOk()->assertJsonPath('data.0.vps', null);
+        DB::table('score_snapshots')->insert(['id' => (string) Str::uuid7(), 'vendor_organization_id' => $store->id, 'window_ends_on' => now()->toDateString(),
+            'vps' => '4.25', 'vcs' => '4.00', 'ohs' => '4.50', 'mqs' => '4.00', 'components' => '{}', 'sample_counts' => '{}', 'calculated_at' => now(), 'created_at' => now(), 'updated_at' => now()]);
+        $this->getJson('/api/v1/admin/vendors?q=Performance')->assertOk()->assertJsonPath('data.0.vps', '4.25');
+        $this->getJson('/api/v1/admin/vendors/'.$store->id)->assertOk()->assertJsonPath('data.can_view_scores', true);
+        $this->signInAdmin($this->admin('ADMIN_SUPPORT'));
+        $this->getJson('/api/v1/admin/vendors/'.$store->id)->assertOk()->assertJsonPath('data.can_view_scores', false);
+        $this->getJson('/api/v1/admin/scores/'.$store->id)->assertForbidden();
+    }
+
     public function test_buyer_list_searches_filters_counts_and_paginates(): void
     {
         $this->directoryBuyer('Maria Santos', 'maria@example.com', ['company_name' => 'Santos Builders'], '2026-09-01 08:00:00');
@@ -169,11 +212,16 @@ final class AdminUserDirectoryTest extends TestCase
         $profile = $this->buyerProfileId($buyer);
         $this->signInAdmin($admin = $this->admin('ADMIN_SUPPORT'));
         $this->getJson('/api/v1/admin/buyers/'.$profile)->assertOk()->assertJsonPath('data.profile.avatar_url', null);
+        $this->getJson('/api/v1/admin/buyers')->assertOk()->assertJsonPath('data.0.avatar_url', null);
         $key = 'private/profile-photos/directory-test.png';
         Storage::disk('local')->put($key, 'sanitized profile photo');
         $buyer->forceFill(['profile_photo_key' => $key, 'profile_photo_disk' => 'local'])->save();
-        $url = (string) $this->getJson('/api/v1/admin/buyers/'.$profile)->assertOk()->json('data.profile.avatar_url');
+        $list = $this->getJson('/api/v1/admin/buyers')->assertOk();
+        $url = (string) $list->json('data.0.avatar_url');
+        self::assertStringContainsString('/api/v1/admin/buyers/'.$profile.'/photo?', $url);
         self::assertStringNotContainsString($key, $url);
+        self::assertStringNotContainsString('profile_photo_key', (string) $list->getContent());
+        self::assertStringNotContainsString('profile_photo_disk', (string) $list->getContent());
         self::assertStringNotContainsString('profile_photo_key', (string) $this->getJson('/api/v1/admin/buyers/'.$profile)->getContent());
         $photo = $this->get($url)->assertOk()->assertHeader('Content-Type', 'image/png')->assertHeader('X-Content-Type-Options', 'nosniff');
         self::assertSame('sanitized profile photo', $photo->streamedContent());
@@ -199,6 +247,7 @@ final class AdminUserDirectoryTest extends TestCase
         $this->travelBack();
         $buyer->forceFill(['account_status' => 'DELETED', 'account_deleted_at' => now()])->save();
         $this->getJson('/api/v1/admin/buyers/'.$profile)->assertOk()->assertJsonPath('data.profile.avatar_url', null);
+        $this->getJson('/api/v1/admin/buyers')->assertOk()->assertJsonPath('data.0.avatar_url', null);
         $this->get($url)->assertNotFound();
         $this->flushSession();
         $this->app['auth']->forgetGuards();
@@ -262,6 +311,25 @@ final class AdminUserDirectoryTest extends TestCase
         DB::table('files')->where('id', $file)->update(['scan_state' => 'CLEAN']);
         DB::table('store_profiles')->where('vendor_organization_id', $store->id)->update(['banner_file_id' => null]);
         $this->getJson('/api/v1/admin/vendors/'.$store->id)->assertOk()->assertJsonPath('data.store.banner_url', null);
+    }
+
+    public function test_vendor_list_pictures_use_only_the_current_clean_store_logo(): void
+    {
+        [$store, $owner] = $this->activeStore('Logo Hardware', false);
+        $this->signInAdmin($admin = $this->admin('ADMIN_SUPPORT'));
+        $this->getJson('/api/v1/admin/vendors?q=Logo')->assertOk()->assertJsonPath('data.0.logo_url', null);
+        $this->signInStoreMember($owner);
+        $this->post('/api/v1/vendors/onboarding/media', ['file' => UploadedFile::fake()->image('logo.png'), 'kind' => 'LOGO', 'alt_text' => 'Store logo'])->assertCreated();
+        $file = (string) DB::table('store_profiles')->where('vendor_organization_id', $store->id)->value('logo_file_id');
+        $this->signInAdmin($admin);
+        $list = $this->getJson('/api/v1/admin/vendors?q=Logo')->assertOk();
+        self::assertNotNull($list->json('data.0.logo_url'));
+        self::assertStringNotContainsString('object_key', (string) $list->getContent());
+        DB::table('files')->where('id', $file)->update(['scan_state' => 'PENDING']);
+        $this->getJson('/api/v1/admin/vendors?q=Logo')->assertOk()->assertJsonPath('data.0.logo_url', null);
+        DB::table('files')->where('id', $file)->update(['scan_state' => 'CLEAN']);
+        DB::table('store_profiles')->where('vendor_organization_id', $store->id)->update(['logo_file_id' => null]);
+        $this->getJson('/api/v1/admin/vendors?q=Logo')->assertOk()->assertJsonPath('data.0.logo_url', null);
     }
 
     public function test_vendor_list_filters_by_status_verification_and_owner_and_paginates(): void

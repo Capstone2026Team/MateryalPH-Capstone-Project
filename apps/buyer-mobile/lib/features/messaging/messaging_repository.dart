@@ -15,7 +15,6 @@ abstract interface class MessagingRepository {
     String? instructions,
   });
   Future<api.ConversationPage> inbox({int page = 1, bool archived = false});
-  Future<api.ConversationPage> projectInquiries(String id, {int page = 1});
   Future<void> archive(String id);
   Future<void> restore(String id);
   Future<api.ConversationDetail> conversation(
@@ -34,6 +33,12 @@ abstract interface class MessagingRepository {
     String? accessInstructions,
   });
   Future<void> send(String id, String body, String key, {String? productId});
+  Future<void> chooseAutomatedResponse(
+    String id,
+    String welcomeId,
+    int index,
+    String key,
+  );
 
   /// Free site inspection for ready-mixed concrete; returns the store
   /// conversation it was posted in. [key] also identifies the request on retry.
@@ -160,16 +165,22 @@ final class ApiMessagingRepository implements MessagingRepository {
         ),
       );
   @override
-  Future<api.ConversationPage> projectInquiries(String id, {int page = 1}) =>
-      _guard(
-        () async => _guard.required(
-          (await _api.listChatProjectInquiries(
-            messagingPortal: 'buyers',
-            conversationId: id,
-            page: page,
-          )).data?.data,
-        ),
-      );
+  Future<void> chooseAutomatedResponse(
+    String id,
+    String welcomeId,
+    int index,
+    String key,
+  ) => _guard(() async {
+    await _api.chooseChatAutomatedResponse(
+      conversationId: id,
+      chatAutomatedChoice: api.ChatAutomatedChoice(
+        (b) => b
+          ..welcomeMessageId = welcomeId
+          ..optionIndex = index
+          ..clientMessageId = key,
+      ),
+    );
+  });
 
   @override
   Future<void> archive(String id) => _guard(() async {
@@ -199,6 +210,7 @@ final class ApiMessagingRepository implements MessagingRepository {
         before: before,
         page: page,
         legacyPage: legacyPage,
+        storeThread: true,
       )).data?.data,
     ),
   );

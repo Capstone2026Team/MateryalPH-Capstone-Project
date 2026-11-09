@@ -110,6 +110,10 @@ erDiagram
     BUYER_RANKING_PREFERENCES {
         uuid id PK
     }
+    BUYER_THREAD_AUTOMATION_STATES {
+        uuid buyer_profile_id PK
+        uuid vendor_organization_id PK
+    }
     CACHE {
         character_varying key PK
     }
@@ -177,6 +181,9 @@ erDiagram
         uuid id PK
     }
     CONVERSATION_ASSIGNMENTS {
+        uuid id PK
+    }
+    CONVERSATION_AUTOMATED_SELECTIONS {
         uuid id PK
     }
     CONVERSATION_PARTICIPANTS {
@@ -336,6 +343,9 @@ erDiagram
     INVENTORY_MOVEMENTS {
         uuid id PK
     }
+    INVOICE_DRAFTS {
+        uuid id PK
+    }
     INVOICE_RECORD_DOWNLOADS {
         uuid id PK
     }
@@ -480,6 +490,12 @@ erDiagram
         uuid id PK
     }
     ORDER_DELIVERY_SNAPSHOTS {
+        uuid id PK
+    }
+    ORDER_DOCUMENT_RENDITIONS {
+        uuid id PK
+    }
+    ORDER_DOCUMENTS {
         uuid id PK
     }
     ORDER_FULFILLMENT_ASSIGNMENTS {
@@ -767,6 +783,9 @@ erDiagram
     VENDOR_AUTHORITY_REVIEWS {
         uuid id PK
     }
+    VENDOR_AUTOMATED_RESPONSES {
+        uuid vendor_organization_id PK
+    }
     VENDOR_BADGE_HISTORY {
         uuid id PK
     }
@@ -794,6 +813,9 @@ erDiagram
         uuid id PK
     }
     VENDOR_INVITATIONS {
+        uuid id PK
+    }
+    VENDOR_INVOICE_PRESETS {
         uuid id PK
     }
     VENDOR_LISTINGS {
@@ -904,6 +926,7 @@ erDiagram
     BUYER_PROFILES ||--|{ BUYER_LOCATIONS : "buyer_profile_id → id"
     BUYER_PROFILES ||--|{ BUYER_PREFERRED_CATEGORIES : "buyer_profile_id → id"
     BUYER_PROFILES ||--|{ BUYER_RANKING_PREFERENCES : "buyer_profile_id → id"
+    BUYER_PROFILES ||--|{ BUYER_THREAD_AUTOMATION_STATES : "buyer_profile_id → id"
     BUYER_PROFILES ||--|{ CARTS : "buyer_profile_id → id"
     BUYER_PROFILES ||--|{ CHECKOUT_GROUPS : "buyer_profile_id → id"
     BUYER_PROFILES ||--|{ CONVERSATIONS : "buyer_profile_id → id"
@@ -946,9 +969,11 @@ erDiagram
     COMPLIANCE_SUBMISSIONS ||--o{ VENDOR_LISTINGS : "current_compliance_submission_id → id"
     CONVERSATIONS ||--|{ CONVERSATION_ARCHIVES : "conversation_id → id"
     CONVERSATIONS ||--|{ CONVERSATION_ASSIGNMENTS : "conversation_id → id"
+    CONVERSATIONS ||--|{ CONVERSATION_AUTOMATED_SELECTIONS : "conversation_id → id"
     CONVERSATIONS ||--|{ CONVERSATION_PARTICIPANTS : "conversation_id → id"
     CONVERSATIONS ||--o{ CONVERSATIONS : "canonical_conversation_id → id"
     CONVERSATIONS ||--|{ MESSAGES : "conversation_id → id"
+    CONVERSATIONS ||--o{ MESSAGES : "work_package_inquiry_id → id"
     CONVERSATIONS ||--o{ PROJECT_ARRANGEMENT_VENDORS : "conversation_id → id"
     CONVERSATIONS ||--|{ QUOTATIONS : "conversation_id → id"
     CONVERSATIONS ||--|{ SITE_INSPECTION_REQUESTS : "conversation_id → id"
@@ -1002,9 +1027,12 @@ erDiagram
     FILES ||--|{ EXTERNAL_FILING_EVIDENCE : "file_id → id"
     FILES ||--o{ FULFILLMENT_PROOFS : "photo_file_id → id"
     FILES ||--o{ FULFILLMENT_PROOFS : "signature_file_id → id"
+    FILES ||--|{ INVOICE_DRAFTS : "file_id → id"
     FILES ||--|{ INVOICE_RECORDS : "file_id → id"
     FILES ||--|{ LISTING_MEDIA : "file_id → id"
     FILES ||--|{ MESSAGE_ATTACHMENTS : "file_id → id"
+    FILES ||--|{ ORDER_DOCUMENT_RENDITIONS : "file_id → id"
+    FILES ||--o{ ORDER_DOCUMENTS : "file_id → id"
     FILES ||--o{ PHYSICAL_PAYMENT_RECORDS : "evidence_file_id → id"
     FILES ||--o{ PHYSICAL_REIMBURSEMENTS : "evidence_file_id → id"
     FILES ||--o{ REMITTANCE_ASSESSMENTS : "evidence_file_id → id"
@@ -1039,6 +1067,7 @@ erDiagram
     INVENTORY_ITEMS ||--|{ INVENTORY_HOLDS : "inventory_item_id → id"
     INVENTORY_ITEMS ||--|{ INVENTORY_MOVEMENTS : "inventory_item_id → id"
     INVENTORY_ITEMS ||--|{ STOCK_CONFIRMATION_EVENTS : "inventory_item_id → id"
+    INVOICE_RECORDS ||--o{ INVOICE_DRAFTS : "sent_record_id → id"
     INVOICE_RECORDS ||--|{ INVOICE_RECORD_DOWNLOADS : "invoice_record_id → id"
     INVOICE_RECORDS ||--o{ INVOICE_RECORDS : "amends_invoice_record_id → id"
     INVOICE_RECORDS ||--o{ INVOICE_REQUESTS : "fulfilled_invoice_record_id → id"
@@ -1085,6 +1114,9 @@ erDiagram
     MATERIALS ||--|{ REGULATED_MATERIAL_RULES : "material_id → id"
     MATERIALS ||--o{ UNIT_CONVERSIONS : "material_id → id"
     MATERIALS ||--o{ WORK_PACKAGE_LINES : "material_id → id"
+    MESSAGES ||--o{ BUYER_THREAD_AUTOMATION_STATES : "active_welcome_message_id → id"
+    MESSAGES ||--|{ CONVERSATION_AUTOMATED_SELECTIONS : "buyer_message_id → id"
+    MESSAGES ||--|{ CONVERSATION_AUTOMATED_SELECTIONS : "welcome_message_id → id"
     MESSAGES ||--|{ MESSAGE_ATTACHMENTS : "message_id → id"
     MESSAGES ||--|{ MESSAGE_READ_RECEIPTS : "message_id → id"
     NOTIFICATION_DELIVERIES ||--|{ NOTIFICATION_DELIVERY_ATTEMPTS : "notification_delivery_id → id"
@@ -1092,6 +1124,7 @@ erDiagram
     NOTIFICATIONS ||--|{ NOTIFICATION_DELIVERIES : "notification_id → id"
     NRPC_RECORDS ||--o{ NRPC_ACCEPTANCES : "nrpc_record_id → id"
     NRPC_RECORDS ||--|{ NRPC_LINE_ALLOCATIONS : "nrpc_record_id → id"
+    ORDER_DOCUMENTS ||--|{ ORDER_DOCUMENT_RENDITIONS : "order_document_id → id"
     ORDER_LINES ||--|{ FINANCIAL_SNAPSHOT_LINES : "order_line_id → id"
     ORDER_LINES ||--o{ INVENTORY_HOLDS : "order_line_id → id"
     ORDER_LINES ||--|{ NRPC_LINE_ALLOCATIONS : "order_line_id → id"
@@ -1109,13 +1142,16 @@ erDiagram
     ORDERS ||--o{ FULFILLMENT_MILESTONES : "order_id → id"
     ORDERS ||--o{ FULFILLMENT_PROOFS : "order_id → id"
     ORDERS ||--|{ FULFILLMENTS : "order_id → id"
+    ORDERS ||--|{ INVOICE_DRAFTS : "order_id → id"
     ORDERS ||--o{ INVOICE_RECORDS : "order_id → id"
     ORDERS ||--|{ INVOICE_REQUESTS : "order_id → id"
+    ORDERS ||--o{ MESSAGES : "work_package_order_id → id"
     ORDERS ||--o{ METRIC_EVENTS : "order_id → id"
     ORDERS ||--|{ NFR_EVENTS : "order_id → id"
     ORDERS ||--|{ NRPC_ACCEPTANCES : "order_id → id"
     ORDERS ||--|{ NRPC_RECORDS : "order_id → id"
     ORDERS ||--|{ ORDER_DELIVERY_SNAPSHOTS : "order_id → id"
+    ORDERS ||--|{ ORDER_DOCUMENTS : "order_id → id"
     ORDERS ||--|{ ORDER_FULFILLMENT_ASSIGNMENTS : "order_id → id"
     ORDERS ||--|{ ORDER_INVOICE_DETAILS : "order_id → id"
     ORDERS ||--|{ ORDER_LINES : "order_id → id"
@@ -1128,6 +1164,7 @@ erDiagram
     ORDERS ||--o{ PROJECT_ARRANGEMENT_VENDORS : "order_id → id"
     ORDERS ||--o{ PROJECT_PROCUREMENT_DRAFT_ITEMS : "order_id → id"
     ORDERS ||--o{ QUOTATIONS : "accepted_order_id → id"
+    ORDERS ||--o{ QUOTATIONS : "replaces_order_id → id"
     ORDERS ||--o{ REFUNDS : "order_id → id"
     ORDERS ||--|{ REMITTANCE_ASSESSMENTS : "order_id → id"
     ORDERS ||--|{ REVIEW_WINDOWS : "order_id → id"
@@ -1301,6 +1338,7 @@ erDiagram
     USERS ||--o{ IDEMPOTENCY_RECORDS : "actor_user_id → id"
     USERS ||--o{ INVENTORY_ITEMS : "updated_by_user_id → id"
     USERS ||--o{ INVENTORY_MOVEMENTS : "actor_user_id → id"
+    USERS ||--|{ INVOICE_DRAFTS : "updated_by_user_id → id"
     USERS ||--|{ INVOICE_RECORD_DOWNLOADS : "user_id → id"
     USERS ||--o{ INVOICE_RECORDS : "reconciliation_noted_by_user_id → id"
     USERS ||--o{ INVOICE_RECORDS : "uploaded_by_user_id → id"
@@ -1383,6 +1421,7 @@ erDiagram
     USERS ||--|{ VENDOR_DOCUMENT_VERSIONS : "uploaded_by_user_id → id"
     USERS ||--o{ VENDOR_INVENTORY_SETTINGS : "updated_by_user_id → id"
     USERS ||--|{ VENDOR_INVITATIONS : "invited_by_user_id → id"
+    USERS ||--|{ VENDOR_INVOICE_PRESETS : "updated_by_user_id → id"
     USERS ||--o{ VENDOR_LISTINGS : "created_by_user_id → id"
     USERS ||--o{ VENDOR_LISTINGS : "removed_by_user_id → id"
     USERS ||--o{ VENDOR_LISTINGS : "updated_by_user_id → id"
@@ -1433,6 +1472,7 @@ erDiagram
     VENDOR_ONBOARDING_REQUIREMENTS ||--o{ VENDOR_DOCUMENTS : "onboarding_step_id → id"
     VENDOR_ORGANIZATIONS ||--o{ AGREEMENT_ACCEPTANCES : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ BADGE_SUPPRESSIONS : "vendor_organization_id → id"
+    VENDOR_ORGANIZATIONS ||--|{ BUYER_THREAD_AUTOMATION_STATES : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ CART_VENDOR_GROUPS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ CATALOG_IMPORT_JOBS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ CHECKOUT_VENDOR_GROUPS : "vendor_organization_id → id"
@@ -1451,6 +1491,7 @@ erDiagram
     VENDOR_ORGANIZATIONS ||--|{ FEE_ASSESSMENTS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ FEE_STATEMENTS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--o{ FINANCE_REVIEW_ITEMS : "vendor_organization_id → id"
+    VENDOR_ORGANIZATIONS ||--|{ INVOICE_DRAFTS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ INVOICE_RECORDS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ INVOICE_REQUESTS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ LISTING_VIEW_DAYS : "vendor_organization_id → id"
@@ -1480,11 +1521,13 @@ erDiagram
     VENDOR_ORGANIZATIONS ||--|{ TAX_YEAR_ACCUMULATORS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ VENDOR_ACTIVATION_HISTORY : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ VENDOR_ADDRESSES : "vendor_organization_id → id"
+    VENDOR_ORGANIZATIONS ||--|{ VENDOR_AUTOMATED_RESPONSES : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ VENDOR_BADGE_HISTORY : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ VENDOR_CLASSIFICATIONS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ VENDOR_DOCUMENTS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ VENDOR_INVENTORY_SETTINGS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ VENDOR_INVITATIONS : "vendor_organization_id → id"
+    VENDOR_ORGANIZATIONS ||--|{ VENDOR_INVOICE_PRESETS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ VENDOR_LISTINGS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ VENDOR_MEMBERSHIPS : "vendor_organization_id → id"
     VENDOR_ORGANIZATIONS ||--|{ VENDOR_ONBOARDING_DRAFTS : "vendor_organization_id → id"

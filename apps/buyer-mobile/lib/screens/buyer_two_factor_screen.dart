@@ -1,3 +1,4 @@
+import '../design_system/components/async_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -247,7 +248,7 @@ class _BuyerTwoFactorScreenState extends State<BuyerTwoFactorScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (_busy) const LinearProgressIndicator(semanticsLabel: 'Loading'),
+            if (_busy) const BuyerLoadingProgress(semanticsLabel: 'Loading'),
             if (_error != null) ...[
               const SizedBox(height: 12),
               AuthNotice(message: _error!, isError: true),

@@ -5,6 +5,7 @@ import {
   type AdminRefundRow,
   type AdminReimbursementRow,
   type ListAdminRefundsStateEnum,
+  type ListAdminRefundsTriggerEnum,
 } from '@materyalph/api-client-ts'
 import { createWebApiConfiguration } from '@materyalph/web-ui'
 import { dateQuery, type CalendarRange } from './admin-format'
@@ -19,8 +20,8 @@ export async function getSummary(): Promise<AdminOrderOperationsSummary> {
   return (await operationsApi().getAdminOrderOperationsSummary()).data
 }
 
-export async function listRefunds(page: number, state?: ListAdminRefundsStateEnum, range?: CalendarRange): Promise<{ items: AdminRefundRow[]; hasMore: boolean }> {
-  const response = await operationsApi().listAdminRefunds({ page, ...(state ? { state } : {}), ...dateQuery(range) })
+export async function listRefunds(page: number, state?: ListAdminRefundsStateEnum, range?: CalendarRange, trigger?: ListAdminRefundsTriggerEnum): Promise<{ items: AdminRefundRow[]; hasMore: boolean }> {
+  const response = await operationsApi().listAdminRefunds({ page, ...(state ? { state } : {}), ...(trigger ? { trigger } : {}), ...dateQuery(range) })
   return { items: response.data, hasMore: Boolean((response.meta as { has_more?: boolean } | undefined)?.has_more) }
 }
 
@@ -31,6 +32,11 @@ export async function retryRefund(refundId: string): Promise<void> {
 
 export async function listReimbursements(range?: CalendarRange): Promise<AdminReimbursementRow[]> {
   return (await operationsApi().listAdminReimbursements(dateQuery(range))).data
+}
+
+export async function listAuditReimbursements(page: number, range?: CalendarRange): Promise<{ items: AdminReimbursementRow[]; hasMore: boolean }> {
+  const response = await operationsApi().listAdminReimbursements({ page, ...dateQuery(range) })
+  return { items: response.data, hasMore: Boolean((response.meta as { has_more?: boolean } | undefined)?.has_more) }
 }
 
 export async function confirmReimbursement(reimbursementId: string, reason: string): Promise<void> {

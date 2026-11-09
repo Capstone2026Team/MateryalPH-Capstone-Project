@@ -7,7 +7,7 @@
 Name | Type
 ------------ | -------------
 `data` | [Array&lt;ProductComplianceQueueItem&gt;](ProductComplianceQueueItem.md)
-`meta` | { [key: string]: any; }
+`meta` | [ProductComplianceQueueEnvelopeMeta](ProductComplianceQueueEnvelopeMeta.md)
 `errors` | Array&lt;{ [key: string]: any; }&gt;
 
 ## Example

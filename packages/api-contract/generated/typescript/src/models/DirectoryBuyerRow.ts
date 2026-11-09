@@ -13,6 +13,14 @@
  */
 
 import { mapValues, parseDate, parseDateTime, serializeDate, serializeDateTime } from '../runtime';
+import type { BuyerRatingSummary } from './BuyerRatingSummary';
+import {
+    BuyerRatingSummaryFromJSON,
+    BuyerRatingSummaryFromJSONTyped,
+    BuyerRatingSummaryToJSON,
+    BuyerRatingSummaryToJSONTyped,
+} from './BuyerRatingSummary';
+
 /**
  *
  * @export
@@ -51,6 +59,14 @@ export interface DirectoryBuyerRow {
      *
      */
     lastActiveAt: Date | null;
+    /**
+     *
+     */
+    rating: BuyerRatingSummary;
+    /**
+     * Short-lived viewer-bound URL for the authenticated private Buyer photo endpoint. Null when absent or the Buyer is deleted.
+     */
+    avatarUrl: string | null;
 }
 
 
@@ -88,6 +104,8 @@ export function instanceOfDirectoryBuyerRow(value: object): value is DirectoryBu
     if ((!('companyName' in (value as Record<string, any>)) && !('company_name' in (value as Record<string, any>))) || ((value as Record<string, any>)['companyName'] === undefined && (value as Record<string, any>)['company_name'] === undefined)) return false;
     if ((!('joinedAt' in (value as Record<string, any>)) && !('joined_at' in (value as Record<string, any>))) || ((value as Record<string, any>)['joinedAt'] === undefined && (value as Record<string, any>)['joined_at'] === undefined)) return false;
     if ((!('lastActiveAt' in (value as Record<string, any>)) && !('last_active_at' in (value as Record<string, any>))) || ((value as Record<string, any>)['lastActiveAt'] === undefined && (value as Record<string, any>)['last_active_at'] === undefined)) return false;
+    if (!('rating' in value) || value['rating'] === undefined) return false;
+    if ((!('avatarUrl' in (value as Record<string, any>)) && !('avatar_url' in (value as Record<string, any>))) || ((value as Record<string, any>)['avatarUrl'] === undefined && (value as Record<string, any>)['avatar_url'] === undefined)) return false;
     return true;
 }
 
@@ -109,6 +127,8 @@ export function DirectoryBuyerRowFromJSONTyped(json: any, ignoreDiscriminator: b
         'companyName': json['company_name'],
         'joinedAt': (json['joined_at'] == null ? json['joined_at'] : parseDateTime(json['joined_at'])),
         'lastActiveAt': (json['last_active_at'] == null ? null : parseDateTime(json['last_active_at'])),
+        'rating': BuyerRatingSummaryFromJSON(json['rating']),
+        'avatarUrl': json['avatar_url'],
     };
 }
 
@@ -131,6 +151,8 @@ export function DirectoryBuyerRowToJSONTyped(value?: DirectoryBuyerRow | null, i
         'company_name': value['companyName'],
         'joined_at': value['joinedAt'] == null ? value['joinedAt'] : serializeDateTime(value['joinedAt']),
         'last_active_at': value['lastActiveAt'] == null ? value['lastActiveAt'] : serializeDateTime(value['lastActiveAt']),
+        'rating': BuyerRatingSummaryToJSON(value['rating']),
+        'avatar_url': value['avatarUrl'],
     };
 }
 

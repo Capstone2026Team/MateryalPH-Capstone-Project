@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { NotificationsApi, type DeliveryFailure } from '@materyalph/api-client-ts'
-import { ALL_DATES, Button, DateFilter, EmptyState, StatusMessage, Toolbar, enableWebPush, NotificationsWorkspace, createWebApiConfiguration, notificationError } from '@materyalph/web-ui'
+import { dateFilterPreset, Button, DateFilter, EmptyState, StatusMessage, Toolbar, enableWebPush, NotificationsWorkspace, createWebApiConfiguration, notificationError } from '@materyalph/web-ui'
 import { AdminShell, LoadingState, PageHeader } from './PhaseThreeAdminPages'
 import { dateQuery } from '../lib/admin-format'
 
@@ -16,7 +16,7 @@ export function AdminDeliveryFailuresPage() {
   const [error, setError] = useState('')
   const [page, setPage] = useState(1)
   const [hasMore, setHasMore] = useState(false)
-  const [range, setRange] = useState(ALL_DATES)
+  const [range, setRange] = useState(() => dateFilterPreset(30))
   const [loading, setLoading] = useState(true)
   const request = useRef(0)
   const cancelPending = useCallback(() => { request.current++ }, [])
@@ -29,5 +29,5 @@ export function AdminDeliveryFailuresPage() {
     finally { if (run === request.current) setLoading(false) }
   }, [range])
   useEffect(() => { void load(); return cancelPending }, [load, cancelPending])
-  return <AdminShell activeHref="/notifications"><div className="grid gap-6"><PageHeader eyebrow="Notifications" title="Delivery exceptions" description="External deliveries that exhausted their five attempts. Original business transactions remain recorded." actions={<Button variant="secondary" disabled={loading} onClick={() => void load()}>Refresh</Button>} /><Toolbar filters={<><DateFilter title="Delivery failure dates" value={range} onChange={setRange} />{(range.from || range.to) && <Button variant="quiet" onClick={() => setRange(ALL_DATES)}>Reset dates</Button>}</>} />{error && <StatusMessage tone="error">{error}</StatusMessage>}{loading && !items.length ? <LoadingState /> : items.length ? <ul className="divide-y divide-border-default rounded-surface border border-border-default bg-surface-primary px-4">{items.map(item => <li key={item.id} className="py-4"><strong>{item.channel} · {item.state}</strong><p className="text-sm">{item.attemptCount} attempts · {item.failureCode}</p><p className="break-all text-xs text-text-secondary">Delivery reference: {item.id}</p></li>)}</ul> : !error && <EmptyState message="No failed deliveries match these dates." />}{hasMore && <Button variant="secondary" disabled={loading} onClick={() => void load(page + 1)}>{loading ? 'Loading…' : 'Load more'}</Button>}</div></AdminShell>
+  return <AdminShell activeHref="/notifications"><div className="grid gap-6"><PageHeader eyebrow="Notifications" title="Delivery exceptions" description="External deliveries that exhausted their five attempts. Original business transactions remain recorded." actions={<Button variant="secondary" disabled={loading} onClick={() => void load()}>Refresh</Button>} /><Toolbar filters={<><DateFilter title="Delivery failure dates" value={range} onChange={setRange} /></>} />{error && <StatusMessage tone="error">{error}</StatusMessage>}{loading && !items.length ? <LoadingState /> : items.length ? <ul className="divide-y divide-border-default mp-card px-4">{items.map(item => <li key={item.id} className="py-4"><strong>{item.channel} · {item.state}</strong><p className="text-sm">{item.attemptCount} attempts · {item.failureCode}</p><p className="break-all text-xs text-text-secondary">Delivery reference: {item.id}</p></li>)}</ul> : !error && <EmptyState message="No failed deliveries match these dates." />}{hasMore && <Button variant="secondary" disabled={loading} onClick={() => void load(page + 1)}>{loading ? 'Loading…' : 'Load more'}</Button>}</div></AdminShell>
 }

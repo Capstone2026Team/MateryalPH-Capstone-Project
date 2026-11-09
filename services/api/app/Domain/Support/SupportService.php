@@ -142,7 +142,7 @@ final class SupportService
     }
 
     /** @param array<string, mixed> $filters
-     * @return array{items: list<array<string, mixed>>, next_cursor: ?string}
+     * @return array{items: list<array<string, mixed>>, next_cursor: ?string, counts?: array<string, int>}
      */
     public function list(Request $request, array $filters): array
     {
@@ -150,27 +150,37 @@ final class SupportService
         if ($admin) {
             app(AdminAccess::class)->require($request, 'support.view');
         }
-        $query = DB::table('support_tickets')->orderByDesc('id');
+        $query = DB::table('support_tickets');
         if (! $admin) {
             $query->where('user_id', $request->user()->getKey());
         }
-        foreach (['category', 'user_type', 'status'] as $key) {
+        foreach (['category', 'user_type'] as $key) {
             if (isset($filters[$key])) {
                 $query->where($key, $filters[$key]);
             }
-        }
-        if (! empty($filters['cursor'])) {
-            $query->where('id', '<', $filters['cursor']);
         }
         if (! empty($filters['q'])) {
             $q = '%'.addcslashes($filters['q'], '%_\\').'%';
             $query->where(fn ($query) => $query->where('ticket_number', 'ilike', $q)->orWhere('full_name', 'ilike', $q)->orWhere('email', 'ilike', $q)->orWhere('subject', 'ilike', $q));
         }
         PortalDateRange::apply($query, 'created_at', $filters);
-        $rows = $query->limit(26)->get();
+        $counts = [];
+        if ($admin) {
+            $counts = array_fill_keys(SupportRules::STATUSES, 0);
+            foreach ((clone $query)->selectRaw('status, count(*) as total')->groupBy('status')->get() as $row) {
+                $counts[$row->status] = (int) $row->total;
+            }
+        }
+        if (isset($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+        if (! empty($filters['cursor'])) {
+            $query->where('id', '<', $filters['cursor']);
+        }
+        $rows = $query->orderByDesc('id')->limit(26)->get();
         $items = $rows->take(25);
 
-        return ['items' => $items->map(fn ($ticket) => $this->present($ticket))->all(), 'next_cursor' => $rows->count() > 25 ? $items->last()->id : null];
+        return ['items' => $items->map(fn ($ticket) => $this->present($ticket))->all(), 'next_cursor' => $rows->count() > 25 ? $items->last()->id : null] + ($admin ? ['counts' => $counts] : []);
     }
 
     /** @return array<string, mixed> */

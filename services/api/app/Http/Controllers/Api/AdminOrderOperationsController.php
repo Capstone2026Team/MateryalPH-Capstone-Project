@@ -44,9 +44,10 @@ final class AdminOrderOperationsController extends Controller
 
     public function reimbursements(Request $request): JsonResponse
     {
-        $filters = $request->validate(PortalDateRange::rules($request));
+        $filters = $request->validate(['page' => ['sometimes', 'integer', 'between:1,1000']] + PortalDateRange::rules($request));
+        $result = $this->operations->reimbursements($request, $filters);
 
-        return ApiResponse::success($this->operations->reimbursements($request, $filters));
+        return ApiResponse::success($result['items'], $result['meta']);
     }
 
     public function decideReimbursement(Request $request, string $reimbursementId, ReimbursementService $reimbursements): JsonResponse

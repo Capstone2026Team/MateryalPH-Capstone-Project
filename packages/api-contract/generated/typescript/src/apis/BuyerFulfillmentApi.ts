@@ -463,7 +463,7 @@ export class BuyerFulfillmentApi extends runtime.BaseAPI {
     }
 
     /**
-     * Proof, problem and reimbursement evidence referenced by this order only.
+     * Proof, problem, reimbursement evidence and frozen delivery vehicle images referenced by this order only. Vehicle images must belong to this order\'s Vendor, remain private and pass malware scanning.
      */
     async getBuyerOrderFileRaw(requestParameters: GetBuyerOrderFileRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Blob>> {
         const requestOptions = await this.getBuyerOrderFileRequestOpts(requestParameters);
@@ -473,7 +473,7 @@ export class BuyerFulfillmentApi extends runtime.BaseAPI {
     }
 
     /**
-     * Proof, problem and reimbursement evidence referenced by this order only.
+     * Proof, problem, reimbursement evidence and frozen delivery vehicle images referenced by this order only. Vehicle images must belong to this order\'s Vendor, remain private and pass malware scanning.
      */
     async getBuyerOrderFile(requestParameters: GetBuyerOrderFileRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Blob> {
         const response = await this.getBuyerOrderFileRaw(requestParameters, initOverrides);

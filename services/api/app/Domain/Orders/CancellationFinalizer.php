@@ -66,7 +66,8 @@ final class CancellationFinalizer
             'refund_total_centavos' => $plan['online_refund_total_centavos'], 'cash_reimbursement_centavos' => $plan['cash_reimbursement_centavos'],
             'released_unpaid_centavos' => $plan['released_unpaid_centavos'], 'correlation_id' => mb_substr($actor->correlationId, 0, 64), 'created_at' => now(), 'updated_at' => now(),
         ]);
-        $reasonCode = $ctx['cause'] === 'VENDOR' ? 'VENDOR_CANCELLATION' : ($before === OrderStates::AWAITING_VENDOR_CONFIRMATION ? 'BUYER_WITHDRAWAL' : 'BUYER_CANCELLATION');
+        $reasonCode = $ctx['decision_code'] === 'QUOTATION_REPLACED' ? 'QUOTATION_REPLACED'
+            : ($ctx['cause'] === 'VENDOR' ? 'VENDOR_CANCELLATION' : ($before === OrderStates::AWAITING_VENDOR_CONFIRMATION ? 'BUYER_WITHDRAWAL' : 'BUYER_CANCELLATION'));
         $this->release->closeOpenAttempts((string) $order->id, $actor, 'ORDER_CANCELLED');
         $this->release->release($order, OrderStates::CANCELLED, $reasonCode, $actor);
         $this->physical($order, $decisionId, $plan);
@@ -207,6 +208,11 @@ final class CancellationFinalizer
             $parts[] = $peso((int) $plan['released_unpaid_centavos']).' you had not paid is no longer due.';
         }
         $buyerBody = ($ctx['cause'] === 'VENDOR' ? 'The Vendor cancelled this order. ' : 'Your order was cancelled. ').implode(' ', $parts ?: ['Nothing was charged.']);
+        if ($ctx['decision_code'] === 'QUOTATION_REPLACED') {
+            $buyerBody = 'You accepted a replacement quotation for this pending request. The original request is retained in order history.';
+        } elseif ($order->work_package_id !== null) {
+            $buyerBody .= ' Your Work Package can be reused. Review matching vendors for the uncovered materials; no replacement order is sent automatically.';
+        }
         $this->notifier->buyer($order, 'Order '.$order->reference.' cancelled', $buyerBody);
         $this->notifier->vendor($order, 'Order '.$order->reference.' cancelled', ($ctx['cause'] === 'VENDOR'
             ? 'You cancelled this order. Every Buyer-paid amount is refunded, any NRPC is forfeited, the reserved stock was released and the cancellation counts toward your Non-Fulfillment Rate.'

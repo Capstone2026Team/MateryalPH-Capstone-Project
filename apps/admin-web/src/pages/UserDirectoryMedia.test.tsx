@@ -1,14 +1,15 @@
 import { PortalPagePatterns } from '@materyalph/web-ui'
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import * as directory from '../lib/user-directory-api'
-import { AdminBuyerUserDetailPage, AdminVendorUserDetailPage } from './UserDirectoryPages'
+import { AdminBuyerUserDetailPage, AdminBuyerUsersPage, AdminVendorUserDetailPage, AdminVendorUsersPage } from './UserDirectoryPages'
 
 vi.mock('../lib/user-directory-api', async original => ({
   ...await original<typeof import('../lib/user-directory-api')>(),
   getDirectoryBuyer: vi.fn(), getDirectoryBuyerPhoto: vi.fn(), getDirectoryVendor: vi.fn(),
+  listDirectoryBuyers: vi.fn(), listDirectoryVendors: vi.fn(),
 }))
 vi.mock('./PhaseThreeAdminPages', async original => ({
   ...await original<typeof import('./PhaseThreeAdminPages')>(),
@@ -18,6 +19,7 @@ vi.mock('./PhaseThreeAdminPages', async original => ({
 const buyerPhotoUrl = 'https://api.example.test/api/v1/admin/buyers/b1/photo?version=2&expires=1793000000&signature=fixture'
 const buyer = (over: Record<string, unknown> = {}) => ({
   id: 'b1', subjectType: 'BUYER', name: 'Maria Santos', status: 'ACTIVE',
+  rating: { score: null, count: 0, minimumCount: 5, windowDays: 90, inquirySeriousness: null, communicationQuality: null, paymentReliability: null },
   profile: { avatarUrl: buyerPhotoUrl, email: 'maria@example.com', emailVerified: true, mobile: '+639171234567', buyerType: 'BUSINESS', companyName: 'Santos Builders', positionTitle: 'Site Engineer', industry: 'GENERAL_CONTRACTOR', area: 'Quezon City, Metro Manila',
     onboardingStatus: 'COMPLETED', joinedAt: new Date('2026-09-01T00:00:00Z'), deletedAt: null, commerceRestrictedUntil: null },
   ratings: { received: { count: 0, inquirySeriousness: null, communicationQuality: null, paymentReliability: null }, written: { count: 0 } },
@@ -58,6 +60,63 @@ beforeEach(() => {
 })
 afterEach(() => { cleanup(); vi.unstubAllGlobals() })
 
+const listMeta = { page: 1, perPage: 20, total: 3, lastPage: 1, statusCounts: { ACTIVE: 3 } }
+const buyerRow = (id: string, name: string, avatarUrl: string | null, status = 'ACTIVE') => ({
+  id, name, avatarUrl, status, email: `${id}@example.com`, buyerType: 'INDIVIDUAL', companyName: null,
+  joinedAt: new Date('2026-09-01T00:00:00Z'), lastActiveAt: null, rating: buyer().rating,
+})
+
+test('Buyer rows load private pictures with compact initials for missing and deleted photos, and release Blob URLs', async () => {
+  vi.mocked(directory.listDirectoryBuyers).mockResolvedValue({ items: [
+    buyerRow('b1', 'Maria Santos', buyerPhotoUrl), buyerRow('b2', 'Ana Cruz', null), buyerRow('b3', 'Deleted Buyer', buyerPhotoUrl, 'DELETED'),
+  ], meta: listMeta } as never)
+  vi.mocked(directory.getDirectoryBuyerPhoto).mockResolvedValue(new Blob(['photo'], { type: 'image/png' }))
+  const view = render(<MemoryRouter><AdminBuyerUsersPage /></MemoryRouter>)
+
+  const image = await screen.findByRole('img', { name: 'Maria Santos profile photo' })
+  expect(image).toHaveAttribute('src', 'blob:buyer-photo')
+  expect(image.parentElement).toHaveClass('profile-image--compact')
+  expect(directory.getDirectoryBuyerPhoto).toHaveBeenCalledExactlyOnceWith('b1', buyerPhotoUrl)
+  expect(screen.getByRole('img', { name: 'Ana Cruz profile photo unavailable' })).toHaveTextContent('AC')
+  expect(screen.getByRole('img', { name: 'Deleted Buyer profile photo unavailable' })).toHaveTextContent('DB')
+  expect(within(image.closest('tr')!).getByRole('link', { name: 'Maria Santos' })).toHaveAttribute('href', '/buyer-users/b1')
+  expect(directory.getDirectoryBuyer).not.toHaveBeenCalled()
+  view.unmount()
+  expect(revokeObjectUrl).toHaveBeenCalledExactlyOnceWith('blob:buyer-photo')
+})
+
+test('a failed Buyer list photo keeps initials and the profile link available', async () => {
+  vi.mocked(directory.listDirectoryBuyers).mockResolvedValue({ items: [buyerRow('b1', 'Maria Santos', buyerPhotoUrl)], meta: listMeta } as never)
+  vi.mocked(directory.getDirectoryBuyerPhoto).mockRejectedValue(new Error('Expired photo signature'))
+  render(<MemoryRouter><AdminBuyerUsersPage /></MemoryRouter>)
+
+  expect(await screen.findByRole('img', { name: 'Maria Santos profile photo unavailable' })).toHaveTextContent('MS')
+  expect(screen.getByRole('link', { name: 'Maria Santos' })).toHaveAttribute('href', '/buyer-users/b1')
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+})
+
+test('Vendor rows show compact store logos and initials when missing or broken', async () => {
+  const store = (id: string, storeName: string, logoUrl: string | null) => ({
+    id, storeName, logoUrl, ownerName: 'Store Owner', ownerEmail: 'owner@example.com', status: 'ACTIVE',
+    verificationStatus: 'APPROVED', discoverabilityStatus: 'DISCOVERABLE', accountStatus: 'ACTIVE', location: 'Quezon City',
+    joinedAt: new Date('2026-09-01T00:00:00Z'), vps: null,
+  })
+  vi.mocked(directory.listDirectoryVendors).mockResolvedValue({ items: [
+    store('v1', 'Alpha Hardware', 'https://media.example.test/logo.png'), store('v2', 'Beta Lumber', null),
+  ], meta: listMeta } as never)
+  render(<MemoryRouter><AdminVendorUsersPage /></MemoryRouter>)
+
+  const image = await screen.findByRole('img', { name: 'Alpha Hardware logo' })
+  expect(image).toHaveAttribute('src', 'https://media.example.test/logo.png')
+  expect(image.parentElement).toHaveClass('profile-image--compact')
+  expect(screen.getByRole('img', { name: 'Beta Lumber logo unavailable' })).toHaveTextContent('BL')
+  expect(within(image.closest('tr')!).getByText('Quezon City')).toBeInTheDocument()
+  fireEvent.error(image)
+  expect(screen.getByRole('img', { name: 'Alpha Hardware logo unavailable' })).toHaveTextContent('AH')
+  expect(screen.getByRole('link', { name: 'Alpha Hardware' })).toHaveAttribute('href', '/vendor-users/v1')
+  expect(directory.getDirectoryVendor).not.toHaveBeenCalled()
+})
+
 test('the Buyer profile reads private media once, displays a Blob URL and revokes it on unmount', async () => {
   const photo = new Blob(['sanitized-photo'], { type: 'image/png' })
   vi.mocked(directory.getDirectoryBuyer).mockResolvedValue(buyer() as never)
@@ -70,6 +129,10 @@ test('the Buyer profile reads private media once, displays a Blob URL and revoke
   expect(screen.getByRole('link', { name: 'Open Enforcement' })).toHaveAttribute('href', '/enforcement')
   fireEvent.click(screen.getByRole('tab', { name: 'Usage and activity' }))
   expect(screen.getByText('Orders')).toBeInTheDocument()
+  expect(directory.getDirectoryBuyerPhoto).toHaveBeenCalledTimes(1)
+  fireEvent.click(screen.getByRole('tab', { name: 'Performance Monitoring' }))
+  expect(screen.getByRole('img', { name: 'Maria Santos profile photo' })).toHaveAttribute('src', 'blob:buyer-photo')
+  fireEvent.click(screen.getByRole('tab', { name: 'Profile' }))
   expect(directory.getDirectoryBuyerPhoto).toHaveBeenCalledTimes(1)
 
   view.unmount()

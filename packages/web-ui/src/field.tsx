@@ -1,4 +1,4 @@
-import { createContext, useContext, forwardRef, useId, useState, type InputHTMLAttributes, type ReactNode } from 'react'
+import { createContext, useContext, forwardRef, useId, useState, type InputHTMLAttributes, type TextareaHTMLAttributes, type ReactNode } from 'react'
 
 export const FormErrors = createContext<Record<string, string>>({})
 
@@ -44,3 +44,14 @@ export const Field = forwardRef<HTMLInputElement, FieldProps>(
 )
 
 Field.displayName = 'Field'
+
+export function TextArea({ label, error, hint, id, className = '', ...props }: TextareaHTMLAttributes<HTMLTextAreaElement> & { label: string; error?: string; hint?: ReactNode }) {
+  const generatedId = useId()
+  const fieldId = id ?? generatedId
+  const descriptionId = error || hint ? `${fieldId}-description` : undefined
+  return <div className="grid min-w-0 gap-2 text-sm font-semibold text-text-strong">
+    <label htmlFor={fieldId}>{label}</label>
+    <textarea {...props} id={fieldId} aria-invalid={Boolean(error)} aria-describedby={descriptionId} className={`min-h-24 w-full min-w-0 rounded-control border border-border-default bg-surface-primary px-3 py-2 text-base font-normal text-text-strong focus:border-focus-ring focus:ring-2 focus:ring-focus-ring/20 disabled:opacity-60 ${className}`} />
+    {(error || hint) && <span id={descriptionId} role={error ? 'alert' : undefined} className={`text-sm font-normal ${error ? 'text-status-error' : 'text-text-secondary'}`}>{error || hint}</span>}
+  </div>
+}

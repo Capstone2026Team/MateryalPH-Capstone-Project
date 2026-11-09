@@ -1,6 +1,7 @@
 import { Menu, X } from 'lucide-react'
 import { useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
+import { ConnectionNotice } from '@materyalph/web-ui'
 
 const links: ReadonlyArray<readonly [string, string]> = [
   ['Home', '/#main-content'],
@@ -16,7 +17,7 @@ export function BrandHeader() {
   const [open, setOpen] = useState(false)
 
   return (
-    <header className="site-header">
+    <><header className="site-header">
       <a className="skip-link" href="#main-content">Skip to content</a>
       <div className="site-header__inner">
         <Link className="brand-link" to="/" aria-label="MateryalPH Vendor home">
@@ -35,6 +36,6 @@ export function BrandHeader() {
           <Link className="nav-cta" to="/register">Register your store</Link>
         </nav>
       </div>
-    </header>
+    </header><div className="mx-auto w-full max-w-[90rem] px-4"><ConnectionNotice /></div></>
   )
 }

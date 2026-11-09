@@ -8,6 +8,8 @@ import 'package:materyalph_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
+**invoiceHeading** | **String** | Admin draft heading; frozen on issue. | [optional]
+**invoiceMessage** | **String** | Admin draft Vendor message; frozen on issue. | [optional]
 **id** | **String** |  |
 **reference** | **String** |  |
 **state** | **String** |  |

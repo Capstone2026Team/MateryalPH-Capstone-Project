@@ -39,7 +39,7 @@ export function fleetVehicleDraft(row: FleetVehicle): DeliveryVehicleDraft {
   const text = (value: number | string | null | undefined) => value === null || value === undefined ? '' : String(value)
   const fee = (value: number | null | undefined) => typeof value === 'number' ? (value / 100).toFixed(2) : ''
   return {
-    ...emptyDeliveryVehicle(), id: row.id, lockVersion: row.lockVersion, category: text(row.vehicleCategory), type: row.vehicleType, customType: text(row.customTypeName),
+    ...emptyDeliveryVehicle(), key: row.id, id: row.id, lockVersion: row.lockVersion, category: text(row.vehicleCategory), type: row.vehicleType, customType: text(row.customTypeName),
     name: row.name, brand: text(row.brand), count: text(row.numberAvailable), weight: text(row.capacityKg), mixer: text(row.mixerCapacityM3),
     length: text(row.cargoLengthM), width: text(row.cargoWidthM), height: text(row.cargoHeightM), heavy: text(row.heavyClassification),
     baseFee: fee(row.baseFeeCentavos), perKm: fee(row.perKmCentavos), mobilizationFee: fee(row.mobilizationFeeCentavos), mobilizationBasis: text(row.mobilizationBasis), maxDistance: text(row.maximumDistanceKm), imageId: text(row.imageFileId),
@@ -73,6 +73,7 @@ export const fleetFieldNames: Record<string, keyof DeliveryVehicleDraft> = {
 export function vehicleErrors(vehicle: DeliveryVehicleDraft, operational = false): Record<string, string> {
   const errors: Record<string, string> = {}
   if (operational && vehicle.removed) return errors
+  if (vehicle.capacityReviewRequired) errors.capacityReviewRequired = 'Confirm the proposed mixer capacity or enter the actual truck capacity.'
   if (operational) {
     const distance = Number(vehicle.maxDistance)
     if (!Number.isInteger(distance) || distance < 1 || distance > 1000) errors.maxDistance = 'Enter a whole number of kilometers from 1 to 1,000.'

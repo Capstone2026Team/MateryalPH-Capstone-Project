@@ -17,6 +17,7 @@ Name | Type
 `canEditBillingDetails` | boolean
 `canRequestCopy` | boolean
 `canRequestCorrection` | boolean
+`orderSummary` | [InvoiceOrderSummary](InvoiceOrderSummary.md)
 
 ## Example
 
@@ -36,6 +37,7 @@ const example = {
   "canEditBillingDetails": null,
   "canRequestCopy": null,
   "canRequestCorrection": null,
+  "orderSummary": null,
 } satisfies BuyerOrderInvoices
 
 console.log(example)

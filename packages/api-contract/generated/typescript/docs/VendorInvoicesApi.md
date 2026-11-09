@@ -4,12 +4,102 @@ All URIs are relative to */api/v1*
 
 | Method | HTTP request | Description |
 |------------- | ------------- | -------------|
+| [**downloadVendorInvoiceDraft**](VendorInvoicesApi.md#downloadvendorinvoicedraft) | **GET** /vendor/invoice-drafts/{draftId}/files/{fileId} |  |
 | [**explainVendorInvoiceDifference**](VendorInvoicesApi.md#explainvendorinvoicedifference) | **POST** /vendor/orders/{orderId}/invoices/{recordId}/explanation |  |
 | [**getVendorInvoiceFile**](VendorInvoicesApi.md#getvendorinvoicefile) | **GET** /vendor/invoice-records/{recordId}/content |  |
+| [**getVendorInvoicePreset**](VendorInvoicesApi.md#getvendorinvoicepreset) | **GET** /vendor/invoices/preset |  |
 | [**getVendorOrderInvoices**](VendorInvoicesApi.md#getvendororderinvoices) | **GET** /vendor/orders/{orderId}/invoices |  |
 | [**listVendorInvoices**](VendorInvoicesApi.md#listvendorinvoices) | **GET** /vendor/invoices |  |
+| [**saveVendorInvoicePreset**](VendorInvoicesApi.md#savevendorinvoicepreset) | **PUT** /vendor/invoices/preset |  |
+| [**sendVendorInvoice**](VendorInvoicesApi.md#sendvendorinvoice) | **POST** /vendor/orders/{orderId}/invoices/send |  |
 | [**uploadVendorInvoice**](VendorInvoicesApi.md#uploadvendorinvoice) | **POST** /vendor/orders/{orderId}/invoices |  |
 
+
+
+## downloadVendorInvoiceDraft
+
+> Blob downloadVendorInvoiceDraft(draftId, fileId, expires, signature)
+
+
+
+invoices.upload. Authorized, short-lived private draft preview. Reauthorizes the current Vendor role, store, order and current file. A replaced file link fails closed. Never available to Buyers.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  VendorInvoicesApi,
+} from '@materyalph/api-client-ts';
+import type { DownloadVendorInvoiceDraftRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // To configure API key authorization: accessCookie
+    apiKey: "YOUR API KEY",
+    // To configure API key authorization: webCsrf
+    apiKey: "YOUR API KEY",
+  });
+  const api = new VendorInvoicesApi(config);
+
+  const body = {
+    // string
+    draftId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // string
+    fileId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // number
+    expires: 56,
+    // string
+    signature: signature_example,
+  } satisfies DownloadVendorInvoiceDraftRequest;
+
+  try {
+    const data = await api.downloadVendorInvoiceDraft(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **draftId** | `string` |  | [Defaults to `undefined`] |
+| **fileId** | `string` |  | [Defaults to `undefined`] |
+| **expires** | `number` |  | [Defaults to `undefined`] |
+| **signature** | `string` |  | [Defaults to `undefined`] |
+
+### Return type
+
+**Blob**
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/octet-stream`, `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Private invoice copy. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **409** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
 ## explainVendorInvoiceDifference
@@ -182,6 +272,75 @@ example().catch(console.error);
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
+## getVendorInvoicePreset
+
+> VendorInvoicePresetEnvelope getVendorInvoicePreset()
+
+
+
+invoices.view. Returns the store invoice defaults and current lock_version. Invoice dates default to today in Asia/Manila.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  VendorInvoicesApi,
+} from '@materyalph/api-client-ts';
+import type { GetVendorInvoicePresetRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // To configure API key authorization: accessCookie
+    apiKey: "YOUR API KEY",
+    // To configure API key authorization: webCsrf
+    apiKey: "YOUR API KEY",
+  });
+  const api = new VendorInvoicesApi(config);
+
+  try {
+    const data = await api.getVendorInvoicePreset();
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+This endpoint does not need any parameter.
+
+### Return type
+
+[**VendorInvoicePresetEnvelope**](VendorInvoicePresetEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Authorized result. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **409** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
 ## getVendorOrderInvoices
 
 > VendorOrderInvoicesEnvelope getVendorOrderInvoices(orderId)
@@ -264,7 +423,7 @@ example().catch(console.error);
 
 
 
-invoices.view. Open requests, orders without an invoice copy yet, uploaded records and reconciliation items. Never Earnings or other protected finance.
+invoices.view. Open requests, orders without an invoice copy yet, uploaded records and reconciliation items. Never Earnings or other protected finance. Every Vendor list row includes its authorized order_id for opening the order invoice details.
 
 ### Example
 
@@ -343,13 +502,176 @@ example().catch(console.error);
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
+## saveVendorInvoicePreset
+
+> VendorInvoicePresetEnvelope saveVendorInvoicePreset(idempotencyKey, invoicePresetInput)
+
+
+
+invoices.upload. Saves the store invoice defaults with current lock_version and Idempotency-Key. Presets apply to future preparations only; sent records never change. Invoice dates default to today in Asia/Manila, while invoice numbers and amounts stay document-specific.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  VendorInvoicesApi,
+} from '@materyalph/api-client-ts';
+import type { SaveVendorInvoicePresetRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // To configure API key authorization: accessCookie
+    apiKey: "YOUR API KEY",
+    // To configure API key authorization: webCsrf
+    apiKey: "YOUR API KEY",
+  });
+  const api = new VendorInvoicesApi(config);
+
+  const body = {
+    // string
+    idempotencyKey: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // InvoicePresetInput
+    invoicePresetInput: ...,
+  } satisfies SaveVendorInvoicePresetRequest;
+
+  try {
+    const data = await api.saveVendorInvoicePreset(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **idempotencyKey** | `string` |  | [Defaults to `undefined`] |
+| **invoicePresetInput** | [InvoicePresetInput](InvoicePresetInput.md) |  | |
+
+### Return type
+
+[**VendorInvoicePresetEnvelope**](VendorInvoicePresetEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Authorized result. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **409** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## sendVendorInvoice
+
+> VendorOrderInvoicesEnvelope sendVendorInvoice(orderId, idempotencyKey, invoiceSendInput)
+
+
+
+invoices.upload. Sends the saved, clean draft exactly once, creates an immutable invoice version, fulfills the applicable Buyer request and notifies the Buyer after commit. The Buyer email includes the exact uploaded invoice file and a summary of the sent invoice. Delivery rechecks current Buyer access, clean private storage and attachment integrity. Requires the current lock_version. No file means no send. A sent version cannot be edited or resent with a new key until the Buyer returns it or requests a correction.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  VendorInvoicesApi,
+} from '@materyalph/api-client-ts';
+import type { SendVendorInvoiceRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // To configure API key authorization: accessCookie
+    apiKey: "YOUR API KEY",
+    // To configure API key authorization: webCsrf
+    apiKey: "YOUR API KEY",
+  });
+  const api = new VendorInvoicesApi(config);
+
+  const body = {
+    // string
+    orderId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // string
+    idempotencyKey: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // InvoiceSendInput
+    invoiceSendInput: ...,
+  } satisfies SendVendorInvoiceRequest;
+
+  try {
+    const data = await api.sendVendorInvoice(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **orderId** | `string` |  | [Defaults to `undefined`] |
+| **idempotencyKey** | `string` |  | [Defaults to `undefined`] |
+| **invoiceSendInput** | [InvoiceSendInput](InvoiceSendInput.md) |  | |
+
+### Return type
+
+[**VendorOrderInvoicesEnvelope**](VendorOrderInvoicesEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+- **Content-Type**: `application/json`
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Authorized result. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **409** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
 ## uploadVendorInvoice
 
-> VendorOrderInvoicesEnvelope uploadVendorInvoice(orderId, idempotencyKey, invoiceType, issuerName, invoiceNumber, issuedOn, amountCentavos, sourceSystem, invoicingMethod, file, vatCentavos, vatExemptCentavos, zeroRatedCentavos, relatedLineIds, amendsInvoiceRecordId, invoiceRequestId)
+> VendorOrderInvoicesEnvelope uploadVendorInvoice(orderId, idempotencyKey, invoiceType, issuerName, invoiceNumber, issuedOn, amountCentavos, sourceSystem, invoicingMethod, lockVersion, vatCentavos, vatExemptCentavos, zeroRatedCentavos, relatedLineIds, amendsInvoiceRecordId, invoiceRequestId, file)
 
 
 
-invoices.upload (Owner, Store Manager, Store Staff). Validates type and issuer; a total or VAT difference opens INVOICE_RECONCILIATION_REQUIRED without changing the accepted Buyer total.
+invoices.upload. Save or replace the private invoice draft with optimistic concurrency and Idempotency-Key. Uploading never sends to the Buyer. After Send, preparation is locked until the Buyer requests a correction or returns the latest copy. No accepted Buyer total changes.
 
 ### Example
 
@@ -389,8 +711,8 @@ async function example() {
     sourceSystem: sourceSystem_example,
     // string
     invoicingMethod: invoicingMethod_example,
-    // Blob | PDF, JPG or PNG copy, validated and scanned fail-closed, stored privately.
-    file: BINARY_DATA_HERE,
+    // number | Current lock version; zero creates a new draft or preset.
+    lockVersion: 56,
     // number (optional)
     vatCentavos: 56,
     // number (optional)
@@ -403,6 +725,8 @@ async function example() {
     amendsInvoiceRecordId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
     // string (optional)
     invoiceRequestId: 38400000-8cf0-11bd-b23e-10b96e4ef00d,
+    // Blob | PDF, JPG or PNG, validated and scanned fail-closed. Required for a new draft; omit to retain its current file. (optional)
+    file: BINARY_DATA_HERE,
   } satisfies UploadVendorInvoiceRequest;
 
   try {
@@ -431,13 +755,14 @@ example().catch(console.error);
 | **amountCentavos** | `number` |  | [Defaults to `undefined`] |
 | **sourceSystem** | `REGISTERED_CAS`, `BIR_EIS`, `LOOSE_LEAF_OR_PRINTED`, `OTHER_REGISTERED` |  | [Defaults to `undefined`] [Enum: REGISTERED_CAS, BIR_EIS, LOOSE_LEAF_OR_PRINTED, OTHER_REGISTERED] |
 | **invoicingMethod** | `ELECTRONIC`, `COMPUTERIZED`, `MANUAL` |  | [Defaults to `undefined`] [Enum: ELECTRONIC, COMPUTERIZED, MANUAL] |
-| **file** | `Blob` | PDF, JPG or PNG copy, validated and scanned fail-closed, stored privately. | [Defaults to `undefined`] |
+| **lockVersion** | `number` | Current lock version; zero creates a new draft or preset. | [Defaults to `undefined`] |
 | **vatCentavos** | `number` |  | [Optional] [Defaults to `undefined`] |
 | **vatExemptCentavos** | `number` |  | [Optional] [Defaults to `undefined`] |
 | **zeroRatedCentavos** | `number` |  | [Optional] [Defaults to `undefined`] |
 | **relatedLineIds** | `Array<string>` |  | [Optional] |
 | **amendsInvoiceRecordId** | `string` |  | [Optional] [Defaults to `undefined`] |
 | **invoiceRequestId** | `string` |  | [Optional] [Defaults to `undefined`] |
+| **file** | `Blob` | PDF, JPG or PNG, validated and scanned fail-closed. Required for a new draft; omit to retain its current file. | [Optional] [Defaults to `undefined`] |
 
 ### Return type
 

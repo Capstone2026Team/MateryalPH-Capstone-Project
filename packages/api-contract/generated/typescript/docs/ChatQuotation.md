@@ -15,6 +15,7 @@ Name | Type
 `draft` | { [key: string]: any; }
 `canDraft` | boolean
 `canPublish` | boolean
+`replacesOrderId` | string
 
 ## Example
 
@@ -32,6 +33,7 @@ const example = {
   "draft": null,
   "canDraft": null,
   "canPublish": null,
+  "replacesOrderId": null,
 } satisfies ChatQuotation
 
 console.log(example)

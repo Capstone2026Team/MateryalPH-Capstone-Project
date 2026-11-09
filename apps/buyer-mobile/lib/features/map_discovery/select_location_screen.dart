@@ -387,7 +387,7 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
                         ],
                       ),
                     ),
-                    if (_searching) const LinearProgressIndicator(),
+                    if (_searching) const BuyerLoadingProgress(),
                     if (_suggestions.isNotEmpty)
                       ConstrainedBox(
                         constraints: BoxConstraints(
@@ -621,7 +621,7 @@ class _SelectLocationScreenState extends State<SelectLocationScreen> {
         ),
         const SizedBox(height: 12),
         if (_busy) ...[
-          const LinearProgressIndicator(),
+          const BuyerLoadingProgress(),
           const SizedBox(height: 12),
         ],
         if (_preview?.formattedAddress != null)

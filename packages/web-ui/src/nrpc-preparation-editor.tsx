@@ -24,7 +24,7 @@ export function NrpcPreparationEditor({ enabled, value, materials, onToggle, onC
   const available = materials.filter(material => material.payableCentavos !== null && material.payableCentavos > 0 && !Object.hasOwn(value.allocations, material.id))
   const reasonError = errors['nrpc.reason'] ?? (value.reason.trim() ? assessment.reasonError : null)
   const allocationError = errors['nrpc.lines'] ?? errors['nrpc.allocations'] ?? errors['nrpc.amount_centavos']
-  return <section aria-labelledby={`${id}-heading`} className="grid min-w-0 gap-3 rounded-surface border border-border-default p-3 sm:p-4">
+  return <section aria-labelledby={`${id}-heading`} className="grid min-w-0 gap-3 mp-card p-3 sm:p-4">
     <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
       <h3 id={`${id}-heading`} className="text-sm font-semibold">Non-Recoverable Preparation Cost <span className="font-normal text-text-secondary">(optional)</span></h3>
       <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 text-sm font-semibold"><input type="checkbox" className="h-4 w-4 accent-action-primary" checked={enabled} disabled={disabled || termsAvailable === false} onChange={event => onToggle(event.target.checked)} />Include NRPC</label>

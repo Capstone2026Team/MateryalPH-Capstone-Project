@@ -8,6 +8,7 @@ import 'package:materyalph_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
+**badges** | [**BuiltList&lt;PublicBadge&gt;**](PublicBadge.md) | Current active automatic awards; suppressed or revoked badges are omitted. Tier 2 only. | [optional]
 **logoUrl** | **String** |  |
 **supplierType** | **String** |  |
 **niches** | **BuiltList&lt;String&gt;** |  |

@@ -9,7 +9,7 @@ import 'package:materyalph_api_client/api.dart';
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **data** | [**BuiltList&lt;EnforcementSummary&gt;**](EnforcementSummary.md) |  |
-**meta** | [**BuiltMap&lt;String, JsonObject&gt;**](JsonObject.md) |  |
+**meta** | [**EnforcementListEnvelopeMeta**](EnforcementListEnvelopeMeta.md) |  |
 **errors** | [**BuiltList&lt;ApiError&gt;**](ApiError.md) |  |
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

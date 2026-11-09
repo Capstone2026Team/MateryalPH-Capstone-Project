@@ -4,6 +4,7 @@
 
 // ignore_for_file: unused_element
 import 'package:built_collection/built_collection.dart';
+import 'package:materyalph_api_client/src/model/buyer_rating_summary.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -20,6 +21,8 @@ part 'directory_buyer_row.g.dart';
 /// * [companyName]
 /// * [joinedAt]
 /// * [lastActiveAt]
+/// * [rating]
+/// * [avatarUrl] - Short-lived viewer-bound URL for the authenticated private Buyer photo endpoint. Null when absent or the Buyer is deleted.
 @BuiltValue()
 abstract class DirectoryBuyerRow implements Built<DirectoryBuyerRow, DirectoryBuyerRowBuilder> {
   @BuiltValueField(wireName: r'id')
@@ -48,6 +51,13 @@ abstract class DirectoryBuyerRow implements Built<DirectoryBuyerRow, DirectoryBu
 
   @BuiltValueField(wireName: r'last_active_at')
   DateTime? get lastActiveAt;
+
+  @BuiltValueField(wireName: r'rating')
+  BuyerRatingSummary get rating;
+
+  /// Short-lived viewer-bound URL for the authenticated private Buyer photo endpoint. Null when absent or the Buyer is deleted.
+  @BuiltValueField(wireName: r'avatar_url')
+  String? get avatarUrl;
 
   DirectoryBuyerRow._();
 
@@ -111,6 +121,16 @@ class _$DirectoryBuyerRowSerializer implements PrimitiveSerializer<DirectoryBuye
     yield object.lastActiveAt == null ? null : serializers.serialize(
       object.lastActiveAt,
       specifiedType: const FullType.nullable(DateTime),
+    );
+    yield r'rating';
+    yield serializers.serialize(
+      object.rating,
+      specifiedType: const FullType(BuyerRatingSummary),
+    );
+    yield r'avatar_url';
+    yield object.avatarUrl == null ? null : serializers.serialize(
+      object.avatarUrl,
+      specifiedType: const FullType.nullable(String),
     );
   }
 
@@ -192,6 +212,21 @@ class _$DirectoryBuyerRowSerializer implements PrimitiveSerializer<DirectoryBuye
           ) as DateTime?;
           if (valueDes == null) continue;
           result.lastActiveAt = valueDes;
+          break;
+        case r'rating':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(BuyerRatingSummary),
+          ) as BuyerRatingSummary;
+          result.rating.replace(valueDes);
+          break;
+        case r'avatar_url':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.avatarUrl = valueDes;
           break;
         default:
           unhandled.add(key);

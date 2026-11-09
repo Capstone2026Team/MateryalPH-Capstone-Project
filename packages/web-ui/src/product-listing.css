@@ -1,0 +1,51 @@
+.mp-product-catalog { display: grid; min-width: 0; gap: 16px; }
+.mp-product-catalog-controls { display: grid; min-width: 0; gap: 12px; }
+.mp-product-catalog-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.mp-product-catalog-layout { display: flex; gap: 4px; padding: 3px; border: 1px solid var(--mp-color-border-default); border-radius: var(--mp-radius-control); background: var(--mp-color-surface-canvas); }
+.mp-product-catalog-layout > button { min-height: 44px; gap: 6px; padding-inline: 12px; border: 0; box-shadow: none; }
+.mp-product-catalog-layout > button[aria-pressed="false"] { background: transparent; }
+.mp-product-listing-grid { display: grid; min-width: 0; grid-template-columns: repeat(auto-fill, minmax(min(100%, 248px), 1fr)); gap: 16px; }
+.mp-product-listing { position: relative; display: flex; flex-direction: column; min-width: 0; overflow: hidden; transition: border-color 150ms ease; }
+.mp-product-listing:hover { border-color: var(--mp-color-action-primary); }
+.mp-product-listing-photo { position: relative; display: grid; aspect-ratio: 2.4 / 1; max-height: 160px; place-items: center; overflow: hidden; border-bottom: 1px solid var(--mp-color-border-default); background: var(--mp-color-surface-canvas); }
+.mp-product-listing-photo > img { width: 100%; height: 100%; object-fit: cover; }
+.mp-product-listing-placeholder { display: grid; justify-items: center; gap: 8px; padding: 16px; font-size: 12px; color: var(--mp-color-text-secondary); }
+.mp-product-listing-body { display: flex; flex: 1; flex-direction: column; gap: 12px; padding: 12px 16px; }
+.mp-product-listing-identity { display: grid; gap: 4px; overflow-wrap: anywhere; }
+.mp-product-listing-identity > h3 { display: -webkit-box; min-height: 40px; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; font-size: 14px; font-weight: 600; line-height: 20px; }
+.mp-product-listing-identity > p { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; line-height: 18px; color: var(--mp-color-text-secondary); }
+.mp-product-listing-identity > .mp-product-listing-sku { display: flex; gap: 4px; }
+.mp-product-listing-sku > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--mp-color-text-strong); }
+.mp-product-listing-price { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 8px; }
+.mp-product-listing-price > p { font-size: 16px; line-height: 24px; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.mp-product-listing-price > p > span { font-size: 12px; font-weight: 400; color: var(--mp-color-text-secondary); }
+.mp-product-listing-price > span { font-size: 12px; color: var(--mp-color-text-secondary); }
+.mp-product-listing-status { position: absolute; top: 12px; left: 12px; right: 12px; display: flex; align-items: flex-start; pointer-events: none; }
+.mp-product-listing-status > span { max-width: 100%; white-space: normal; }
+.mp-product-listing-compliance { display: flex; min-height: 32px; align-items: center; margin-top: auto; font-size: 12px; color: var(--mp-color-text-secondary); }
+.mp-product-listing-compliance > span { max-width: 100%; white-space: normal; }
+.mp-product-listing-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 16px; border-top: 1px solid var(--mp-color-border-default); }
+.mp-product-listing-stock { flex: 1 1 100px; min-width: 0; font-size: 12px; line-height: 18px; overflow-wrap: anywhere; }
+.mp-product-listing-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.mp-product-listing-actions > :is(a, button) { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; gap: 6px; padding-inline: 12px; border-radius: var(--mp-radius-control); font-size: 12px; font-weight: 600; }
+.mp-product-listing-actions > a { border: 1px solid var(--mp-color-border-default); background: var(--mp-color-surface-primary); }
+.mp-product-listing-actions > a:hover { background: var(--mp-color-surface-canvas); }
+.mp-product-listing-actions > a:focus-visible { outline: 2px solid var(--mp-color-focus-ring); outline-offset: 2px; }
+.mp-product-insight-strip { display: grid; min-height: 118px; align-content: start; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--mp-color-border-default); }
+.mp-product-insight-strip > span { font-size: 11px; line-height: 16px; font-weight: 500; color: var(--mp-color-text-secondary); }
+.mp-product-insight-stats { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 12px; line-height: 18px; color: var(--mp-color-text-secondary); }
+.mp-product-insight-stats > div { display: grid; gap: 2px; }
+.mp-product-insight-stats dd { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.mp-product-insight-stats strong { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--mp-color-text-strong); }
+.mp-product-insight-stats[data-compact] { display: grid; gap: 4px; }
+.mp-product-insight-stats[data-compact] > div { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 8px; }
+.mp-product-insight-sparkline { min-height: 24px; }
+.mp-product-insight-sparkline > svg { height: 24px; }
+.mp-product-record-identity { display: flex; min-width: 0; align-items: flex-start; gap: 12px; }
+.mp-product-record-identity > div { display: grid; min-width: 0; gap: 4px; overflow-wrap: anywhere; }
+.mp-product-record-identity p { font-size: 12px; line-height: 18px; font-weight: 400; color: var(--mp-color-text-secondary); }
+.mp-product-record-stack { display: grid; justify-items: start; gap: 6px; }
+.mp-product-record-stack > span { max-width: 100%; white-space: normal; }
+.mp-product-record-secondary { font-size: 12px; line-height: 18px; color: var(--mp-color-text-secondary); }
+@media (min-width: 640px) { .mp-product-catalog-summary { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (prefers-reduced-motion: reduce) { .mp-product-listing { transition: none; } }

@@ -25,15 +25,20 @@ function result(page = 1): GeoDemand {
 
 beforeEach(() => vi.mocked(getGeoDemand).mockReset().mockImplementation(async (_filters, _measure, page) => result(page)))
 
-test('shows categories with zero demand, pages to recorded Steel demand, and keeps the definition in expandable help', async () => {
+test('shows categories with zero demand, pages to recorded Steel demand, and explains the calculation beside the heading', async () => {
   render(<DemandSection filters={filters} />)
   await screen.findByRole('columnheader', { name: 'Cement' })
   expect(screen.getByRole('columnheader', { name: 'Aggregates' })).toBeVisible()
   expect(screen.getAllByRole('cell', { name: '0' })).toHaveLength(2)
   expect(screen.getByText('No confirmed demand in this view')).toBeVisible()
   expect(screen.getByText('Philippines')).toBeVisible()
-  const details = screen.getByText('How demand is measured').closest('details')!
-  expect(details.open).toBe(false)
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  const help = screen.getByRole('button', { name: 'How this is calculated: Category demand by area' })
+  fireEvent.click(help)
+  expect(screen.getByRole('dialog', { name: 'Category demand by area' })).toHaveTextContent('Order count counts confirmed orders containing each category.')
+  fireEvent.keyDown(document, { key: 'Escape' })
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  expect(help).toHaveFocus()
   fireEvent.click(screen.getByRole('button', { name: 'Next' }))
   await screen.findByRole('columnheader', { name: 'Steel and Reinforcement' })
   expect(screen.getByRole('cell', { name: '8' })).toBeVisible()

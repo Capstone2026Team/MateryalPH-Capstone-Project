@@ -9,15 +9,25 @@ void main() {
     'listing_id': '019c6e27-e55b-73d1-87d8-4e01f1f75043',
     'name': 'Purchased steel bar',
     'variant_label': null,
+    'image_url': 'https://media.example.test/steel-bar.png',
   };
-  for (final inputProduct in <Map<String, Object?>?>[product, null]) {
+  for (final inputProduct in <Map<String, Object?>?>[
+    product,
+    {...product, 'image_url': null},
+    {...product}..remove('image_url'),
+    null,
+  ]) {
+    final avatar = inputProduct == null
+        ? null
+        : 'https://api.example.test/api/v1/vendor/reviews/019c6e27-e55b-73d1-87d8-4e01f1f75043/buyer-photo?expires=9999999999&signature=sample';
     final detail = standardSerializers.deserializeWith(
       VendorReviewEnvelope.serializer,
       <String, Object?>{
         'data': <String, Object?>{
           'type': inputProduct == null ? 'VENDOR' : 'PRODUCT',
           'product': inputProduct,
-          'display_name': 'Verified Buyer',
+          'display_name': 'Sample Buyer',
+          'buyer_avatar_url': avatar,
           'ratings': <String, Object?>{'product_quality': 4},
           'comment': 'Consistent quality.',
           'media': <Object?>[],
@@ -30,6 +40,10 @@ void main() {
         'Nullable purchased product must deserialize');
     check(detail.data.product?.variantLabel == null,
         'Nullable purchased variant must deserialize');
+    check(detail.data.product?.imageUrl == inputProduct?['image_url'],
+        'Present, null and omitted product photo links must deserialize');
+    check(detail.data.buyerAvatarUrl == avatar,
+        'Present and missing Buyer photo links must deserialize');
     final output = standardSerializers.serializeWith(
         VendorReviewEnvelope.serializer, detail) as Map<String, Object?>;
     final row = output['data']! as Map<String, Object?>;
@@ -38,6 +52,10 @@ void main() {
         'Product identity must round trip');
     check(savedProduct?['name'] == inputProduct?['name'],
         'Purchased product name must round trip');
+    check(savedProduct?['image_url'] == inputProduct?['image_url'],
+        'Nullable product photo must round trip');
+    check(row['buyer_avatar_url'] == avatar,
+        'Nullable review-scoped Buyer photo must round trip');
   }
 
   for (final rated in <bool>[false, true]) {
@@ -81,6 +99,6 @@ void main() {
     check((savedSummary['distribution']! as List<Object?>).length == 5,
         'Five star distribution must round trip');
   }
-  print('Dart Vendor review contract passed: nullable purchase snapshots, '
+  print('Dart Vendor review contract passed: nullable product and Buyer photo links and purchase snapshots, '
       'empty and fractional rating summaries, and all five star buckets.');
 }

@@ -19,7 +19,7 @@ for (const [path, methods] of Object.entries(spec.paths)) {
   for (const [method, operation] of Object.entries(methods)) {
     if (!operation.tags?.includes('Messaging')) continue
     assert.ok(operation.responses['401'] && operation.responses['403'] && operation.responses['409'])
-    const portals = operation.parameters.find(p => p.name === 'messagingPortal')?.schema.enum ?? ['vendor']
+    const portals = operation.parameters.find(p => p.name === 'messagingPortal')?.schema.enum ?? [path.startsWith('/buyers/') ? 'buyers' : 'vendor']
     for (const portal of portals) {
       const uri = `api/v1${path.replace('{messagingPortal}', portal)}`
       const route = routes.find(r => r.uri === uri && r.method.split('|').includes(method.toUpperCase()))
@@ -103,3 +103,27 @@ console.log(`Phase 9 contract passed: ${expected.size} authorized operations, pr
 assert.equal(spec.components.schemas.ChatDraftContent.properties.nrpc.deprecated, true)
 assert.match(spec.components.schemas.ChatDraftContent.properties.nrpc.description, /prohibited/)
 assert.match(spec.components.schemas.VendorOrderPermissions.properties.can_set_nrpc.description, /COD or In-Store/)
+
+assert.equal(spec.components.schemas.AutomatedResponseSettings.properties.options.maxItems, 3)
+assert.ok(spec.components.schemas.AutomatedResponseSettings.required.includes('lock_version'))
+assert.equal(spec.components.schemas.ChatQuotationVersion.properties.replaces_order_id.format, 'uuid')
+assert.equal(spec.components.schemas.ChatAutomatedChoice.properties.option_index.maximum, 2)
+assert.ok(spec.components.schemas.ConversationView.properties.needs_human_response)
+assert.ok(spec.paths['/vendor/messaging/automated-response'].put.parameters.some(p => p.name === 'Idempotency-Key' && p.required))
+assert.equal(spec.paths['/buyers/conversations/{conversationId}/automated-response'].post.operationId, 'chooseChatAutomatedResponse')
+assert.equal(spec.paths['/vendor/conversations/{conversationId}/buyer-thread'].get.operationId, 'getVendorBuyerThread')
+assert.equal(spec.paths['/vendor/conversations/{conversationId}/buyer-thread/contexts'].get.operationId, 'listVendorBuyerThreadContexts')
+assert.equal(spec.components.schemas.ConversationDetail.properties.thread_contexts.maxItems, 61)
+assert.equal(spec.components.schemas.ConversationDetail.properties.thread_authority.type, 'string')
+assert.equal(spec.components.schemas.ConversationView.properties.buyer_thread_id.format, 'uuid')
+for (const model of ['ChatMessage', 'ChatQuotationVersion']) assert.equal(spec.components.schemas[model].properties.conversation_id.format, 'uuid')
+assert.ok(spec.components.schemas.ChatMessage.properties.kind.enum.includes('WORK_PACKAGE'))
+assert.match(spec.components.schemas.ChatWorkPackageAttachment.properties.reference.description, /Vendor-scoped/)
+assert.match(spec.components.schemas.ConversationView.properties.locked_reference.description, /only the store allocation/)
+assert.equal(spec.components.schemas.ChatMessage.properties.work_package_attachment.$ref, '#/components/schemas/ChatWorkPackageAttachment')
+assert.equal(spec.components.schemas.ChatId.properties.store_conversation_id.format, 'uuid')
+assert.ok(spec.paths['/{messagingPortal}/conversations/{conversationId}'].get.parameters.some(p => p.name === 'store_thread' && p.schema.default === false))
+assert.equal(spec.paths['/vendor/conversations/{conversationId}/buyer-thread/contexts'].get.deprecated, true)
+for (const path of ['/buyers/conversations/{conversationId}/work-package-attachment', '/buyers/orders/{orderId}/work-package-message']) {
+  assert.ok(spec.paths[path].post.parameters.some(p => p.name === 'Idempotency-Key' && p.required))
+}

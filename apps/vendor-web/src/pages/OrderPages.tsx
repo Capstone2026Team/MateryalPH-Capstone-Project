@@ -1,18 +1,19 @@
-import { manilaToday, shouldRotateIdempotencyKey } from '@materyalph/web-ui'
+import { BackNavigation, manilaToday, shouldRotateIdempotencyKey } from '@materyalph/web-ui'
 import { useNavigationRefresh } from '@materyalph/web-ui'
 import { DocumentExportButton } from '@materyalph/web-ui'
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Bot, CheckCircle2, Store, MapPin, MessageSquare, PackageSearch, ShieldAlert, Truck } from 'lucide-react'
+import { Bot, CheckCircle2, Store, MapPin, MessageSquare, PackageSearch, ShieldAlert, Truck } from 'lucide-react'
 import {
-  ActiveFilters, ALL_DATES, Button, CountBadge, DateFilter, DeliveryArrangementFields, FormDialog, OrderHistory, OrderProgress, SidePanel, ConfirmDialog, DeadlineCountdown, Field, FilterTabs, MoneyBreakdown, NrpcPreparationEditor, Pagination, Toolbar, VendorDiscountEditor, EmptyState, OrderSummaryCard, OrderStateRows, ProfileDetails, ResponsiveRecordList, Select, StatusMessage,
-  dateFilterLabel, deliveryPlanVehicleOptions, formatManilaDateTime, formatPesoCentavos, nrpcPreparationAssessment, orderStateLabel, type NrpcPreparedMaterial, type RecordColumn,
+  ActiveFilters, Button, CountBadge, DateFilter, dateFilterPreset, DeliveryArrangementFields, FormDialog, OrderHistory, OrderProgress, SidePanel, ConfirmDialog, DeadlineCountdown, Field, FilterTabs, MoneyBreakdown, NrpcPreparationEditor, Pagination, Toolbar, VendorDiscountEditor, EmptyState, OrderSummaryCard, OrderStateRows, ProfileDetails, ResponsiveRecordList, Select, StatusMessage,
+  DeliveryVehicleCard, readOrderEvidenceFile, deliveryPlanVehicleOptions, formatManilaDateTime, formatPesoCentavos, nrpcPreparationAssessment, orderStateLabel, type NrpcPreparedMaterial, type RecordColumn,
 } from '@materyalph/web-ui'
 import {
-  apiFailure, confirmOrder, declineOrder, getDeliveryPlan, getOrder, listOrders, quantityText, readableOrderError, orderFieldErrors,
+  apiBasePath, apiFailure, confirmOrder, declineOrder, getDeliveryPlan, getOrder, listOrders, quantityText, readableOrderError, orderFieldErrors,
   type ClosedOrderState, type DeliveryPlan, type DeliveryVehicleSelection, type OrderDetail, type OrderGroup, type OrderLine, type OrderListMeta, type OrderSummary, type VendorOrderConfirmRequest, type VendorOrderDeclineReason,
 } from '../lib/orders-api'
 import type { ChatQuotationDiscount, DeliveryPlanVehicle } from '@materyalph/api-client-ts'
+import { fleetImageUrl } from '../lib/inventory-api'
 import { deliveryChoiceFee, mobilizationLabel, mobilizationTotal } from '../lib/delivery-fee'
 import { parsePesoInput } from '../../../../packages/web-ui/src/money-input'
 import { orderDiscountForSave, orderDiscountPreview } from '../lib/order-discount'
@@ -29,6 +30,9 @@ import { FulfillmentConversationDialog } from './FulfillmentConversationDialog'
 import { FileDisputeDialog } from './DisputePages'
 import { dateRangeFromParams, dateRangePatch } from '../lib/date-filters'
 import { useFulfillmentUnreadCount } from '../lib/use-fulfillment-unread-count'
+import { ChatAvatar } from '@materyalph/web-ui'
+import { readOrderBuyerPhoto } from '../lib/orders-api'
+import { OrderLocationPanel } from '../components/OrderLocationPanel'
 
 type VisibleOrderGroup = Exclude<OrderGroup, 'ALL'>
 const GROUPS: { value: VisibleOrderGroup; label: string }[] = [
@@ -121,11 +125,10 @@ function OrdersWorkspace({ canMessage, canViewReviews, canRateBuyer }: { canMess
     <ActiveFilters filters={[
       ...(q ? [{ key: 'q', label: `Search: ${q}`, onRemove: () => setParams({ q: '' }) }] : []),
       ...(closedState ? [{ key: 'closed_state', label: orderStateLabel(closedState), onRemove: () => setParams({ closed_state: '' }) }] : []),
-      ...(range.from || range.to ? [{ key: 'dates', label: dateFilterLabel(range), onRemove: () => setParams(dateRangePatch(ALL_DATES)) }] : []),
-    ]} onClear={() => { setQuery(''); setParams({ q: '', closed_state: '', ...dateRangePatch(ALL_DATES) }) }} />
+    ]} onClear={() => { setQuery(''); setParams({ q: '', closed_state: '', ...dateRangePatch(dateFilterPreset(30)) }) }} />
     {error ? <ErrorState message={error} onRetry={() => setAttempt(value => value + 1)} />
       : loading && rows.length === 0 ? <div className="grid gap-3" aria-busy="true" aria-label="Loading orders">{[0, 1, 2].map(index => <div key={index} className="h-20 animate-pulse rounded-surface bg-surface-canvas motion-reduce:animate-none" />)}</div>
-        : rows.length === 0 ? <EmptyState message={q || range.from || range.to ? 'No orders match these filters.' : closedState ? `No ${orderStateLabel(closedState).toLowerCase()} orders yet.` : EMPTY[group]} action={q || closedState || range.from || range.to ? <Button variant="secondary" onClick={() => { setQuery(''); setParams({ group, closed_state: '', q: '', ...dateRangePatch(ALL_DATES) }) }}>Clear filters</Button> : undefined} />
+        : rows.length === 0 ? <EmptyState message={q || range.from || range.to ? 'No orders match these filters.' : closedState ? `No ${orderStateLabel(closedState).toLowerCase()} orders yet.` : EMPTY[group]} action={q || closedState ? <Button variant="secondary" onClick={() => { setQuery(''); setParams({ group, closed_state: '', q: '', ...dateRangePatch(dateFilterPreset(30)) }) }}>Clear filters</Button> : undefined} />
           : <div aria-busy={loading}>
             <ul aria-label={GROUPS.find(item => item.value === group)?.label ?? 'Orders'} className="grid min-w-0 gap-4">
               {rows.map(row => <li key={row.id} className="min-w-0"><OrderSummaryCard order={row} identity={<OrderIdentity row={row} onOpen={openOrder} />} action={<ActionLink row={row} onOpen={openOrder} />} /></li>)}
@@ -197,7 +200,7 @@ function OrderDetailWorkspace({ orderId, panel = false, canMessage = false, canV
   if (panel) return <OrderPanelContent order={order} canMessage={canMessage} canViewReviews={canViewReviews} canRateBuyer={canRateBuyer} notice={notice} onChanged={changed} onReload={load} />
 
   const information: [string, ReactNode][] = [
-    ['Buyer', order.buyer?.displayName ?? '—'],
+    ['Buyer', <div key="buyer" className="flex min-w-0 items-center gap-3"><ChatAvatar name={order.buyer?.displayName ?? 'Buyer'} path={order.buyer?.profilePhotoPath} load={readOrderBuyerPhoto} /><span className="min-w-0 break-words">{order.buyer?.displayName ?? '—'}</span></div>],
     ['Requested', formatManilaDateTime(order.submittedAt)],
     ['Fulfillment', order.fulfillmentMethod === 'DELIVERY' ? 'Site Delivery' : 'Self-Pickup'],
     ['Payment method', order.paymentMethod === 'ONLINE' ? 'Online payment' : order.paymentMethod === 'CASH_ON_DELIVERY' ? 'Cash on Delivery' : 'In-Store Payment'],
@@ -212,9 +215,9 @@ function OrderDetailWorkspace({ orderId, panel = false, canMessage = false, canV
     <BackLink />
     <PageHeader eyebrow="Job order" title={order.reference} status={orderState} description={primaryDescription(order)} />
     {error && <StatusMessage tone="error">{error} The last loaded order is shown. <Button variant="quiet" onClick={load}>Retry</Button></StatusMessage>}
-    <div className="min-w-0 rounded-surface border border-border-default bg-surface-primary px-4 pt-4 sm:px-5 sm:pt-5">
+    <div className="min-w-0 mp-card px-4 pt-4 sm:px-5 sm:pt-5">
       <ProfileDetails title="Order information" columns={3} items={information} action={<div className="flex min-w-0 flex-wrap items-start gap-2">
-        <DocumentExportButton basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} audience="vendor" types={['PURCHASE_ORDER', 'OPERATIONAL_ORDER', 'PAYMENT_CONFIRMATION']} resourceId={order.id} title={order.reference} />
+        <DocumentExportButton basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} audience="vendor" types={['PURCHASE_ORDER']} resourceId={order.id} title={order.reference} />
         {canMessage && <OrderMessageButton order={order} />}
       </div>} />
     </div>
@@ -237,7 +240,7 @@ function OrderDetailWorkspace({ orderId, panel = false, canMessage = false, canV
           <h2 id="status-heading" className="text-base font-semibold">Status</h2>
           <OrderStateRows states={order.states} />
         </section>
-        <div className="rounded-surface border border-border-default bg-surface-primary p-4"><MoneyBreakdown money={order.money} title="Buyer payment breakdown" /><p className="mt-3 border-t border-border-default pt-3 text-xs text-text-secondary">The Buyer total never includes your monthly commission or merchant withholding; those are settled separately.</p></div>
+        <div className="mp-card mp-card-padded"><MoneyBreakdown money={order.money} title="Buyer payment breakdown" /><p className="mt-4 border-t border-border-default pt-3 text-xs leading-5 text-text-secondary">Monthly commission and merchant withholding are settled separately and excluded from the Buyer total.</p></div>
         <OrderPaymentPanel order={order} onChanged={load} />
         <CasePanel order={order} />
         <CancellationPanel order={order} onChanged={changed} />
@@ -282,7 +285,7 @@ function OrderPanelContent({ order, notice, onChanged, onReload, canMessage, can
   return <div className="grid min-w-0">
     <div className="grid min-w-0 gap-4 p-5">
       <div className="flex flex-wrap items-start gap-3 border-b border-border-default pb-5">
-        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-control bg-surface-canvas text-action-primary"><Store size={20} aria-hidden="true" /></span>
+        <ChatAvatar name={order.buyer?.displayName ?? 'Buyer'} path={order.buyer?.profilePhotoPath} load={readOrderBuyerPhoto} />
         <div className="min-w-[8rem] flex-1"><h3 className="break-words text-sm font-semibold">{order.buyer?.displayName ?? 'Buyer'}</h3><p className="text-xs text-text-secondary">{order.procurementType === 'PROJECT_BASED' ? 'Project-Based' : 'Item-Based'} · {order.reference}</p><p className="mt-1 text-xs text-text-secondary">Requested {formatManilaDateTime(order.submittedAt)}</p></div>
         {canMessage && <OrderMessageButton order={order} />}
       </div>
@@ -304,7 +307,6 @@ function OrderPanelContent({ order, notice, onChanged, onReload, canMessage, can
         <dl className="divide-y divide-border-default text-xs">
           {[
             ['Fulfillment', order.fulfillmentMethod === 'DELIVERY' ? 'Site Delivery' : 'Self-Pickup'],
-            ['Address', order.destination?.type === 'PICKUP' ? order.destination.storeAddress : (order.destination?.alternateDropOff ?? order.destination?.intended)?.formattedAddress],
             ['Expected fulfillment', order.expectedFulfillmentDate ? new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium' }).format(new Date(order.expectedFulfillmentDate)) : null],
             ['Confirmed vehicle', order.delivery.confirmed?.vehicles.map(vehicle => `${vehicle.name} · ${vehicle.numberOfVehicles} vehicle(s), ${vehicle.totalVehicleTrips} trip(s)`).join('; ')],
             ['Payment method', order.paymentMethod === 'ONLINE' ? 'Online payment' : order.paymentMethod === 'CASH_ON_DELIVERY' ? 'Cash on Delivery' : 'In-Store Payment'],
@@ -312,7 +314,7 @@ function OrderPanelContent({ order, notice, onChanged, onReload, canMessage, can
           ].filter(([, value]) => Boolean(value)).map(([label, value]) => <div key={label} className="flex justify-between gap-4 py-2"><dt className="shrink-0 text-text-secondary">{label}</dt><dd className="min-w-0 break-words text-right font-medium">{value}</dd></div>)}
         </dl>
       </section>
-      {order.destination?.accessInstructions && <section className="grid gap-2"><h3 className="text-xs font-semibold uppercase text-text-secondary">Access instructions</h3><p className="rounded-control bg-surface-canvas p-3 text-sm">{order.destination.accessInstructions}</p></section>}
+      <section className="grid min-w-0 gap-3 border-t border-border-default pt-5" aria-label="Order location"><h3 className="text-xs font-semibold uppercase tracking-wide text-text-secondary">{order.fulfillmentMethod === 'DELIVERY' ? 'Delivery location' : 'Pickup location'}</h3><OrderLocationPanel order={order} /></section>
       {order.states.some(row => (row.family === 'REFUND' && ['REFUND_PENDING', 'REFUND_FAILED', 'PARTIALLY_REFUNDED'].includes(row.state)) || (row.family === 'DISPUTE' && ['OPEN_AWAITING_RESPONSE', 'MUTUAL_RESOLUTION', 'ESCALATED_ADMIN_REVIEW', 'AWAITING_CLARIFICATION', 'APPEAL_OPEN'].includes(row.state))) && <StatusMessage tone="info">This order has an active refund or dispute. <Link to={`/orders/${order.id}`} className="underline">View full order for details</Link>.</StatusMessage>}
       {order.primaryAction === 'CONFIRM' && !order.permissions?.canConfirm && <StatusMessage tone="info">Your role can view this request but cannot confirm it.</StatusMessage>}
       {state === 'COMPLETED' && canViewReviews && <OrderReviewPanel orderId={order.id} canRate={canRateBuyer} />}
@@ -351,7 +353,7 @@ function primaryDescription(order: OrderDetail): string {
 function CasePanel({ order }: { order: OrderDetail }) {
   const [filing, setFiling] = useState(false)
   if (!order.dispute && !order.permissions?.canFileDispute) return null
-  return <section aria-labelledby="case-heading" className="grid gap-3 rounded-surface border border-border-default bg-surface-primary p-4">
+  return <section aria-labelledby="case-heading" className="grid gap-3 mp-card mp-card-padded">
     <h2 id="case-heading" className="flex items-center gap-2 text-base font-semibold"><ShieldAlert size={16} aria-hidden="true" />Dispute</h2>
     {order.dispute ? <div className="grid gap-2"><DisputeStatusBadge status={order.dispute.status} /><Link to={`/disputes/${order.dispute.caseId}`} className="font-semibold text-action-primary underline-offset-4 hover:underline">Open case {order.dispute.reference}</Link></div>
       : <><p className="text-sm text-text-secondary">Report a Buyer issue such as an unpaid cash balance, a pickup no-show or abusive communication. Filing never creates a refund.</p><Button variant="secondary" className="w-fit" aria-haspopup="dialog" onClick={() => setFiling(true)}>File a case</Button>
@@ -360,7 +362,7 @@ function CasePanel({ order }: { order: OrderDetail }) {
 }
 
 function BackLink() {
-  return <Link to="/orders" className="inline-flex min-h-11 w-fit items-center gap-2 text-sm font-semibold text-text-secondary hover:text-text-strong"><ArrowLeft size={16} aria-hidden="true" />All orders</Link>
+  return <BackNavigation><Link to="/orders">All orders</Link></BackNavigation>
 }
 
 function LineIdentity({ line }: { line: OrderLine }) {
@@ -524,7 +526,7 @@ function ConfirmationWorkspace({ order, onDone, onReload }: { order: OrderDetail
   }
 
   return <form className="grid min-w-0 gap-6" onSubmit={event => { event.preventDefault(); if (validate()) setConfirmOpen(true); else setMessage('Review the highlighted fields.') }} noValidate aria-labelledby="confirm-heading">
-    <section className="grid gap-4 rounded-surface border border-border-default bg-surface-primary p-4 sm:p-5">
+    <section className="grid gap-4 mp-card mp-card-padded">
       <div><h2 id="confirm-heading" className="text-lg font-semibold">Confirm what you can supply</h2>
         <p className="mt-1 text-sm text-text-secondary">Prices come from the Buyer's request and never increase. Lowering a quantity or adding a discount sends a revision to the Buyer.{!permissions.canRevise && ' Your role can confirm the request as submitted or decline it; only the Owner, Store Manager or Store Staff can publish a revision.'}</p></div>
       {message && <StatusMessage tone="error">{message}</StatusMessage>}
@@ -540,7 +542,7 @@ function ConfirmationWorkspace({ order, onDone, onReload }: { order: OrderDetail
       {errors.discount && <p className="text-sm text-status-error" role="alert">{errors.discount}</p>}
     </section>
 
-    <section className="grid gap-4 rounded-surface border border-border-default bg-surface-primary p-4 sm:p-5" aria-labelledby="fulfillment-heading">
+    <section className="grid gap-4 mp-card mp-card-padded" aria-labelledby="fulfillment-heading">
       <h2 id="fulfillment-heading" className="flex items-center gap-2 text-lg font-semibold">{delivery ? <Truck size={18} aria-hidden="true" /> : <Store size={18} aria-hidden="true" />}{delivery ? 'Delivery arrangement' : 'Ready-for-pickup date'}</h2>
       {!delivery && <div className="max-w-xs"><Field label="Ready for pickup on" name="pickup.ready_date" type="date" min={manilaToday()} value={readyDate} disabled={busy} error={errors['pickup.ready_date']} onChange={event => setReadyDate(event.target.value)} hint="Philippine date. Store hours stay informational." /></div>}
       {delivery && !permissions.canConfirmDelivery && <StatusMessage tone="error">Only the Owner or Store Manager can confirm the delivery vehicles, trips and fee for this order.</StatusMessage>}
@@ -554,7 +556,7 @@ function ConfirmationWorkspace({ order, onDone, onReload }: { order: OrderDetail
       setErrors(current => Object.fromEntries(Object.entries(current).filter(([field]) => !field.startsWith('nrpc.'))))
     }} />}
 
-    <div className="flex flex-col gap-3 border-t border-border-default pt-5 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-3 border-t border-border-default pt-5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
       <p className="flex items-start gap-2 text-sm text-text-secondary"><CheckCircle2 size={16} className="mt-0.5 shrink-0 text-status-success" aria-hidden="true" />{nextStep}</p>
       <div className="flex flex-col-reverse gap-3 sm:flex-row">
         {permissions.canDecline && <Button variant="secondary" disabled={busy} onClick={() => setDeclineOpen(true)}>Decline request</Button>}
@@ -596,9 +598,9 @@ function DeliveryPlanner({ plan, busy, onLoad, choices, setChoices, fee, errors,
             const next = deliveryChoice(group.key, option)
             setChoices(choice ? choices.map(item => item.key === group.key ? next : item) : [...choices, next])
           }} />
-          <span className="min-w-0 flex-1"><span className="font-semibold">{option.name}</span>{option.recommended && <span className="block text-xs font-semibold text-action-primary">System recommendation · lowest eligible delivery fee</span>} <span className="text-text-secondary">{[option.brand, option.heavyClassification === 'HEAVY' ? 'Heavy vehicle' : null, option.mixerCapacityM3 ? `${quantityText(option.mixerCapacityM3)} m³ drum` : null].filter(Boolean).join(' · ')}</span>
-            {option.volumePlan && <span className="block text-xs text-text-secondary">{option.volumePlan.fullTrips > 0 ? `${option.volumePlan.fullTrips} × ${option.volumePlan.fullLoadM3} m³ + ` : ''}{option.volumePlan.lastTripM3} m³ of {option.volumePlan.totalM3} m³</span>}</span>
-          <span className="tabular-nums text-text-secondary">{formatPesoCentavos(option.perTripCentavos)} per trip{(option.mobilizationFeeCentavos ?? 0) > 0 && <> + {formatPesoCentavos(option.mobilizationFeeCentavos ?? 0)} mobilization {mobilizationLabel(option.mobilizationBasis)}</>}</span>
+          <DeliveryVehicleCard profile={option.vehicleDetails} name={option.name} status={group.status === 'MANUAL_REVIEW_REQUIRED' ? 'Manual load review required' : option.recommended ? 'Recommended · Eligible for this delivery' : 'Eligible for this delivery'} imageScope="fleet" loadImage={fleetImageUrl} vehicles={option.numberOfVehicles} trips={option.totalVehicleTrips} />
+          {option.volumePlan && <span className="basis-full text-xs text-text-secondary">{option.volumePlan.fullTrips > 0 ? `${option.volumePlan.fullTrips} × ${option.volumePlan.fullLoadM3} m³ + ` : ''}{option.volumePlan.lastTripM3} m³ of {option.volumePlan.totalM3} m³</span>}
+          <span className="basis-full pl-7 tabular-nums text-text-secondary sm:basis-auto sm:pl-0">{formatPesoCentavos(option.perTripCentavos)} per trip{(option.mobilizationFeeCentavos ?? 0) > 0 && <> + {formatPesoCentavos(option.mobilizationFeeCentavos ?? 0)} mobilization {mobilizationLabel(option.mobilizationBasis)}</>}</span>
         </label>)}{options.length === 0 && <p className="text-sm text-status-error">No configured vehicle is eligible for this load and drop-off. Review your fleet or contact the Buyer.</p>}</div>
         {choice && <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Vehicles used" name={`vehicles-${group.key}`} type="number" disabled={busy} min={1} max={vehicles.get(choice.vehicleId)?.numberAvailable ?? 1} value={choice.numberOfVehicles} onChange={event => update(group.key, { numberOfVehicles: Math.max(1, Number(event.target.value) || 1) })} />
@@ -644,19 +646,13 @@ function DeclineDialog({ open, order, onClose, onDone }: { open: boolean; order:
 // ── Side panels ─────────────────────────────────────────────────────────────────────────────────
 
 function DestinationPanel({ order }: { order: OrderDetail }) {
-  const destination = order.destination
   const confirmed = order.delivery.confirmed
-  return <section aria-labelledby="destination-heading" className="grid gap-3 rounded-surface border border-border-default bg-surface-primary p-4">
+  return <section aria-labelledby="destination-heading" className="grid gap-3 mp-card mp-card-padded">
     <h2 id="destination-heading" className="flex items-center gap-2 text-base font-semibold"><MapPin size={16} aria-hidden="true" />{order.fulfillmentMethod === 'DELIVERY' ? 'Delivery' : 'Pickup'}</h2>
-    {destination?.type === 'PICKUP' && <p className="text-sm">Buyer collects at your store{destination.storeAddress ? `: ${destination.storeAddress}` : ''}.</p>}
-    {destination?.type === 'DELIVERY' && <dl className="grid gap-3 text-sm">
-      <div><dt className="text-xs text-text-secondary">Intended destination / Project site</dt><dd className="font-semibold">{destination.intended?.label ?? '—'}</dd><dd className="text-text-secondary">{destination.intended?.formattedAddress}</dd></div>
-      {destination.alternateDropOff && <div><dt className="text-xs text-text-secondary">Actual vehicle drop-off (heavy-vehicle restriction)</dt><dd className="font-semibold">{destination.alternateDropOff.label}</dd><dd className="text-text-secondary">{destination.alternateDropOff.formattedAddress}</dd></div>}
-      {destination.accessInstructions && <div><dt className="text-xs text-text-secondary">Access instructions</dt><dd>{destination.accessInstructions}</dd></div>}
-    </dl>}
-    {order.delivery.estimate?.options?.length ? <div className="grid gap-1 border-t border-border-default pt-3 text-sm"><h3 className="font-semibold">System recommendation</h3>{order.delivery.estimate.options.map((option, index) => <p key={index}>{option.vehicleName} · {option.vehicles} vehicle(s), {option.trips} trip(s) · {formatPesoCentavos(option.feeCentavos)}</p>)}<p className="text-xs text-text-secondary">Estimated fee; the Vendor confirms and the Buyer approves before paying.</p></div> : null}
+    <OrderLocationPanel order={order} />
+    {!confirmed && order.delivery.estimate?.options?.length ? <div className="grid gap-3 border-t border-border-default pt-3 text-sm"><h3 className="font-semibold">System recommendation</h3>{order.delivery.estimate.options.map((option, index) => <div key={index} className="grid gap-1"><DeliveryVehicleCard profile={option.vehicleDetails} name={option.vehicleName} status="Saved recommendation · Awaiting Vendor confirmation" imageScope={`order:${order.id}`} loadImage={fileId => readOrderEvidenceFile(apiBasePath, `/vendor/orders/${order.id}/files/${fileId}`)} vehicles={option.vehicles} trips={option.trips} /><p className="text-xs text-text-secondary">Estimated delivery fee {formatPesoCentavos(option.feeCentavos)}</p></div>)}<p className="text-xs text-text-secondary">Estimated fee; the Vendor confirms and the Buyer approves before paying.</p></div> : null}
     {confirmed && <dl className="grid gap-2 border-t border-border-default pt-3 text-sm">
-      <div><dt className="text-xs text-text-secondary">Confirmed vehicles</dt>{confirmed.vehicles.map((vehicle, index) => <dd key={index} className="font-semibold">{vehicle.name} · {vehicle.numberOfVehicles} vehicle{vehicle.numberOfVehicles === 1 ? '' : 's'}, {vehicle.totalVehicleTrips} trip{vehicle.totalVehicleTrips === 1 ? '' : 's'}</dd>)}</div>
+      <div><dt className="mb-2 text-xs text-text-secondary">Confirmed vehicles</dt>{confirmed.vehicles.map((vehicle, index) => <dd key={index} className="py-2"><DeliveryVehicleCard profile={vehicle.vehicleDetails} name={vehicle.name} status="Vendor confirmed for this order" imageScope={`order:${order.id}`} loadImage={fileId => readOrderEvidenceFile(apiBasePath, `/vendor/orders/${order.id}/files/${fileId}`)} vehicles={vehicle.numberOfVehicles} trips={vehicle.totalVehicleTrips} /></dd>)}</div>
       <div><dt className="text-xs text-text-secondary">Route</dt><dd>{(confirmed.distanceMeters / 1000).toFixed(1)} km to the {confirmed.endpoint === 'ALTERNATE_DROP_OFF' ? 'alternate drop-off' : 'intended destination'}</dd></div>
       <div><dt className="text-xs text-text-secondary">Final delivery fee</dt><dd className="font-semibold tabular-nums">{formatPesoCentavos(confirmed.finalFeeCentavos)}</dd></div>
       {confirmed.arrangement && <div><dt className="text-xs text-text-secondary">Arrangement</dt><dd>{confirmed.arrangement}</dd></div>}
@@ -669,7 +665,7 @@ function DestinationPanel({ order }: { order: OrderDetail }) {
 function NrpcSummary({ order }: { order: OrderDetail }) {
   const nrpc = order.nrpc
   if (!nrpc) return null
-  return <section aria-labelledby="nrpc-summary-heading" className="grid gap-2 rounded-surface border border-border-default bg-surface-primary p-4 text-sm">
+  return <section aria-labelledby="nrpc-summary-heading" className="grid gap-2 mp-card mp-card-padded text-sm">
     <h2 id="nrpc-summary-heading" className="text-base font-semibold">NRPC</h2>
     <p><strong className="tabular-nums">{formatPesoCentavos(nrpc.amountCentavos)}</strong> · {nrpc.status === 'ACCEPTED' ? `Accepted ${formatManilaDateTime(nrpc.acceptedAt)}` : nrpc.status === 'REJECTED' ? 'Rejected by the Buyer' : 'Waiting for the Buyer'}</p>
     <p className="text-text-secondary">{nrpc.reason}</p>
@@ -680,7 +676,7 @@ function NrpcSummary({ order }: { order: OrderDetail }) {
 function AutoAcceptPanelView({ order }: { order: OrderDetail }) {
   const outcome = order.autoAccept
   if (!outcome?.accepted) return null
-  return <section aria-labelledby="auto-heading" className="grid gap-2 rounded-surface border border-border-default bg-surface-primary p-4 text-sm">
+  return <section aria-labelledby="auto-heading" className="grid gap-2 mp-card mp-card-padded text-sm">
     <h2 id="auto-heading" className="flex items-center gap-2 text-base font-semibold"><Bot size={16} aria-hidden="true" />Auto-accepted</h2>
     <p>All lines met the auto-accept allotment and safeguards; stock was reserved automatically.</p>
   </section>

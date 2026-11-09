@@ -1,3 +1,4 @@
+import { AsyncLoading } from './async-state'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { type NotificationPreference, type NotificationsApi } from '@materyalph/api-client-ts'
 import { ShieldCheck } from 'lucide-react'
@@ -66,7 +67,7 @@ export function NotificationPreferencesDialog({ api, audience, onClose, enablePu
   const required = preferences?.filter(preference => preference.mandatory) ?? []
   return <FormDialog open size="compact" title="Notification preferences" description="Choose where you receive optional updates." busy={busy} onClose={onClose} footer={<div className="flex flex-wrap items-center justify-between gap-3"><p role="status" className="text-xs text-text-secondary">{status || 'Changes save automatically.'}</p><Button disabled={busy} onClick={onClose}>Done</Button></div>}>
     {error && <div role="alert" className="mb-4 grid gap-2"><p className="text-sm">{error}</p><Button variant="secondary" className="justify-self-start" disabled={busy || loading} onClick={() => void load()}>Retry</Button></div>}
-    {loading ? <p role="status" className="py-6 text-sm text-text-secondary">Loading preferences…</p> : preferences && <div className="grid gap-5">
+    {loading ? <AsyncLoading compact label="Loading preferences…" /> : preferences && <div className="grid gap-5">
       {optional.length ? <table className="w-full table-fixed text-sm">
         <caption className="sr-only">Optional notification delivery channels</caption>
         <thead className="border-b border-border-default text-xs text-text-secondary"><tr><th scope="col" className="w-2/5 pb-3 text-left font-medium">Update</th>{channels.map(channel => <th key={channel.key} scope="col" className="pb-3 text-center font-medium">{channel.label}</th>)}</tr></thead>

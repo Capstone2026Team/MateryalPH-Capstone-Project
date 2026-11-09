@@ -1,5 +1,5 @@
 import { afterEach, expect, test, vi } from 'vitest'
-import { clearWebSessionTransport, createWebApiConfiguration } from '@materyalph/web-ui'
+import { clearWebSessionTransport, createWebApiConfiguration, readSignedCaseFile } from '@materyalph/web-ui'
 
 const base = 'https://portal.example.test/api/v1'
 const json = (status: number, data = {}) => new Response(JSON.stringify({ data, meta: {}, errors: [] }), {
@@ -69,6 +69,19 @@ test('private media keeps its existing explicit retry instead of replaying downl
   const response = await createWebApiConfiguration(base).fetchApi!(`${base}/vendors/account/photo`, { headers: { Accept: 'image/png' } })
   expect(response.status).toBe(503)
   expect(fetcher).toHaveBeenCalledOnce()
+})
+
+test('draft previews require an authorized same-origin path and do not retry failed private reads', async () => {
+  const path = '/vendor/invoice-drafts/019a4db9-1234-7123-8123-012345678901/files/019a4db9-1234-7123-8123-012345678902?expires=9999999999&signature=sample'
+  const fetcher = vi.fn<typeof fetch>(async () => new Response('%PDF sample', { headers: { 'Content-Type': 'application/pdf' } }))
+  vi.stubGlobal('fetch', fetcher)
+  expect((await readSignedCaseFile(base, base + path)).type).toBe('application/pdf')
+  expect(fetcher.mock.calls[0]?.[1]).toMatchObject({ credentials: 'include', cache: 'no-store' })
+  await expect(readSignedCaseFile(base, `https://untrusted.example.test/api/v1${path}`)).rejects.toThrow('invalid')
+  expect(fetcher).toHaveBeenCalledOnce()
+  fetcher.mockImplementation(async () => new Response('{}', { status: 503 }))
+  await expect(readSignedCaseFile(base, base + path)).rejects.toThrow()
+  expect(fetcher).toHaveBeenCalledTimes(2)
 })
 
 test.each(['logout', 'cancel'])('a pending read retry is not sent after %s', async action => {

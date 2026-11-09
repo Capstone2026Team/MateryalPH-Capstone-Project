@@ -14,6 +14,7 @@ use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
@@ -25,7 +26,7 @@ final class ReviewQueries
 {
     public const PER_PAGE = 20;
 
-    public function __construct(private readonly ReviewAccess $access, private readonly ReviewPresenter $presenter, private readonly PublicScores $scores, private readonly CatalogFileStore $store) {}
+    public function __construct(private readonly ReviewAccess $access, private readonly ReviewPresenter $presenter, private readonly PublicScores $scores, private readonly CatalogFileStore $store, private readonly BuyerRatingSummary $buyerRatings) {}
 
     /** @return array{items: list<array<string, mixed>>, meta: array<string, mixed>} */
     public function listingReviews(string $listingId, int $page): array
@@ -61,6 +62,21 @@ final class ReviewQueries
         ]);
     }
 
+    /** @return array{items: list<array<string, mixed>>, meta: array<string, mixed>} */
+    public function buyerRatings(Request $request, int $page): array
+    {
+        $profileId = $this->access->buyerProfileId($request);
+        $base = ReviewRules::constrainVisible(DB::table('reviews as r')->join('orders as o', 'o.id', '=', 'r.order_id')
+            ->where('r.buyer_profile_id', $profileId)->where('r.review_type', ReviewRules::BUYER)->where('o.order_state', 'COMPLETED'));
+        $rows = (clone $base)->orderByDesc('r.submitted_at')->orderByDesc('r.id')->forPage($page, self::PER_PAGE)->get(['r.*', 'o.reference as order_reference']);
+
+        return ['items' => $rows->map(fn (object $review): array => [
+            'id' => (string) $review->id, 'store_name' => $this->presenter->authorName($review), 'order_id' => (string) $review->order_id,
+            'order_reference' => (string) $review->order_reference, 'ratings' => $this->presenter->ratings($review), 'comment' => $review->comment,
+            'submitted_at' => ReviewPresenter::iso($review->submitted_at),
+        ])->all(), 'meta' => ['page' => $page, 'per_page' => self::PER_PAGE, 'total' => (clone $base)->count(), 'summary' => $this->buyerRatings->forProfiles([$profileId])[$profileId]]];
+    }
+
     /**
      * @param  array{type?: string, page?: int, listing_id?: string, from?: string, to?: string}  $filters
      * @return array{items: list<array<string, mixed>>, meta: array<string, mixed>}
@@ -84,7 +100,9 @@ final class ReviewQueries
         $page = max(1, (int) ($filters['page'] ?? 1));
         PortalDateRange::apply($base, 'r.submitted_at', $filters);
         $total = (clone $base)->count();
-        $rows = (clone $base)->join('orders as o', 'o.id', '=', 'r.order_id')->orderByDesc('r.submitted_at')->orderByDesc('r.id')->forPage($page, self::PER_PAGE)->get(['r.*', 'o.reference as order_reference']);
+        $rows = (clone $base)->join('orders as o', 'o.id', '=', 'r.order_id')->leftJoin('users as author', 'author.id', '=', 'r.reviewer_user_id')
+            ->orderByDesc('r.submitted_at')->orderByDesc('r.id')->forPage($page, self::PER_PAGE)->select(['r.*', 'o.reference as order_reference'])
+            ->selectRaw('author.profile_photo_key IS NOT NULL AS buyer_has_photo')->get();
 
         $meta = ['page' => $page, 'per_page' => self::PER_PAGE, 'total' => $total, 'type' => $type];
         if ($type === ReviewRules::PRODUCT) {
@@ -107,12 +125,25 @@ final class ReviewQueries
                 ReviewRules::constrainVisible($received);
             });
         });
-        $review = $base->join('orders as o', 'o.id', '=', 'r.order_id')->first(['r.*', 'o.reference as order_reference']);
+        $review = $base->join('orders as o', 'o.id', '=', 'r.order_id')->leftJoin('users as author', 'author.id', '=', 'r.reviewer_user_id')
+            ->select(['r.*', 'o.reference as order_reference'])->selectRaw('author.profile_photo_key IS NOT NULL AS buyer_has_photo')->first();
         if ($review === null) {
             throw new AuthenticationException('REVIEW_NOT_FOUND', 'This review is unavailable.', 404);
         }
 
-        return $this->vendorRow($review, $scope['permissions']);
+        $row = $this->vendorRow($review, $scope['permissions']);
+        if ($row['product'] !== null) {
+            // Use current catalog media without changing the purchased name or variant snapshot.
+            $image = DB::table('listing_media as m')->join('files as f', 'f.id', '=', 'm.file_id')
+                ->where('m.vendor_listing_id', $review->vendor_listing_id)->where('m.status', 'READY')
+                ->where('f.owner_type', 'VENDOR_ORGANIZATION')->where('f.owner_id', $scope['organization_id'])
+                ->where('f.purpose', CatalogFileStore::LISTING_MEDIA)->where('f.scan_state', 'CLEAN')
+                ->whereIn('f.content_type', ['image/jpeg', 'image/png', 'image/webp'])
+                ->orderBy('m.sort_order')->orderBy('m.id')->first(['f.*']);
+            $row['product']['image_url'] = $image === null ? null : $this->store->temporaryUrl($image)['url'];
+        }
+
+        return $row;
     }
 
     /**
@@ -135,7 +166,29 @@ final class ReviewQueries
         }
 
         return $row + ['order_id' => (string) $review->order_id, 'order_reference' => (string) $review->order_reference, 'product' => $product,
-            'can_report' => ! $own && in_array(ReviewAccess::REPORT, $permissions, true)];
+            'can_report' => ! $own && in_array(ReviewAccess::REPORT, $permissions, true),
+            'buyer_avatar_url' => ! $own && $this->buyerIdentityVisible($review) && $review->buyer_has_photo
+                ? URL::temporarySignedRoute('reviews.vendor.buyer-photo', now()->addMinutes(ReviewPresenter::MEDIA_TTL_MINUTES), ['reviewId' => $review->id]) : null];
+    }
+
+    /** A named review grants only its current store's review readers access to the sanitized Buyer photo. */
+    public function buyerPhoto(Request $request, string $reviewId): StreamedResponse
+    {
+        $scope = $this->access->vendorScope($request, ReviewAccess::VIEW);
+        $review = ReviewRules::constrainVisible(DB::table('reviews as r')->where('r.id', ReviewAccess::uuid($reviewId))
+            ->where('r.vendor_organization_id', $scope['organization_id'])->whereIn('r.review_type', [ReviewRules::VENDOR, ReviewRules::PRODUCT])->whereNotNull('r.submitted_at'))->first(['r.*']);
+        $photo = $review !== null && $this->buyerIdentityVisible($review)
+            ? DB::table('users')->where('id', $review->reviewer_user_id)->where('account_type', 'BUYER')->first(['profile_photo_key', 'profile_photo_disk']) : null;
+        if ($photo?->profile_photo_key === null || ! Storage::disk($photo->profile_photo_disk)->exists($photo->profile_photo_key)) {
+            throw new AuthenticationException('FILE_NOT_FOUND', 'This Buyer profile picture is unavailable.', 404);
+        }
+
+        return Storage::disk($photo->profile_photo_disk)->response($photo->profile_photo_key, null, ['Content-Type' => 'image/png', 'Cache-Control' => 'private, no-store', 'X-Content-Type-Options' => 'nosniff']);
+    }
+
+    private function buyerIdentityVisible(object $review): bool
+    {
+        return $review->reviewer_party === 'BUYER' && $this->presenter->authorName($review) !== 'Reviewer unavailable';
     }
 
     /**
@@ -147,23 +200,30 @@ final class ReviewQueries
         $this->access->admin($request, ReviewAccess::MODERATE);
         $state = $filters['state'] ?? 'NEEDS_ACTION';
         $query = DB::table('reviews as r')->join('orders as o', 'o.id', '=', 'r.order_id')->join('vendor_organizations as vo', 'vo.id', '=', 'r.vendor_organization_id')->whereNotNull('r.submitted_at');
+        PortalDateRange::apply($query, 'r.submitted_at', $filters);
+        $needsAction = fn (Builder $q) => $q->whereIn('r.moderation_state', ['FLAGGED', 'HIDDEN_PENDING_REVIEW'])
+            ->orWhereExists(fn (Builder $flag) => $flag->selectRaw('1')->from('review_flags as f')->whereColumn('f.review_id', 'r.id')->where('f.state', 'OPEN'));
+        $counts = array_fill_keys(['FLAGGED', 'HIDDEN_PENDING_REVIEW', 'CORRECTION_REQUESTED', 'REMOVED', 'NONE'], 0);
+        foreach ((clone $query)->selectRaw('r.moderation_state, count(*) as total')->groupBy('r.moderation_state')->get() as $row) {
+            $counts[$row->moderation_state] = (int) $row->total;
+        }
+        $counts['ALL'] = array_sum($counts);
+        $counts['NEEDS_ACTION'] = (clone $query)->where($needsAction)->count();
         match ($state) {
-            'NEEDS_ACTION' => $query->where(fn (Builder $q) => $q->whereIn('r.moderation_state', ['FLAGGED', 'HIDDEN_PENDING_REVIEW'])
-                ->orWhereExists(fn (Builder $flag) => $flag->selectRaw('1')->from('review_flags as f')->whereColumn('f.review_id', 'r.id')->where('f.state', 'OPEN'))),
+            'NEEDS_ACTION' => $query->where($needsAction),
             'ALL' => null,
             default => $query->where('r.moderation_state', $state),
         };
         $page = max(1, (int) ($filters['page'] ?? 1));
-        PortalDateRange::apply($query, 'r.submitted_at', $filters);
         $total = (clone $query)->count();
         $rows = $query->orderByDesc('r.updated_at')->orderByDesc('r.id')->forPage($page, self::PER_PAGE)->get(['r.*', 'o.reference as order_reference', 'vo.store_name']);
         $flags = DB::table('review_flags')->whereIn('review_id', $rows->pluck('id'))->where('state', 'OPEN')->groupBy('review_id')->selectRaw('review_id, count(*) AS total')->pluck('total', 'review_id');
 
         return ['items' => $rows->map(fn (object $review): array => [
             'id' => (string) $review->id, 'type' => $review->review_type, 'moderation_state' => $review->moderation_state, 'order_reference' => (string) $review->order_reference,
-            'store_name' => (string) $review->store_name, 'display_name' => (string) $review->public_display_name, 'ratings' => $this->presenter->ratings($review), 'comment' => $review->comment,
+            'store_name' => (string) $review->store_name, 'display_name' => $this->presenter->authorName($review), 'ratings' => $this->presenter->ratings($review), 'comment' => $review->comment,
             'open_flags' => (int) ($flags[$review->id] ?? 0), 'submitted_at' => ReviewPresenter::iso($review->submitted_at), 'updated_at' => ReviewPresenter::iso($review->updated_at),
-        ])->all(), 'meta' => ['page' => $page, 'per_page' => self::PER_PAGE, 'total' => $total, 'state' => $state]];
+        ])->all(), 'meta' => ['page' => $page, 'per_page' => self::PER_PAGE, 'total' => $total, 'state' => $state, 'counts' => $counts]];
     }
 
     /** @return array<string, mixed> */
@@ -181,7 +241,7 @@ final class ReviewQueries
             'moderation_state' => $review->moderation_state,
             'reviewer_party' => $review->reviewer_party,
             'display_name_choice' => $review->display_name_choice,
-            'author_display_rule' => $review->reviewer_party === 'VENDOR' ? 'Store name' : ($review->display_name_choice === 'VERIFIED_BUYER' ? 'Verified Buyer (reviewer chose the more restrictive name)' : 'First name and last initial'),
+            'author_display_rule' => $review->reviewer_party === 'VENDOR' ? 'Store name' : 'Full Buyer profile name',
             'verified_purchase' => ['order_id' => (string) $review->order_id, 'order_reference' => (string) $order->reference, 'store_name' => (string) $order->store_name, 'completed_at' => ReviewPresenter::iso($order->closed_at),
                 'order_line_id' => $review->order_line_id, 'listing_id' => $review->vendor_listing_id],
             'related_dispute' => $case === null ? null : ['id' => (string) $case->id, 'reference' => (string) $case->reference, 'status' => (string) $case->status],

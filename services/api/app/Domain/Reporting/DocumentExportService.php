@@ -20,7 +20,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 final class DocumentExportService
 {
-    public const TYPES = ['PURCHASE_ORDER', 'PAYMENT_CONFIRMATION', 'PROJECT_SUMMARY', 'BUDGET_REPORT', 'OPERATIONAL_ORDER', 'FEE_STATEMENT', 'MATERIALS_ANALYTICS', 'TAX_PACKAGE', 'AUDIT_LOG', 'GEO_ANALYTICS', 'TRANSACTION_HISTORY', 'EARNINGS'];
+    public const TYPES = ['PURCHASE_ORDER', 'PROJECT_SUMMARY', 'BUDGET_REPORT', 'OPERATIONAL_ORDER', 'FEE_STATEMENT', 'MATERIALS_ANALYTICS', 'TAX_PACKAGE', 'AUDIT_LOG', 'GEO_ANALYTICS', 'TRANSACTION_HISTORY', 'EARNINGS'];
 
     /** @param array<string, mixed> $input
      * @return array<string, mixed> */

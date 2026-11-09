@@ -10,11 +10,11 @@
 @endsection
 
 @section('next')
-Open <strong>Finance</strong> in the MateryalPH Vendor portal to review the details.
+Open <strong>Finance</strong> in MateryalPH to review the details.
 @endsection
 
 @section('action')
-@include('mail.notification-link')
+@include('mail.notification-link', ['purposeLabel' => 'View finance details'])
 @endsection
 
 @section('security', 'MateryalPH will never ask you to send a password, one-time code or payment details by email.')

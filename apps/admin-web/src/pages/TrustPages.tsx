@@ -1,17 +1,17 @@
-import { DocumentExportButton } from '@materyalph/web-ui'
+import { BackNavigation, DocumentExportButton } from '@materyalph/web-ui'
 import { useEffect, useState, type FormEvent } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, CheckCircle2, ChevronDown, ClipboardCheck, Clock3, Download, Flag, Inbox, MapPinned, Package, Search, ShieldCheck, Store, UserRound } from 'lucide-react'
+import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom'
+import { ArrowRight, CheckCircle2, ChevronDown, ClipboardCheck, Clock3, Download, Flag, Inbox, MapPinned, Package, RefreshCw, Search, ShieldCheck, Store, UserRound } from 'lucide-react'
 import type { ReviewRatings } from '@materyalph/api-client-ts'
 import {
-  AnalyticsNullState, BadgeList, BadgeStatusList, Button, DateFilter, DatasetNotice, EventTimeline, FactList, FilterTabs, FormDialog, MaterialPriceTable, MaterialThumbnail, PriceTrendPanel, ReasonedDecisionForm, ReviewDetailContent, ReviewRatingSummary, ScoreSummaryGrid, SearchInput, StatusBadge, StatusMessage, TrendSummary,
-  analyticsDay, dateComparisonPreset, formatAnalyticsDate, formatManilaDateTime, formatPhpDecimal, manilaToday, type PricePoint,
+  AnalyticsNullState, Button, DateFilter, DatasetNotice, EventTimeline, FactList, FilterPanel, FilterTabs, FormDialog, MaterialPriceTable, MaterialThumbnail, ModerationLoadingState, PriceTrendPanel, ReasonedDecisionForm, ReviewDetailContent, ReviewRatingSummary, StorePerformanceSummary, SearchInput, StatusBadge, StatusMessage, TrendSummary,
+  analyticsDay, dateComparisonPreset, dateRangeFromParams, dateRangePatch, formatAnalyticsDate, formatManilaDateTime, formatPhpDecimal, manilaToday, useQueueStatusCounts, type PricePoint,
   type ReviewPresentationRow,
 } from '@materyalph/web-ui'
 import { readableApiError } from '../lib/auth-api'
 import {
-  correctRun, excludeSource, exportAdminAnalytics, getAdminAnalyticsDetail, getModeration, getScore, liftSuppression, listAdminAnalytics, listModeration, listRuns, listScores, listSources, moderate, revokeExclusion, suppressBadge,
-  type AdminAnalyticsFilters, type AdminMaterialsAnalyticsDetail, type AdminMaterialsAnalyticsList, type AdminScoreDetail, type AdminScoreRow, type AnalyticsSource, type ModerationAction, type ModerationDetail, type ModerationQueueRow, type ModerationState,
+  correctRun, excludeSource, exportAdminAnalytics, getAdminAnalyticsDetail, getModeration, getScore, liftSuppression, listAdminAnalytics, listModeration, listRuns, listSources, moderate, revokeExclusion, suppressBadge,
+  type AdminAnalyticsFilters, type AdminMaterialsAnalyticsDetail, type AdminMaterialsAnalyticsList, type AdminScoreDetail, type AnalyticsSource, type ModerationAction, type ModerationDetail, type ModerationState,
 } from '../lib/trust-api'
 import { AdminShell, ErrorState, LoadingState, PageHeader } from './PhaseThreeAdminPages'
 import { Pager, Panel } from '../components/OperationsKit'
@@ -91,7 +91,7 @@ export function MaterialsAnalyticsSection({ psgcCode, areaLabel }: { psgcCode: s
     try { const blob = await exportAdminAnalytics(filters); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = 'materials-analytics-aggregates.csv'; link.click(); URL.revokeObjectURL(link.href) }
     catch (cause) { setExportError(await readableApiError(cause)) }
   }
-  return <section aria-labelledby="materials-analytics" className="grid min-w-0 gap-5 rounded-surface border border-border-default bg-surface-primary p-4 sm:p-6">
+  return <section aria-labelledby="materials-analytics" className="grid min-w-0 gap-5 mp-card mp-card-padded">
     <div className="flex min-w-0 flex-col gap-4 xl:flex-row xl:items-start xl:justify-between"><div className="min-w-0"><h2 id="materials-analytics" className="text-lg font-semibold text-text-strong">Materials Analytics</h2><p className="mt-1.5 max-w-3xl text-sm leading-6 text-text-secondary">Equal-Vendor daily averages of public Tier 2 listed prices. Not an official price index.</p><p className="mt-3 flex items-center gap-2 text-[13px] font-medium text-text-strong"><MapPinned size={16} aria-hidden="true" className="shrink-0 text-text-secondary" /><span className="min-w-0 break-words">{areaLabel}</span></p></div>
       <div className="flex flex-wrap gap-2"><DocumentExportButton basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} audience="admin" types={['MATERIALS_ANALYTICS']} filters={{ ...(filters.startDate && filters.endDate ? { start_date: filters.startDate, end_date: filters.endDate } : { preset_days: filters.presetDays ?? 30 }), ...(filters.psgcCode ? { psgc_code: filters.psgcCode } : {}), ...(filters.q ? { q: filters.q } : {}) }} /><Button variant="secondary" onClick={() => void download()}><Download size={16} aria-hidden="true" />Export CSV</Button></div></div>
     {exportError && <StatusMessage tone="error">{exportError}</StatusMessage>}
@@ -130,8 +130,8 @@ export function AdminMaterialPriceDetailsPage() {
   const back = new URLSearchParams({ view: 'materials', days: String(filters.presetDays ?? 30) })
   if (filters.startDate && filters.endDate) { back.set('priceFrom', filters.startDate); back.set('priceTo', filters.endDate) }
   if (filters.psgcCode) back.set('area', filters.psgcCode)
-  return <AdminShell activeHref="/analytics"><div className="space-y-6">
-    <Link className="inline-flex min-h-11 items-center text-sm font-semibold text-action-primary" to={`/analytics?${back.toString()}`}>← Marketplace Analytics</Link>
+  return <AdminShell activeHref="/analytics"><div className="mp-analytics space-y-3">
+    <BackNavigation><Link to={`/analytics?${back.toString()}`}>Marketplace Analytics</Link></BackNavigation>
     {detail.error ? <ErrorState message={detail.error} onRetry={detail.retry} /> : !detail.data ? <LoadingState /> : <MaterialDetail detail={detail.data} filters={filters} onChange={setFilters} />}
   </div></AdminShell>
 }
@@ -188,82 +188,59 @@ function SourceInspection({ groupId, dates }: { groupId: string; dates: string[]
   </section>
 }
 
-const SCORE_NAMES = { vps: 'Vendor Performance Score', vcs: 'Vendor Community Score', mqs: 'Material Quality Score', ohs: 'Operational Health Score' }
 const scorePage = (value: string | null) => Math.min(500, Math.max(1, Number.isInteger(Number(value)) ? Number(value) : 1))
-
-export function AdminScoresPage() {
-  const [params, setParams] = useSearchParams()
-  const applied = params.get('q') ?? ''
-  const page = scorePage(params.get('page'))
-  const [q, setQ] = useState(applied)
-  useEffect(() => { setQ(applied) }, [applied])
-  const list = useLoad<{ items: AdminScoreRow[]; total: number; perPage?: number }>(() => listScores(applied, page), [applied, page])
-  const update = (query: string, nextPage = 1) => { const next = new URLSearchParams(); if (query) next.set('q', query); if (nextPage > 1) next.set('page', String(nextPage)); setParams(next) }
-  const query = params.toString() ? `?${params.toString()}` : ''
-  return <AdminShell activeHref="/scores"><div className="space-y-6">
-    <PageHeader eyebrow="Compliance & quality" title="Score & Badge Monitoring" description="Monitor Vendor performance, automatic badges, and the source records behind every published score." />
-    <div className="flex items-start gap-3 text-sm text-text-secondary"><ShieldCheck size={20} className="shrink-0 text-action-primary" aria-hidden="true" /><p>Scores and badges are calculated automatically. Authorized Admins can investigate sources and record documented exclusions or badge suppressions.</p></div>
-    <section aria-labelledby="score-directory" className="min-w-0 overflow-hidden rounded-surface border border-border-default bg-surface-primary">
-      <div className="grid gap-4 border-b border-border-default p-4 sm:p-5 lg:grid-cols-[1fr_minmax(320px,540px)] lg:items-center">
-        <div><div className="flex flex-wrap items-center gap-2"><h2 id="score-directory" className="text-lg font-semibold">Vendor performance</h2>{list.data && <StatusBadge label={`${list.data.total} ${list.data.total === 1 ? 'store' : 'stores'}`} />}</div><p className="mt-1 text-sm text-text-secondary">{applied ? `Search results for “${applied}”` : 'Active stores, ordered by store name.'}</p></div>
-        <form className="flex min-w-0 flex-wrap gap-2" role="search" onSubmit={event => { event.preventDefault(); update(q.trim()) }}><SearchInput id="score-search" label="Search stores" placeholder="Search by store name" maxLength={120} value={q} onChange={setQ} className="w-full basis-full sm:w-auto sm:basis-0 sm:flex-1" /><Button type="submit" variant="secondary">Search</Button>{applied && <Button variant="quiet" onClick={() => { setQ(''); update('') }}>Reset search</Button>}</form>
-      </div>
-      {list.error ? <div className="p-5"><ErrorState message={list.error} onRetry={list.retry} /></div> : !list.data ? <div className="p-5"><LoadingState /></div> : list.data.items.length === 0 ? <div className="grid justify-items-center gap-3 px-5 py-14 text-center"><Store size={28} aria-hidden="true" className="text-text-secondary" /><h3 className="text-lg font-semibold">{applied ? 'No matching stores' : page > 1 ? 'No stores on this page' : 'No active stores yet'}</h3><p className="max-w-md text-sm text-text-secondary">{applied ? 'Try another store name or clear your search to see all active stores.' : 'Active Vendor stores will appear here with their latest published performance.'}</p>{(applied || page > 1) && <Button variant="secondary" onClick={() => { setQ(''); update('') }}>View all stores</Button>}</div>
-        : <>
-          <div aria-hidden="true" className="hidden grid-cols-[minmax(0,2fr)_minmax(200px,1.4fr)_minmax(100px,.7fr)_minmax(140px,1fr)_112px] gap-5 border-b border-border-default bg-surface-canvas px-5 py-3 text-xs font-semibold uppercase tracking-wide text-text-secondary xl:grid"><span>Store & public standing</span><span>Published scores</span><span>Response & reliability</span><span>Badges & investigations</span><span className="text-right">Details</span></div>
-          <ul className="divide-y divide-border-default">{list.data.items.map(row => <li key={row.vendorId} className="grid min-w-0 gap-5 p-4 transition-colors hover:bg-surface-canvas motion-reduce:transition-none sm:p-5 md:grid-cols-2 xl:grid-cols-[minmax(0,2fr)_minmax(200px,1.4fr)_minmax(100px,.7fr)_minmax(140px,1fr)_112px] xl:items-center">
-            <div className="min-w-0"><Link className="inline-flex min-h-11 items-center break-words font-semibold text-text-strong underline-offset-4 hover:text-action-primary hover:underline" to={`/scores/${row.vendorId}${query}`}>{row.storeName}</Link><p className="mt-1 text-xs leading-5 text-text-secondary">{row.scores.label}</p></div>
-            <dl className="grid grid-cols-4 gap-3">{(['vps', 'vcs', 'mqs', 'ohs'] as const).map(key => <div key={key}><dt className="text-xs font-semibold text-text-secondary"><abbr title={SCORE_NAMES[key]} className="no-underline">{key.toUpperCase()}</abbr></dt><dd className="mt-1 text-sm font-semibold tabular-nums">{row.scores[key] ?? <span className="font-normal text-text-secondary" aria-label="Not published">—</span>}</dd></div>)}</dl>
-            <dl className="grid grid-cols-2 gap-3 xl:grid-cols-1 xl:gap-1">{(['crr', 'frr'] as const).map(key => <div key={key} className="flex flex-wrap items-center gap-x-2"><dt className="text-xs text-text-secondary"><abbr className="no-underline" title={key === 'crr' ? 'Customer Response Rate' : 'Fulfillment Reliability Rate'}>{key.toUpperCase()}</abbr></dt><dd className="text-sm tabular-nums">{row[key] != null ? `${row[key]}%` : '—'}</dd></div>)}</dl>
-            <div className="space-y-2"><BadgeList badges={row.scores.badges} empty="No earned badges" /><div className="flex flex-wrap gap-1">{row.activeSuppressions > 0 && <StatusBadge label={`${row.activeSuppressions} suppressed`} tone="warning" />}{row.activeExclusions > 0 && <StatusBadge label={`${row.activeExclusions} excluded`} tone="info" />}</div></div>
-            <Link className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-action-primary underline-offset-4 hover:underline xl:justify-end whitespace-nowrap" to={`/scores/${row.vendorId}${query}`} aria-label={`View performance for ${row.storeName}`}>View details<ArrowRight size={16} aria-hidden="true" /></Link>
-          </li>)}</ul>
-        </>}
-      {list.data && list.data.total > 0 && <div className="border-t border-border-default px-5 py-4"><p className="text-xs text-text-secondary">Scores use a 1–5 scale. A dash means the metric is not published or has no eligible data.</p>{list.data.total > (list.data.perPage ?? 20) && <Pager page={page} lastPage={Math.ceil(list.data.total / (list.data.perPage ?? 20))} total={list.data.total} onChange={next => update(applied, next)} />}</div>}
-    </section>
-  </div></AdminShell>
-}
+/** Retain old bookmarks while the directory now owns performance monitoring. */
+export function AdminScoresPage() { return <Navigate to="/vendor-users" replace /> }
 
 type ScoreNotice = { tone: 'error' | 'success'; text: string }
 export function AdminScoreDetailPage() {
   const { vendorId = '' } = useParams()
+  return <AdminShell activeHref="/vendor-users"><div className="mp-analytics space-y-3">
+    <BackNavigation><Link to="/dashboard">Dashboard</Link></BackNavigation>
+    <VendorPerformanceMonitoring key={vendorId} vendorId={vendorId} />
+  </div></AdminShell>
+}
+
+/** Also serves score-only Admin roles without loading directory contact data. */
+export function VendorPerformanceMonitoring({ vendorId }: { vendorId: string }) {
   const [params, setParams] = useSearchParams()
   const eventPage = scorePage(params.get('eventsPage'))
   const detail = useLoad<AdminScoreDetail>(() => getScore(vendorId, eventPage), [vendorId, eventPage])
   const [notice, setNotice] = useState<ScoreNotice | null>(null)
   const [revision, setRevision] = useState(0)
+  const [recordView, setRecordView] = useState('Source events')
   useEffect(() => { setNotice(null) }, [vendorId])
-  const back = new URLSearchParams(params); back.delete('eventsPage')
-  return <AdminShell activeHref="/scores"><div className="space-y-6">
-    <Link className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-action-primary" to={`/scores${back.size ? `?${back}` : ''}`}><ArrowLeft size={16} aria-hidden="true" />Score & Badge Monitoring</Link>
+  return <div className="mp-analytics space-y-3">
     {notice && <StatusMessage tone={notice.tone}>{notice.text}</StatusMessage>}
-    {detail.error ? <ErrorState message={detail.error} onRetry={detail.retry} /> : !detail.data ? <LoadingState /> : <ScoreDetail key={`${vendorId}-${revision}`} data={detail.data} onChanged={message => { setRevision(value => value + 1); setNotice({ tone: 'success', text: message }); detail.retry() }} eventPage={eventPage} onEventPage={page => { const next = new URLSearchParams(params); if (page > 1) next.set('eventsPage', String(page)); else next.delete('eventsPage'); setParams(next, { preventScrollReset: true }) }} />}
-  </div></AdminShell>
+    {detail.error ? <ErrorState message={detail.error} onRetry={detail.retry} /> : !detail.data ? <LoadingState /> : <ScoreDetail key={`${vendorId}-${revision}`} data={detail.data} recordView={recordView} onRecordView={setRecordView} onChanged={message => { setRevision(value => value + 1); setNotice({ tone: 'success', text: message }); detail.retry() }} eventPage={eventPage} onEventPage={page => { const next = new URLSearchParams(params); if (page > 1) next.set('eventsPage', String(page)); else next.delete('eventsPage'); setParams(next, { preventScrollReset: true }) }} />}
+  </div>
 }
 
-function ScoreDetail({ data, onChanged, eventPage, onEventPage }: { data: AdminScoreDetail; onChanged: (message: string) => void; eventPage: number; onEventPage: (page: number) => void }) {
+function ScoreDetail({ data, onChanged, eventPage, onEventPage, recordView, onRecordView }: { recordView: string; onRecordView: (view: string) => void; data: AdminScoreDetail; onChanged: (message: string) => void; eventPage: number; onEventPage: (page: number) => void }) {
   const events = records(record(data.sourceEvents).items)
   const meta = record(record(data.sourceEvents).meta)
   const total = numberValue(meta.total, events.length)
   const perPage = Math.max(1, numberValue(meta.per_page, 20))
   const exclusions = records(data.exclusions), suppressions = records(data.suppressions)
   return <>
-    <PageHeader eyebrow="Score & Badge Monitoring" title={data.storeName ?? 'Vendor'} description="Published performance, badge eligibility, and audited source investigations." actions={<StatusBadge label={data.canInvestigate ? 'Investigation access' : 'Read-only access'} tone="info" />} />
-    <section aria-label="Public standing" className="flex flex-wrap items-center justify-between gap-4 border-l-4 border-action-primary bg-surface-primary px-5 py-4"><div><p className="text-xs font-semibold uppercase tracking-wide text-text-secondary">Public standing</p><p className="mt-1 text-lg font-semibold">{data.label || 'No public standing available'}</p></div><div className="text-sm"><p className="text-xs text-text-secondary">Latest score snapshot</p><p className="mt-1 font-semibold">{data.asOf ? formatAnalyticsDate(data.asOf, true) : 'Awaiting first calculation'}</p></div></section>
-    <section aria-labelledby="published-scores" className="space-y-4"><div><h2 id="published-scores" className="text-lg font-semibold">Published scores</h2><p className="mt-1 text-sm text-text-secondary">Daily performance snapshots. Operational health is recalculated weekly; publication depends on eligible samples.</p></div>{data.scores?.length ? <ScoreSummaryGrid scores={data.scores} /> : <AnalyticsNullState title="No score snapshot available" reason="Scores will appear after a calculation has been completed." />}</section>
-    <div className="grid items-start gap-6 2xl:grid-cols-[minmax(0,2fr)_minmax(300px,1fr)]">
-      <Panel id="badge-states" title="Automatic badges" description="Eligibility comes from the published criteria below. Awards and removals are automatic."><BadgeStatusList badges={data.badges ?? []} /></Panel>
-      <Panel id="badge-metrics" title="Response & reliability" description="Supporting metrics used to determine badge eligibility.">
-        {!data.badgeMetrics?.length ? <p className="text-sm text-text-secondary">No supporting metrics available yet.</p> : <dl className="grid gap-5 sm:grid-cols-2 2xl:grid-cols-1">{data.badgeMetrics.map(metric => <div key={metric.key} className="space-y-2"><dt className="text-sm font-semibold">{metric.key === 'CRR' ? 'Customer Response Rate' : 'Fulfillment Reliability Rate'} <span className="text-text-secondary">({metric.key})</span></dt><dd className="text-3xl font-semibold tabular-nums">{metric.value != null ? `${metric.value}%` : <span className="text-lg text-text-secondary">No eligible data</span>}</dd><dd className="text-xs text-text-secondary">{metric.window} · {metric.sampleCount} eligible samples</dd><dd className="text-xs leading-5 text-text-secondary">{metric.definition}</dd></div>)}</dl>}
-      </Panel>
-    </div>
+    <div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="text-lg font-semibold">Performance Monitoring</h2><p className="mt-1 text-sm text-text-secondary">{data.storeName} · Published scores, automatic badges and their source records.</p></div><StatusBadge label={data.canInvestigate ? 'Investigation access' : 'Read-only access'} tone="info" /></div>
+    <StorePerformanceSummary data={data} />
+    <FilterTabs appearance="tabs" label="Performance records" value={recordView} onChange={onRecordView} chips={['Source events', 'Investigations', 'Badge history'].map(label => ({ value: label, label }))} />
+    {[
+      { label: 'Source events', content:
     <Panel id="score-sources" title="Source events" description="System-recorded events behind the scores. Exclusion removes an order’s sources from later calculations; the original events remain available.">
       {events.length === 0 ? <div className="flex items-start gap-3 py-5"><Inbox size={24} aria-hidden="true" className="shrink-0 text-text-secondary" /><div><p className="font-semibold">No source events {eventPage > 1 ? 'on this page' : 'yet'}</p><p className="mt-1 text-sm text-text-secondary">Order and response activity will appear here when recorded.</p>{eventPage > 1 && <Button variant="quiet" onClick={() => onEventPage(1)}>Return to first page</Button>}</div></div> : <div className="overflow-x-auto" role="region" aria-label="Scrollable source events" tabIndex={0}><table className="w-full min-w-[660px] text-left text-sm"><caption className="sr-only">Score source events</caption><thead className="border-b border-border-default text-xs uppercase tracking-wide text-text-secondary"><tr>{['Metric / source', 'Value', 'Order', 'Recorded', 'Status'].map(label => <th key={label} scope="col" className="px-3 py-3">{label}</th>)}</tr></thead><tbody className="divide-y divide-border-default">{events.map(event => <tr key={stringValue(event.id)}><th scope="row" className="px-3 py-4 font-normal"><p className="font-semibold">{stringValue(event.metric)}</p><p className="mt-1 text-xs text-text-secondary">{statusLabel(stringValue(event.source_kind))}</p></th><td className="px-3 py-4 tabular-nums">{stringValue(event.value, '—')}</td><td className="px-3 py-4"><p>{stringValue(event.order_reference, 'No linked order')}</p>{typeof event.order_id === 'string' && <p className="mt-1 text-xs text-text-secondary">ID: {event.order_id}</p>}</td><td className="px-3 py-4 text-xs text-text-secondary">{formatManilaDateTime(stringValue(event.occurred_at))}</td><td className="px-3 py-4"><StatusBadge label={event.excluded ? 'Excluded' : 'Recorded'} tone={event.excluded ? 'warning' : 'neutral'} /></td></tr>)}</tbody></table></div>}
       {total > perPage && <Pager page={eventPage} lastPage={Math.ceil(total / perPage)} total={total} onChange={onEventPage} />}
     </Panel>
+      },
+      { label: 'Investigations', content: <div className="grid gap-4">
     {data.canInvestigate ? <section aria-labelledby="score-investigation" className="space-y-4"><div><h2 id="score-investigation" className="text-lg font-semibold">Investigation actions</h2><p className="mt-1 text-sm text-text-secondary">Document the finding and review its effect before submitting. Each action is recorded in the audit history.</p></div><ScoreInvestigation data={data} onChanged={onChanged} /></section> : <p className="flex items-start gap-2 text-sm text-text-secondary"><ShieldCheck size={18} className="shrink-0" aria-hidden="true" />You have read-only access. Source exclusions and badge suppressions require investigation permission.</p>}
     <div className="grid items-start gap-6 lg:grid-cols-2"><Panel id="score-exclusions" title="Source exclusions" description="Recorded exclusions and reversals for this Vendor."><ScoreAdjustments rows={exclusions} kind="exclusion" canInvestigate={Boolean(data.canInvestigate)} onChanged={onChanged} /></Panel><Panel id="score-suppressions" title="Badge suppressions" description="Documented cases affecting public badge display."><ScoreAdjustments rows={suppressions} kind="suppression" canInvestigate={Boolean(data.canInvestigate)} onChanged={onChanged} /></Panel></div>
+      </div> },
+      { label: 'Badge history', content:
     <Panel id="badge-history" title="Badge history" description="Recent automatic awards and removals, with up to 100 records retained in this view.">{!data.badgeHistory?.length ? <p className="py-3 text-sm text-text-secondary">No badges have been awarded yet.</p> : <ul className="divide-y divide-border-default">{records(data.badgeHistory).map(row => <li key={stringValue(row.id)} className="space-y-2 py-4 text-sm"><div className="flex flex-wrap items-center gap-2"><span className="font-semibold">{stringValue(row.name)}</span><StatusBadge label={row.revoked_at ? 'Removed automatically' : 'Awarded automatically'} tone={row.revoked_at ? 'neutral' : 'success'} /></div><p className="text-xs text-text-secondary">Awarded {formatManilaDateTime(stringValue(row.earned_at))}{row.scope_label ? ` · ${stringValue(row.scope_label)}` : ''}</p>{Boolean(row.revoked_at) && <p className="text-xs text-text-secondary">Removed {formatManilaDateTime(stringValue(row.revoked_at))} · {statusLabel(stringValue(row.revocation_reason))}</p>}</li>)}</ul>}</Panel>
+      },
+    ].find(section => section.label === recordView)?.content}
   </>
 }
 
@@ -374,39 +351,44 @@ export function AdminReviewModerationPage() {
   const state = QUEUE_STATES.find(item => item.value === params.get('state'))?.value ?? 'NEEDS_ACTION'
   const requestedPage = Number(params.get('page'))
   const page = Number.isSafeInteger(requestedPage) && requestedPage >= 1 && requestedPage <= 500 ? requestedPage : 1
-  const from = analyticsDay(params.get('from')) ?? '', to = analyticsDay(params.get('to')) ?? ''
-  const range = { label: from || to ? 'Custom range' : 'All dates', from, to }
+  const selectedRange = dateRangeFromParams(params)
+  const from = analyticsDay(selectedRange.from) ?? '', to = analyticsDay(selectedRange.to) ?? ''
+  const range = { ...selectedRange, from, to }
   const change = (patch: Record<string, string>) => setParams(current => {
     const next = new URLSearchParams(current)
     for (const [key, value] of Object.entries(patch)) { if (value) next.set(key, value); else next.delete(key) }
     return next
   })
-  const resetDates = () => change({ from: '', to: '', page: '' })
   const copy = QUEUE_COPY[state] ?? QUEUE_COPY.NEEDS_ACTION!
   const label = QUEUE_STATES.find(item => item.value === state)?.label
   const context = params.size ? `?${params.toString()}` : ''
-  const queue = useLoad<{ items: ModerationQueueRow[]; total: number; perPage?: number }>(() => listModeration(state, page, range), [state, page, range.from, range.to])
-  return <AdminShell activeHref="/reviews"><div className="mx-auto max-w-[1440px] space-y-6">
-    <PageHeader eyebrow="Compliance & quality" title="Review Moderation" description="Review reported feedback, inspect supporting evidence, and record a reasoned decision." />
-    <FilterTabs appearance="tabs" label="Moderation queue" value={state} chips={QUEUE_STATES} onChange={value => change({ state: value, page: '' })} />
-    <section className="min-w-0 overflow-hidden rounded-surface border border-border-default bg-surface-primary" aria-labelledby="moderation-queue-title">
-      <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border-default p-5 sm:px-6">
-        <div className="min-w-0 max-w-2xl"><div className="flex flex-wrap items-center gap-3"><h2 id="moderation-queue-title" className="text-lg font-semibold">{label}</h2>{queue.data && <StatusBadge label={`${queue.data.total.toLocaleString()} ${queue.data.total === 1 ? 'review' : 'reviews'}`} />}</div><p className="mt-2 text-sm leading-6 text-text-secondary">{copy.description}</p></div>
-        <div className="flex max-w-full flex-wrap items-center gap-2"><DateFilter title="Review submission dates" value={range} onChange={value => change({ from: value.from, to: value.to, page: '' })} />{(from || to) && <Button variant="quiet" onClick={resetDates}>Reset dates</Button>}</div>
+  const queue = useAnalyticsResource(`review-moderation-${JSON.stringify([state, page, from, to])}`, () => listModeration(state, page, { from, to }))
+  const counts = useQueueStatusCounts(queue.data?.counts, Boolean(queue.error))
+  return <AdminShell activeHref="/reviews"><div className="mp-moderation-workspace">
+    <PageHeader eyebrow="Compliance & quality" title="Review Moderation" description="Review reported feedback, inspect supporting evidence, and record a reasoned decision." actions={<Button variant="secondary" disabled={queue.loading} onClick={() => void queue.retry()}><RefreshCw size={16} aria-hidden="true" />{queue.loading && queue.data ? 'Refreshing…' : 'Refresh queue'}</Button>} />
+
+    <FilterTabs appearance="chips" label="Moderation queue" value={state} chips={QUEUE_STATES.map(item => ({ ...item, count: counts[item.value] }))} onChange={value => change({ state: value, page: '' })} />
+    <FilterPanel compact label="Moderation filters" footer={<div className="mp-filter-date"><span>Review submission dates</span><DateFilter title="Review submission dates" value={range} onChange={value => change({ ...dateRangePatch(value), page: '' })} /></div>} />
+    <section className="min-w-0 overflow-hidden mp-card" aria-labelledby="moderation-queue-title">
+      <div className="mp-moderation-queue-header">
+        <div className="min-w-0 max-w-2xl"><div className="flex flex-wrap items-center gap-3"><h2 id="moderation-queue-title">{label}</h2>{queue.data && <StatusBadge label={`${queue.data.total.toLocaleString()} ${queue.data.total === 1 ? 'review' : 'reviews'}`} />}</div><p>{copy.description}</p></div>
+        <span role="status" className="text-xs leading-5 text-text-secondary">{queue.loading ? queue.data ? 'Updating queue…' : 'Loading queue…' : queue.data ? `${queue.data.items.length} shown · Page ${page}` : 'Queue unavailable'}</span>
       </div>
-      {queue.error ? <div className="p-6"><ErrorState message={queue.error} onRetry={queue.retry} /></div> : !queue.data ? <div className="p-6"><LoadingState /></div> : queue.data.items.length === 0 ? <div role="status" className="flex min-h-72 flex-col items-center justify-center gap-4 px-6 py-12 text-center">
-        <span className="grid h-14 w-14 place-items-center rounded-full border border-border-default bg-surface-canvas text-text-secondary">{state === 'NEEDS_ACTION' && !from && !to ? <CheckCircle2 size={26} aria-hidden="true" /> : <Inbox size={26} aria-hidden="true" />}</span>
-        <div className="max-w-md"><h3 className="text-base font-semibold">{from || to ? 'No reviews in this date range' : page > 1 ? 'No reviews on this page' : copy.empty}</h3><p className="mt-2 text-sm leading-6 text-text-secondary">{from || to ? 'Try another submission date range or reset dates to see the full queue.' : page > 1 ? 'The queue may have changed. Return to the first page to see the latest reviews.' : copy.hint}</p></div>
-        {from || to ? <Button variant="secondary" onClick={resetDates}>View all dates</Button> : page > 1 ? <Button variant="secondary" onClick={() => change({ page: '' })}>Return to first page</Button> : state !== 'ALL' && <Button variant="secondary" onClick={() => change({ state: 'ALL', page: '' })}>Browse all reviews<ArrowRight size={16} aria-hidden="true" /></Button>}
+      <div className="mp-moderation-queue-state" aria-busy={queue.loading}>
+      {queue.error ? <div className="p-5"><ErrorState message={queue.error} onRetry={queue.retry} /></div> : !queue.data ? <ModerationLoadingState /> : queue.data.items.length === 0 ? <div role="status" className="mp-moderation-empty">
+        <span className="grid h-11 w-11 place-items-center rounded-full border border-border-default bg-surface-canvas text-text-secondary">{state === 'NEEDS_ACTION' && !from && !to ? <CheckCircle2 size={22} aria-hidden="true" /> : <Inbox size={22} aria-hidden="true" />}</span>
+        <div className="max-w-md"><h3 className="text-sm font-semibold">{page > 1 ? 'No reviews on this page' : from || to ? 'No reviews in this date range' : copy.empty}</h3><p className="mt-1 text-sm leading-6 text-text-secondary">{page > 1 ? 'The queue may have changed. Return to the first page to see the latest reviews.' : from || to ? 'Try another submission date range in the date filter to see more reviews.' : copy.hint}</p></div>
+        {page > 1 ? <Button variant="secondary" onClick={() => change({ page: '' })}>Return to first page</Button> : state !== 'ALL' && <Button variant="secondary" onClick={() => change({ state: 'ALL', page: '' })}>Browse all reviews<ArrowRight size={16} aria-hidden="true" /></Button>}
       </div> : <ul aria-label="Reviews in this queue" className="divide-y divide-border-default">{queue.data.items.map(row => {
         const Icon = reviewTypeIcon(row.type)
-        return <li key={row.id} className="grid min-w-0 gap-4 p-5 sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(11rem,14rem)] lg:gap-6">
+        return <li key={row.id} className="mp-moderation-queue-row">
           <div className="flex min-w-0 items-start gap-3"><span className="grid h-11 w-11 shrink-0 place-items-center rounded-control border border-border-default bg-surface-canvas text-text-secondary"><Icon size={21} aria-hidden="true" /></span>
-            <div className="min-w-0 space-y-2"><p className="text-xs font-medium text-text-secondary">{reviewTypeLabel(row.type)}</p><Link className="inline-flex min-h-11 max-w-full items-center break-words text-base font-semibold text-text-strong underline-offset-4 hover:text-action-primary hover:underline" to={`/reviews/${row.id}${context}`}>{row.storeName}</Link><p className="break-words text-sm text-text-secondary">{row.type === 'BUYER' ? 'Submitted by' : 'Buyer'}: {row.displayName} · Order {row.orderReference}</p><ReviewRatingSummary ratings={row.ratings} />{row.comment && <p className="line-clamp-2 whitespace-pre-wrap break-words text-sm leading-6">{row.comment}</p>}<p className="text-xs leading-5 text-text-secondary">Submitted <ModerationTime value={row.submittedAt} /></p></div>
+            <div className="min-w-0 space-y-2"><p className="text-xs font-medium text-text-secondary">{reviewTypeLabel(row.type)}</p><Link className="inline-flex min-h-11 max-w-full items-center break-words text-sm font-semibold text-text-strong underline-offset-4 hover:text-action-primary hover:underline" to={`/reviews/${row.id}${context}`}>{row.storeName}</Link><p className="break-words text-xs leading-5 text-text-secondary">{row.type === 'BUYER' ? 'Submitted by' : 'Buyer'}: {row.displayName} · Order {row.orderReference}</p><ReviewRatingSummary ratings={row.ratings} compact />{row.comment && <p className="line-clamp-2 whitespace-pre-wrap break-words text-sm leading-6">{row.comment}</p>}<p className="text-xs leading-5 text-text-secondary">Submitted <ModerationTime value={row.submittedAt} /></p>{row.updatedAt && <p className="text-xs leading-5 text-text-secondary">Updated <ModerationTime value={row.updatedAt} /></p>}</div>
           </div>
           <div className="flex min-w-0 flex-wrap items-center justify-between gap-3 lg:flex-col lg:items-end lg:justify-start"><ModerationStatus state={row.moderationState} />{row.openFlags > 0 ? <span className="inline-flex items-center gap-1.5 text-xs font-medium"><Flag size={14} aria-hidden="true" />{row.openFlags} open {row.openFlags === 1 ? 'report' : 'reports'}</span> : <span className="text-xs text-text-secondary">No open reports</span>}<Link to={`/reviews/${row.id}${context}`} aria-label={`View ${reviewTypeLabel(row.type).toLowerCase()} by ${row.displayName} for ${row.orderReference}`} className="inline-flex min-h-11 items-center gap-2 rounded-control px-3 text-sm font-semibold text-action-primary hover:bg-surface-canvas">View review<ArrowRight size={16} aria-hidden="true" /></Link></div>
         </li>
       })}</ul>}
+      </div>
       {queue.data && queue.data.total > (queue.data.perPage ?? 20) && <div className="px-5 py-4 sm:px-6"><Pager page={page} lastPage={Math.max(1, Math.ceil(queue.data.total / (queue.data.perPage ?? 20)))} total={queue.data.total} onChange={value => change({ page: String(value) })} /></div>}
     </section>
     <p className="flex items-start gap-2 text-xs leading-5 text-text-secondary"><ShieldCheck size={16} className="mt-0.5 shrink-0" aria-hidden="true" />Every decision requires a reason. Original content and decision history are preserved; Vendors cannot remove reviews.</p>
@@ -446,14 +428,15 @@ function ModerationDetailPage({ reviewId, back }: { reviewId: string; back: stri
   const submittedAt = moderationDate(revisions[0]?.created_at ?? revisions[0]?.createdAt)
   const type = data?.type === 'PRODUCT' || data?.type === 'VENDOR' || data?.type === 'BUYER' ? data.type : undefined
   const review: ReviewPresentationRow = { ...(type ? { type } : {}), ...(data?.ratings ? { ratings: data.ratings } : {}), ...(data?.comment ? { comment: data.comment } : {}), displayName: data?.displayName || 'Author unavailable', verifiedPurchase: true, ...(submittedAt ? { submittedAt } : {}), edited: revisions.length > 1, media: data?.media ?? [] }
-  return <AdminShell activeHref="/reviews"><div className="mx-auto max-w-[1440px] space-y-6">
-    <Link className="inline-flex min-h-11 items-center gap-2 rounded-control text-sm font-semibold text-action-primary underline-offset-4 hover:underline" to={back}><ArrowLeft size={17} aria-hidden="true" />Review Moderation</Link>
-    {detail.error ? <ErrorState message={detail.error} onRetry={detail.retry} /> : !data ? <LoadingState /> : <>
+  return <AdminShell activeHref="/reviews"><div className="mp-moderation-workspace">
+    <BackNavigation><Link to={back}>Review Moderation</Link></BackNavigation>
+    {detail.error ? <ErrorState message={detail.error} onRetry={detail.retry} /> : !data ? <ModerationLoadingState detail /> : <>
       <PageHeader eyebrow="Review Moderation" title={reviewTypeLabel(data.type)} description={`${data.displayName || 'Author unavailable'} · ${storeName}`} actions={<ModerationStatus state={data.moderationState} />} />
+      <nav aria-label="Review sections" className="mp-moderation-detail-nav"><a href="#review-evidence">Review & evidence</a><a href="#review-reports">Reports ({flags.length})</a><a href="#review-decision">Decision</a><a href="#review-history">Moderation history</a><a href="#review-revisions">Revisions ({revisions.length})</a></nav>
       {message && <StatusMessage tone={message.tone}>{message.text}</StatusMessage>}
-      <div className="grid min-w-0 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,24rem)]">
-        <div className="min-w-0 space-y-6">
-          <ReviewDetailContent review={review} apiBasePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} onRefreshMedia={() => void refresh()} refreshingMedia={refreshing || busy} />
+      <div className="mp-moderation-detail-grid">
+        <div id="review-evidence" className="mp-moderation-detail-column">
+          <ReviewDetailContent compact review={review} apiBasePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} onRefreshMedia={() => void refresh()} refreshingMedia={refreshing || busy} />
           <Panel id="review-reports" title="Reports" description="Reasons submitted for moderation, including resolved reports.">
             {flags.length === 0 ? <p className="text-sm leading-6 text-text-secondary">No reports have been submitted for this review.</p> : <ul className="divide-y divide-border-default">{flags.map((flag, index) => <li key={stringValue(flag.id, String(index))} className="space-y-2 py-4 first:pt-0 last:pb-0">
               <div className="flex flex-wrap items-start justify-between gap-2"><h3 className="inline-flex items-center gap-2 text-sm font-semibold"><Flag size={16} aria-hidden="true" />{statusLabel(stringValue(flag.reason_code ?? flag.reasonCode, 'Reason unavailable'))}</h3><StatusBadge label={statusLabel(stringValue(flag.state, 'Unknown'))} tone={flag.state === 'OPEN' ? 'warning' : 'neutral'} /></div>
@@ -461,18 +444,18 @@ function ModerationDetailPage({ reviewId, back }: { reviewId: string; back: stri
             </li>)}</ul>}
           </Panel>
         </div>
-        <div className="min-w-0 space-y-6 xl:row-span-2">
+        <div className="mp-moderation-detail-column mp-moderation-detail-rail">
           <Panel id="review-context" title="Review context" actions={<ShieldCheck size={20} className="text-text-secondary" aria-hidden="true" />}>
             <FactList columns={1} facts={[{ label: 'Verified purchase', value: orderReference }, { label: 'Store', value: storeName }, { label: 'Public visibility', value: VISIBILITY_LABELS[data.visibility ?? ''] ?? 'Visibility unavailable' }, { label: 'Author display rule', value: data.authorDisplayRule ?? 'Not recorded' }, { label: 'Related dispute', value: dispute.reference ? <span>{stringValue(dispute.reference)}{dispute.status ? <span className="mt-1 block text-xs text-text-secondary">{statusLabel(stringValue(dispute.status))}</span> : null}</span> : 'No related dispute' }]} />
           </Panel>
-          {(data.availableActions ?? []).length > 0 ? <ReasonedDecisionForm key={data.lockVersion ?? 1} title="Record a decision" target={`${reviewTypeLabel(data.type)} · ${orderReference}`} version={data.lockVersion ?? null} submitLabel="Record decision" variant={action === 'REMOVE' ? 'danger' : 'primary'} maxReason={2000} busy={busy || refreshing} submitDisabled={!action} onSubmit={reason => void submit(reason)}>
+          <div id="review-decision" className="min-w-0">{(data.availableActions ?? []).length > 0 ? <ReasonedDecisionForm key={data.lockVersion ?? 1} title="Record a decision" target={`${reviewTypeLabel(data.type)} · ${orderReference}`} version={data.lockVersion ?? null} submitLabel="Record decision" variant={action === 'REMOVE' ? 'danger' : 'primary'} maxReason={2000} busy={busy || refreshing} submitDisabled={!action} onSubmit={reason => void submit(reason)}>
             <p className="text-sm leading-6 text-text-secondary">Choose the action supported by the evidence. The reason is required and kept in the audit history.</p>
             <label className="grid gap-2 text-sm font-semibold">Decision<select className={control} value={action} disabled={busy || refreshing} onChange={event => { setAction(event.target.value as ModerationAction); setMessage(null) }}><option value="">Choose a decision</option>{(data.availableActions ?? []).map(value => <option key={value} value={value}>{ACTION_LABELS[value] ?? value}</option>)}</select></label>
             {action && <p role="status" className="border-l-2 border-action-primary pl-3 text-sm leading-6">{ACTION_EFFECTS[action]}</p>}
-          </ReasonedDecisionForm> : <Panel id="review-decision-status" title="Decision status" actions={<ClipboardCheck size={20} aria-hidden="true" />}><p className="text-sm leading-6 text-text-secondary">{data.moderationState === 'REMOVED' ? 'This review has been removed. The decision is final; its original content and history remain available for audit.' : 'No moderation actions are available for this review.'}</p></Panel>}
+          </ReasonedDecisionForm> : <Panel id="review-decision-status" title="Decision status" actions={<ClipboardCheck size={20} aria-hidden="true" />}><p className="text-sm leading-6 text-text-secondary">{data.moderationState === 'REMOVED' ? 'This review has been removed. The decision is final; its original content and history remain available for audit.' : 'No moderation actions are available for this review.'}</p></Panel>}</div>
           <Button variant="secondary" disabled={busy || refreshing} onClick={() => void refresh()} className="w-full">{refreshing ? 'Refreshing…' : 'Refresh review'}</Button>
         </div>
-        <div className="min-w-0 space-y-6 xl:col-start-1">
+        <div className="mp-moderation-detail-column">
           <Panel id="review-history" title="Moderation history" description="Recorded reports and Admin decisions, in chronological order.">
             <EventTimeline label="Moderation history" events={history.filter(entry => moderationDate(entry.at)).map((entry, index) => ({ id: String(index), title: ACTION_LABELS[stringValue(entry.action)] ?? statusLabel(stringValue(entry.action)), at: moderationDate(entry.at)!, actor: MODERATION_ACTORS[stringValue(entry.actor_role ?? entry.actorRole)] ?? statusLabel(stringValue(entry.actor_role ?? entry.actorRole)), detail: <div className="space-y-1">{entry.from_state && entry.to_state ? <p className="text-xs text-text-secondary">{MODERATION_STATUSES[stringValue(entry.from_state)]?.label ?? statusLabel(stringValue(entry.from_state))} → {MODERATION_STATUSES[stringValue(entry.to_state)]?.label ?? statusLabel(stringValue(entry.to_state))}</p> : null}{stringValue(entry.reason) && <p className="whitespace-pre-wrap leading-6">{entry.action === 'FLAG_RAISED' ? statusLabel(stringValue(entry.reason)) : stringValue(entry.reason)}</p>}</div> }))} formatDate={formatManilaDateTime} empty="No moderation decisions have been recorded." />
           </Panel>

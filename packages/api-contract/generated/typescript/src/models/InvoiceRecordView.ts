@@ -13,6 +13,13 @@
  */
 
 import { mapValues, parseDate, parseDateTime, serializeDate, serializeDateTime } from '../runtime';
+import type { InvoiceOrderSummary } from './InvoiceOrderSummary';
+import {
+    InvoiceOrderSummaryFromJSON,
+    InvoiceOrderSummaryFromJSONTyped,
+    InvoiceOrderSummaryToJSON,
+    InvoiceOrderSummaryToJSONTyped,
+} from './InvoiceOrderSummary';
 import type { DisputeFileLink } from './DisputeFileLink';
 import {
     DisputeFileLinkFromJSON,
@@ -139,6 +146,26 @@ export interface InvoiceRecordView {
      *
      */
     lastDownloadAt?: Date;
+    /**
+     *
+     */
+    fileName?: string | null;
+    /**
+     *
+     */
+    contentType?: string | null;
+    /**
+     *
+     */
+    fileSizeBytes?: number | null;
+    /**
+     *
+     */
+    sentAt?: Date | null;
+    /**
+     *
+     */
+    orderSummary?: InvoiceOrderSummary;
 }
 
 
@@ -257,6 +284,11 @@ export function InvoiceRecordViewFromJSONTyped(json: any, ignoreDiscriminator: b
         'vendorName': json['vendor_name'] == null ? undefined : json['vendor_name'],
         'downloads': json['downloads'] == null ? undefined : json['downloads'],
         'lastDownloadAt': json['last_download_at'] == null ? undefined : (parseDateTime(json['last_download_at'])),
+        'fileName': json['file_name'] === undefined ? undefined : json['file_name'] === null ? null : json['file_name'],
+        'contentType': json['content_type'] === undefined ? undefined : json['content_type'] === null ? null : json['content_type'],
+        'fileSizeBytes': json['file_size_bytes'] === undefined ? undefined : json['file_size_bytes'] === null ? null : json['file_size_bytes'],
+        'sentAt': json['sent_at'] === undefined ? undefined : json['sent_at'] === null ? null : (parseDateTime(json['sent_at'])),
+        'orderSummary': json['order_summary'] == null ? undefined : InvoiceOrderSummaryFromJSON(json['order_summary']),
     };
 }
 
@@ -299,6 +331,11 @@ export function InvoiceRecordViewToJSONTyped(value?: InvoiceRecordView | null, i
         'vendor_name': value['vendorName'],
         'downloads': value['downloads'],
         'last_download_at': value['lastDownloadAt'] == null ? value['lastDownloadAt'] : serializeDateTime(value['lastDownloadAt']),
+        'file_name': value['fileName'],
+        'content_type': value['contentType'],
+        'file_size_bytes': value['fileSizeBytes'],
+        'sent_at': value['sentAt'] == null ? value['sentAt'] : serializeDateTime(value['sentAt']),
+        'order_summary': InvoiceOrderSummaryToJSON(value['orderSummary']),
     };
 }
 

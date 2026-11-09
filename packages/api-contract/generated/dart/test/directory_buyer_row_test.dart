@@ -48,5 +48,16 @@ void main() {
       // TODO
     });
 
+    // BuyerRatingSummary rating
+    test('to test the property `rating`', () async {
+      // TODO
+    });
+
+    // Short-lived viewer-bound URL for the authenticated private Buyer photo endpoint. Null when absent or the Buyer is deleted.
+    // String avatarUrl
+    test('to test the property `avatarUrl`', () async {
+      // TODO
+    });
+
   });
 }

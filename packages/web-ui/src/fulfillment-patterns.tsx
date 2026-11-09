@@ -25,17 +25,17 @@ export function MilestoneStepper({ steps, label = 'Fulfillment milestones', rend
       const last = index === steps.length - 1
       const Icon = step.status === 'COMPLETE' ? CheckCircle2 : step.status === 'CURRENT' ? CircleDot : Circle
       const tone = step.status === 'COMPLETE' ? 'text-green-800' : step.status === 'CURRENT' ? 'text-action-primary' : 'text-text-secondary'
-      return <li key={step.key} className="relative grid min-w-0 grid-cols-[2rem_minmax(0,1fr)] gap-x-3" aria-current={step.status === 'CURRENT' ? 'step' : undefined}>
+      return <li key={step.key} className="relative grid min-w-0 grid-cols-[1.5rem_minmax(0,1fr)] gap-x-3" aria-current={step.status === 'CURRENT' ? 'step' : undefined}>
         <span className="relative flex justify-center" aria-hidden="true">
-          <Icon size={22} className={`relative z-10 mt-0.5 bg-surface-primary ${tone}`} />
-          {!last && <span className={`absolute bottom-0 top-7 w-px ${step.status === 'COMPLETE' ? 'bg-green-700' : 'bg-border-default'}`} />}
+          <Icon size={20} className={`relative z-10 mt-0.5 shrink-0 bg-surface-primary ${tone}`} />
+          {!last && <span className={`absolute bottom-0 top-6 w-px ${step.status === 'COMPLETE' ? 'bg-green-700' : 'bg-border-default'}`} />}
         </span>
-        <div className={`grid min-w-0 gap-1 ${last ? '' : 'pb-6'}`}>
-          <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-            <p className={`font-semibold ${step.status === 'UPCOMING' ? 'text-text-secondary' : 'text-text-strong'}`}>{step.label}</p>
-            <span className={`text-xs font-semibold ${tone}`}>{stepStatusText[step.status]}</span>
+        <div className={`grid min-w-0 content-start gap-1.5 ${last ? '' : 'pb-5'}`}>
+          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+            <p className={`min-w-0 break-words text-sm font-semibold ${step.status === 'UPCOMING' ? 'text-text-secondary' : 'text-text-strong'}`}>{step.label}</p>
+            <span className={`rounded-full bg-surface-canvas px-2 py-0.5 text-xs font-medium ${tone}`}>{stepStatusText[step.status]}</span>
           </div>
-          {step.at && <p className="text-sm text-text-secondary"><time dateTime={step.at.toISOString()}>{formatManilaDateTime(step.at)}</time>{step.actorRole ? ` · ${roleLabel(step.actorRole)}` : ''}</p>}
+          {step.at && <p className="break-words text-xs leading-5 text-text-secondary"><time dateTime={step.at.toISOString()}>{formatManilaDateTime(step.at)}</time>{step.actorRole ? ` · ${roleLabel(step.actorRole)}` : ''}</p>}
           {showProofRequirements && step.proofRequired && step.status !== 'COMPLETE' && <p className="text-xs text-text-secondary">Proof required: {step.proofRequirements.map(proofText).join(', ')}.</p>}
           {step.proof && renderProof?.(step)}
           {renderStepContent?.(step)}
@@ -100,7 +100,7 @@ export function RefundTimeline({ timeline, audience, onRetry, retryingId, onAckn
         <p className="text-sm text-text-secondary">{refund.message}</p>
         <dl className="grid gap-x-6 gap-y-1 text-sm sm:grid-cols-2">
           <Row label="Original payment" value={`${purposeText[refund.paymentPurpose] ?? refund.paymentPurpose} · ${refund.originalMethod}`} />
-          {refund.processingFeeCentavos > 0 && <Row label="Includes processing fee" value={formatPesoCentavos(refund.processingFeeCentavos)} />}
+          {refund.processingFeeCentavos > 0 && <Row label="Includes e-wallet transaction fee" value={formatPesoCentavos(refund.processingFeeCentavos)} />}
           {refund.requestedAt && <Row label="Initiated" value={formatManilaDateTime(refund.requestedAt)} />}
           {refund.completedAt && <Row label="Processed" value={formatManilaDateTime(refund.completedAt)} />}
           {refund.attemptNumber > 1 && <Row label="Attempt" value={String(refund.attemptNumber)} />}

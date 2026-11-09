@@ -6,6 +6,10 @@
 
 Name | Type
 ------------ | -------------
+`ratingComponents` | { [key: string]: any; }
+`completedOrders` | { [key: string]: any; }
+`ohsCalculatedOn` | Date
+`nextOhsRecalculationOn` | Date
 `vendorId` | string
 `storeName` | string
 `calculated` | boolean
@@ -29,6 +33,10 @@ import type { AdminScoreDetail } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "ratingComponents": null,
+  "completedOrders": null,
+  "ohsCalculatedOn": null,
+  "nextOhsRecalculationOn": null,
   "vendorId": null,
   "storeName": null,
   "calculated": null,

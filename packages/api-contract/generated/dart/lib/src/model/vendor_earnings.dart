@@ -17,7 +17,7 @@ part 'vendor_earnings.g.dart';
 /// * [demo]
 /// * [environment]
 /// * [notice]
-/// * [commercialSalesCentavos] - Latest financial-snapshot total (materials after vendor discount, VAT included, plus delivery) of orders accepted in the range, leaving out declined, expired, cancelled and unconfirmed orders and orders whose payment was fully refunded. The Dashboard's Product sales value uses the same rule.
+/// * [commercialSalesCentavos] - Net sales, matching Vendor Dashboard net_sales_centavos and Admin net merchandise value: confirmed order value less completed principal refunds and confirmed cash reimbursements; cancelled and fully refunded sales contribute zero. Uses the first CONFIRMED timestamp, falling back to accepted_at then created_at for historical confirmed orders. Buyer processing fees are excluded. Product values plus delivery less breakdown.sales.refunds_centavos equal this total.
 /// * [includedVatCentavos]
 /// * [onlineCollectionsCentavos] - Verified online principal less confirmed refunded principal, attributed to the original payment date; fully refunded principal contributes zero.
 /// * [onlineRefundsCentavos] - Confirmed online refunds, including their refunded Buyer fees, attributed to the original payment date. Pending and failed refunds do not reduce collections.
@@ -45,7 +45,7 @@ abstract class VendorEarnings implements Built<VendorEarnings, VendorEarningsBui
   @BuiltValueField(wireName: r'notice')
   String get notice;
 
-  /// Latest financial-snapshot total (materials after vendor discount, VAT included, plus delivery) of orders accepted in the range, leaving out declined, expired, cancelled and unconfirmed orders and orders whose payment was fully refunded. The Dashboard's Product sales value uses the same rule.
+  /// Net sales, matching Vendor Dashboard net_sales_centavos and Admin net merchandise value: confirmed order value less completed principal refunds and confirmed cash reimbursements; cancelled and fully refunded sales contribute zero. Uses the first CONFIRMED timestamp, falling back to accepted_at then created_at for historical confirmed orders. Buyer processing fees are excluded. Product values plus delivery less breakdown.sales.refunds_centavos equal this total.
   @BuiltValueField(wireName: r'commercial_sales_centavos')
   int get commercialSalesCentavos;
 

@@ -1,3 +1,4 @@
+import '../../design_system/components/async_state.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -148,7 +149,7 @@ class _NotificationSettingsScreenState
                 style: textTheme.bodyMedium?.copyWith(color: BuyerTheme.muted),
               ),
               const SizedBox(height: 16),
-              if (_loading) const LinearProgressIndicator(),
+              if (_loading) const BuyerLoadingProgress(),
               if (_error != null)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 8),

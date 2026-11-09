@@ -5,6 +5,7 @@ import '../../design_system/components/buyer_overlays.dart';
 import '../../design_system/components/buyer_app_bar.dart';
 import '../../design_system/components/procurement_components.dart';
 import '../../design_system/theme.dart';
+import '../../core/vendor_score_display.dart';
 import '../../widgets/auth_content.dart';
 import 'device_location.dart';
 import 'discovery_models.dart';
@@ -128,7 +129,7 @@ class _SavedLocationsScreenState extends State<SavedLocationsScreen> {
       child: _locations != null && _locations!.isEmpty && _error == null
           ? Column(
               children: [
-                if (_busy) const LinearProgressIndicator(),
+                if (_busy) const BuyerLoadingProgress(),
                 Expanded(
                   child: StatePage(
                     onRefresh: _load,
@@ -149,7 +150,7 @@ class _SavedLocationsScreenState extends State<SavedLocationsScreen> {
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
                 children: [
-                  if (_busy) const LinearProgressIndicator(),
+                  if (_busy) const BuyerLoadingProgress(),
                   if (_error != null) ...[
                     AuthNotice(message: _error!, isError: true),
                     TextButton(onPressed: _load, child: const Text('Retry')),
@@ -283,7 +284,7 @@ class _FavoriteSuppliersScreenState extends State<FavoriteSuppliersScreen> {
                 padding: const EdgeInsets.all(16),
                 children: [
                   if (_favorites == null && _error == null)
-                    const LinearProgressIndicator(),
+                    const BuyerLoadingProgress(),
                   if (_error != null) ...[
                     AuthNotice(message: _error!, isError: true),
                     TextButton(onPressed: _load, child: const Text('Retry')),
@@ -302,8 +303,11 @@ class _FavoriteSuppliersScreenState extends State<FavoriteSuppliersScreen> {
                       // A Directory Supplier is informational: no Store Profile or Message.
                       subtitle: Text(
                         favorite.isVerified
-                            ? '${favorite.scoreText} · ${favorite.currentlyDiscoverable ? 'Currently offering products' : 'No current eligible offerings'}'
+                            ? '${vendorScoreDisplayText(favorite.scoreText)} · ${favorite.currentlyDiscoverable ? 'Currently offering products' : 'No current eligible offerings'}'
                             : 'Directory Supplier · ${favorite.currentlyDiscoverable ? 'Find it on the Map for contact details' : 'Details return when it appears on the Map again'}',
+                        semanticsLabel: favorite.isVerified
+                            ? '${favorite.scoreText} · ${favorite.currentlyDiscoverable ? 'Currently offering products' : 'No current eligible offerings'}'
+                            : null,
                       ),
                       trailing:
                           widget.onOpenStore == null || !favorite.isVerified

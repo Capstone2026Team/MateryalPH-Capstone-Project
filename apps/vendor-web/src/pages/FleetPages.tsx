@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { AlertTriangle, CheckCircle2, CircleCheck, Truck, TruckElectric } from 'lucide-react'
-import { Button, ConflictBanner, DeliveryVehicles, VendorDeliverySetup, StatCard, InfoNote, EmptyState, StatusMessage, useAutomaticRefresh, type DeliveryVehicleDraft } from '@materyalph/web-ui'
+import { Button, StatCard, ConflictBanner, DeliveryVehicles, emptyDeliveryVehicle, VendorDeliverySetup, InfoNote, EmptyState, StatusMessage, useAutomaticRefresh, type DeliveryVehicleDraft, type VehicleCapacitySource } from '@materyalph/web-ui'
 import { apiFailure, fleetImageUrl, listFleet, readableInventoryError, saveFleet, uploadFleetImage, type FleetVehicle, type FleetVehicleListMeta } from '../lib/inventory-api'
 import { fleetFieldNames, fleetVehicleDraft, fleetVehiclePayload, vehicleErrors } from '../lib/delivery-vehicles'
 import { useOnboardingSnapshot } from '../lib/vendor-status'
 import { ErrorState, LoadingState, PageHeader, VendorShell } from './PhaseThreeVendorPages'
 import { storeName } from '../lib/catalog-access'
 import { watchConversation } from '../lib/messaging-api'
+import { loadFleetCapacitySources } from '../lib/fleet-capacity'
 
 const reasonText: Record<string, string> = {
   DELIVERY_NOT_ENABLED: 'Vendor Delivery is not enabled for your store', VEHICLE_DISABLED: 'Turned off for future deliveries', VEHICLE_UNAVAILABLE: 'Marked unavailable now',
@@ -25,17 +26,22 @@ function FleetSummaryPanel({ summary, dirty }: { summary: FleetVehicleListMeta['
   return <section aria-label="Fleet overview" className="space-y-4">
     {dirty && <p className="text-[13px] text-text-secondary">Showing saved counts. Save your changes to update them.</p>}
     {!summary && <StatusMessage>Fleet summary is temporarily unavailable. Updates will resume automatically.</StatusMessage>}
-    <dl className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <StatCard label="Total vehicles" value={count(summary?.totalVehicles)} hint={summary ? `${count(summary.configurations)} saved configurations, including disabled vehicles` : 'Saved fleet units'} icon={<Truck size={18} aria-hidden="true" />} />
-      <StatCard label="Active vehicles" value={count(summary?.activeVehicles)} hint="Enabled for future deliveries" icon={<CircleCheck size={18} aria-hidden="true" />} />
-      <StatCard label="Available vehicles" value={count(summary?.availableVehicles)} hint="Active vehicles marked available by your store" icon={<CheckCircle2 size={18} aria-hidden="true" />} />
-      <StatCard label="In use" value={count(summary?.outForDeliveryVehicleAssignments)} hint={summary ? `Vehicle assignments across ${count(summary.outForDeliveryOrders)} ${summary.outForDeliveryOrders === 1 ? 'order' : 'orders'} Out for Delivery` : 'Vehicle assignments on orders Out for Delivery'} icon={<TruckElectric size={18} aria-hidden="true" />} />
+    <dl className="grid grid-cols-2 gap-2 xl:grid-cols-4">
+      {[
+        { label: 'Total vehicles', value: summary?.totalVehicles, icon: Truck, hint: `${count(summary?.configurations)} configurations, including disabled vehicles` },
+        { label: 'Active vehicles', value: summary?.activeVehicles, icon: CircleCheck, hint: 'Enabled for future deliveries' },
+        { label: 'Available vehicles', value: summary?.availableVehicles, icon: CheckCircle2, hint: 'Active and marked available by your store' },
+        { label: 'In use', value: summary?.outForDeliveryVehicleAssignments, icon: TruckElectric, hint: `${count(summary?.outForDeliveryOrders)} ${summary?.outForDeliveryOrders === 1 ? 'order' : 'orders'} Out for Delivery. Counts assignments; a configuration can serve multiple deliveries.` },
+      ].map((item, index) => <StatCard compact key={item.label} label={item.label} value={count(item.value)} icon={<item.icon size={16} aria-hidden="true" />} hint={item.hint} active={index === 0} />)}
     </dl>
-    <InfoNote>You confirm vehicles, trips and the final fee before a Buyer accepts. Changes apply to future proposals; accepted orders keep their vehicle, rate and address. Availability is set by your store. In use counts each confirmed vehicle assignment; the same vehicle configuration may be assigned to more than one delivery.</InfoNote>
+    <InfoNote>You confirm vehicles, trips, site access and the fee before Buyer acceptance. Changes apply to future proposals; accepted orders keep their confirmed arrangement.</InfoNote>
   </section>
 }
 
 export function VendorFleetPage() {
+  const [params] = useSearchParams()
+  const requestedListing = params.get('listing') ?? ''
+  const requestedVariant = params.get('variant') ?? ''
   const { snapshot, loading: snapshotLoading, error: snapshotError, refresh } = useOnboardingSnapshot()
   const permissions = snapshot?.permissions ?? []
   const [saved, setSaved] = useState<FleetVehicle[]>([])
@@ -50,6 +56,13 @@ export function VendorFleetPage() {
   const [dirty, setDirty] = useState(false)
   const [attempt, setAttempt] = useState(0)
   const [editorRevision, setEditorRevision] = useState(0)
+  const [editing, setEditing] = useState(false)
+  const [initialEditorKey, setInitialEditorKey] = useState<string | null>(null)
+  const [capacitySources, setCapacitySources] = useState<VehicleCapacitySource[]>([])
+  const [capacityLoadedFor, setCapacityLoadedFor] = useState<string | null>(null)
+  const [capacityError, setCapacityError] = useState(false)
+  const [capacityAttempt, setCapacityAttempt] = useState(0)
+  const handledListing = useRef('')
   const pendingImages = useRef(new Set<string>())
   const currentEdit = useRef({ dirty, busy })
   currentEdit.current = { dirty, busy }
@@ -60,11 +73,31 @@ export function VendorFleetPage() {
   const [updateError, setUpdateError] = useState(false)
   const canManage = permissions.includes('vehicles.manage')
   const canView = permissions.includes('portal.vehicles')
+  const canReadCatalog = permissions.includes('catalog.manage')
+
+  useEffect(() => {
+    if (!canManage || !canReadCatalog) return
+    let active = true
+    setCapacityError(false)
+    loadFleetCapacitySources(requestedListing || undefined).then(sources => { if (active) { setCapacitySources(sources); setCapacityLoadedFor(requestedListing) } }).catch(() => { if (active) { setCapacitySources([]); setCapacityLoadedFor(null); setCapacityError(true) } })
+    return () => { active = false }
+  }, [canManage, canReadCatalog, requestedListing, capacityAttempt])
+  useEffect(() => {
+    const requestKey = `${requestedListing}:${requestedVariant}`
+    if (loading || !meta?.permissions.canManage || !canManage || !requestedListing || capacityLoadedFor !== requestedListing || !capacitySources.length || handledListing.current === requestKey) return
+    const source = capacitySources.find(item => item.id === requestedVariant) ?? capacitySources[0]!
+    const vehicle = { ...emptyDeliveryVehicle(), category: 'TRUCK', type: 'CONCRETE_MIXER', mixer: source.volumeM3, capacitySourceId: source.id, capacityReviewRequired: Boolean(source.volumeM3) }
+    handledListing.current = requestKey
+    currentEdit.current.dirty = true
+    setDrafts(current => [...current, vehicle]); setDirty(true); setInitialEditorKey(vehicle.key)
+  }, [loading, meta?.permissions.canManage, canManage, requestedListing, requestedVariant, capacitySources, capacityLoadedFor])
 
   const apply = useCallback((items: FleetVehicle[], nextMeta: FleetVehicleListMeta) => {
     revision.current += 1
     latestFleet.current = { items, meta: nextMeta }
     currentEdit.current.dirty = false
+    setInitialEditorKey(null)
+    setEditing(false)
     setSaved(items); setMeta(nextMeta); setDrafts(items.map(fleetVehicleDraft)); setErrors({}); setDirty(false)
     pendingImages.current.clear(); setEditorRevision(value => value + 1)
   }, [])
@@ -174,8 +207,17 @@ export function VendorFleetPage() {
     const changed = row && JSON.stringify(fleetVehiclePayload(draft)) !== JSON.stringify(fleetVehiclePayload(fleetVehicleDraft(row)))
     return [draft.key, changed ? <p key={draft.key} className="text-sm text-text-secondary">Unsaved changes. Delivery eligibility is checked when you save.</p> : row ? <Eligibility key={draft.key} vehicle={row} /> : null]
   }))
+  const feedback = <>
+    {conflict && <ConflictBanner title="A vehicle changed while you were editing" useCurrentLabel="Reload saved vehicles" onUseCurrent={() => { setConflict(false); setAttempt(value => value + 1) }}><p>Another person saved a vehicle. Reload the saved configuration, then reapply your changes.</p></ConflictBanner>}
+    {notice && <StatusMessage tone={notice.tone}>{notice.text}</StatusMessage>}
+  </>
+  const actions = canManage && dirty ? <>
+    <Button disabled={busy} onClick={() => void save()}>{busy ? 'Saving…' : 'Save vehicles'}</Button>
+    <Button variant="secondary" disabled={busy} onClick={() => { const latest = latestFleet.current; apply(latest?.items ?? saved, latest?.meta ?? meta as FleetVehicleListMeta); setNotice(null); setConflict(false) }}>Discard changes</Button>
+    <span className="text-sm text-text-secondary" role="status">Unsaved changes</span>
+  </> : null
 
-  return shell(<div className="space-y-6">
+  return shell(<div className="space-y-4">
     {header}
     {loading ? <LoadingState label="Loading vehicles…" />
       : error ? <ErrorState message={error} onRetry={() => setAttempt(value => value + 1)} />
@@ -184,24 +226,19 @@ export function VendorFleetPage() {
             <FleetSummaryPanel summary={meta?.summary} dirty={dirty} />
             {updateError && <StatusMessage>Automatic updates are temporarily unavailable. Showing the last saved fleet; retrying automatically.</StatusMessage>}
             {deliveryOff && <StatusMessage>Vendor Delivery is not enabled for your store, so saved vehicles are kept but not offered. Change the fulfillment method in <Link className="font-semibold underline" to="/store-profile">Store Profile</Link>.</StatusMessage>}
-            {conflict && <ConflictBanner title="A vehicle changed while you were editing" useCurrentLabel="Reload saved vehicles" onUseCurrent={() => { setConflict(false); setAttempt(value => value + 1) }}>
-              <p>Another person saved a vehicle after you opened this page. Nothing was overwritten. Reload to see the saved configuration, then reapply your change.</p>
-            </ConflictBanner>}
-            {notice && <StatusMessage tone={notice.tone}>{notice.text}</StatusMessage>}
+            {!editing && feedback}
+            {capacityError && <StatusMessage>Listing-based capacity suggestions could not load. Enter the actual truck values, or <button type="button" className="min-h-11 font-semibold underline" onClick={() => setCapacityAttempt(value => value + 1)}>Retry listing suggestions</button>.</StatusMessage>}
+            {requestedListing && !canReadCatalog && <StatusMessage>Your role cannot read this listing. Enter the actual vehicle capacity manually.</StatusMessage>}
+            {requestedListing && canReadCatalog && <Link className="inline-flex min-h-11 items-center text-sm font-semibold underline" to={`/products/${encodeURIComponent(requestedListing)}?step=1`}>Return to the ready-mix listing</Link>}
             {canManage && <VendorDeliverySetup hideWhenReady method={meta?.delivery?.fulfillmentMethod ?? ''} state={meta?.deliverySetup}
               staffAction={<Link to="/team" className="inline-flex min-h-11 items-center text-action-primary underline">Manage Fulfillment Staff</Link>}
               activationAction={<Link to="/store-profile" className="inline-flex min-h-11 items-center text-action-primary underline">Open Fulfillment Configuration</Link>} />}
             {!canManage && <StatusMessage>You can view vehicles. Only the Owner or Store Manager can change vehicle configuration, fees or capacity.</StatusMessage>}
-            <DeliveryVehicles key={editorRevision} operational disabled={!canManage || busy} vehicles={drafts} errors={errors} notices={notices} coverageKm={meta?.delivery?.serviceRadiusKm ?? 50}
+            <DeliveryVehicles resetEditorRevision={editorRevision} onEditorChange={setEditing} initialEditorKey={initialEditorKey} editorActions={actions} editorFeedback={feedback} capacitySources={capacitySources} operational disabled={!canManage || busy} vehicles={drafts} errors={errors} notices={notices} coverageKm={meta?.delivery?.serviceRadiusKm ?? 50}
               onChange={next => { currentEdit.current.dirty = true; setDrafts(next); setDirty(true) }}
-              onImagePending={(key, pending) => { if (pending) pendingImages.current.add(key); else pendingImages.current.delete(key) }}
+              onImagePending={(key, pending) => { if (pending) { pendingImages.current.add(key); currentEdit.current.dirty = true; setDirty(true) } else pendingImages.current.delete(key) }}
               uploadImage={async file => { try { return await uploadFleetImage(file) } catch (cause) { throw new Error(await readableInventoryError(cause)) } }}
               resolveImage={fleetImageUrl} />
-            {canManage && dirty && <div className="sticky bottom-0 z-10 flex flex-wrap items-center gap-3 border-t border-border-default bg-surface-canvas py-4">
-              <Button disabled={busy || !dirty} onClick={() => void save()}>{busy ? 'Saving…' : 'Save vehicles'}</Button>
-              <Button variant="secondary" disabled={busy || !dirty} onClick={() => { const latest = latestFleet.current; apply(latest?.items ?? saved, latest?.meta ?? meta as FleetVehicleListMeta); setNotice(null) }}>Discard changes</Button>
-              {dirty && <span className="text-sm text-text-secondary" role="status">Unsaved changes</span>}
-            </div>}
           </>}
   </div>)
 }

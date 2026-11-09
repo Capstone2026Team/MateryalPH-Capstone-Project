@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api;
 
 use App\Domain\Finance\AdminFinanceService;
+use App\Domain\Finance\CommissionEmails;
 use App\Domain\Finance\CommissionPolicyService;
 use App\Domain\Finance\WithholdingThresholdEngine;
 use App\Http\ApiResponse;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Finance\PublishCommissionPolicyRequest;
+use App\Http\Requests\Finance\UpdateStatementInvoiceRequest;
 use App\Support\PortalDateRange;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -26,16 +29,41 @@ final class AdminFinanceController extends Controller
         $input = $request->validate(['page' => ['sometimes', 'integer', 'between:1,1000']]);
         $result = $policies->index($request, (int) ($input['page'] ?? 1));
 
-        return ApiResponse::success($result['data'], $result['meta']);
+        return ApiResponse::success($result['data'], $result['meta'])->header('Cache-Control', 'no-store');
     }
 
-    public function publishCommissionPolicy(Request $request, CommissionPolicyService $policies): JsonResponse
+    public function publishCommissionPolicy(PublishCommissionPolicyRequest $request, CommissionPolicyService $policies): JsonResponse
     {
-        $input = $request->validate(['commission_basis_points' => ['required', 'integer', 'between:0,10000'],
-            'expected_version' => ['required', 'integer', 'min:0'], 'effective_from' => ['nullable', 'date'], 'reason' => ['required', 'string', 'min:10', 'max:2000']]);
+        return ApiResponse::success($policies->publish($request, $request->validated()));
+    }
 
-        /** @var array{commission_basis_points: int, expected_version: int, effective_from?: ?string, reason: string} $input */
-        return ApiResponse::success($policies->publish($request, $input));
+    public function previewCommissionPolicy(PublishCommissionPolicyRequest $request, CommissionPolicyService $policies): JsonResponse
+    {
+        return ApiResponse::success($policies->preview($request, $request->validated()));
+    }
+
+    public function publicCommissionPolicy(Request $request, CommissionPolicyService $policies): JsonResponse
+    {
+        $input = $request->validate(['policy' => ['nullable', 'uuid']]);
+
+        return ApiResponse::success($policies->publicPolicy($input['policy'] ?? null))->header('Cache-Control', 'no-store');
+    }
+
+    public function resendCommissionEmail(Request $request, string $eventId, CommissionEmails $emails): JsonResponse
+    {
+        return ApiResponse::success($emails->resend($request, $eventId));
+    }
+
+    public function resendFailedCommissionEmails(Request $request, string $policyId, CommissionEmails $emails): JsonResponse
+    {
+        return ApiResponse::success($emails->resendFailed($request, $policyId));
+    }
+
+    public function statement(Request $request, string $statementId): JsonResponse
+    {
+        $input = $request->validate(['page' => ['sometimes', 'integer', 'between:1,1000'], 'payments_page' => ['sometimes', 'integer', 'between:1,1000']]);
+
+        return ApiResponse::success($this->finance->statement($request, $statementId, $input));
     }
 
     public function payments(Request $request): JsonResponse
@@ -46,6 +74,21 @@ final class AdminFinanceController extends Controller
             'page' => ['sometimes', 'integer', 'between:1,1000']] + PortalDateRange::rules($request));
 
         return $this->paged($this->finance->payments($request, $filters));
+    }
+
+    public function commissionTransactions(Request $request): JsonResponse
+    {
+        $filters = $request->validate(['page' => ['sometimes', 'integer', 'between:1,1000'], 'search' => ['sometimes', 'string', 'max:120'], 'statuses' => ['sometimes', 'string', 'max:160'], 'status' => ['sometimes', Rule::in(AdminFinanceService::COMMISSION_PAYMENT_STATUSES)]] + PortalDateRange::rules($request));
+
+        return $this->paged($this->finance->payments($request, $filters + ['commission_only' => true]));
+    }
+
+    public function updateStatementInvoice(UpdateStatementInvoiceRequest $request, string $statementId): JsonResponse
+    {
+        /** @var array{lock_version: int, invoice_heading: string, invoice_message: ?string} $input */
+        $input = $request->validated();
+
+        return ApiResponse::success($this->finance->updateStatementInvoice($request, $statementId, $input));
     }
 
     public function reviewItems(Request $request): JsonResponse
@@ -89,7 +132,7 @@ final class AdminFinanceController extends Controller
         if (in_array($request->query('overdue'), ['true', 'false'], true)) {
             $request->merge(['overdue' => $request->query('overdue') === 'true']);
         }
-        $filters = $request->validate(['state' => ['sometimes', Rule::in(['DRAFT', 'ISSUED', 'PARTIALLY_PAID', 'PAID', 'VOIDED'])], 'overdue' => ['sometimes', 'boolean'], 'page' => ['sometimes', 'integer', 'between:1,1000']] + PortalDateRange::rules($request));
+        $filters = $request->validate(['state' => ['sometimes', Rule::in(['DRAFT', 'ISSUED', 'PARTIALLY_PAID', 'PAID', 'VOIDED'])], 'states' => ['sometimes', 'string', 'max:100'], 'search' => ['sometimes', 'string', 'max:120'], 'overdue' => ['sometimes', 'boolean'], 'page' => ['sometimes', 'integer', 'between:1,1000']] + PortalDateRange::rules($request));
 
         return $this->paged($this->finance->statementsList($request, $filters));
     }

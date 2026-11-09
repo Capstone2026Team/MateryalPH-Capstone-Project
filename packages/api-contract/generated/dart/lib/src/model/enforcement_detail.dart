@@ -5,6 +5,7 @@
 // ignore_for_file: unused_element
 import 'package:materyalph_api_client/src/model/subject_review.dart';
 import 'package:built_collection/built_collection.dart';
+import 'package:materyalph_api_client/src/model/enforcement_evidence.dart';
 import 'package:materyalph_api_client/src/model/enforcement_summary.dart';
 import 'package:materyalph_api_client/src/model/enforcement_event.dart';
 import 'package:built_value/json_object.dart';
@@ -44,10 +45,14 @@ part 'enforcement_detail.g.dart';
 /// * [subjectReview]
 /// * [events]
 /// * [allowedActions]
+/// * [evidence]
 @BuiltValue()
 abstract class EnforcementDetail implements EnforcementSummary, Built<EnforcementDetail, EnforcementDetailBuilder> {
   @BuiltValueField(wireName: r'continuation_note')
   String? get continuationNote;
+
+  @BuiltValueField(wireName: r'evidence')
+  BuiltList<EnforcementEvidence> get evidence;
 
   @BuiltValueField(wireName: r'restoration_condition')
   String? get restorationCondition;
@@ -95,6 +100,11 @@ class _$EnforcementDetailSerializer implements PrimitiveSerializer<EnforcementDe
     yield serializers.serialize(
       object.reason,
       specifiedType: const FullType(String),
+    );
+    yield r'evidence';
+    yield serializers.serialize(
+      object.evidence,
+      specifiedType: const FullType(BuiltList, [FullType(EnforcementEvidence)]),
     );
     if (object.restorationCondition != null) {
       yield r'restoration_condition';
@@ -286,6 +296,13 @@ class _$EnforcementDetailSerializer implements PrimitiveSerializer<EnforcementDe
             specifiedType: const FullType(String),
           ) as String;
           result.reason = valueDes;
+          break;
+        case r'evidence':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(BuiltList, [FullType(EnforcementEvidence)]),
+          ) as BuiltList<EnforcementEvidence>;
+          result.evidence.replace(valueDes);
           break;
         case r'restoration_condition':
           final valueDes = serializers.deserialize(

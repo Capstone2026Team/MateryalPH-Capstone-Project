@@ -15,6 +15,9 @@ Name | Type
 `failedAt` | Date
 `retryable` | boolean
 `retryNote` | string
+`recoveryStatus` | string
+`recoveryAttempts` | number
+`nextRetryAt` | Date
 
 ## Example
 
@@ -32,6 +35,9 @@ const example = {
   "failedAt": null,
   "retryable": null,
   "retryNote": null,
+  "recoveryStatus": null,
+  "recoveryAttempts": null,
+  "nextRetryAt": null,
 } satisfies OperationFailure
 
 console.log(example)

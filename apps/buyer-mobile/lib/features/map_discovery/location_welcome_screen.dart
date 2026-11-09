@@ -167,7 +167,7 @@ class _LocationWelcomeScreenState extends State<LocationWelcomeScreen> {
                                 ? const SizedBox(
                                     width: 18,
                                     height: 18,
-                                    child: CircularProgressIndicator(
+                                    child: BuyerLoadingIndicator(
                                       strokeWidth: 2,
                                     ),
                                   )

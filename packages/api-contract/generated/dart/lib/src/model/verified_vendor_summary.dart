@@ -7,6 +7,7 @@ import 'package:built_collection/built_collection.dart';
 import 'package:materyalph_api_client/src/model/supplier_open_status.dart';
 import 'package:materyalph_api_client/src/model/public_address_summary.dart';
 import 'package:materyalph_api_client/src/model/supplier_serviceability.dart';
+import 'package:materyalph_api_client/src/model/public_badge.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -15,6 +16,7 @@ part 'verified_vendor_summary.g.dart';
 /// VerifiedVendorSummary
 ///
 /// Properties:
+/// * [badges] - Current active automatic awards; suppressed or revoked badges are omitted. Tier 2 only.
 /// * [logoUrl]
 /// * [supplierType]
 /// * [niches]
@@ -26,6 +28,10 @@ part 'verified_vendor_summary.g.dart';
 /// * [serviceability]
 @BuiltValue()
 abstract class VerifiedVendorSummary implements Built<VerifiedVendorSummary, VerifiedVendorSummaryBuilder> {
+  /// Current active automatic awards; suppressed or revoked badges are omitted. Tier 2 only.
+  @BuiltValueField(wireName: r'badges')
+  BuiltList<PublicBadge>? get badges;
+
   @BuiltValueField(wireName: r'logo_url')
   String? get logoUrl;
 
@@ -76,6 +82,13 @@ class _$VerifiedVendorSummarySerializer implements PrimitiveSerializer<VerifiedV
     VerifiedVendorSummary object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.badges != null) {
+      yield r'badges';
+      yield serializers.serialize(
+        object.badges,
+        specifiedType: const FullType(BuiltList, [FullType(PublicBadge)]),
+      );
+    }
     yield r'logo_url';
     yield object.logoUrl == null ? null : serializers.serialize(
       object.logoUrl,
@@ -144,6 +157,14 @@ class _$VerifiedVendorSummarySerializer implements PrimitiveSerializer<VerifiedV
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'badges':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltList, [FullType(PublicBadge)]),
+          ) as BuiltList<PublicBadge>?;
+          if (valueDes == null) continue;
+          result.badges.replace(valueDes);
+          break;
         case r'logo_url':
           final valueDes = serializers.deserialize(
             value,

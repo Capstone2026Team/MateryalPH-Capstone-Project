@@ -6,6 +6,8 @@
 
 Name | Type
 ------------ | -------------
+`buyerThreadId` | string
+`conversationCount` | number
 `id` | string
 `purpose` | string
 `contextType` | string
@@ -35,6 +37,11 @@ Name | Type
 `legacyConversationIds` | Array&lt;string&gt;
 `legacyHasMore` | boolean
 `legacyPage` | number
+`needsHumanResponse` | boolean
+`canConfigureAutomatedResponse` | boolean
+`canPrepareOrderQuotation` | boolean
+`orderLockVersion` | number
+`pendingOrderId` | string
 
 ## Example
 
@@ -43,6 +50,8 @@ import type { ConversationView } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "buyerThreadId": null,
+  "conversationCount": null,
   "id": null,
   "purpose": null,
   "contextType": null,
@@ -72,6 +81,11 @@ const example = {
   "legacyConversationIds": null,
   "legacyHasMore": null,
   "legacyPage": null,
+  "needsHumanResponse": null,
+  "canConfigureAutomatedResponse": null,
+  "canPrepareOrderQuotation": null,
+  "orderLockVersion": null,
+  "pendingOrderId": null,
 } satisfies ConversationView
 
 console.log(example)

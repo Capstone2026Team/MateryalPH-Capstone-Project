@@ -58,5 +58,17 @@ void main() {
       // TODO
     });
 
+    // Published VPS from the latest immutable score snapshot. Null below eligibility gates.
+    // String vps
+    test('to test the property `vps`', () async {
+      // TODO
+    });
+
+    // Current clean store logo URL. Null when no clean logo is available.
+    // String logoUrl
+    test('to test the property `logoUrl`', () async {
+      // TODO
+    });
+
   });
 }

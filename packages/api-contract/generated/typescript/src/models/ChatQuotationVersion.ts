@@ -28,6 +28,10 @@ import {
  */
 export interface ChatQuotationVersion {
     /**
+     * Original inquiry for authorized quotation actions. The combined timeline never changes these commercial boundaries.
+     */
+    conversationId?: string;
+    /**
      * Buyer's exact recorded counter-offer for this version, retained after revision. Omitted when no changes were requested. Only visible to authorized conversation participants.
      */
     requestedChanges?: string;
@@ -95,6 +99,10 @@ export interface ChatQuotationVersion {
      *
      */
     acceptedOrderId?: string;
+    /**
+     *
+     */
+    replacesOrderId?: string;
 }
 
 /**
@@ -124,6 +132,7 @@ export function ChatQuotationVersionFromJSONTyped(json: any, ignoreDiscriminator
     }
     return {
 
+        'conversationId': json['conversation_id'] == null ? undefined : json['conversation_id'],
         'requestedChanges': json['requested_changes'] == null ? undefined : json['requested_changes'],
         'changeRequestedAt': json['change_requested_at'] == null ? undefined : json['change_requested_at'],
         'vendorResponseDueAt': json['vendor_response_due_at'] == null ? undefined : json['vendor_response_due_at'],
@@ -141,6 +150,7 @@ export function ChatQuotationVersionFromJSONTyped(json: any, ignoreDiscriminator
         'actions': json['actions'],
         'quotationId': json['quotation_id'] == null ? undefined : json['quotation_id'],
         'acceptedOrderId': json['accepted_order_id'] == null ? undefined : json['accepted_order_id'],
+        'replacesOrderId': json['replaces_order_id'] == null ? undefined : json['replaces_order_id'],
     };
 }
 
@@ -155,6 +165,7 @@ export function ChatQuotationVersionToJSONTyped(value?: ChatQuotationVersion | n
 
     return {
 
+        'conversation_id': value['conversationId'],
         'requested_changes': value['requestedChanges'],
         'change_requested_at': value['changeRequestedAt'],
         'vendor_response_due_at': value['vendorResponseDueAt'],
@@ -172,6 +183,7 @@ export function ChatQuotationVersionToJSONTyped(value?: ChatQuotationVersion | n
         'actions': value['actions'],
         'quotation_id': value['quotationId'],
         'accepted_order_id': value['acceptedOrderId'],
+        'replaces_order_id': value['replacesOrderId'],
     };
 }
 

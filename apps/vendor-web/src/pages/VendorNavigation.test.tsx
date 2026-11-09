@@ -32,6 +32,22 @@ function open(path: string) {
   return render(<MemoryRouter initialEntries={[path]}><Routes><Route path="/entry" element={<VendorEntryPage />} /><Route path="/welcome" element={<VendorWelcomePage />} /><Route path="/dashboard" element={<VendorDashboardPage />} /><Route path="/onboarding/verification" element={<VendorVerificationPage />} /><Route path="/onboarding/setup" element={<VendorSetupPage />} /><Route path="/store-profile" element={<VendorStoreProfilePage />} /><Route path="/vehicles" element={<h1>Vehicles Management</h1>} /><Route path="/settings" element={<h1>Personal account settings</h1>} /></Routes></MemoryRouter>)
 }
 
+test.each([
+  { permissions: ['vendor.onboarding.manage', 'scores.view_store', 'catalog.manage', 'materials_analytics.view_competitors'], scores: true, products: true },
+  { permissions: ['catalog.manage', 'portal.products'], scores: false, products: true },
+  { permissions: ['portal.orders', 'portal.performance', 'materials_analytics.view_competitors'], scores: false, products: false },
+])('Vendor analytics navigation follows score and product grants: $scores / $products', async ({ permissions, scores, products }) => {
+  snapshot.permissions = permissions
+  snapshot.activation.status = 'ACTIVE'
+  open('/dashboard')
+  const navigation = within(await screen.findByLabelText('VENDOR PORTAL navigation'))
+  expect(Boolean(navigation.queryByRole('link', { name: 'Store Performance' }))).toBe(scores)
+  const productLink = navigation.queryByRole('link', { name: 'Product Analytics' })
+  expect(Boolean(productLink)).toBe(products)
+  if (productLink) expect(productLink).toHaveAttribute('href', '/analytics/products')
+  expect(navigation.queryByText('Materials Analytics')).not.toBeInTheDocument()
+})
+
 test('onboarding is standalone without dashboard navigation', async () => {
   open('/onboarding/verification')
   expect(await screen.findByRole('heading', { name: 'Store Verification', level: 1 })).toBeVisible()
@@ -121,8 +137,8 @@ test('failed code requests and confirmations leave the replacement unverified an
 test('activated dashboard changes sections without showing onboarding forms', async () => {
   snapshot.activation.status = 'ACTIVE'
   open('/dashboard')
-  fireEvent.click(await screen.findByRole('tab', { name: 'Sales & Revenue' }))
-  expect(await screen.findByText('Average order value')).toBeVisible()
+  fireEvent.click(await screen.findByRole('tab', { name: 'Traffic & Volume' }))
+  expect(await screen.findByRole('region', { name: 'Demand funnel' })).toBeVisible()
   expect(screen.queryByText('Quality summary')).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Save verification draft' })).not.toBeInTheDocument()
 })
@@ -152,7 +168,7 @@ test('Store Profile is separate and logo returns to the authenticated dashboard'
   fireEvent.click(await screen.findByRole('link', { name: 'Store Profile' }))
   expect(await screen.findByRole('heading', { level: 1, name: 'Test Supply' })).toBeVisible()
   fireEvent.click(screen.getByRole('link', { name: /MateryalPH VENDOR PORTAL/ }))
-  expect(await screen.findByRole('heading', { name: /^Welcome back/, level: 1 })).toBeVisible()
+  expect(await screen.findByRole('heading', { name: 'Welcome back', level: 1 })).toBeVisible()
   expect(screen.queryByText('Personal account settings')).not.toBeInTheDocument()
 })
 
@@ -217,8 +233,10 @@ test('active Inventory Staff enter their focused workspace while the Owner retai
   employee.unmount()
   snapshot.permissions = ['vendor.onboarding.submit', 'vendor.onboarding.manage']
   open('/dashboard')
-  expect(await screen.findByRole('heading', { name: /^Welcome back/, level: 1 })).toBeVisible()
-  expect(await screen.findByRole('tab', { name: 'Sales & Revenue' })).toBeVisible()
+  expect(await screen.findByRole('heading', { name: 'Welcome back', level: 1 })).toBeVisible()
+  expect(await screen.findByRole('tab', { name: 'Overview' })).toBeVisible()
+  expect(screen.queryByRole('tab', { name: 'Performance' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('tab', { name: 'Sales & Revenue' })).not.toBeInTheDocument()
 })
 
 test('an unavailable API keeps entry recoverable instead of routing to login', async () => {
@@ -291,7 +309,7 @@ test('ready store can still request activation from the limited dashboard', asyn
   fireEvent.click(await screen.findByRole('button', { name: 'Request Store Activation' }))
   await waitFor(() => expect(api.activateVendorStore).toHaveBeenCalledOnce())
   await waitFor(() => expect(screen.queryByText('Limited-Access Vendor Dashboard')).not.toBeInTheDocument())
-  expect(screen.getByRole('heading', { name: /^Welcome back/, level: 1 })).toBeVisible()
+  expect(screen.getByRole('heading', { name: 'Welcome back', level: 1 })).toBeVisible()
 })
 
 test('approved verification and completed setup expose the remaining agreement and its review route', async () => {

@@ -1,3 +1,4 @@
+import { AsyncLoading } from './async-state'
 import { useEffect, useRef, useState } from 'react'
 import { MapPin, Store } from 'lucide-react'
 import { loadGoogleMaps } from './google-maps'
@@ -33,20 +34,29 @@ export function decodeDeliveryPolyline(encoded: string): Position[] {
   return path
 }
 
-export function DeliveryRouteMap({ origin, destination, encodedPolyline, browserKey }: { origin: Point; destination: Point; encodedPolyline: string; browserKey: string }) {
+export function DeliveryRouteMap({ origin, destination, encodedPolyline = '', browserKey, mapLabel = 'Delivery route map', originLabel = 'Starting point', destinationLabel = 'Confirmed drop-off', stackAddresses = false }: {
+  origin?: Point | null; destination?: Point | null; encodedPolyline?: string; browserKey: string
+  mapLabel?: string; originLabel?: string; destinationLabel?: string; stackAddresses?: boolean
+}) {
   const container = useRef<HTMLDivElement>(null)
   const [error, setError] = useState<string | null>(null)
+  const [attempt, setAttempt] = useState(0)
+  const [loading, setLoading] = useState(true)
   useEffect(() => {
     let active = true
     const cleanup: (() => void)[] = []
     setError(null)
-    if (!browserKey) { setError('Map display is unavailable. Use the delivery addresses or open navigation.'); return }
+    setLoading(true)
+    const center = origin ?? destination
+    if (!center) { setError('A map pin is unavailable for this address. Use the address below or open navigation.'); setLoading(false); return }
+    if (!browserKey) { setError('Map display is unavailable. Use the addresses below or open navigation.'); setLoading(false); return }
     void loadGoogleMaps<MapsApi>(browserKey).then(google => {
       if (!active || !container.current) return
-      const map = new google.maps.Map(container.current, { center: { lat: origin.latitude, lng: origin.longitude }, zoom: 13, gestureHandling: 'cooperative', streetViewControl: false, mapTypeControl: false })
+      const map = new google.maps.Map(container.current, { center: { lat: center.latitude, lng: center.longitude }, zoom: 15, gestureHandling: 'cooperative', streetViewControl: false, mapTypeControl: false })
       cleanup.push(() => google.maps.event.clearInstanceListeners(map))
       const bounds = new google.maps.LatLngBounds()
       for (const point of [origin, destination]) {
+        if (!point) continue
         const position = { lat: point.latitude, lng: point.longitude }
         bounds.extend(position)
         const marker = new google.maps.Marker({ map, position, title: point.label })
@@ -54,17 +64,24 @@ export function DeliveryRouteMap({ origin, destination, encodedPolyline, browser
       }
       const path = decodeDeliveryPolyline(encodedPolyline)
       path.forEach(point => bounds.extend(point))
-      const line = new google.maps.Polyline({ map, path, strokeWeight: 4 })
-      map.fitBounds(bounds)
-      cleanup.push(() => line.setMap(null))
-    }).catch(() => { cleanup.forEach(dispose => dispose()); if (active) setError('The map could not load. Use the addresses below or open navigation.') })
+      if (path.length > 0) {
+        const line = new google.maps.Polyline({ map, path, strokeWeight: 4 })
+        cleanup.push(() => line.setMap(null))
+      }
+      if (origin && destination) map.fitBounds(bounds)
+      setLoading(false)
+    }).catch(() => { cleanup.forEach(dispose => dispose()); cleanup.length = 0; if (active) { setError('The map could not load. Use the addresses below or open navigation.'); setLoading(false) } })
     return () => { active = false; cleanup.forEach(dispose => dispose()) }
-  }, [origin.latitude, origin.longitude, origin.label, destination.latitude, destination.longitude, destination.label, encodedPolyline, browserKey])
+  }, [origin?.latitude, origin?.longitude, origin?.label, destination?.latitude, destination?.longitude, destination?.label, encodedPolyline, browserKey, attempt])
   return <div className="grid min-w-0 gap-3">
-    {error ? <p role="status" className="text-sm leading-6 text-text-secondary">{error}</p> : <div ref={container} role="region" aria-label="Delivery route map" className="h-56 w-full min-w-0 overflow-hidden rounded-control border border-border-default sm:h-72" />}
-    <dl className="grid min-w-0 gap-4 text-sm sm:grid-cols-2" aria-label="Delivery route addresses">
-      <div className="grid min-w-0 content-start gap-1.5"><dt className="flex items-center gap-2 font-semibold"><Store size={16} className="shrink-0 text-text-secondary" aria-hidden="true" />Starting point</dt><dd className="break-words leading-6 text-text-secondary">{origin.label}</dd></div>
-      <div className="grid min-w-0 content-start gap-1.5"><dt className="flex items-center gap-2 font-semibold"><MapPin size={16} className="shrink-0 text-text-secondary" aria-hidden="true" />Confirmed drop-off</dt><dd className="break-words leading-6 text-text-secondary">{destination.label}</dd></div>
+    <div className="relative min-w-0">
+      <div ref={container} role="region" aria-label={mapLabel} aria-busy={loading} hidden={Boolean(error)} className="h-56 w-full min-w-0 overflow-hidden rounded-control border border-border-default sm:h-72" />
+      {loading && !error && <AsyncLoading label="Loading map…" className="absolute inset-0 bg-surface-canvas" />}
+      {error && <div className="grid gap-2"><p role="status" className="text-sm leading-6 text-text-secondary">{error}</p>{browserKey && (origin || destination) && <button type="button" className="min-h-11 w-fit text-sm font-semibold text-action-primary underline focus-visible:outline-2 focus-visible:outline-focus-ring" onClick={() => setAttempt(value => value + 1)}>Retry map</button>}</div>}
+    </div>
+    <dl className={`grid min-w-0 gap-4 text-sm${stackAddresses ? '' : ' sm:grid-cols-2'}`} aria-label="Delivery route addresses">
+      {origin && <div className="grid min-w-0 content-start gap-1.5"><dt className="flex items-center gap-2 font-semibold"><Store size={16} className="shrink-0 text-text-secondary" aria-hidden="true" />{originLabel}</dt><dd className="break-words leading-6 text-text-secondary">{origin.label}</dd></div>}
+      {destination && <div className="grid min-w-0 content-start gap-1.5"><dt className="flex items-center gap-2 font-semibold"><MapPin size={16} className="shrink-0 text-text-secondary" aria-hidden="true" />{destinationLabel}</dt><dd className="break-words leading-6 text-text-secondary">{destination.label}</dd></div>}
     </dl>
   </div>
 }

@@ -1,18 +1,18 @@
-import { DocumentExportButton } from '@materyalph/web-ui'
+import { BackNavigation, DocumentExportButton } from '@materyalph/web-ui'
 import type { GeoActiveUsers, GeoCell, GeoChild, GeoRate } from '@materyalph/api-client-ts'
 import {
-  Button, ChoroplethLegend, DateFilter, DemandHeatmap, FilterDisclosure, FilterTabs, GeoChoroplethMap, InfoNote, KpiCard, Pagination, SidePanel, SortableDataTable, TrendLineChart,
-  analyticsDay, choroplethThresholds, formatAnalyticsDate, formatPesoCentavos, manilaToday, type GeoAreaValue, type GeoFeature, type SortableColumn,
+  Button, CalculationHelp, ChoroplethLegend, DateFilter, DemandHeatmap, DashboardPanel, FilterDisclosure, FilterTabs, GeoChoroplethMap, InfoNote, KpiCard, PageHeader, Pagination, SortableDataTable, TrendLineChart,
+  analyticsDay, choroplethThresholds, dateFilterPreset, formatAnalyticsDate, formatPesoCentavos, manilaToday, type GeoAreaValue, type GeoFeature, type SortableColumn,
 } from '@materyalph/web-ui'
-import { ArrowLeft, Clock3, Download, EyeOff, MapPinned, RefreshCw, ShoppingCart, Store, Users, Wallet } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { Clock3, EyeOff, MapPinned, RefreshCw } from 'lucide-react'
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { control, label as humanize, labelClass, manilaDateTime, useLoad } from '../lib/operations-hooks'
 import { exportFilters, getGeoBoundaries, getGeoDashboard, getGeoDemand, getGeoFilterOptions, type GeoDashboard, type GeoFilters } from '../lib/geo-analytics-api'
-import { apiProblem, newKey, problemText, requestExport } from '../lib/operations-api'
-import { AdminShell, ErrorState, LoadingState, PageHeader } from './PhaseThreeAdminPages'
+import { AdminShell, ErrorState, LoadingState } from './PhaseThreeAdminPages'
 import { MaterialsAnalyticsSection } from './TrustPages'
 import { useAnalyticsResource } from '../lib/use-analytics-resource'
+import { MarketplacePaymentAnalytics } from './MarketplacePaymentAnalytics'
 
 const iso = (date: Date) => date.toISOString().slice(0, 10)
 const daysAgo = (days: number) => { const date = new Date(`${manilaToday()}T00:00:00Z`); date.setUTCDate(date.getUTCDate() - days); return iso(date) }
@@ -28,8 +28,8 @@ function duration(seconds: number | null | undefined): string {
 type Metric = { key: string; label: string; format: (value: number) => string; value: (child: GeoChild) => number | null; suppressed: (child: GeoChild) => boolean }
 const rateValue = (rate: GeoRate) => rate.percent === null || rate.percent === undefined ? null : Number(rate.percent)
 const METRICS: Metric[] = [
-  { key: 'gross', label: 'Gross GMV', format: value => formatPesoCentavos(value), value: child => child.grossGmvCentavos.value ?? null, suppressed: child => child.grossGmvCentavos.suppressed },
-  { key: 'net', label: 'Net GMV', format: value => formatPesoCentavos(value), value: child => child.netGmvCentavos.value ?? null, suppressed: child => child.netGmvCentavos.suppressed },
+  { key: 'gross', label: 'Gross sales', format: value => formatPesoCentavos(value), value: child => child.grossGmvCentavos.value ?? null, suppressed: child => child.grossGmvCentavos.suppressed },
+  { key: 'net', label: 'Net sales', format: value => formatPesoCentavos(value), value: child => child.netGmvCentavos.value ?? null, suppressed: child => child.netGmvCentavos.suppressed },
   { key: 'orders', label: 'Orders', format: count, value: child => child.orderVolume.value ?? null, suppressed: child => child.orderVolume.suppressed },
   { key: 'buyers', label: 'Registered Buyers', format: count, value: child => child.registeredBuyers.value ?? null, suppressed: child => child.registeredBuyers.suppressed },
   { key: 'vendors', label: 'Vendors', format: count, value: child => child.vendorCount, suppressed: () => false },
@@ -48,7 +48,7 @@ function useGeoFilters(): [GeoFilters, (next: Partial<GeoFilters>) => void] {
   const [params, setParams] = useSearchParams()
   const filters: GeoFilters = {
     dataset: 'TEST', area: /^\d{10}$/.test(params.get('area') ?? '') ? params.get('area') : null,
-    from: params.get('from') ?? daysAgo(89), to: params.get('to') ?? daysAgo(0), granularity: (['DAY', 'WEEK', 'MONTH'].includes(params.get('granularity') ?? '') ? params.get('granularity') : 'WEEK') as GeoFilters['granularity'],
+    from: params.get('from') ?? daysAgo(29), to: params.get('to') ?? daysAgo(0), granularity: (['DAY', 'WEEK', 'MONTH'].includes(params.get('granularity') ?? '') ? params.get('granularity') : 'WEEK') as GeoFilters['granularity'],
     procurementType: params.get('procurementType') ?? '', categoryId: params.get('categoryId') ?? '', materialId: params.get('materialId') ?? '',
     fulfillmentMethod: params.get('fulfillmentMethod') ?? '', paymentMethod: params.get('paymentMethod') ?? '', orderState: params.get('orderState') ?? '',
   }
@@ -66,25 +66,42 @@ function CellValue({ cell, format, reason }: { cell: { value?: number | null | u
   return <>{cell.value === null || cell.value === undefined ? '—' : format(cell.value)}</>
 }
 
-function RateKpi({ label, rate }: { label: string; rate: GeoRate }) {
+function GeoMetricHelp({ dashboard, definitions }: { dashboard: GeoDashboard; definitions: string[] }) {
+  return <>
+    <p><strong>{dashboard.scope.name}</strong> · {formatAnalyticsDate(dashboard.period.from, true)} – {formatAnalyticsDate(dashboard.period.to, true)} · Asia/Manila</p>
+    {definitions.map(key => <p key={key}>{dashboard.definitions[key] ?? 'The calculation definition is unavailable for this metric.'}</p>)}
+    {dashboard.disclosure.minimumPersons > 1 && <p>{dashboard.disclosure.description}</p>}
+  </>
+}
+
+function RateKpi({ label, rate, calculation }: { label: string; rate: GeoRate; calculation: ReactNode }) {
   return <KpiCard density="compact" label={label} hint={rate.suppressed ? undefined : rate.denominator ? `${count(rate.numerator ?? 0)} of ${count(rate.denominator)}` : 'No eligible orders'}
+    calculation={calculation}
     value={rate.suppressed ? <span className="text-lg"><CellValue cell={{ suppressed: true }} format={percent} reason={rate.reason} /></span> : rate.percent === null || rate.percent === undefined ? '—' : `${rate.percent}%`} />
 }
 
-function CellKpi({ label, cell, format, hint, icon, accent = false, className = '' }: { label: string; cell: GeoCell; format: (value: number) => string; hint?: string; icon?: ReactNode; accent?: boolean; className?: string }) {
+function CellKpi({ label, cell, format, hint, accent = false, className = '', calculation }: { label: string; cell: GeoCell; format: (value: number) => string; hint?: string; accent?: boolean; className?: string; calculation: ReactNode }) {
   return <KpiCard density="compact" className={className} label={label} value={<span className={cell.suppressed ? 'text-lg' : 'tabular-nums'}><CellValue cell={cell} format={format} reason={cell.reason} /></span>}
-    hint={cell.suppressed ? undefined : hint} icon={icon} accent={accent} />
+    hint={cell.suppressed ? undefined : hint} calculation={calculation} accent={accent && !cell.suppressed} />
 }
 
-function ActiveUsersKpi({ label, activity }: { label: string; activity: GeoActiveUsers }) {
-  return <KpiCard density="compact" label={label} icon={<Users size={16} aria-hidden="true" />}
+function ActiveUsersKpi({ label, activity, calculation }: { label: string; activity: GeoActiveUsers; calculation: ReactNode }) {
+  return <KpiCard density="compact" label={label} calculation={calculation}
     value={<><span className={activity.mau.suppressed ? 'text-lg' : 'tabular-nums'}><CellValue cell={activity.mau} format={count} reason={activity.mau.reason} /></span> <span className="text-sm font-normal text-text-secondary" title="Monthly active users">MAU</span></>}
-    hint={<span className="mt-2 grid gap-1 border-t border-border-default pt-2">
-      {(['dau', 'wau'] as const).map(window => <span key={window} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-        <span>{window === 'dau' ? 'Daily (DAU)' : 'Weekly (WAU)'}</span>
+    hint={<span className="mp-geo-activity-breakdown">
+      {(['dau', 'wau'] as const).map(window => <span key={window}>
+        <span title={window === 'dau' ? 'Daily active users' : 'Weekly active users'}>{window.toUpperCase()}</span>
         <span className="font-semibold tabular-nums text-text-strong"><CellValue cell={activity[window]} format={count} reason={activity[window].reason} /></span>
       </span>)}
     </span>} />
+}
+
+function AnalyticsSectionTabs() {
+  const [params, setParams] = useSearchParams()
+  const view = ['demand', 'materials', 'payments'].includes(params.get('view') ?? '') ? params.get('view')! : 'trends'
+  return <FilterTabs appearance="tabs" label="Analytics section" value={view} onChange={value => { const next = new URLSearchParams(params); next.set('view', value); setParams(next) }} chips={[
+    { value: 'trends', label: 'Trends & activity' }, { value: 'demand', label: 'Category & material demand' }, { value: 'payments', label: 'Marketplace payments' }, { value: 'materials', label: 'Materials Analytics' },
+  ]} />
 }
 
 export function AdminGeoAnalyticsPage() {
@@ -92,31 +109,35 @@ export function AdminGeoAnalyticsPage() {
   const [filters, setFilters] = useGeoFilters()
   const dashboard = useAnalyticsResource(`geo-${JSON.stringify(filters)}`, () => getGeoDashboard(filters))
   const boundaries = useLoad(() => getGeoBoundaries(filters.area), [filters.area])
-  const [view, setView] = useState(params.get('view') === 'materials' ? 'materials' : 'trends')
+  const view = params.get('view') === 'materials' ? 'materials' : params.get('view') === 'demand' ? 'demand' : params.get('view') === 'payments' ? 'payments' : 'trends'
+  const defaults = dateFilterPreset(30)
   const data = dashboard.data
   const scopeName = data?.scope.name ?? 'Philippines'
-  const introduction = <div className="grid min-w-0 gap-5">
-    <section aria-label="Analytics header" className="grid min-w-0 gap-4 rounded-surface border border-border-default bg-surface-primary p-4 sm:p-5">
-      <PageHeader compact eyebrow="Marketplace Analytics" title="Philippine geographic analytics" description="Daily aggregate facts by PSGC area: Philippines → Region → Province or independent/highly urbanized city → City or Municipality. Buyer coordinates are never stored or shown." />
-      <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-6 gap-y-4">
+  const introduction = <div className="grid min-w-0 gap-3">
+    <section aria-label="Analytics header" className="grid min-w-0 gap-3 mp-card mp-card-padded">
+      <PageHeader compact eyebrow="Marketplace Analytics" title="Philippine geographic analytics" description="Marketplace activity by region, province and city. Buyer coordinates are never shown." />
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2">
         {data ? <DatasetLine dashboard={data} /> : <p className="text-sm text-text-secondary">{dashboard.error ? 'Marketplace activity unavailable.' : 'Loading marketplace activity…'}</p>}
         <div className="flex min-w-0 flex-wrap items-center gap-2"><Button variant="secondary" disabled={dashboard.loading} onClick={dashboard.retry}><RefreshCw size={16} aria-hidden="true" />Refresh</Button><GeoExportButton filters={filters} /></div>
       </div>
     </section>
     <GeoFilterBar filters={filters} onApply={setFilters} dashboard={data} />
   </div>
-  return <AdminShell activeHref="/analytics"><div className="min-w-0 space-y-6">
+  return <AdminShell activeHref="/analytics"><div className="mp-analytics mp-geographic-analytics min-w-0 space-y-3">
     {!(data?.dataset.available && !dashboard.error) && introduction}
     {dashboard.error ? <ErrorState message={dashboard.error} onRetry={dashboard.retry} /> : !data ? <LoadingState /> : !data.dataset.available
-      ? <p className="rounded-surface border border-dashed border-border-default bg-surface-primary px-6 py-10 text-center text-sm text-text-secondary">No aggregation has published yet. Marketplace facts refresh every minute while the scheduler is running, or can be re-run from Integration & Job Health.</p>
+      ? <p className="rounded-surface border border-dashed border-border-default bg-surface-primary px-6 py-10 text-center text-sm text-text-secondary">No aggregation has published yet. Marketplace facts refresh every minute while the scheduler is running, or can be re-run from Platform Monitoring.</p>
       : <>
         <GeographicOverview dashboard={data} introduction={introduction} features={(boundaries.data?.features ?? []) as unknown as GeoFeature[]} missingCodes={boundaries.data?.missingCodes ?? []} onSelectArea={code => setFilters({ area: code })} />
         <UnresolvedNotice unresolved={data.unresolved} />
-        <FilterTabs appearance="tabs" label="Analytics section" value={view} onChange={setView} chips={[{ value: 'trends', label: 'Trends & activity' }, { value: 'demand', label: 'Category & material demand' }, { value: 'materials', label: 'Materials Analytics' }]} />
+      </>}
+    <AnalyticsSectionTabs />
+    {view === 'payments' && <MarketplacePaymentAnalytics range={{ label: filters.from === defaults.from && filters.to === defaults.to ? defaults.label : 'Custom range', from: filters.from, to: filters.to }} onRangeChange={range => setFilters({ from: range.from, to: range.to })} />}
+    {data?.dataset.available && !dashboard.error && <>
         {view === 'trends' && <TrendsSection dashboard={data} />}
         {view === 'demand' && <DemandSection filters={filters} />}
         {view === 'materials' && <MaterialsAnalyticsSection psgcCode={filters.area} areaLabel={scopeName} />}
-        <details className="rounded-surface border border-border-default bg-surface-primary p-4"><summary className="min-h-11 cursor-pointer content-center font-semibold">Metric definitions and disclosure rule</summary>
+        <details className="mp-card mp-card-padded"><summary className="min-h-11 cursor-pointer content-center font-semibold">Metric definitions and disclosure rule</summary>
           <dl className="mt-3 grid gap-3 md:grid-cols-2">{Object.entries(data.definitions).map(([key, value]) => <div key={key}><dt className="text-sm font-semibold">{humanize(key)}</dt><dd className="text-sm text-text-secondary">{value}</dd></div>)}
             {data.disclosure.minimumPersons > 1 && <div><dt className="text-sm font-semibold">Small-cell suppression</dt><dd className="text-sm text-text-secondary">{data.disclosure.description} Where only one sibling would be hidden, the smallest other sibling is hidden too (complementary suppression) so it cannot be recovered by subtraction.</dd></div>}</dl>
         </details>
@@ -134,6 +155,7 @@ function DatasetLine({ dashboard }: { dashboard: GeoDashboard }) {
 
 export function GeoFilterBar({ filters, onApply, dashboard }: { filters: GeoFilters; onApply: (next: Partial<GeoFilters>) => void; dashboard: GeoDashboard | null }) {
   const [draft, setDraft] = useState(filters)
+  const defaultRange = dateFilterPreset(30)
   useEffect(() => { setDraft(filters) }, [filters])
   const categories = useAnalyticsResource('geo-filter-categories', () => getGeoFilterOptions())
   const materials = useAnalyticsResource(`geo-filter-materials-${draft.categoryId}`, () => draft.categoryId ? getGeoFilterOptions(draft.categoryId) : Promise.resolve([]))
@@ -143,7 +165,7 @@ export function GeoFilterBar({ filters, onApply, dashboard }: { filters: GeoFilt
   const refinements = [filters.categoryId, filters.materialId, filters.procurementType, filters.fulfillmentMethod, filters.paymentMethod, filters.orderState].filter(Boolean).length
   return <FilterDisclosure summary={<div className="flex flex-wrap items-center gap-x-4 gap-y-1 leading-5"><span>{formatAnalyticsDate(filters.from, true)} – {formatAnalyticsDate(filters.to, true)}</span><span>{filters.granularity === 'DAY' ? 'Daily' : filters.granularity === 'MONTH' ? 'Monthly' : 'Weekly'} trends</span>{refinements > 0 && <span className="font-medium text-text-strong">{refinements} {refinements === 1 ? 'refinement' : 'refinements'}</span>}</div>}>
     <form onSubmit={submit} aria-label="Dashboard filters" className="grid min-w-0 gap-5">
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border-default pb-5"><DateFilter title="Marketplace activity dates" value={{ label: 'Custom range', from: filters.from, to: filters.to }} allowAllDates={false} allowOpenEnded={false} maxRangeDays={366} onChange={range => { const next = { ...draft, from: range.from, to: range.to }; setDraft(next); onApply(next) }} /><p className="text-xs leading-5 text-text-secondary">Inclusive Asia/Manila dates · up to one year</p></div>
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border-default pb-5"><DateFilter title="Marketplace activity dates" value={{ label: filters.from === defaultRange.from && filters.to === defaultRange.to ? defaultRange.label : 'Custom range', from: filters.from, to: filters.to }} allowAllDates={false} allowOpenEnded={false} maxRangeDays={366} onChange={range => { const next = { ...draft, from: range.from, to: range.to }; setDraft(next); onApply(next) }} /><p className="text-xs leading-5 text-text-secondary">Inclusive Asia/Manila dates · up to one year</p></div>
     <fieldset className="min-w-0"><legend className="mb-3 text-sm font-semibold text-text-strong">Trend and materials</legend><div className="grid min-w-0 gap-4 sm:grid-cols-2 xl:grid-cols-3">
       <label className={labelClass}>Trend interval<select className={control} value={draft.granularity} onChange={set('granularity')}><option value="DAY">Daily</option><option value="WEEK">Weekly</option><option value="MONTH">Monthly</option></select></label>
       <label className={labelClass}>Category<select className={control} value={draft.categoryId} disabled={categories.loading && !categories.data} onChange={set('categoryId')}><option value="">{categories.loading && !categories.data ? 'Loading categories…' : 'All categories'}</option>{(categories.data ?? []).map(column => <option key={column.id} value={column.id}>{column.name}</option>)}</select></label>
@@ -156,7 +178,7 @@ export function GeoFilterBar({ filters, onApply, dashboard }: { filters: GeoFilt
     </div></fieldset>
     <div className="grid min-w-0 gap-4 border-t border-border-default pt-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
       <p className="max-w-4xl text-[13px] leading-6 text-text-secondary">{transaction ? `${transaction.note} Not applicable to: ${transaction.notApplicableTo.map(item => humanize(item)).join(', ')}.` : 'Category, material, procurement, fulfillment, payment and order-state filters apply to order metrics only; they are not applicable to Vendor and Buyer counts, active users, response time or Materials Analytics prices.'} No distance radius applies; geography uses PSGC areas.</p>
-      <div className="flex flex-wrap gap-2"><Button type="submit">Apply filters</Button><Button variant="secondary" onClick={() => onApply({ procurementType: '', categoryId: '', materialId: '', fulfillmentMethod: '', paymentMethod: '', orderState: '', from: daysAgo(89), to: daysAgo(1), granularity: 'WEEK' })}>Reset</Button></div>
+      <div className="flex flex-wrap gap-2"><Button type="submit">Apply filters</Button><Button variant="secondary" onClick={() => onApply({ procurementType: '', categoryId: '', materialId: '', fulfillmentMethod: '', paymentMethod: '', orderState: '', from: daysAgo(29), to: daysAgo(0), granularity: 'WEEK' })}>Reset</Button></div>
     </div>
     </form>
   </FilterDisclosure>
@@ -168,8 +190,8 @@ function GeographicOverview({ dashboard, introduction, features, missingCodes, o
   const hasSuppression = [kpis.registeredBuyers, kpis.grossGmvCentavos, kpis.netGmvCentavos, kpis.orderVolume,
     kpis.fulfillmentRate, kpis.cancellationRate, kpis.disputeRate, response,
     ...Object.values(kpis.activeUsers.buyer), ...Object.values(kpis.activeUsers.vendor)].some(cell => cell.suppressed)
-  return <section aria-label={`${dashboard.scope.name} overview`} className="grid min-w-0 gap-5">
-    <AreaExplorer dashboard={dashboard} features={features} missingCodes={missingCodes} onDrill={onSelectArea} introduction={<div className="grid min-w-0 gap-5">
+  return <section aria-label={`${dashboard.scope.name} overview`} className="grid min-w-0 gap-3">
+    <AreaExplorer dashboard={dashboard} features={features} missingCodes={missingCodes} onDrill={onSelectArea} introduction={<div className="grid min-w-0 gap-3">
       {introduction}
       {hasSuppression && <aside aria-label="Metric privacy" title={dashboard.disclosure.description} className="flex min-w-0 items-start gap-2 text-xs leading-5 text-text-secondary">
         <EyeOff size={16} aria-hidden="true" className="mt-0.5 shrink-0" />
@@ -184,32 +206,33 @@ function GeographicOverview({ dashboard, introduction, features, missingCodes, o
 function KpiGrid({ dashboard }: { dashboard: GeoDashboard }) {
   const kpis = dashboard.kpis
   const response = kpis.responseTime
-  return <section aria-label={`Key metrics for ${dashboard.scope.name}`} className="grid min-w-0 content-start gap-5">
-    <section aria-labelledby="geo-commerce" className="grid gap-3">
+  const help = (key: string) => <GeoMetricHelp dashboard={dashboard} definitions={[key]} />
+  return <section aria-label={`Key metrics for ${dashboard.scope.name}`} className="mp-geo-metrics">
+    <section aria-labelledby="geo-commerce" className="mp-geo-metric-section mp-geo-commerce">
       <h3 id="geo-commerce" className="text-sm font-semibold text-text-strong">Commerce</h3>
-      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-2 2xl:grid-cols-3">
-        <CellKpi label="Gross GMV" cell={kpis.grossGmvCentavos} format={formatPesoCentavos} hint="Before discounts, refunds and cancellations." icon={<Wallet size={16} aria-hidden="true" />} accent />
-        <CellKpi label="Net GMV" cell={kpis.netGmvCentavos} format={formatPesoCentavos} hint="After discounts, cancellations and refunds." />
-        <CellKpi label="Orders" cell={kpis.orderVolume} format={count} className="col-span-2 sm:col-span-1 xl:col-span-2 2xl:col-span-1" icon={<ShoppingCart size={16} aria-hidden="true" />} />
+      <dl className="mp-geo-metric-grid">
+        <CellKpi label="Gross sales" cell={kpis.grossGmvCentavos} format={formatPesoCentavos} hint="Confirmed order value" calculation={help('gross_gmv')} accent />
+        <CellKpi label="Net sales" cell={kpis.netGmvCentavos} format={formatPesoCentavos} hint="After cancellations and refunds" calculation={help('net_gmv')} />
+        <CellKpi label="Orders" cell={kpis.orderVolume} format={count} hint="Confirmed Vendor orders" calculation={help('order_volume')} />
       </dl>
     </section>
-    <section aria-labelledby="geo-community" className="grid gap-3">
+    <section aria-labelledby="geo-community" className="mp-geo-metric-section">
       <h3 id="geo-community" className="text-sm font-semibold text-text-strong">Community & activity</h3>
-      <dl className="grid grid-cols-2 gap-3">
-        <CellKpi label="Vendors (public storefronts)" cell={kpis.vendorCount} format={count} hint="Activated Tier 2 stores." icon={<Store size={16} aria-hidden="true" />} />
-        <CellKpi label="Registered Buyers" cell={kpis.registeredBuyers} format={count} icon={<Users size={16} aria-hidden="true" />} />
-        <ActiveUsersKpi label="Active Buyers" activity={kpis.activeUsers.buyer} />
-        <ActiveUsersKpi label="Active Vendor users" activity={kpis.activeUsers.vendor} />
+      <dl className="mp-geo-metric-grid">
+        <CellKpi label="Vendors (public storefronts)" cell={kpis.vendorCount} format={count} hint="Activated Tier 2 stores" calculation={help('vendor_count')} />
+        <CellKpi label="Registered Buyers" cell={kpis.registeredBuyers} format={count} hint="By primary saved location" calculation={help('registered_buyers')} />
+        <ActiveUsersKpi label="Active Buyers" activity={kpis.activeUsers.buyer} calculation={help('active_users')} />
+        <ActiveUsersKpi label="Active Vendor users" activity={kpis.activeUsers.vendor} calculation={help('active_users')} />
       </dl>
     </section>
-    <section aria-labelledby="geo-performance" className="grid gap-3">
+    <section aria-labelledby="geo-performance" className="mp-geo-metric-section">
       <h3 id="geo-performance" className="text-sm font-semibold text-text-strong">Order performance</h3>
-      <dl className="grid grid-cols-2 gap-3">
-        <RateKpi label="Fulfillment rate" rate={kpis.fulfillmentRate} />
-        <RateKpi label="Cancellation rate" rate={kpis.cancellationRate} />
-        <RateKpi label="Dispute rate" rate={kpis.disputeRate} />
-        <KpiCard density="compact" label="Vendor response time" icon={<Clock3 size={16} aria-hidden="true" />}
-          hint={response.suppressed ? undefined : `Mean ${duration(response.meanSeconds)} · p90 ${duration(response.p90Seconds)} · ${count(response.answered ?? 0)} answered, ${count(response.unanswered ?? 0)} unanswered`}
+      <dl className="mp-geo-metric-grid">
+        <RateKpi label="Fulfillment rate" rate={kpis.fulfillmentRate} calculation={help('fulfillment_rate')} />
+        <RateKpi label="Cancellation rate" rate={kpis.cancellationRate} calculation={help('cancellation_rate')} />
+        <RateKpi label="Dispute rate" rate={kpis.disputeRate} calculation={help('dispute_rate')} />
+        <KpiCard density="compact" label="Vendor response time" calculation={help('response_time')}
+          hint={response.suppressed ? undefined : <span className="grid gap-1"><span>Mean {duration(response.meanSeconds)} · p90 {duration(response.p90Seconds)}</span><span>{count(response.answered ?? 0)} answered · {count(response.unanswered ?? 0)} unanswered</span></span>}
           value={response.suppressed ? <span className="text-lg"><CellValue cell={{ suppressed: true }} format={count} reason={response.reason} /></span> : <><span className="text-sm font-normal text-text-secondary">Median</span> {duration(response.medianSeconds)}</>} />
       </dl>
     </section>
@@ -233,27 +256,26 @@ function AreaExplorer({ dashboard, introduction, features, missingCodes, onDrill
     { key: 'response', header: 'Median response', numeric: true, sortValue: child => child.responseSuppressed ? null : child.medianResponseSeconds ?? null, cell: child => child.responseSuppressed ? <CellValue cell={{ suppressed: true }} format={count} reason={child.suppressionNote} /> : duration(child.medianResponseSeconds) },
     { key: 'disclosure', header: 'Disclosure', minWidth: 288, cell: child => child.suppressed ? <span className="text-[13px]">{child.suppressionReason === 'COMPLEMENTARY' ? 'Complementary suppression' : 'Small cell'}{child.suppressionNote ? `: ${child.suppressionNote}` : ''}</span> : <span className="text-[13px] text-text-secondary">Shown</span> },
   ]
-  return <div className="grid min-w-0 gap-5">
-    <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(20rem,0.9fr)] xl:grid-rows-[auto_1fr] 2xl:grid-cols-[minmax(0,1fr)_32rem]">
+  const metricDefinition = { gross: 'gross_gmv', net: 'net_gmv', orders: 'order_volume', buyers: 'registered_buyers', vendors: 'vendor_count', fulfillment: 'fulfillment_rate', cancellation: 'cancellation_rate', dispute: 'dispute_rate' }[metric.key]!
+  return <div className="grid min-w-0 items-start gap-3 xl:grid-cols-[minmax(0,1.2fr)_minmax(20rem,0.8fr)] xl:grid-rows-[auto_auto_1fr] 2xl:grid-cols-[minmax(0,1fr)_28rem]">
       <div className="order-1 min-w-0 xl:col-start-1 xl:row-start-1">{introduction}</div>
       <div className="order-3 min-w-0 xl:col-start-1 xl:row-start-2">{metrics}</div>
-      <section aria-label={`Interactive map for ${dashboard.scope.name}`} className="order-2 grid min-w-0 gap-3 rounded-surface border border-border-default bg-surface-primary p-4 xl:sticky xl:top-20 xl:col-start-2 xl:row-span-2 xl:row-start-1">
-        <header className="grid min-w-0 gap-3 border-b border-border-default pb-4">
-          <div className="flex min-w-0 flex-wrap items-center justify-between gap-2"><p className="inline-flex items-center gap-2 text-xs font-semibold text-action-primary"><MapPinned size={15} aria-hidden="true" />{dashboard.scope.code ? 'Selected area' : 'National overview'}</p>{dashboard.scope.code && <Button variant="quiet" onClick={() => onDrill(null)}><ArrowLeft size={16} aria-hidden="true" />Back to Philippines</Button>}</div>
-          <div className="flex min-w-0 flex-wrap items-end justify-between gap-4">
+      <section aria-label={`Interactive map for ${dashboard.scope.name}`} className="mp-geo-map-panel order-2 grid min-w-0 gap-3 mp-card mp-card-padded xl:sticky xl:top-20 xl:col-start-2 xl:row-span-3 xl:row-start-1">
+        <header className="grid min-w-0 gap-2 border-b border-border-default pb-3">
+          <div className="flex min-w-0 flex-wrap items-center justify-between gap-2"><p className="inline-flex items-center gap-2 text-xs font-semibold text-action-primary"><MapPinned size={15} aria-hidden="true" />{dashboard.scope.code ? 'Selected area' : 'National overview'}</p>{dashboard.scope.code && <BackNavigation><button type="button" onClick={() => onDrill(null)}>Back to Philippines</button></BackNavigation>}</div>
+          <div className="flex min-w-0 flex-wrap items-end justify-between gap-3">
             <div className="min-w-0 flex-1 basis-48"><h3 id="area-explorer" className="break-words text-lg font-semibold text-text-strong">{dashboard.scope.code ? dashboard.scope.name : 'Philippines map'}</h3><p className="mt-1 text-[13px] leading-5 text-text-secondary">{dashboard.scope.code ? `Showing the selected area. Explore its ${dashboard.scope.childrenLabel.toLowerCase()} when boundaries are available.` : 'Click a region to view its map and marketplace activity.'}</p></div>
-            <label className={`${labelClass} w-full sm:w-44`}>Map metric<select className={control} value={metricKey} onChange={event => setMetricKey(event.target.value)}>{METRICS.map(item => <option key={item.key} value={item.key}>{item.label}</option>)}</select></label>
+            <div className="flex w-full items-end gap-1 sm:w-auto"><label className={`${labelClass} min-w-0 flex-1 sm:w-40`}>Map metric<select className={control} value={metricKey} onChange={event => setMetricKey(event.target.value)}>{METRICS.map(item => <option key={item.key} value={item.key}>{item.label}</option>)}</select></label><CalculationHelp title={`${metric.label} by area`}><GeoMetricHelp dashboard={dashboard} definitions={[metricDefinition]} /><p>Select an area to apply it to all analytics panels. Unshaded reference boundaries provide geographic context only.</p></CalculationHelp></div>
           </div>
         </header>
         <GeoChoroplethMap renderer="outline" layout="portrait" showNames scope={{ code: dashboard.scope.code ?? null, name: dashboard.scope.name }} features={features} areas={areas} thresholds={thresholds} metricLabel={metric.label} formatValue={metric.format} focusedCode={focused} selectedCode={selected} onFocus={setFocused} onSelect={area => choose(area.code)} missingCodes={missingCodes} />
         {children.length === 0 ? <p className="rounded-control border border-dashed border-border-default p-4 text-[13px] leading-6 text-text-secondary">{dashboard.scope.drillable ? 'No sub-areas have recorded activity in this period.' : `${dashboard.scope.name} is the most detailed level shown. Barangay-level figures are not published.`}</p>
-          : <div className="border-t border-border-default pt-4"><ChoroplethLegend title={`${metric.label} by ${dashboard.scope.childrenLabel.toLowerCase()}`} thresholds={thresholds} formatValue={metric.format} /></div>}
+          : <div className="border-t border-border-default pt-3"><ChoroplethLegend title={`${metric.label} by ${dashboard.scope.childrenLabel.toLowerCase()}`} thresholds={thresholds} formatValue={metric.format} /></div>}
       </section>
-    </div>
     {children.length > 0 &&
-      <div className="grid min-w-0 gap-3">
-        <div className="flex flex-wrap items-baseline justify-between gap-2"><h3 className="text-base font-semibold text-text-strong">Area comparison</h3><p className="text-[13px] text-text-secondary">{count(children.length)} areas · Sort by a column or scroll to compare all metrics.</p></div>
-        <SortableDataTable caption={`${dashboard.scope.childrenLabel} in ${dashboard.scope.name}`} columns={columns} rows={children} rowKey={child => child.code} focusedKey={focused} selectedKey={selected}
+      <div className="mp-geo-comparison order-4 grid min-w-0 gap-2 xl:col-start-1 xl:row-start-3">
+        <div className="flex flex-wrap items-center justify-between gap-2"><div><h3 className="text-sm font-semibold text-text-strong">Area comparison</h3><p className="text-xs leading-5 text-text-secondary">{count(children.length)} areas · Sort columns or select an area to explore. Scroll for more.</p></div><CalculationHelp title="Area comparison"><p>Rows use the same area, dates and applicable filters as the map and key metrics. Sort a column to compare values; suppressed and unavailable values stay last.</p><p>Public storefront counts remain visible. Person-derived metrics follow the disclosure rule.</p><p>{dashboard.disclosure.description}</p></CalculationHelp></div>
+        <SortableDataTable density="compact" caption={`${dashboard.scope.childrenLabel} in ${dashboard.scope.name}`} columns={columns} rows={children} rowKey={child => child.code} focusedKey={focused} selectedKey={selected}
           onFocusRow={setFocused} onSelectRow={child => choose(child.code)} rowLabel={child => child.drillable ? `Drill into ${child.name}` : `Select ${child.name}`} initialSort={{ key: 'gross', direction: 'descending' }} />
       </div>
     }
@@ -273,22 +295,22 @@ function TrendsSection({ dashboard }: { dashboard: GeoDashboard }) {
   const orders = dashboard.trends.map(point => point.suppressed ? null : point.orderVolume ?? null)
   const activityLabels = dashboard.activityTrend.map(point => analyticsDay(point.date) ?? '')
   const [table, setTable] = useState(false)
-  return <div className="grid gap-5">
-    <div className="grid min-w-0 gap-5 xl:grid-cols-2">
-      <figure className="m-0 grid min-w-0 gap-3 rounded-surface border border-border-default bg-surface-primary p-4"><figcaption className="text-base font-semibold">Gross and net GMV</figcaption>
-        <TrendLineChart title="Gross and net GMV" labels={labels} formatValue={value => formatPesoCentavos(Math.round(value))} emptyReason="No order activity in this period." series={[{ key: 'gross', label: 'Gross GMV', colorVar: '--mp-viz-series-1', values: gross }, { key: 'net', label: 'Net GMV', colorVar: '--mp-viz-series-2', values: net }]} /></figure>
-      <figure className="m-0 grid min-w-0 gap-3 rounded-surface border border-border-default bg-surface-primary p-4"><figcaption className="text-base font-semibold">Order volume</figcaption>
-        <TrendLineChart title="Order volume" labels={labels} formatValue={value => count(Math.round(value))} emptyReason="No order activity in this period." series={[{ key: 'orders', label: 'Orders', colorVar: '--mp-viz-series-1', values: orders }]} /></figure>
-      <figure className="m-0 grid min-w-0 gap-3 rounded-surface border border-border-default bg-surface-primary p-4 xl:col-span-2"><figcaption className="text-base font-semibold">Daily active users</figcaption>
-        <TrendLineChart title="Daily active Buyers and Vendor users" labels={activityLabels} formatValue={value => count(Math.round(value))} emptyReason="No active-user facts in this period, or every day is suppressed."
-          series={[{ key: 'buyers', label: 'Buyer DAU', colorVar: '--mp-viz-series-1', values: dashboard.activityTrend.map(point => point.buyerDau ?? null) }, { key: 'vendors', label: 'Vendor DAU', colorVar: '--mp-viz-series-2', values: dashboard.activityTrend.map(point => point.vendorDau ?? null) }]} /></figure>
+  return <div className="mp-analytics grid gap-3">
+    <div className="grid min-w-0 gap-3 xl:grid-cols-2">
+      <DashboardPanel density="compact" title="Gross and net sales" description="Order value for the selected area and dates." calculation={<GeoMetricHelp dashboard={dashboard} definitions={['gross_gmv', 'net_gmv']} />}>
+        <TrendLineChart variant="area" title="Gross and net sales" labels={labels} formatValue={value => formatPesoCentavos(Math.round(value))} emptyReason="No order activity in this period." series={[{ key: 'gross', label: 'Gross sales', colorVar: '--mp-viz-series-1', values: gross }, { key: 'net', label: 'Net sales', colorVar: '--mp-viz-series-2', values: net }]} /></DashboardPanel>
+      <DashboardPanel density="compact" title="Order volume" description="Confirmed orders in the selected area." calculation={<GeoMetricHelp dashboard={dashboard} definitions={['order_volume']} />}>
+        <TrendLineChart variant="bar" title="Order volume" labels={labels} formatValue={value => count(Math.round(value))} emptyReason="No order activity in this period." series={[{ key: 'orders', label: 'Orders', colorVar: '--mp-viz-series-1', values: orders }]} /></DashboardPanel>
+      <div className="xl:col-span-2"><DashboardPanel density="compact" title="Daily active users" description="Buyers and Vendor users with recorded activity." calculation={<GeoMetricHelp dashboard={dashboard} definitions={['active_users']} />}>
+        <TrendLineChart variant="bar" title="Daily active Buyers and Vendor users" labels={activityLabels} formatValue={value => count(Math.round(value))} emptyReason="No active-user facts in this period, or every day is suppressed."
+          series={[{ key: 'buyers', label: 'Buyer DAU', colorVar: '--mp-viz-series-1', values: dashboard.activityTrend.map(point => point.buyerDau ?? null) }, { key: 'vendors', label: 'Vendor DAU', colorVar: '--mp-viz-series-2', values: dashboard.activityTrend.map(point => point.vendorDau ?? null) }]} /></DashboardPanel></div>
     </div>
     <div><Button variant="secondary" aria-expanded={table} onClick={() => setTable(value => !value)}>{table ? 'Hide trend tables' : 'Show trend tables'}</Button></div>
-    {table && <div className="grid gap-5 xl:grid-cols-2">
+    {table && <div className="mp-card-group grid gap-5 xl:grid-cols-2">
       <SortableDataTable caption="Order trend by period" rows={dashboard.trends} rowKey={point => point.bucket.toISOString()} columns={[
         { key: 'bucket', header: 'Period starting', cell: point => analyticsDay(point.bucket) ?? 'Not recorded', sortValue: point => analyticsDay(point.bucket) ?? '' },
-        { key: 'gross', header: 'Gross GMV', numeric: true, cell: point => <CellValue cell={{ value: point.grossGmvCentavos, suppressed: point.suppressed }} format={formatPesoCentavos} reason={point.reason} />, sortValue: point => point.suppressed ? null : point.grossGmvCentavos ?? null },
-        { key: 'net', header: 'Net GMV', numeric: true, cell: point => <CellValue cell={{ value: point.netGmvCentavos, suppressed: point.suppressed }} format={formatPesoCentavos} reason={point.reason} />, sortValue: point => point.suppressed ? null : point.netGmvCentavos ?? null },
+        { key: 'gross', header: 'Gross sales', numeric: true, cell: point => <CellValue cell={{ value: point.grossGmvCentavos, suppressed: point.suppressed }} format={formatPesoCentavos} reason={point.reason} />, sortValue: point => point.suppressed ? null : point.grossGmvCentavos ?? null },
+        { key: 'net', header: 'Net sales', numeric: true, cell: point => <CellValue cell={{ value: point.netGmvCentavos, suppressed: point.suppressed }} format={formatPesoCentavos} reason={point.reason} />, sortValue: point => point.suppressed ? null : point.netGmvCentavos ?? null },
         { key: 'orders', header: 'Orders', numeric: true, cell: point => <CellValue cell={{ value: point.orderVolume, suppressed: point.suppressed }} format={count} reason={point.reason} />, sortValue: point => point.suppressed ? null : point.orderVolume ?? null },
       ]} />
       <SortableDataTable caption="Active users by day" rows={dashboard.activityTrend} rowKey={point => point.date.toISOString()} columns={[
@@ -310,9 +332,9 @@ export function DemandSection({ filters }: { filters: GeoFilters }) {
   const format = (value: number) => effective === 'VALUE' ? formatPesoCentavos(value) : count(value)
   const pagination = demand.data?.columnPagination
   const dimension = filters.categoryId || filters.materialId ? 'Material' : 'Category'
-  return <section aria-labelledby="demand" className="grid min-w-0 gap-5 rounded-surface border border-border-default bg-surface-primary p-4 sm:p-6">
+  return <section aria-labelledby="demand" className="grid min-w-0 gap-5 mp-card mp-card-padded">
     <div className="flex flex-col gap-4 border-b border-border-default pb-5 lg:flex-row lg:items-end lg:justify-between">
-      <div className="min-w-0"><h2 id="demand" className="text-lg font-semibold text-text-strong">{dimension} demand by area</h2><p className="mt-1.5 max-w-3xl text-sm leading-6 text-text-secondary">Compare confirmed marketplace demand across {demand.data?.scope.childrenLabel.toLowerCase() ?? 'areas'}. Categories and materials without matching orders show 0.</p>
+      <div className="min-w-0"><div className="flex items-center justify-between gap-2"><h2 id="demand" className="text-lg font-semibold text-text-strong">{dimension} demand by area</h2>{demand.data && <CalculationHelp title={`${dimension} demand by area`}><p>{demand.data.definition}</p><p>Choose a category in the dashboard filters to compare its materials. This is a recorded marketplace indicator, not an official government market statistic.</p></CalculationHelp>}</div><p className="mt-1.5 max-w-3xl text-sm leading-6 text-text-secondary">Compare confirmed marketplace demand across {demand.data?.scope.childrenLabel.toLowerCase() ?? 'areas'}. Categories and materials without matching orders show 0.</p>
         {demand.data && <p className="mt-3 inline-flex max-w-full items-center gap-2 text-[13px] font-medium text-text-strong"><MapPinned size={16} aria-hidden="true" className="shrink-0 text-text-secondary" /><span className="min-w-0 break-words">{demand.data.scope.name}</span><span className="shrink-0 font-normal text-text-secondary">· {dimension === 'Material' ? 'Materials' : 'Categories'}</span></p>}
       </div>
       <label className={`${labelClass} w-full shrink-0 sm:w-56`}>Measure<select className={control} value={effective} onChange={event => setMeasure(event.target.value as typeof measure)}><option value="ORDER_COUNT">Orders</option><option value="QUANTITY" disabled={!filters.materialId}>Quantity{filters.materialId ? '' : ' (select material)'}</option><option value="VALUE">Line value</option></select></label>
@@ -322,36 +344,14 @@ export function DemandSection({ filters }: { filters: GeoFilters }) {
         rows={demand.data.rows.map(row => ({ code: row.code, name: row.name, cells: row.cells.map(cell => ({ value: cell.value === null || cell.value === undefined ? null : Number(cell.value), suppressed: cell.suppressed, reason: cell.reason ?? null })) }))} />
       {pagination && <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><p className="text-[13px] text-text-secondary">{pagination.total} {dimension === 'Material' ? 'materials' : 'categories'} · up to 8 per page{demand.data.unit ? ` · Quantities in ${demand.data.unit}` : ''}</p><Pagination page={page} lastPage={pagination.lastPage} busy={demand.loading} onChange={next => setPosition({ selection, page: next })} /></div>}
       {demand.data.notComparableLines > 0 && <p className="text-[13px] text-text-secondary">{count(demand.data.notComparableLines)} order lines use a unit that cannot be normalized and are excluded from quantity totals.</p>}
-      <details className="border-t border-border-default pt-2 text-[13px] text-text-secondary"><summary className="min-h-11 cursor-pointer content-center rounded-control font-semibold text-text-strong focus-visible:outline-2 focus-visible:outline-focus-ring">How demand is measured</summary><p className="max-w-4xl pb-2 pt-1 leading-6">{demand.data.definition} Choose a category in the dashboard filters to compare its materials. This is a recorded marketplace indicator, not an official government market statistic.</p></details>
     </>}
   </section>
 }
 
-function GeoExportButton({ filters }: { filters: GeoFilters }) {
-  const [open, setOpen] = useState(false)
-  const [purpose, setPurpose] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [message, setMessage] = useState<{ tone: 'error' | 'success'; text: string } | null>(null)
-  const key = useRef({ scope: '', value: newKey() })
-  async function submit(event: FormEvent) {
-    event.preventDefault()
-    if (purpose.trim().length < 10) { setMessage({ tone: 'error', text: 'State the purpose of this export in at least 10 characters.' }); return }
-    const payload = exportFilters(filters)
-    const scope = JSON.stringify([payload, purpose.trim()])
-    if (key.current.scope !== scope) key.current = { scope, value: newKey() }
-    setBusy(true); setMessage(null)
-    try { const outcome = await requestExport('GEO_ANALYTICS', payload, purpose.trim(), key.current.value); setMessage({ tone: 'success', text: outcome === 'DOWNLOADED' ? 'Downloaded. The file carries the dataset label and the same suppression as this page.' : 'The export is still generating; it will be listed with your exports when ready.' }) }
-    catch (cause) { setMessage({ tone: 'error', text: problemText(await apiProblem(cause)) }) } finally { setBusy(false) }
-  }
+export function GeoExportButton({ filters }: { filters: GeoFilters }) {
+  const context = { basePath: import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1', audience: 'admin' as const, types: ['GEO_ANALYTICS'] as const, filters: exportFilters(filters) }
   return <>
-    <DocumentExportButton basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'} audience="admin" types={['GEO_ANALYTICS']} filters={exportFilters(filters)} />
-    <Button variant="secondary" onClick={() => setOpen(true)}><Download size={16} aria-hidden="true" />Export CSV</Button>
-    {open && <SidePanel open title="Export geographic analytics" description="Requires the aggregate export permission. The export uses the current area, period and filters, with suppressed cells left blank." onClose={() => setOpen(false)}>
-      <form onSubmit={event => void submit(event)} className="grid gap-5">
-        <label className={labelClass}>Purpose (recorded)<textarea className={`${control} min-h-20 py-2`} maxLength={500} value={purpose} onChange={event => setPurpose(event.target.value)} /></label>
-        {message && <p role={message.tone === 'error' ? 'alert' : 'status'} className={`rounded-control border px-4 py-3 text-sm ${message.tone === 'error' ? 'border-status-error/30 bg-red-50 text-red-900' : 'border-status-success/30 bg-green-50 text-green-900'}`}>{message.text}</p>}
-        <div className="flex justify-end"><Button type="submit" disabled={busy}>{busy ? 'Generating…' : 'Generate export'}</Button></div>
-      </form>
-    </SidePanel>}
+    <DocumentExportButton {...context} />
+    <DocumentExportButton {...context} format="CSV" />
   </>
 }

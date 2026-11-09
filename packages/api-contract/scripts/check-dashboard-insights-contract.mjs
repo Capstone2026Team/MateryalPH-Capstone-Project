@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { createRequire } from 'node:module'
 import { readFileSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
@@ -42,7 +43,31 @@ const vendor = schemas.VendorDashboardInsights.properties
 for (const [section, name] of [['orders', 'VendorDashboardOrders'], ['performance', 'VendorDashboardPerformance'], ['stock', 'VendorDashboardStock'], ['disputes', 'VendorDashboardDisputes']]) {
   assert.ok(nullableRef(vendor[section], name), `Vendor ${section} is null without its grant`)
 }
+const products = schemas.VendorDashboardOrders.properties.products
+assert.ok(products.required.includes('sales_breakdown'))
+assert.ok(nullableRef(products.properties.sales_breakdown, 'VendorProductSalesBreakdown'), 'Product reconciliation is null without finance.view')
+assert.deepEqual([...schemas.VendorProductSalesBreakdown.required].sort(), ['delivery_centavos', 'net_sales_centavos', 'product_sales_centavos', 'refunds_centavos'])
+for (const value of Object.values(schemas.VendorProductSalesBreakdown.properties)) {
+  assert.equal(value.type, 'integer')
+  assert.equal(value.minimum, 0)
+}
+assert.match(products.properties.sales_breakdown.description, /same surviving confirmed orders/)
+const { VendorProductSalesBreakdownFromJSON, VendorProductSalesBreakdownToJSON } = createRequire(import.meta.url)('../generated/typescript/dist/index.js')
+const values = { product_sales_centavos: 2940650, delivery_centavos: 93075, refunds_centavos: 0, net_sales_centavos: 3033725 }
+const decoded = VendorProductSalesBreakdownFromJSON(values)
+assert.equal(decoded.productSalesCentavos + decoded.deliveryCentavos - decoded.refundsCentavos, decoded.netSalesCentavos)
+assert.deepEqual(VendorProductSalesBreakdownToJSON(decoded), values)
+assert.equal(VendorProductSalesBreakdownFromJSON(null), null)
+
 const kpis = schemas.VendorDashboardOrders.properties.kpis.properties
+const refunds = schemas.VendorDashboardSeriesPoint.properties.refunds_centavos
+assert.deepEqual(refunds.type, ['integer', 'null'], 'Daily refunds are integer centavos and null without finance.view')
+assert.equal(refunds.minimum, 0)
+assert.match(refunds.description, /first confirmed/)
+const cancellations = schemas.VendorDashboardSeriesPoint.properties.cancellation_deductions_centavos
+assert.deepEqual(cancellations.type, ['integer', 'null'])
+assert.equal(cancellations.minimum, 0)
+assert.match(cancellations.description, /not already included/)
 for (const money of ['gross_sales_centavos', 'net_sales_centavos', 'average_order_value_centavos']) {
   assert.ok(kpis[money].oneOf?.some(s => s.type === 'null') || (Array.isArray(kpis[money].type) && kpis[money].type.includes('null')), `${money} is nullable for roles without finance.view`)
 }
@@ -50,6 +75,6 @@ assert.deepEqual(schemas.VendorDashboardInsights.properties.traffic.properties.s
 const admin = schemas.AdminDashboardInsights.properties
 assert.ok(nullableRef(admin.marketplace, 'AdminDashboardMarketplace') && nullableRef(admin.vendor_health, 'AdminDashboardVendorHealth'))
 assert.deepEqual(schemas.DashboardClassification.properties.class.enum, ['BUILDING_TRACK_RECORD', 'BELOW_WATCH_LEVEL', 'WATCH', 'HEALTHY'])
-const text = JSON.stringify(Object.fromEntries(Object.entries(schemas).filter(([name]) => /^(Dashboard|VendorDashboard|AdminDashboard(Insights|Marketplace|Series|Activity|Area|Categories|VendorHealth))/.test(name))))
+const text = JSON.stringify(Object.fromEntries(Object.entries(schemas).filter(([name]) => /^(Dashboard|VendorProductSalesBreakdown|VendorDashboard|AdminDashboard(Insights|Marketplace|Series|Activity|Area|Categories|VendorHealth))/.test(name))))
 assert.ok(!/latitude|longitude|"location"|buyer_key|buyer_profile_id|email|phone|"tin"|tax_evidence/i.test(text), 'Dashboard schemas expose no coordinates, Buyer identity, contact data, TIN or tax evidence')
 console.log('Dashboard insights contract checks passed (2 operations).')

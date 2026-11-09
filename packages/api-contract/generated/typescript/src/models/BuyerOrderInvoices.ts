@@ -20,6 +20,13 @@ import {
     InvoiceRequestViewToJSON,
     InvoiceRequestViewToJSONTyped,
 } from './InvoiceRequestView';
+import type { InvoiceOrderSummary } from './InvoiceOrderSummary';
+import {
+    InvoiceOrderSummaryFromJSON,
+    InvoiceOrderSummaryFromJSONTyped,
+    InvoiceOrderSummaryToJSON,
+    InvoiceOrderSummaryToJSONTyped,
+} from './InvoiceOrderSummary';
 import type { InvoiceRecordView } from './InvoiceRecordView';
 import {
     InvoiceRecordViewFromJSON,
@@ -85,13 +92,17 @@ export interface BuyerOrderInvoices {
      */
     canEditBillingDetails: boolean;
     /**
-     *
+     * False once a Vendor sales invoice copy has been sent, including legacy uploaded copies. Corrections remain a separate action.
      */
     canRequestCopy: boolean;
     /**
      *
      */
     canRequestCorrection: boolean;
+    /**
+     *
+     */
+    orderSummary?: InvoiceOrderSummary;
 }
 
 
@@ -144,6 +155,7 @@ export function BuyerOrderInvoicesFromJSONTyped(json: any, ignoreDiscriminator: 
         'canEditBillingDetails': json['can_edit_billing_details'],
         'canRequestCopy': json['can_request_copy'],
         'canRequestCorrection': json['can_request_correction'],
+        'orderSummary': json['order_summary'] == null ? undefined : InvoiceOrderSummaryFromJSON(json['order_summary']),
     };
 }
 
@@ -169,6 +181,7 @@ export function BuyerOrderInvoicesToJSONTyped(value?: BuyerOrderInvoices | null,
         'can_edit_billing_details': value['canEditBillingDetails'],
         'can_request_copy': value['canRequestCopy'],
         'can_request_correction': value['canRequestCorrection'],
+        'order_summary': InvoiceOrderSummaryToJSON(value['orderSummary']),
     };
 }
 

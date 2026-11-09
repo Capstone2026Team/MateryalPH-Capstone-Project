@@ -41,7 +41,7 @@ export function VendorDiscountEditor({ discount, fulfillmentMethod, preview, leg
         <div><dt className="text-text-secondary">Deduction</dt><dd className="font-semibold tabular-nums">− {formatPesoCentavos(preview.deduction)}</dd></div>
         <div><dt className="text-text-secondary">Estimated order total</dt><dd className="font-semibold tabular-nums">{deliveryPending ? 'Awaiting delivery fee' : formatPesoCentavos(preview.total)}</dd></div>
       </dl>
-      <p className="text-xs text-text-secondary">Materials {formatPesoCentavos(preview.materialsPayable)} · {deliveryPending ? 'Delivery awaiting confirmation' : `Delivery ${formatPesoCentavos(preview.deliveryPayable)}`} · Before payment processing fees.</p>
+      <p className="text-xs text-text-secondary">Materials {formatPesoCentavos(preview.materialsPayable)} · {deliveryPending ? 'Delivery awaiting confirmation' : `Delivery ${formatPesoCentavos(preview.deliveryPayable)}`} · Before e-wallet transaction fees.</p>
     </> : <p role="status" className="text-sm text-text-secondary">{preview.message}</p>}
   </section>
 }

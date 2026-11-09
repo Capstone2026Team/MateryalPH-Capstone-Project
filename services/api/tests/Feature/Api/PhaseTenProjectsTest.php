@@ -6,8 +6,10 @@ namespace Tests\Feature\Api;
 
 use App\Domain\Geography\PlacesProvider;
 use App\Domain\Geography\RouteProvider;
+use App\Domain\Orders\OrderActor;
 use App\Domain\Projects\ProjectBudget;
 use App\Domain\Projects\ProjectEstimateService;
+use App\Domain\Projects\WorkPackageOrderRecovery;
 use App\Domain\Vendors\AddressGeocoder;
 use App\Domain\Vendors\StoreOperatingSchedule;
 use App\Domain\Vendors\VendorFileScanner;
@@ -115,8 +117,8 @@ final class PhaseTenProjectsTest extends TestCase
     {
         $id = $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/inquiries', ['lock_version' => $w['lock_version'], 'candidate_id' => $candidate['id']], $this->key())->assertCreated()->json('data.id');
         $header = $this->getJson('/api/v1/buyers/conversations/'.$id)->assertOk()->json('data.conversation');
-        self::assertNotNull($header['main_conversation_id']);
-        $this->getJson('/api/v1/buyers/conversations/'.$header['main_conversation_id'])->assertOk()->assertJsonPath('data.conversation.context_type', 'ITEM_BASED');
+        self::assertSame('PROJECT_BASED', $header['context_type']);
+        self::assertNotEmpty($header['locked_reference']['work_package']);
 
         return [$id, $this->getJson('/api/v1/buyers/work-packages/'.$w['id'])->assertOk()->json('data')];
     }
@@ -130,6 +132,28 @@ final class PhaseTenProjectsTest extends TestCase
         $this->putJson('/api/v1/vendor/conversations/'.$id.'/quotation/draft', ['lock_version' => 1, 'draft' => $draft])->assertOk();
 
         return $this->postJson('/api/v1/vendor/conversations/'.$id.'/quotation/publish', ['lock_version' => 2], $this->key())->assertOk()->json('data.versions.0');
+    }
+
+    public function test_candidate_badges_are_current_public_awards_without_rewriting_the_estimate(): void
+    {
+        [$vendor] = $this->pickupStore('Awarded project supplier');
+        $this->bulk($vendor->id);
+        $awardId = (string) Str::uuid7();
+        DB::table('vendor_badge_history')->insert([
+            'id' => $awardId, 'vendor_organization_id' => $vendor->id,
+            'badge_definition_id' => DB::table('badge_definitions')->where('code', 'FAST_RESPONDER')->value('id'),
+            'earned_at' => now(), 'scope_key' => '', 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $this->buyer();
+        [, $w] = $this->package();
+        $estimate = $this->scan($w);
+        self::assertSame(['FAST_RESPONDER'], array_column($estimate['items'][0]['badges'], 'code'));
+        $snapshot = DB::table('compiled_estimate_vendors')->where('id', $estimate['items'][0]['id'])->value('snapshot');
+        self::assertArrayNotHasKey('badges', json_decode($snapshot, true, 512, JSON_THROW_ON_ERROR));
+        DB::table('vendor_badge_history')->where('id', $awardId)->update(['revoked_at' => now(), 'revocation_reason' => 'CRITERIA_NOT_MET', 'updated_at' => now()]);
+        $current = $this->getJson('/api/v1/buyers/work-packages/'.$w['id'].'/estimates')->assertOk()->json('data');
+        self::assertSame([], $current['items'][0]['badges']);
+        self::assertSame($snapshot, DB::table('compiled_estimate_vendors')->where('id', $estimate['items'][0]['id'])->value('snapshot'));
     }
 
     public function test_archived_projects_retain_originals_and_expire_unassigned_inquiries_but_reject_new_work(): void
@@ -508,5 +532,237 @@ final class PhaseTenProjectsTest extends TestCase
         DB::table('refunds')->insert(['id' => (string) Str::uuid7(), 'target_type' => 'ORDER', 'order_id' => $order, 'source_payment_id' => $payment, 'trigger' => 'CANCELLATION', 'amount_centavos' => 15300, 'source_captured_centavos' => 17300, 'state' => 'REFUNDED',
             'cancellation_decision_id' => $decision, 'idempotency_key' => (string) Str::uuid7(), 'created_at' => now(), 'updated_at' => now()]);
         $this->getJson('/api/v1/buyers/work-packages/'.$w['id'])->assertOk()->assertJsonPath('data.budget.actual_centavos', 2000)->assertJsonPath('data.budget.awaiting_recovery_centavos', 0)->assertJsonPath('data.budget.committed_centavos', 2000)->assertJsonPath('data.budget.remaining_centavos', 998000);
+    }
+
+    public function test_opening_fulfillment_messages_preserves_the_work_package_order_and_requirements(): void
+    {
+        [$vendor, $owner] = $this->pickupStore('Package message navigation');
+        $this->bulk($vendor->id);
+        $buyer = $this->buyer();
+        [, $w] = $this->package();
+        $candidate = $this->scan($w)['items'][0];
+        $order = $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/selection', [
+            'lock_version' => $w['lock_version'], 'candidate_id' => $candidate['id'], 'payment_method' => 'ONLINE',
+        ], $this->key())->assertCreated()->json('data.id');
+        $before = $this->getJson('/api/v1/buyers/work-packages/'.$w['id'])->assertOk()->json('data');
+        $thread = $this->postJson('/api/v1/buyers/orders/'.$order.'/fulfillment-conversation', [], $this->key())->assertOk()->json('data.conversation_id');
+        $this->getJson('/api/v1/buyers/conversations/'.$thread)->assertOk()->assertJsonPath('data.conversation.order_id', $order)
+            ->assertJsonPath('data.conversation.locked_reference.version_id', $w['current_version_id']);
+        $this->postJson('/api/v1/buyers/conversations/'.$thread.'/messages', ['body' => 'Please confirm availability.', 'client_message_id' => (string) Str::uuid7()])->assertCreated();
+        $after = $this->getJson('/api/v1/buyers/work-packages/'.$w['id'])->assertOk()->json('data');
+        self::assertSame($before['order_id'], $after['order_id']);
+        self::assertSame($before['selected_vendor_id'], $after['selected_vendor_id']);
+        self::assertSame($before['version'], $after['version']);
+    }
+
+    public function test_cancellation_reopens_the_same_package_and_allows_matching_again(): void
+    {
+        [$vendor] = $this->pickupStore('Reusable package');
+        $this->bulk($vendor->id);
+        $this->buyer();
+        [, $w] = $this->package();
+        $candidate = $this->scan($w)['items'][0];
+        $order = $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/selection', [
+            'lock_version' => $w['lock_version'], 'candidate_id' => $candidate['id'], 'payment_method' => 'ONLINE',
+        ], $this->key())->assertCreated()->json('data.id');
+        $lock = (int) DB::table('orders')->where('id', $order)->value('lock_version');
+        $this->postJson('/api/v1/buyers/orders/'.$order.'/cancel', ['lock_version' => $lock], $this->key())->assertOk();
+        $reopened = $this->getJson('/api/v1/buyers/work-packages/'.$w['id'])->assertOk()->assertJsonPath('data.status', 'ACTIVE')
+            ->assertJsonPath('data.selected_vendor_id', null)->assertJsonPath('data.current_version_id', $w['current_version_id'])->json('data');
+        self::assertNotEmpty($this->scan($reopened)['items']);
+        self::assertSame('CANCELLED', DB::table('orders')->where('id', $order)->value('order_state'));
+        self::assertTrue(DB::table('outbox_events')->where('event_type', 'WORK_PACKAGE_REOPEN_REQUESTED')->exists());
+        DB::transaction(fn () => app(WorkPackageOrderRecovery::class)->reopen(DB::table('orders')->where('id', $order)->first(), OrderActor::system()));
+        self::assertTrue(DB::table('audit_logs')->where('action', 'WORK_PACKAGE_REOPENED')->exists());
+    }
+
+    public function test_grouped_cancellation_reopens_only_failed_coverage_and_preserves_the_other_supplier_order(): void
+    {
+        [$first] = $this->pickupStore('First group supplier', [['price' => 1800, 'qty' => '5']]);
+        [$second] = $this->pickupStore('Second group supplier', [['price' => 1900, 'qty' => '5']]);
+        $this->bulk($first->id);
+        $this->bulk($second->id);
+        $buyer = $this->buyer();
+        [, $w] = $this->package();
+        $this->scan($w);
+        $base = '/api/v1/buyers/work-packages/'.$w['id'];
+        $options = $this->getJson($base.'/arrangement-options')->assertOk()->json('data.items');
+        $group = collect($options)->firstWhere('vendor_count', 2);
+        self::assertNotNull($group);
+        $arrangement = $this->postJson($base.'/arrangements', ['source_candidate_id' => $group['source_candidate_id'], 'proposal_token' => $group['proposal_token']], $this->key())->assertCreated()->json('data');
+        $url = $base.'/arrangements/'.$arrangement['id'];
+        $arrangement = $this->postJson($url.'/submit', ['version' => $arrangement['version'], 'fingerprint' => $arrangement['fingerprint'], 'acknowledged' => true,
+            'payments' => [['vendor_id' => $first->id, 'payment_method' => 'ONLINE'], ['vendor_id' => $second->id, 'payment_method' => 'ONLINE']]], $this->key())->assertCreated()->json('data');
+        $orders = array_column($arrangement['vendors'], 'order_id', 'vendor_id');
+        self::assertCount(2, array_filter($orders));
+        $cancelled = $orders[$first->id];
+        $peer = $orders[$second->id];
+        $this->postJson('/api/v1/buyers/orders/'.$cancelled.'/cancel', ['lock_version' => (int) DB::table('orders')->where('id', $cancelled)->value('lock_version')], $this->key())->assertOk();
+        DB::transaction(fn () => app(WorkPackageOrderRecovery::class)->reopen(DB::table('orders')->where('id', $cancelled)->first(), OrderActor::system()));
+        $reopened = $this->getJson($url)->assertOk()->json('data');
+        self::assertCount(1, $reopened['vendors']);
+        self::assertSame($peer, $reopened['vendors'][0]['order_id']);
+        self::assertSame('5.0000', bcadd($reopened['coverage']['lines'][0]['remaining_quantity'], '0', 4));
+        self::assertSame($cancelled, $reopened['previous_vendors'][0]['order_id']);
+
+        [$replacement, , $listing] = $this->pickupStore('Replacement group supplier', [['price' => 2000, 'qty' => '5']]);
+        $this->bulk($replacement->id);
+        $this->signInBuyer($buyer);
+        $variant = $this->variantIds($listing)[0];
+        $price = DB::table('listing_price_versions')->where('listing_variant_id', $variant)->where('price_kind', 'ORDINARY')->whereNull('retired_at')->value('id');
+        $line = DB::table('work_package_lines')->where('work_package_version_id', $w['current_version_id'])->value('id');
+        $edited = $this->patchJson($url, ['version' => $reopened['version'], 'vendor_id' => $replacement->id, 'line_id' => $line,
+            'variant_id' => $variant, 'price_version_id' => $price, 'method' => 'PICKUP'])->assertOk()->json('data');
+        self::assertSame('0.0000', bcadd($edited['coverage']['lines'][0]['remaining_quantity'], '0', 4));
+        self::assertSame($peer, collect($edited['vendors'])->firstWhere('vendor_id', $second->id)['order_id']);
+        self::assertNull(collect($edited['vendors'])->firstWhere('vendor_id', $replacement->id)['order_id']);
+        self::assertSame('AWAITING_VENDOR_CONFIRMATION', DB::table('orders')->where('id', $peer)->value('order_state'));
+        self::assertSame(2, DB::table('orders')->where('work_package_id', $w['id'])->count());
+    }
+
+    public function test_work_package_message_buttons_attach_packages_to_the_same_normal_store_chat(): void
+    {
+        [$vendor, $owner, $listing] = $this->pickupStore('One ordinary chat');
+        $this->bulk($vendor->id);
+        $buyer = $this->buyer();
+        $store = null;
+        $inquiries = [];
+        foreach (range(1, 2) as $index) {
+            [, $w] = $this->package();
+            $candidate = $this->scan($w)['items'][0];
+            $key = $this->key();
+            $input = ['lock_version' => $w['lock_version'], 'candidate_id' => $candidate['id']];
+            $result = $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/inquiries', $input, $key)->assertCreated()->json('data');
+            $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/inquiries', $input, $key)->assertCreated()->assertJsonPath('data.store_conversation_id', $result['store_conversation_id']);
+            $store ??= $result['store_conversation_id'];
+            self::assertSame($store, $result['store_conversation_id']);
+            $inquiries[] = $result['id'];
+            $this->getJson('/api/v1/buyers/conversations/'.$store.'?store_thread=true')->assertOk()->assertJsonPath('data.conversation.id', $store)
+                ->assertJsonPath('data.conversation.context_type', 'ITEM_BASED')->assertJsonCount($index, 'data.messages.items')
+                ->assertJsonPath('data.messages.items.'.($index - 1).'.work_package_attachment.reference.version_id', $w['current_version_id']);
+        }
+        $this->getJson('/api/v1/buyers/conversations')->assertOk()->assertJsonCount(1, 'data.items')->assertJsonPath('data.items.0.id', $store);
+        $this->postJson('/api/v1/buyers/conversations/'.$store.'/messages', ['body' => 'Please review my two packages.', 'client_message_id' => (string) Str::uuid7()])->assertCreated();
+        $this->signInStoreMember($owner);
+        $this->getJson('/api/v1/vendor/conversations/'.$inquiries[1].'/buyer-thread')->assertOk()->assertJsonPath('data.conversation.id', $store)
+            ->assertJsonPath('data.conversation.read_only', false)->assertJsonPath('data.messages.items.0.work_package_attachment.can_prepare_quotation', true);
+        $this->postJson('/api/v1/vendor/conversations/'.$store.'/messages', ['body' => 'I can help with both.', 'client_message_id' => (string) Str::uuid7()])->assertCreated();
+        $version = $this->publish($inquiries[0], $this->variantIds($listing)[0]);
+        $this->signInBuyer($buyer);
+        $this->getJson('/api/v1/buyers/conversations/'.$store.'?store_thread=true')->assertOk()->assertJsonPath('data.quotations.versions.0.id', $version['id'])
+            ->assertJsonPath('data.quotations.versions.0.conversation_id', $inquiries[0]);
+        self::assertSame(2, DB::table('messages')->where('conversation_id', $store)->where('kind', 'WORK_PACKAGE')->count());
+        self::assertSame(1, DB::table('conversations')->where('buyer_profile_id', $this->buyerProfileId($buyer))->where('context_type', 'ITEM_BASED')->count());
+        $this->postJson('/api/v1/buyers/conversations/'.$store.'/work-package-attachment', [], $this->key())->assertForbidden();
+        $this->buyer();
+        $this->postJson('/api/v1/buyers/conversations/'.$inquiries[0].'/work-package-attachment', [], $this->key())->assertNotFound();
+        self::assertSame(2, DB::table('messages')->where('conversation_id', $store)->where('kind', 'WORK_PACKAGE')->count());
+    }
+
+    public function test_package_attachment_shows_only_this_vendors_allocation_then_its_accepted_order_items(): void
+    {
+        [$first, $owner, $listing] = $this->pickupStore('Scoped first supplier', [['price' => 1800, 'qty' => '5']]);
+        [$second, $otherOwner] = $this->pickupStore('Scoped second supplier', [['price' => 1900, 'qty' => '5']]);
+        $this->bulk($first->id);
+        $this->bulk($second->id);
+        $buyer = $this->buyer();
+        $material = DB::table('materials')->where('code', 'CONCRETE_HOLLOW_BLOCK')->first();
+        $line = ['material_id' => $material->id, 'unit_id' => $material->canonical_unit_id, 'quantity' => '5', 'specifications' => ['thickness_mm' => '100'], 'preferred_brand' => 'BrandCo'];
+        [, $w] = $this->package(extra: ['lines' => [array_merge($line, ['name' => 'North wall blocks']), array_merge($line, ['name' => 'South wall blocks'])]]);
+        $original = DB::table('work_package_versions')->where('id', $w['current_version_id'])->first();
+        $this->scan($w);
+        $base = '/api/v1/buyers/work-packages/'.$w['id'];
+        $group = collect($this->getJson($base.'/arrangement-options')->assertOk()->json('data.items'))->firstWhere('vendor_count', 2);
+        self::assertNotNull($group);
+        $arrangement = $this->postJson($base.'/arrangements', ['source_candidate_id' => $group['source_candidate_id'], 'proposal_token' => $group['proposal_token']], $this->key())->assertCreated()->json('data');
+        $arrangement = $this->postJson($base.'/arrangements/'.$arrangement['id'].'/vendors/'.$first->id.'/inquiry', ['version' => $arrangement['version']])->assertOk()->json('data');
+        $inquiry = collect($arrangement['vendors'])->firstWhere('vendor_id', $first->id)['conversation_id'];
+        $chat = $this->postJson('/api/v1/buyers/conversations/'.$inquiry.'/work-package-attachment', [], $this->key())->assertCreated()->json('data.id');
+        $this->signInStoreMember($owner);
+        $response = $this->getJson('/api/v1/vendor/conversations/'.$chat.'/buyer-thread')->assertOk()->json('data');
+        $reference = $response['messages']['items'][0]['work_package_attachment']['reference'];
+        self::assertSame('VENDOR_ALLOCATION', $reference['material_scope']);
+        self::assertCount(1, $reference['work_package']['lines']);
+        self::assertSame('5.0000', bcadd($reference['work_package']['lines'][0]['quantity'], '0', 4));
+        $assigned = $reference['work_package']['lines'][0]['name'];
+        $other = $assigned === 'North wall blocks' ? 'South wall blocks' : 'North wall blocks';
+        self::assertStringNotContainsString($other, json_encode($reference));
+        self::assertArrayNotHasKey('budget_centavos', $reference['work_package']);
+        self::assertArrayNotHasKey('system_estimate', $reference);
+        $this->getJson('/api/v1/vendor/conversations/'.$inquiry)->assertOk()->assertJsonCount(1, 'data.conversation.locked_reference.work_package.lines');
+        $this->signInStoreMember($otherOwner);
+        $this->getJson('/api/v1/vendor/conversations/'.$chat.'/buyer-thread')->assertNotFound();
+        $this->signInStoreMember($owner);
+        $quote = $this->publish($inquiry, $this->variantIds($listing)[0], '3');
+        $this->signInBuyer($buyer);
+        $order = $this->postJson('/api/v1/buyers/conversations/'.$inquiry.'/quotation/accept', ['version_id' => $quote['id'], 'content_hash' => $quote['content_hash'], 'payment_method' => 'ONLINE'], $this->key())->assertOk()->json('data.order_id');
+        $this->postJson('/api/v1/buyers/orders/'.$order.'/work-package-message', [], $this->key())->assertCreated()->assertJsonPath('data.id', $chat);
+        $this->signInStoreMember($owner);
+        $response = $this->getJson('/api/v1/vendor/conversations/'.$chat.'/buyer-thread')->assertOk()->json('data');
+        foreach (collect($response['messages']['items'])->where('kind', 'WORK_PACKAGE') as $message) {
+            $reference = $message['work_package_attachment']['reference'];
+            self::assertSame('VENDOR_ORDER', $reference['material_scope']);
+            self::assertTrue($reference['order']['accepted']);
+            self::assertSame($order, $reference['order']['id']);
+            self::assertCount(1, $reference['work_package']['lines']);
+            self::assertSame('3.0000', bcadd($reference['work_package']['lines'][0]['quantity'], '0', 4));
+            self::assertSame(1700, $reference['work_package']['lines'][0]['unit_price_centavos']);
+            self::assertSame('100', $reference['work_package']['lines'][0]['specifications']['thickness_mm']);
+            self::assertArrayNotHasKey('working_duplicate', $reference);
+            self::assertStringNotContainsString($other, json_encode($reference));
+        }
+        $fulfillment = DB::table('conversations')->where('order_id', $order)->where('purpose', 'FULFILLMENT')->value('id');
+        $this->getJson('/api/v1/vendor/conversations/'.$fulfillment)->assertOk()->assertJsonPath('data.conversation.locked_reference.material_scope', 'VENDOR_ORDER')
+            ->assertJsonCount(1, 'data.conversation.locked_reference.work_package.lines')->assertJsonPath('data.conversation.locked_reference.work_package.lines.0.quantity', '3.0000');
+        $this->signInBuyer($buyer);
+        $this->getJson('/api/v1/buyers/conversations/'.$inquiry)->assertOk()->assertJsonCount(2, 'data.conversation.locked_reference.work_package.lines');
+        self::assertSame($original->content, DB::table('work_package_versions')->where('id', $original->id)->value('content'));
+        self::assertSame($original->content_hash, DB::table('work_package_versions')->where('id', $original->id)->value('content_hash'));
+    }
+
+    public function test_order_message_attaches_its_package_and_cancelling_the_order_never_locks_the_store_chat(): void
+    {
+        [$vendor, $owner] = $this->pickupStore('Order package attachment');
+        $this->bulk($vendor->id);
+        $this->buyer();
+        [, $w] = $this->package();
+        $candidate = $this->scan($w)['items'][0];
+        $order = $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/selection', ['lock_version' => $w['lock_version'], 'candidate_id' => $candidate['id'], 'payment_method' => 'ONLINE'], $this->key())->assertCreated()->json('data.id');
+        $key = $this->key();
+        $store = $this->postJson('/api/v1/buyers/orders/'.$order.'/work-package-message', [], $key)->assertCreated()->json('data.id');
+        $this->postJson('/api/v1/buyers/orders/'.$order.'/work-package-message', [], $key)->assertCreated()->assertJsonPath('data.id', $store);
+        self::assertSame(1, DB::table('messages')->where('conversation_id', $store)->where('kind', 'WORK_PACKAGE')->count());
+        $this->postJson('/api/v1/buyers/orders/'.$order.'/cancel', ['lock_version' => (int) DB::table('orders')->where('id', $order)->value('lock_version')], $this->key())->assertOk();
+        $this->signInStoreMember($owner);
+        $this->getJson('/api/v1/vendor/conversations/'.$store.'/buyer-thread')->assertOk()->assertJsonPath('data.conversation.purpose', 'SALES')
+            ->assertJsonPath('data.conversation.read_only', false)->assertJsonPath('data.messages.items.0.work_package_attachment.order_id', $order)
+            ->assertJsonPath('data.messages.items.0.work_package_attachment.can_prepare_quotation', false);
+        $this->postJson('/api/v1/vendor/conversations/'.$store.'/messages', ['body' => 'We can discuss the next package here.', 'client_message_id' => (string) Str::uuid7()])->assertCreated();
+        self::assertSame('CANCELLED', DB::table('orders')->where('id', $order)->value('order_state'));
+        self::assertSame($w['id'], DB::table('orders')->where('id', $order)->value('work_package_id'));
+    }
+
+    public function test_pending_order_quotation_preserves_the_request_until_acceptance_then_replaces_it_atomically(): void
+    {
+        [$vendor, $owner, $listing] = $this->pickupStore('Pending replacement');
+        $this->bulk($vendor->id);
+        $buyer = $this->buyer();
+        [, $w] = $this->package();
+        $candidate = $this->scan($w)['items'][0];
+        $order = $this->postJson('/api/v1/buyers/work-packages/'.$w['id'].'/selection', [
+            'lock_version' => $w['lock_version'], 'candidate_id' => $candidate['id'], 'payment_method' => 'ONLINE',
+        ], $this->key())->assertCreated()->json('data.id');
+        $this->signInStoreMember($owner);
+        $chat = $this->postJson('/api/v1/vendor/orders/'.$order.'/quotation-inquiry', ['lock_version' => (int) DB::table('orders')->where('id', $order)->value('lock_version')], $this->key())->assertOk()->json('data.id');
+        self::assertSame('AWAITING_VENDOR_CONFIRMATION', DB::table('orders')->where('id', $order)->value('order_state'));
+        $quote = $this->publish($chat, $this->variantIds($listing)[0], '10');
+        $this->signInBuyer($buyer);
+        $replacement = $this->postJson('/api/v1/buyers/conversations/'.$chat.'/quotation/accept', ['version_id' => $quote['id'], 'content_hash' => $quote['content_hash'], 'payment_method' => 'ONLINE'], $this->key())->assertOk()->json('data.order_id');
+        self::assertNotSame($order, $replacement);
+        self::assertSame('CANCELLED', DB::table('orders')->where('id', $order)->value('order_state'));
+        $this->getJson('/api/v1/buyers/work-packages/'.$w['id'])->assertOk()->assertJsonPath('data.order_id', $replacement);
+        self::assertTrue(DB::table('order_snapshots')->where('order_id', $order)->exists());
+        $this->signInStoreMember($owner);
+        $this->postJson('/api/v1/vendor/orders/'.$replacement.'/quotation-inquiry', ['lock_version' => (int) DB::table('orders')->where('id', $replacement)->value('lock_version')], $this->key())->assertConflict();
     }
 }

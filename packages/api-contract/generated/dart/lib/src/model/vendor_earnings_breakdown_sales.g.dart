@@ -17,6 +17,8 @@ class _$VendorEarningsBreakdownSales extends VendorEarningsBreakdownSales {
   final int materialsAfterDiscountCentavos;
   @override
   final int deliveryCentavos;
+  @override
+  final int refundsCentavos;
 
   factory _$VendorEarningsBreakdownSales(
           [void Function(VendorEarningsBreakdownSalesBuilder)? updates]) =>
@@ -27,7 +29,8 @@ class _$VendorEarningsBreakdownSales extends VendorEarningsBreakdownSales {
       required this.materialsBeforeDiscountCentavos,
       required this.vendorDiscountsCentavos,
       required this.materialsAfterDiscountCentavos,
-      required this.deliveryCentavos})
+      required this.deliveryCentavos,
+      required this.refundsCentavos})
       : super._();
   @override
   VendorEarningsBreakdownSales rebuild(
@@ -48,7 +51,8 @@ class _$VendorEarningsBreakdownSales extends VendorEarningsBreakdownSales {
         vendorDiscountsCentavos == other.vendorDiscountsCentavos &&
         materialsAfterDiscountCentavos ==
             other.materialsAfterDiscountCentavos &&
-        deliveryCentavos == other.deliveryCentavos;
+        deliveryCentavos == other.deliveryCentavos &&
+        refundsCentavos == other.refundsCentavos;
   }
 
   @override
@@ -59,6 +63,7 @@ class _$VendorEarningsBreakdownSales extends VendorEarningsBreakdownSales {
     _$hash = $jc(_$hash, vendorDiscountsCentavos.hashCode);
     _$hash = $jc(_$hash, materialsAfterDiscountCentavos.hashCode);
     _$hash = $jc(_$hash, deliveryCentavos.hashCode);
+    _$hash = $jc(_$hash, refundsCentavos.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -72,7 +77,8 @@ class _$VendorEarningsBreakdownSales extends VendorEarningsBreakdownSales {
           ..add('vendorDiscountsCentavos', vendorDiscountsCentavos)
           ..add(
               'materialsAfterDiscountCentavos', materialsAfterDiscountCentavos)
-          ..add('deliveryCentavos', deliveryCentavos))
+          ..add('deliveryCentavos', deliveryCentavos)
+          ..add('refundsCentavos', refundsCentavos))
         .toString();
   }
 }
@@ -109,6 +115,11 @@ class VendorEarningsBreakdownSalesBuilder
   set deliveryCentavos(int? deliveryCentavos) =>
       _$this._deliveryCentavos = deliveryCentavos;
 
+  int? _refundsCentavos;
+  int? get refundsCentavos => _$this._refundsCentavos;
+  set refundsCentavos(int? refundsCentavos) =>
+      _$this._refundsCentavos = refundsCentavos;
+
   VendorEarningsBreakdownSalesBuilder() {
     VendorEarningsBreakdownSales._defaults(this);
   }
@@ -121,6 +132,7 @@ class VendorEarningsBreakdownSalesBuilder
       _vendorDiscountsCentavos = $v.vendorDiscountsCentavos;
       _materialsAfterDiscountCentavos = $v.materialsAfterDiscountCentavos;
       _deliveryCentavos = $v.deliveryCentavos;
+      _refundsCentavos = $v.refundsCentavos;
       _$v = null;
     }
     return this;
@@ -161,6 +173,10 @@ class VendorEarningsBreakdownSalesBuilder
               deliveryCentavos,
               r'VendorEarningsBreakdownSales',
               'deliveryCentavos'),
+          refundsCentavos: BuiltValueNullFieldError.checkNotNull(
+              refundsCentavos,
+              r'VendorEarningsBreakdownSales',
+              'refundsCentavos'),
         );
     replace(_$result);
     return _$result;

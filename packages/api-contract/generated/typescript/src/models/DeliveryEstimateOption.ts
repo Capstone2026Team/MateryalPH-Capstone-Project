@@ -13,6 +13,13 @@
  */
 
 import { mapValues } from '../runtime';
+import type { DeliveryVehicleProfile } from './DeliveryVehicleProfile';
+import {
+    DeliveryVehicleProfileFromJSON,
+    DeliveryVehicleProfileFromJSONTyped,
+    DeliveryVehicleProfileToJSON,
+    DeliveryVehicleProfileToJSONTyped,
+} from './DeliveryVehicleProfile';
 import type { MixerVolumePlan } from './MixerVolumePlan';
 import {
     MixerVolumePlanFromJSON,
@@ -27,6 +34,10 @@ import {
  * @interface DeliveryEstimateOption
  */
 export interface DeliveryEstimateOption {
+    /**
+     * Frozen display details when available; older snapshots may omit them. Image bytes require the existing authorized order file endpoint.
+     */
+    vehicleDetails?: DeliveryVehicleProfile | null;
     /**
      * Recommended registered vehicle; absent in historical estimates.
      */
@@ -112,6 +123,7 @@ export function DeliveryEstimateOptionFromJSONTyped(json: any, ignoreDiscriminat
     }
     return {
 
+        'vehicleDetails': json['vehicle_details'] === undefined ? undefined : json['vehicle_details'] === null ? null : DeliveryVehicleProfileFromJSON(json['vehicle_details']),
         'vehicleId': json['vehicle_id'] == null ? undefined : json['vehicle_id'],
         'loadKey': json['load_key'],
         'vehicleName': json['vehicle_name'],
@@ -138,6 +150,7 @@ export function DeliveryEstimateOptionToJSONTyped(value?: DeliveryEstimateOption
 
     return {
 
+        'vehicle_details': DeliveryVehicleProfileToJSON(value['vehicleDetails']),
         'vehicle_id': value['vehicleId'],
         'load_key': value['loadKey'],
         'vehicle_name': value['vehicleName'],

@@ -11,6 +11,7 @@ Name | Type
 `vendorDiscountsCentavos` | number
 `materialsAfterDiscountCentavos` | number
 `deliveryCentavos` | number
+`refundsCentavos` | number
 
 ## Example
 
@@ -24,6 +25,7 @@ const example = {
   "vendorDiscountsCentavos": null,
   "materialsAfterDiscountCentavos": null,
   "deliveryCentavos": null,
+  "refundsCentavos": null,
 } satisfies VendorEarningsBreakdownSales
 
 console.log(example)

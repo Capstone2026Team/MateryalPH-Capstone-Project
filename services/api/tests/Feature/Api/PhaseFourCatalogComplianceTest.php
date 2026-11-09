@@ -38,6 +38,33 @@ final class PhaseFourCatalogComplianceTest extends TestCase
 
     private bool $scannerAvailable = true;
 
+    public function test_compliance_tab_counts_respect_filters_before_status_and_pagination(): void
+    {
+        [, $owner] = $this->activeStore();
+        $this->signInVendor($owner);
+        $listing = $this->publishableListing('PORTLAND_CEMENT', 'COUNT-CEMENT', ['cement_type' => 'Type I', 'bag_weight_kg' => '40'], regulated: true);
+        $this->submitCompliance($listing, 'MANUAL', ['certificate_number' => 'Q-1234', 'manufacturer_name' => 'Sample Cement Corporation'])->assertCreated();
+        $template = (array) DB::table('compliance_submissions')->where('vendor_listing_id', $listing)->first();
+        $listingTemplate = (array) DB::table('vendor_listings')->where('id', $listing)->first();
+        for ($index = 0; $index < 26; $index++) {
+            $listingId = (string) Str::uuid7();
+            DB::table('vendor_listings')->insert(array_replace($listingTemplate, ['id' => $listingId, 'vendor_sku' => 'COUNT-CEMENT-'.$index]));
+            DB::table('compliance_submissions')->insert(array_replace($template, ['id' => (string) Str::uuid7(), 'vendor_listing_id' => $listingId,
+                'status' => $index === 23 ? 'VERIFIED' : 'PENDING_ADMIN_REVIEW', 'path' => $index === 25 ? 'QR' : 'MANUAL',
+                'submitted_at' => $index === 24 ? '2026-09-01T04:00:00Z' : '2026-10-05T04:00:00Z']));
+        }
+        $this->signInAdmin($this->admin('ADMIN_PRODUCT_COMPLIANCE'));
+        $base = '/api/v1/admin/product-compliance?path=MANUAL&from=2026-10-01&to=2026-10-31';
+        $first = $this->getJson($base.'&status=PENDING_ADMIN_REVIEW')->assertOk()->assertJsonCount(20, 'data')->assertJsonPath('meta.total', 23)
+            ->assertJsonPath('meta.counts.PENDING_ADMIN_REVIEW', 23)->assertJsonPath('meta.counts.VERIFIED', 1)
+            ->assertJsonPath('meta.counts.REJECTED', 0)->assertJsonPath('meta.counts.ALL', 24);
+        $this->getJson($base.'&status=PENDING_ADMIN_REVIEW&page=2')->assertOk()->assertJsonCount(3, 'data')->assertJsonPath('meta.counts', $first->json('meta.counts'));
+        $this->getJson($base.'&status=VERIFIED')->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('meta.counts', $first->json('meta.counts'));
+        $this->getJson($base.'&reference_result=MATCHED')->assertOk()->assertJsonPath('meta.counts.ALL', 0);
+        $this->signInAdmin($this->admin('ADMIN_SUPPORT'));
+        $this->getJson($base)->assertForbidden()->assertJsonMissingPath('meta.counts');
+    }
+
     protected function setUp(): void
     {
         parent::setUp();

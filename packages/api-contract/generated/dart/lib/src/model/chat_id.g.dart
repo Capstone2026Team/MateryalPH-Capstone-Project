@@ -9,11 +9,13 @@ part of 'chat_id.dart';
 class _$ChatId extends ChatId {
   @override
   final String id;
+  @override
+  final String? storeConversationId;
 
   factory _$ChatId([void Function(ChatIdBuilder)? updates]) =>
       (ChatIdBuilder()..update(updates))._build();
 
-  _$ChatId._({required this.id}) : super._();
+  _$ChatId._({required this.id, this.storeConversationId}) : super._();
   @override
   ChatId rebuild(void Function(ChatIdBuilder) updates) =>
       (toBuilder()..update(updates)).build();
@@ -24,20 +26,26 @@ class _$ChatId extends ChatId {
   @override
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
-    return other is ChatId && id == other.id;
+    return other is ChatId &&
+        id == other.id &&
+        storeConversationId == other.storeConversationId;
   }
 
   @override
   int get hashCode {
     var _$hash = 0;
     _$hash = $jc(_$hash, id.hashCode);
+    _$hash = $jc(_$hash, storeConversationId.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
 
   @override
   String toString() {
-    return (newBuiltValueToStringHelper(r'ChatId')..add('id', id)).toString();
+    return (newBuiltValueToStringHelper(r'ChatId')
+          ..add('id', id)
+          ..add('storeConversationId', storeConversationId))
+        .toString();
   }
 }
 
@@ -48,6 +56,11 @@ class ChatIdBuilder implements Builder<ChatId, ChatIdBuilder> {
   String? get id => _$this._id;
   set id(String? id) => _$this._id = id;
 
+  String? _storeConversationId;
+  String? get storeConversationId => _$this._storeConversationId;
+  set storeConversationId(String? storeConversationId) =>
+      _$this._storeConversationId = storeConversationId;
+
   ChatIdBuilder() {
     ChatId._defaults(this);
   }
@@ -56,6 +69,7 @@ class ChatIdBuilder implements Builder<ChatId, ChatIdBuilder> {
     final $v = _$v;
     if ($v != null) {
       _id = $v.id;
+      _storeConversationId = $v.storeConversationId;
       _$v = null;
     }
     return this;
@@ -78,6 +92,7 @@ class ChatIdBuilder implements Builder<ChatId, ChatIdBuilder> {
     final _$result = _$v ??
         _$ChatId._(
           id: BuiltValueNullFieldError.checkNotNull(id, r'ChatId', 'id'),
+          storeConversationId: storeConversationId,
         );
     replace(_$result);
     return _$result;

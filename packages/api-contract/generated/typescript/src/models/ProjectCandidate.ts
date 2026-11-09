@@ -34,6 +34,13 @@ import {
     ProjectFulfillmentToJSON,
     ProjectFulfillmentToJSONTyped,
 } from './ProjectFulfillment';
+import type { PublicBadge } from './PublicBadge';
+import {
+    PublicBadgeFromJSON,
+    PublicBadgeFromJSONTyped,
+    PublicBadgeToJSON,
+    PublicBadgeToJSONTyped,
+} from './PublicBadge';
 
 /**
  *
@@ -41,6 +48,10 @@ import {
  * @interface ProjectCandidate
  */
 export interface ProjectCandidate {
+    /**
+     * Current active public awards for this Vendor; suppressed or revoked badges are omitted. Never part of the saved commercial estimate.
+     */
+    badges?: Array<PublicBadge>;
     /**
      *
      */
@@ -290,6 +301,7 @@ export function ProjectCandidateFromJSONTyped(json: any, ignoreDiscriminator: bo
     }
     return {
 
+        'badges': json['badges'] == null ? undefined : ((json['badges'] as Array<any>).map(PublicBadgeFromJSON)),
         'id': json['id'],
         'estimateId': json['estimate_id'],
         'vendorId': json['vendor_id'],
@@ -349,6 +361,7 @@ export function ProjectCandidateToJSONTyped(value?: ProjectCandidate | null, ign
 
     return {
 
+        'badges': value['badges'] == null ? undefined : ((value['badges'] as Array<any>).map(PublicBadgeToJSON)),
         'id': value['id'],
         'estimate_id': value['estimateId'],
         'vendor_id': value['vendorId'],

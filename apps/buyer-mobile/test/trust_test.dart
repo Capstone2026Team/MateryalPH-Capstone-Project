@@ -520,10 +520,7 @@ void main() {
           blindRevealText:
               'Ratings stay hidden until both parties submit or the 14-day window ends.',
           speedLabel: 'Processing Speed',
-          displayOptions: [
-            (choice: 'FIRST_NAME_LAST_INITIAL', preview: 'Juan C.'),
-            (choice: 'VERIFIED_BUYER', preview: 'Verified Buyer'),
-          ],
+          displayOptions: [(choice: 'FULL_NAME', preview: 'Juan dela Cruz')],
           vendorRating: null,
           canSubmitVendorRating: true,
           lines: [
@@ -565,20 +562,19 @@ void main() {
         await tester.ensureVisible(find.bySemanticsLabel(label));
         await tester.tap(find.bySemanticsLabel(label));
       }
-      await tester.ensureVisible(find.text('Verified Buyer'));
-      await tester.tap(find.text('Verified Buyer'));
-      await tester.pump();
+      expect(find.text('Verified Buyer'), findsNothing);
+      expect(find.byType(RadioListTile<String>), findsNothing);
       await tester.ensureVisible(find.text('Preview and submit'));
       await tester.tap(find.text('Preview and submit'));
       await tester.pumpAndSettle();
       expect(
-        find.text('Shown as Verified Buyer · Verified purchase'),
+        find.text('Shown as Juan dela Cruz · Verified purchase'),
         findsOneWidget,
       );
       await tester.tap(find.text('Submit'));
       await tester.pumpAndSettle();
       expect(repository.submissions, hasLength(1));
-      expect(repository.submissions.single['choice'], 'VERIFIED_BUYER');
+      expect(repository.submissions.single['choice'], 'FULL_NAME');
       expect(repository.submissions.single['vendor'], (
         service: 5,
         speed: 4,

@@ -22,7 +22,7 @@ export function vendorInsightsFixture(overrides: Partial<VendorDashboardInsights
         disputeRate: { percent: '1.39', numerator: 1, denominator: 72 },
         responseTime: { meanSeconds: 5400, medianSeconds: 2700, p90Seconds: 14_400, answered: 70, unanswered: 2 },
       },
-      series: dates.map((date, index) => ({ date, orders: orders[index]!, orderRequests: orders[index]! + 1, ordersAverage: 2.5, grossSalesCentavos: orders[index]! * 1_000_00, netSalesCentavos: orders[index]! * 950_00, salesAverageCentavos: 250_000 })),
+      series: dates.map((date, index) => ({ date, orders: orders[index]!, orderRequests: orders[index]! + 1, ordersAverage: 2.5, grossSalesCentavos: orders[index]! * 1_000_00, netSalesCentavos: orders[index]! * 950_00, refundsCentavos: index % 5 === 0 ? 100_00 : 0, cancellationDeductionsCentavos: 0, salesAverageCentavos: 250_000 })),
       forecast: {
         horizonDays: 7,
         orders: { state: 'OK', observedDays: 90, direction: 'INCREASING', changePercent: 12.5, rSquared: 0.4, weekdayStrength: 0.6, expectedTotal: 19, anomalies: [],
@@ -35,6 +35,7 @@ export function vendorInsightsFixture(overrides: Partial<VendorDashboardInsights
         { key: 'CONFIRMED', label: 'Orders confirmed', count: 72 }, { key: 'COMPLETED', label: 'Orders completed', count: 60 }],
       mix: { procurement: [{ key: 'ITEM_BASED', count: 60 }, { key: 'PROJECT_BASED', count: 12 }], fulfillment: [{ key: 'DELIVERY', count: 50 }, { key: 'PICKUP', count: 22 }], payment: [{ key: 'ONLINE', count: 72 }] },
       products: {
+        salesBreakdown: { productSalesCentavos: 55_000_00, deliveryCentavos: 15_000_00, refundsCentavos: 0, netSalesCentavos: 70_000_00 },
         top: [{ name: 'Portland Cement Type 1', category: 'Cement', orders: 40, buyers: 22, valueCentavos: 40_000_00 }, { name: 'Washed Sand', category: 'Aggregates', orders: 20, buyers: 12, valueCentavos: 15_000_00 }],
         categories: [{ category: 'Cement', orders: 40, valueCentavos: 40_000_00 }, { category: 'Aggregates', orders: 20, valueCentavos: 15_000_00 }],
         segments: { state: 'OK', reason: null, k: 2, silhouette: 0.81, features: ['Orders', 'Distinct Buyers', 'Value'],

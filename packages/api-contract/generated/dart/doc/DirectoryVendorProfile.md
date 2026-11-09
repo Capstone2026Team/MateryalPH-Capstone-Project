@@ -19,6 +19,7 @@ Name | Type | Description | Notes
 **sanctions** | [**BuiltList&lt;DirectorySanction&gt;**](DirectorySanction.md) | Empty unless the caller also holds enforcement.view. |
 **canViewEnforcement** | **bool** |  |
 **canViewVerification** | **bool** |  |
+**canViewScores** | **bool** |  |
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

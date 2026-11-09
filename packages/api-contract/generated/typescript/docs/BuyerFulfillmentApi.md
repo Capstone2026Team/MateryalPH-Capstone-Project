@@ -336,7 +336,7 @@ example().catch(console.error);
 
 
 
-Proof, problem and reimbursement evidence referenced by this order only.
+Proof, problem, reimbursement evidence and frozen delivery vehicle images referenced by this order only. Vehicle images must belong to this order\&#39;s Vendor, remain private and pass malware scanning.
 
 ### Example
 

@@ -29,11 +29,18 @@ void main() {
     ..commissionBasisPoints = 325
     ..expectedVersion = 1
     ..effectiveFrom = DateTime.utc(2026, 11, 1)
+    ..vendorMessage = 'Review the updated terms'
+    ..noticeOverride = true
+    ..noticeOverrideReason = 'Approved shorter notice'
+    ..supersedesPolicyId = 'policy-1'
+    ..cancelScheduled = false
     ..reason = 'Commercial commission rate review');
   final wire = standardSerializers.serializeWith(
       CommissionPolicyPublishRequest.serializer, request) as Map;
   check(wire['commission_basis_points'] == 325 && wire['expected_version'] == 1,
       'Publishing preserves integer basis points and concurrency version.');
+  check(wire['vendor_message'] == 'Review the updated terms' && wire['notice_override'] == true && wire['supersedes_policy_id'] == 'policy-1',
+      'Notice override, public message and scheduled revision fields survive Dart serialization.');
   final summary = {
     for (final key in [
       'estimated',

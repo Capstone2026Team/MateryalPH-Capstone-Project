@@ -22,6 +22,10 @@ export interface AdminReimbursementRow {
     /**
      *
      */
+    orderId?: string;
+    /**
+     *
+     */
     id: string;
     /**
      *
@@ -101,6 +105,7 @@ export function AdminReimbursementRowFromJSONTyped(json: any, ignoreDiscriminato
     }
     return {
 
+        'orderId': json['order_id'] == null ? undefined : json['order_id'],
         'id': json['id'],
         'orderReference': json['order_reference'],
         'vendorName': json['vendor_name'] == null ? undefined : json['vendor_name'],
@@ -126,6 +131,7 @@ export function AdminReimbursementRowToJSONTyped(value?: AdminReimbursementRow |
 
     return {
 
+        'order_id': value['orderId'],
         'id': value['id'],
         'order_reference': value['orderReference'],
         'vendor_name': value['vendorName'],

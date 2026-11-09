@@ -77,6 +77,13 @@ void main() {
       // TODO
     });
 
+    // Requires Vendor Owner authority, recent authenticator verification and typed DELETE confirmation. Rechecks eligibility under the organization lock. Returns ACCOUNT_DELETION_BLOCKED with details.blockers if orders, payments, refunds (including failed refunds), disputes or financial obligations remain unresolved. Atomically closes the organization with final DELETED status, anonymizes the Owner login and personal profile, removes external sign-in links and revokes all Owner and current team sessions and unused invitations. Personal avatar cleanup and a security notice use the post-commit outbox. Staff identities and immutable commercial, financial, compliance, dispute, agreement and audit records are retained for their stated purposes under the approved retention schedule. Clears access and refresh cookies. Revoked sessions cannot replay the deletion or restore the account; subsequent authenticated requests require sign-in.
+    //
+    //Future<VendorAccountDeletionResultEnvelope> deleteVendorAccount(String idempotencyKey, VendorAccountDeletionRequest vendorAccountDeletionRequest) async
+    test('test deleteVendorAccount', () async {
+      // TODO
+    });
+
     // Owner only. Allowed for unaccepted expired invitations or accepted invitations linked to a deleted membership. Otherwise returns TEAM_INVITATION_NOT_DELETABLE. Stale lock_version returns RESOURCE_VERSION_CONFLICT. Requires recent authentication and current agreements. Repeated deletion succeeds without duplicating audit events.
     //
     //Future<AccountMutationResultEnvelope> deleteVendorTeamInvitation(String invitationId, VendorTeamDeletion vendorTeamDeletion) async
@@ -130,6 +137,13 @@ void main() {
     //
     //Future<Uint8List> getBuyerAccountPhoto(int expires, String owner, int version, String signature) async
     test('test getBuyerAccountPhoto', () async {
+      // TODO
+    });
+
+    // Owner-only eligibility review and retained-record disclosure for permanent store account deletion. Counts include all recorded environments and financial obligations, including earned unbilled commission.
+    //
+    //Future<VendorAccountDeletionPreviewEnvelope> getVendorAccountDeletionPreview() async
+    test('test getVendorAccountDeletionPreview', () async {
       // TODO
     });
 

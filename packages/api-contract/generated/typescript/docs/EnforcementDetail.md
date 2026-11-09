@@ -34,6 +34,7 @@ Name | Type
 `subjectReview` | [SubjectReview](SubjectReview.md)
 `events` | [Array&lt;EnforcementEvent&gt;](EnforcementEvent.md)
 `allowedActions` | Array&lt;string&gt;
+`evidence` | [Array&lt;EnforcementEvidence&gt;](EnforcementEvidence.md)
 
 ## Example
 
@@ -70,6 +71,7 @@ const example = {
   "subjectReview": null,
   "events": null,
   "allowedActions": null,
+  "evidence": null,
 } satisfies EnforcementDetail
 
 console.log(example)

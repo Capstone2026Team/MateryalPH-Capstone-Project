@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:materyalph/design_system/components/messaging_components.dart';
 import 'package:materyalph/design_system/components/quotation_details.dart';
 import 'package:materyalph/design_system/components/specification_chips.dart';
 import 'package:materyalph/design_system/theme.dart';
+import 'package:materyalph/features/messaging/conversation_quotations_screen.dart';
 import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 
 import 'messaging_test.dart' show quotation;
@@ -30,6 +32,27 @@ Future<void> showDetails(
 }
 
 void main() {
+  testWidgets('capture improved quotation detail reference', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    for (final font in {
+      'MaterialIcons': 'fonts/MaterialIcons-Regular.otf',
+      'Inter': 'assets/fonts/Inter-Variable.ttf',
+      'packages/lucide_icons_flutter/Lucide': 'packages/lucide_icons_flutter/assets/lucide.ttf',
+    }.entries) {
+      await (FontLoader(font.key)..addFont(rootBundle.load(font.value))).load();
+    }
+    final quotes = ValueNotifier<api.ChatQuotationPage?>(api.ChatQuotationPage((b) => b..versions.add(quotation())..hasMore = false));
+    addTearDown(quotes.dispose);
+    await tester.pumpWidget(MaterialApp(theme: BuyerTheme.light, debugShowCheckedModeBanner: false,
+      home: ConversationQuotationDetailScreen(quotations: quotes, versionId: quotation().id, onDecide: (_, _) async => null)));
+    await tester.pumpAndSettle();
+    await expectLater(find.byType(MaterialApp), matchesGoldenFile('../../../docs/design/evidence/buyer-messaging/quotation-detail.png'));
+    await tester.ensureVisible(find.text('Review & accept'));
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
+
   testWidgets(
     'Buyer reviews proposed endpoints and manual delivery fee explanation',
     (tester) async {
@@ -156,7 +179,8 @@ void main() {
     expect(find.text('Materials subtotal'), findsNothing);
     expect(find.text('Included VAT (in materials)'), findsOneWidget);
     expect(find.text('₱7.29'), findsOneWidget);
-    expect(find.text('₱68.00'), findsNWidgets(2));
+    expect(find.text('Quotation total'), findsOneWidget);
+    expect(find.text('₱68.00'), findsNWidgets(3));
     expect(find.text('Pending'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });

@@ -6,6 +6,7 @@
 
 Name | Type
 ------------ | -------------
+`buyerAvatarUrl` | string
 `id` | string
 `type` | string
 `ratings` | [ReviewRatings](ReviewRatings.md)
@@ -29,6 +30,7 @@ import type { VendorReviewRow } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "buyerAvatarUrl": null,
   "id": null,
   "type": null,
   "ratings": null,

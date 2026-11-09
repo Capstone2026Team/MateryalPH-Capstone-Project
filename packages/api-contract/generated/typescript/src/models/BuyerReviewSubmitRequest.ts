@@ -35,9 +35,10 @@ import {
  */
 export interface BuyerReviewSubmitRequest {
     /**
-     *
+     * Deprecated compatibility field; FULL_NAME is always used. Legacy choices are accepted from older clients but cannot hide identity.
+     * @deprecated
      */
-    displayNameChoice: BuyerReviewSubmitRequestDisplayNameChoiceEnum;
+    displayNameChoice?: BuyerReviewSubmitRequestDisplayNameChoiceEnum;
     /**
      *
      */
@@ -53,6 +54,7 @@ export interface BuyerReviewSubmitRequest {
  * @export
  */
 export const BuyerReviewSubmitRequestDisplayNameChoiceEnum = {
+    FullName: 'FULL_NAME',
     FirstNameLastInitial: 'FIRST_NAME_LAST_INITIAL',
     VerifiedBuyer: 'VERIFIED_BUYER',
 } as const;
@@ -63,7 +65,6 @@ export type BuyerReviewSubmitRequestDisplayNameChoiceEnum = typeof BuyerReviewSu
  * Check if a given object implements the BuyerReviewSubmitRequest interface.
  */
 export function instanceOfBuyerReviewSubmitRequest(value: object): value is BuyerReviewSubmitRequest {
-    if ((!('displayNameChoice' in (value as Record<string, any>)) && !('display_name_choice' in (value as Record<string, any>))) || ((value as Record<string, any>)['displayNameChoice'] === undefined && (value as Record<string, any>)['display_name_choice'] === undefined)) return false;
     return true;
 }
 
@@ -77,7 +78,7 @@ export function BuyerReviewSubmitRequestFromJSONTyped(json: any, ignoreDiscrimin
     }
     return {
 
-        'displayNameChoice': json['display_name_choice'],
+        'displayNameChoice': json['display_name_choice'] == null ? undefined : json['display_name_choice'],
         'vendorRating': json['vendor_rating'] == null ? undefined : BuyerReviewSubmitRequestVendorRatingFromJSON(json['vendor_rating']),
         'productReviews': json['product_reviews'] == null ? undefined : ((json['product_reviews'] as Array<any>).map(BuyerReviewSubmitRequestProductReviewsInnerFromJSON)),
     };

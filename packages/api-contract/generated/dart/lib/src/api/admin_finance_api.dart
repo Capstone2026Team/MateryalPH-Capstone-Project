@@ -12,6 +12,7 @@ import 'package:materyalph_api_client/src/model/admin_payment_list_envelope.dart
 import 'package:materyalph_api_client/src/model/channel_fee_version_list_envelope.dart';
 import 'package:materyalph_api_client/src/model/commission_policies_envelope.dart';
 import 'package:materyalph_api_client/src/model/commission_policy_envelope.dart';
+import 'package:materyalph_api_client/src/model/commission_policy_preview_envelope.dart';
 import 'package:materyalph_api_client/src/model/commission_policy_publish_request.dart';
 import 'package:materyalph_api_client/src/model/date.dart';
 import 'package:materyalph_api_client/src/model/fee_credit_proposal_request.dart';
@@ -19,9 +20,11 @@ import 'package:materyalph_api_client/src/model/fee_statement_envelope.dart';
 import 'package:materyalph_api_client/src/model/fee_statement_list_envelope.dart';
 import 'package:materyalph_api_client/src/model/finance_action_result_envelope.dart';
 import 'package:materyalph_api_client/src/model/finance_review_item_list_envelope.dart';
+import 'package:materyalph_api_client/src/model/generic_data_envelope.dart';
 import 'package:materyalph_api_client/src/model/overlap_resolve_request.dart';
 import 'package:materyalph_api_client/src/model/review_resolve_request.dart';
 import 'package:materyalph_api_client/src/model/statement_approve_request.dart';
+import 'package:materyalph_api_client/src/model/statement_invoice_update_request.dart';
 import 'package:materyalph_api_client/src/model/withholding_accumulator_detail_envelope.dart';
 import 'package:materyalph_api_client/src/model/withholding_accumulator_list_envelope.dart';
 
@@ -34,7 +37,7 @@ class AdminFinanceApi {
   const AdminFinanceApi(this._dio, this._serializers);
 
   /// approveFeeCredit
-  /// finance.approve_statements by a user different from the preparer (403 PREPARER_REVIEWER_SAME).
+  /// Manual corrections only: finance.approve_statements by a user different from the preparer (403 PREPARER_REVIEWER_SAME). Routine dispute credits and monthly statement issuance are automatic.
   ///
   /// Parameters:
   /// * [proposalId]
@@ -303,6 +306,103 @@ class AdminFinanceApi {
     }
 
     return Response<FinanceActionResultEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// getAdminCommissionStatement
+  /// finance.view. Read-only statement detail, all-rate aggregate breakdown, separately paginated lines and payments (25 per page), and Owner email delivery activity without recipient contacts. Includes can_resend and can_export permissions.
+  ///
+  /// Parameters:
+  /// * [statementId]
+  /// * [page]
+  /// * [paymentsPage]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [GenericDataEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<GenericDataEnvelope>> getAdminCommissionStatement({
+    required String statementId,
+    int? page,
+    int? paymentsPage,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/admin/finance/statements/{statementId}'.replaceAll('{' r'statementId' '}', encodeQueryParameter(_serializers, statementId, const FullType(String)).toString());
+    final _options = Options(
+      method: r'GET',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'accessCookie',
+            'keyName': 'mp_access',
+            'where': '',
+          },{
+            'type': 'apiKey',
+            'name': 'webCsrf',
+            'keyName': 'X-CSRF-Token',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _queryParameters = <String, dynamic>{
+      if (page != null) r'page': encodeQueryParameter(_serializers, page, const FullType(int)),
+      if (paymentsPage != null) r'payments_page': encodeQueryParameter(_serializers, paymentsPage, const FullType(int)),
+    };
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      queryParameters: _queryParameters,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    GenericDataEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(GenericDataEnvelope),
+      ) as GenericDataEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<GenericDataEnvelope>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -688,10 +788,119 @@ class AdminFinanceApi {
     );
   }
 
+  /// listCommissionTransactions
+  /// finance.view. Paginated successful PLATFORM_FEE_PAYMENT captures to the platform account, excluding late captures. Dates and descending order use paid_at in Asia/Manila. Original captures remain visible after refunds; refunded_centavos and net_collected_centavos distinguish gross payments from retained collections. Gateway mode and evidence origin are retained. Optional status filters apply before pagination and exports.
+  ///
+  /// Parameters:
+  /// * [page]
+  /// * [from]
+  /// * [to]
+  /// * [status]
+  /// * [search]
+  /// * [statuses] - Comma-separated payment statuses combined with OR before pagination.
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [AdminPaymentListEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<AdminPaymentListEnvelope>> listCommissionTransactions({
+    int? page,
+    Date? from,
+    Date? to,
+    String? status,
+    String? search,
+    String? statuses,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/admin/finance/commission-transactions';
+    final _options = Options(
+      method: r'GET',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'accessCookie',
+            'keyName': 'mp_access',
+            'where': '',
+          },{
+            'type': 'apiKey',
+            'name': 'webCsrf',
+            'keyName': 'X-CSRF-Token',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _queryParameters = <String, dynamic>{
+      if (page != null) r'page': encodeQueryParameter(_serializers, page, const FullType(int)),
+      if (from != null) r'from': encodeQueryParameter(_serializers, from, const FullType(Date)),
+      if (to != null) r'to': encodeQueryParameter(_serializers, to, const FullType(Date)),
+      if (status != null) r'status': encodeQueryParameter(_serializers, status, const FullType(String)),
+      if (search != null) r'search': encodeQueryParameter(_serializers, search, const FullType(String)),
+      if (statuses != null) r'statuses': encodeQueryParameter(_serializers, statuses, const FullType(String)),
+    };
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      queryParameters: _queryParameters,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    AdminPaymentListEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(AdminPaymentListEnvelope),
+      ) as AdminPaymentListEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<AdminPaymentListEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
   /// listFeeStatements
   /// finance.view. Monthly commission statements shared with Vendor Finance. Inclusive Manila dates filter issued_on. overdue&#x3D;true returns only issued/partially paid positive balances past the due date; drafts, settled and voided statements are excluded. Approved credits reduce debt on the original statement and any paid excess becomes a separate original-payment refund payable.
   ///
   /// Parameters:
+  /// * [search]
+  /// * [states] - Comma-separated statement states combined with OR before pagination. Filter totals are returned in meta.totals.
   /// * [overdue] - Issued balances past their due date.
   /// * [page]
   /// * [state]
@@ -707,6 +916,8 @@ class AdminFinanceApi {
   /// Returns a [Future] containing a [Response] with a [FeeStatementListEnvelope] as data
   /// Throws [DioException] if API call or serialization fails
   Future<Response<FeeStatementListEnvelope>> listFeeStatements({
+    String? search,
+    String? states,
     bool? overdue,
     int? page,
     String? state,
@@ -745,6 +956,8 @@ class AdminFinanceApi {
     );
 
     final _queryParameters = <String, dynamic>{
+      if (search != null) r'search': encodeQueryParameter(_serializers, search, const FullType(String)),
+      if (states != null) r'states': encodeQueryParameter(_serializers, states, const FullType(String)),
       if (overdue != null) r'overdue': encodeQueryParameter(_serializers, overdue, const FullType(bool)),
       if (page != null) r'page': encodeQueryParameter(_serializers, page, const FullType(int)),
       if (state != null) r'state': encodeQueryParameter(_serializers, state, const FullType(String)),
@@ -793,7 +1006,7 @@ class AdminFinanceApi {
   }
 
   /// listFinanceReviewItems
-  /// finance.view. Reconciliation exceptions, payment mismatches, late captures, unresolved overlap, threshold adjustments, base reviews, overdue statements and fee-credit proposals.
+  /// finance.view. Reconciliation exceptions, payment mismatches, late captures, unresolved overlap, threshold adjustments, base reviews, overdue statements and manual fee-credit proposals. Executed dispute awards create automatic credits without review items.
   ///
   /// Parameters:
   /// * [page]
@@ -994,8 +1207,115 @@ class AdminFinanceApi {
     );
   }
 
+  /// previewCommissionPolicy
+  /// Read-only impact, rendered mail and terms preview. Requires finance.view and platform_settings.manage. Estimates use the last three complete Manila calendar months of recorded eligible basis, not a revenue forecast.
+  ///
+  /// Parameters:
+  /// * [commissionPolicyPublishRequest]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [CommissionPolicyPreviewEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<CommissionPolicyPreviewEnvelope>> previewCommissionPolicy({
+    required CommissionPolicyPublishRequest commissionPolicyPublishRequest,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/admin/finance/commission-policies/preview';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'accessCookie',
+            'keyName': 'mp_access',
+            'where': '',
+          },{
+            'type': 'apiKey',
+            'name': 'webCsrf',
+            'keyName': 'X-CSRF-Token',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(CommissionPolicyPublishRequest);
+      _bodyData = _serializers.serialize(commissionPolicyPublishRequest, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    CommissionPolicyPreviewEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(CommissionPolicyPreviewEnvelope),
+      ) as CommissionPolicyPreviewEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<CommissionPolicyPreviewEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
   /// proposeFeeCredit
-  /// finance.review_tax. Prepare a FIN-03 credit from returned exclusive value after completion.
+  /// finance.review_tax. Prepare a manual FIN-03 correction from returned exclusive value after completion. Executed dispute awards are credited automatically.
   ///
   /// Parameters:
   /// * [feeCreditProposalRequest]
@@ -1102,7 +1422,7 @@ class AdminFinanceApi {
   }
 
   /// publishCommissionPolicy
-  /// Requires finance.view, platform_settings.manage, recent authentication, CSRF, Idempotency-Key and expected_version. Publishes a new commercial rate with immutable, hash-verified Vendor terms and Owner notices. Existing quotations, orders, assessments and credits keep their saved rate. Statutory rates and provider mode are unchanged. No backdating or insertion before the latest scheduled policy.
+  /// Requires finance.view, platform_settings.manage, recent authentication, CSRF, Idempotency-Key and expected_version. Publishes immutable policy and terms with unique queued verified-Owner emails per eligible Vendor (active account or unsettled bill). Increases need configured notice (default 30 days) or explicit reasoned audited override. Set supersedes_policy_id to edit the next scheduled change; cancel_scheduled appends a replacement at the current rate and cancellation notice. Earlier versions and saved transactions remain intact. No rate cache or scheduler flip is required.
   ///
   /// Parameters:
   /// * [idempotencyKey]
@@ -1200,6 +1520,186 @@ class AdminFinanceApi {
     }
 
     return Response<CommissionPolicyEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// resendCommissionEmail
+  /// finance.view plus finance.approve_statements for a statement, or platform_settings.manage for a rate notice. Requeues a sent or failed email. One-minute per-email throttle, audit event and idempotency required. Does not change any financial record.
+  ///
+  /// Parameters:
+  /// * [eventId]
+  /// * [idempotencyKey]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [GenericDataEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<GenericDataEnvelope>> resendCommissionEmail({
+    required String eventId,
+    required String idempotencyKey,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/admin/finance/commission-emails/{eventId}/resend'.replaceAll('{' r'eventId' '}', encodeQueryParameter(_serializers, eventId, const FullType(String)).toString());
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        r'Idempotency-Key': idempotencyKey,
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'accessCookie',
+            'keyName': 'mp_access',
+            'where': '',
+          },{
+            'type': 'apiKey',
+            'name': 'webCsrf',
+            'keyName': 'X-CSRF-Token',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    GenericDataEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(GenericDataEnvelope),
+      ) as GenericDataEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<GenericDataEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// resendFailedCommissionEmails
+  /// Requires finance.view and platform_settings.manage. Requeues failed emails only, with per-email one-minute throttling, idempotency and an audit event. Existing immutable attempt history is retained.
+  ///
+  /// Parameters:
+  /// * [policyId]
+  /// * [idempotencyKey]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [GenericDataEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<GenericDataEnvelope>> resendFailedCommissionEmails({
+    required String policyId,
+    required String idempotencyKey,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/admin/finance/commission-policies/{policyId}/resend-failed'.replaceAll('{' r'policyId' '}', encodeQueryParameter(_serializers, policyId, const FullType(String)).toString());
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        r'Idempotency-Key': idempotencyKey,
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'accessCookie',
+            'keyName': 'mp_access',
+            'where': '',
+          },{
+            'type': 'apiKey',
+            'name': 'webCsrf',
+            'keyName': 'X-CSRF-Token',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    GenericDataEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(GenericDataEnvelope),
+      ) as GenericDataEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<GenericDataEnvelope>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -1503,6 +2003,118 @@ class AdminFinanceApi {
     }
 
     return Response<FinanceActionResultEnvelope>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// updateFeeStatementInvoice
+  /// finance.approve_statements. Edit a DRAFT commission invoice heading and Vendor message with optimistic concurrency and idempotency. Does not send mail. Amounts, issuer, recipients and deadlines remain system controlled. Approval freezes the copy into the immutable SAMPLE/TEST PDF and Owner email. Issued statements reject editing.
+  ///
+  /// Parameters:
+  /// * [statementId]
+  /// * [idempotencyKey]
+  /// * [statementInvoiceUpdateRequest]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [FeeStatementEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<FeeStatementEnvelope>> updateFeeStatementInvoice({
+    required String statementId,
+    required String idempotencyKey,
+    required StatementInvoiceUpdateRequest statementInvoiceUpdateRequest,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/admin/finance/statements/{statementId}/invoice'.replaceAll('{' r'statementId' '}', encodeQueryParameter(_serializers, statementId, const FullType(String)).toString());
+    final _options = Options(
+      method: r'PUT',
+      headers: <String, dynamic>{
+        r'Idempotency-Key': idempotencyKey,
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'apiKey',
+            'name': 'accessCookie',
+            'keyName': 'mp_access',
+            'where': '',
+          },{
+            'type': 'apiKey',
+            'name': 'webCsrf',
+            'keyName': 'X-CSRF-Token',
+            'where': 'header',
+          },
+        ],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(StatementInvoiceUpdateRequest);
+      _bodyData = _serializers.serialize(statementInvoiceUpdateRequest, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    FeeStatementEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(FeeStatementEnvelope),
+      ) as FeeStatementEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<FeeStatementEnvelope>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

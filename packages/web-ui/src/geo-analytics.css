@@ -1,9 +1,8 @@
 /*
- * Data-visualization roles for the Admin geographic analytics (light-first portals).
- * Sequential magnitude: one hue, light → dark, the brand orange ramp extended by one darker step (orange-900).
- * Categorical series: the validated reference slots 1–2 (blue, orange); both pass lightness, chroma, CVD,
- * normal-vision and 3:1 contrast checks on the white surface. Suppressed cells use a neutral hatch plus text,
- * so no meaning is carried by colour alone.
+ * Shared portal chart palette: brand orange for primary data, slate for comparisons.
+ * Additional categories use theme status and neutral tokens; labels, markers and table
+ * views distinguish series beyond colour. Status charts use explicit semantic roles.
+ * Sequential magnitude follows the brand orange ramp. Suppressed cells retain a neutral hatch and text.
  */
 .mp-viz {
   --mp-viz-seq-1: var(--mp-color-brand-orange-100);
@@ -13,19 +12,42 @@
   --mp-viz-seq-5: #7c2d12;
   --mp-viz-empty: var(--mp-color-surface-canvas);
   --mp-viz-suppressed: #e5e7eb;
-  --mp-viz-series-1: #2a78d6;
-  --mp-viz-series-2: #eb6834;
-  /* Slots 3–6 continue the same validated order (aqua, yellow, magenta, green). On white they pass lightness, chroma,
-     adjacent CVD (worst ΔE 9.1) and normal-vision (worst ΔE 19.6) checks; aqua, yellow and magenta sit below 3:1, so
-     every chart using them prints values or offers its table view, and scatter plots add a distinct marker shape. */
-  --mp-viz-series-3: #1baf7a;
-  --mp-viz-series-4: #eda100;
-  --mp-viz-series-5: #e87ba4;
-  --mp-viz-series-6: #008300;
+  --mp-viz-series-1: var(--mp-color-action-primary);
+  --mp-viz-series-2: var(--mp-color-text-secondary);
+  --mp-viz-series-3: var(--mp-color-status-success);
+  --mp-viz-series-4: var(--mp-viz-warning);
+  --mp-viz-series-5: var(--mp-color-action-primary-pressed);
+  --mp-viz-series-6: var(--mp-color-text-strong);
+  --mp-viz-success: var(--mp-color-status-success);
+  /* Deepen the warning token for a visible mark on white chart surfaces. */
+  --mp-viz-warning: color-mix(in srgb, var(--mp-color-status-warning) 65%, var(--mp-color-text-strong));
+  --mp-viz-error: var(--mp-color-status-error);
   --mp-viz-grid: var(--mp-color-border-default);
+  --mp-viz-placeholder: var(--mp-color-border-default);
+  --mp-viz-muted-ink: var(--mp-color-text-secondary);
   /* Forecasts are estimates: a neutral region and band, never a series colour. */
   --mp-viz-forecast-region: rgba(148, 163, 184, 0.10);
   --mp-viz-forecast-band: rgba(71, 85, 105, 0.16);
+}
+
+.mp-scatter-tooltip { position: fixed; inset: auto; margin: 0; z-index: 100; width: min(240px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); overflow: auto; padding: 14px 16px; border: 1px solid var(--mp-color-border-default); border-radius: var(--mp-radius-control); background: var(--mp-color-surface-primary); color: var(--mp-color-text-strong); box-shadow: 0 8px 24px rgb(15 23 42 / 14%); font-size: 12px; line-height: 20px; }
+.mp-scatter-tooltip-name { font-weight: 600; overflow-wrap: anywhere; }
+.mp-scatter-tooltip-group { display: flex; align-items: center; gap: 6px; margin-top: 4px; color: var(--mp-color-text-secondary); }
+.mp-scatter-tooltip-group svg { flex-shrink: 0; }
+.mp-scatter-tooltip dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--mp-color-border-default); }
+.mp-scatter-tooltip dt { color: var(--mp-color-text-secondary); font-size: 11px; }
+.mp-scatter-tooltip dd { margin-top: 2px; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.mp-viz-muted {
+  --mp-viz-series-1: var(--mp-viz-muted-ink);
+  --mp-viz-series-2: var(--mp-viz-muted-ink);
+  --mp-viz-series-3: var(--mp-viz-muted-ink);
+  --mp-viz-series-4: var(--mp-viz-muted-ink);
+  --mp-viz-series-5: var(--mp-viz-muted-ink);
+  --mp-viz-series-6: var(--mp-viz-muted-ink);
+  --mp-viz-success: var(--mp-viz-muted-ink);
+  --mp-viz-warning: var(--mp-viz-muted-ink);
+  --mp-viz-error: var(--mp-viz-muted-ink);
 }
 
 .mp-viz-forecast-swatch {
@@ -34,6 +56,43 @@
   background-size: 100% 2px;
   background-position: center;
   background-repeat: no-repeat;
+}
+
+/* Sales header: gross sales on the left, period totals on the right. */
+.mp-trend-overview {
+  --mp-viz-series-2: var(--mp-color-brand-orange-100);
+  container: sales-overview / inline-size;
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: flex-start;
+  gap: 12px 24px;
+}
+.mp-trend-total { max-width: 100%; }
+.mp-trend-total dt { color: var(--mp-color-text-secondary); font-size: 12px; line-height: 20px; }
+.mp-trend-total dd { margin-top: 2px; color: var(--mp-color-text-strong); font-size: 24px; line-height: 32px; font-weight: 700; letter-spacing: -0.025em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.mp-trend-overview-legend { min-width: 0; max-width: 100%; justify-self: end; }
+.mp-viz.mp-trend-overview .mp-trend-overview-legend > ul { justify-content: flex-end; gap: 8px 16px; }
+.mp-trend-overview-legend > ul > li { flex: 0 1 auto; align-items: stretch; gap: 6px; font-size: 11px; line-height: 20px; }
+.mp-trend-overview:has(> .mp-trend-overview-legend > ul > li:nth-child(3)) > .mp-trend-total dd { font-size: 22px; }
+.mp-trend-overview-legend > ul > li > span:not([aria-hidden]) { display: flex; flex-direction: column; }
+.mp-trend-overview-legend > ul:has(> li:nth-child(3)) .mp-trend-series-value { font-size: 12px; white-space: nowrap; }
+.mp-trend-overview-legend > ul > li > span[aria-hidden] { width: 6px; height: 34px; border: 1px solid var(--mp-color-action-primary); border-radius: 4px; }
+.mp-trend-series-value { display: block; color: var(--mp-color-text-strong); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.mp-trend-overview-plot { grid-column: 1 / -1; width: 100%; min-width: 0; }
+@container sales-overview (max-width: 479px) {
+  .mp-trend-total, .mp-trend-overview-legend { grid-column: 1 / -1; }
+  .mp-trend-overview-legend { justify-self: start; }
+  .mp-viz.mp-trend-overview .mp-trend-overview-legend > ul { justify-content: flex-start; }
+}
+.mp-trend-tooltip { position: absolute; z-index: 1; top: 8px; width: min(220px, 100%); padding: 12px; border: 1px solid var(--mp-color-border-default); border-radius: 12px; background: var(--mp-color-surface-primary); color: var(--mp-color-text-strong); box-shadow: 0 6px 24px rgb(0 0 0 / 10%); font-size: 11px; line-height: 18px; }
+.mp-trend-tooltip > p { margin-bottom: 6px; color: var(--mp-color-text-secondary); }
+.mp-trend-tooltip dl { display: grid; gap: 4px; }
+.mp-trend-tooltip dl > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px; }
+.mp-trend-tooltip dt { color: var(--mp-color-text-secondary); }
+.mp-trend-tooltip dd { font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.mp-trend-overview.mp-viz-muted { --mp-viz-series-2: var(--mp-viz-muted-ink); }
+@container analytics-main (min-width: 800px) {
+  .mp-trend-total dd { font-size: 22px; }
 }
 
 .mp-viz-hatch {
@@ -76,6 +135,15 @@
 .mp-geo-table tbody tr:last-child :is(th, td) {
   border-bottom: 0;
 }
+
+.mp-geo-table-region[data-density="compact"] {
+  max-height: min(65vh, 440px);
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.mp-geo-table-region[data-density="compact"] .mp-geo-table { font-size: 12px; }
+.mp-geo-table-region[data-density="compact"] .mp-geo-table :is(th, td) { padding: 6px 12px; }
 
 .mp-demand-scroll {
   scrollbar-gutter: stable;

@@ -32,6 +32,9 @@ for (const language of ['typescript', 'dart']) {
   assert.ok(fs.readFileSync(new URL(`../generated/${language}/${path}`, import.meta.url), 'utf8').includes('getNavigationUpdates'))
 }
 assert.equal(navigation.operationId, 'getVendorNavigationUpdates')
+assert.match(navigation.description, /E-Invoices counts distinct authorized orders without/)
+assert.match(navigation.description, /without requiring a Buyer request/)
+assert.match(navigation.description, /An order in both groups counts once/)
 assert.ok(navigation.security?.length)
 assert.equal(navigation.responses['200'].content['application/json'].schema.properties.data.$ref, '#/components/schemas/VendorNavigationUpdates')
 assert.equal(spec.components.schemas.VendorNavigationUpdates.properties.sections.additionalProperties.minimum, 0)

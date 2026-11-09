@@ -15,6 +15,16 @@ class _$CommissionPolicyPublishRequest extends CommissionPolicyPublishRequest {
   final DateTime? effectiveFrom;
   @override
   final String reason;
+  @override
+  final String? vendorMessage;
+  @override
+  final bool? noticeOverride;
+  @override
+  final String? noticeOverrideReason;
+  @override
+  final String? supersedesPolicyId;
+  @override
+  final bool? cancelScheduled;
 
   factory _$CommissionPolicyPublishRequest(
           [void Function(CommissionPolicyPublishRequestBuilder)? updates]) =>
@@ -24,7 +34,12 @@ class _$CommissionPolicyPublishRequest extends CommissionPolicyPublishRequest {
       {required this.commissionBasisPoints,
       required this.expectedVersion,
       this.effectiveFrom,
-      required this.reason})
+      required this.reason,
+      this.vendorMessage,
+      this.noticeOverride,
+      this.noticeOverrideReason,
+      this.supersedesPolicyId,
+      this.cancelScheduled})
       : super._();
   @override
   CommissionPolicyPublishRequest rebuild(
@@ -42,7 +57,12 @@ class _$CommissionPolicyPublishRequest extends CommissionPolicyPublishRequest {
         commissionBasisPoints == other.commissionBasisPoints &&
         expectedVersion == other.expectedVersion &&
         effectiveFrom == other.effectiveFrom &&
-        reason == other.reason;
+        reason == other.reason &&
+        vendorMessage == other.vendorMessage &&
+        noticeOverride == other.noticeOverride &&
+        noticeOverrideReason == other.noticeOverrideReason &&
+        supersedesPolicyId == other.supersedesPolicyId &&
+        cancelScheduled == other.cancelScheduled;
   }
 
   @override
@@ -52,6 +72,11 @@ class _$CommissionPolicyPublishRequest extends CommissionPolicyPublishRequest {
     _$hash = $jc(_$hash, expectedVersion.hashCode);
     _$hash = $jc(_$hash, effectiveFrom.hashCode);
     _$hash = $jc(_$hash, reason.hashCode);
+    _$hash = $jc(_$hash, vendorMessage.hashCode);
+    _$hash = $jc(_$hash, noticeOverride.hashCode);
+    _$hash = $jc(_$hash, noticeOverrideReason.hashCode);
+    _$hash = $jc(_$hash, supersedesPolicyId.hashCode);
+    _$hash = $jc(_$hash, cancelScheduled.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -62,7 +87,12 @@ class _$CommissionPolicyPublishRequest extends CommissionPolicyPublishRequest {
           ..add('commissionBasisPoints', commissionBasisPoints)
           ..add('expectedVersion', expectedVersion)
           ..add('effectiveFrom', effectiveFrom)
-          ..add('reason', reason))
+          ..add('reason', reason)
+          ..add('vendorMessage', vendorMessage)
+          ..add('noticeOverride', noticeOverride)
+          ..add('noticeOverrideReason', noticeOverrideReason)
+          ..add('supersedesPolicyId', supersedesPolicyId)
+          ..add('cancelScheduled', cancelScheduled))
         .toString();
   }
 }
@@ -92,6 +122,31 @@ class CommissionPolicyPublishRequestBuilder
   String? get reason => _$this._reason;
   set reason(String? reason) => _$this._reason = reason;
 
+  String? _vendorMessage;
+  String? get vendorMessage => _$this._vendorMessage;
+  set vendorMessage(String? vendorMessage) =>
+      _$this._vendorMessage = vendorMessage;
+
+  bool? _noticeOverride;
+  bool? get noticeOverride => _$this._noticeOverride;
+  set noticeOverride(bool? noticeOverride) =>
+      _$this._noticeOverride = noticeOverride;
+
+  String? _noticeOverrideReason;
+  String? get noticeOverrideReason => _$this._noticeOverrideReason;
+  set noticeOverrideReason(String? noticeOverrideReason) =>
+      _$this._noticeOverrideReason = noticeOverrideReason;
+
+  String? _supersedesPolicyId;
+  String? get supersedesPolicyId => _$this._supersedesPolicyId;
+  set supersedesPolicyId(String? supersedesPolicyId) =>
+      _$this._supersedesPolicyId = supersedesPolicyId;
+
+  bool? _cancelScheduled;
+  bool? get cancelScheduled => _$this._cancelScheduled;
+  set cancelScheduled(bool? cancelScheduled) =>
+      _$this._cancelScheduled = cancelScheduled;
+
   CommissionPolicyPublishRequestBuilder() {
     CommissionPolicyPublishRequest._defaults(this);
   }
@@ -103,6 +158,11 @@ class CommissionPolicyPublishRequestBuilder
       _expectedVersion = $v.expectedVersion;
       _effectiveFrom = $v.effectiveFrom;
       _reason = $v.reason;
+      _vendorMessage = $v.vendorMessage;
+      _noticeOverride = $v.noticeOverride;
+      _noticeOverrideReason = $v.noticeOverrideReason;
+      _supersedesPolicyId = $v.supersedesPolicyId;
+      _cancelScheduled = $v.cancelScheduled;
       _$v = null;
     }
     return this;
@@ -135,6 +195,11 @@ class CommissionPolicyPublishRequestBuilder
           effectiveFrom: effectiveFrom,
           reason: BuiltValueNullFieldError.checkNotNull(
               reason, r'CommissionPolicyPublishRequest', 'reason'),
+          vendorMessage: vendorMessage,
+          noticeOverride: noticeOverride,
+          noticeOverrideReason: noticeOverrideReason,
+          supersedesPolicyId: supersedesPolicyId,
+          cancelScheduled: cancelScheduled,
         );
     replace(_$result);
     return _$result;

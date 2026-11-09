@@ -7,6 +7,18 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(ConversationView, () {
+    // Stable opaque Buyer identifier within the current store. Vendor inbox pagination groups on this identifier before selecting rows.
+    // String buyerThreadId
+    test('to test the property `buyerThreadId`', () async {
+      // TODO
+    });
+
+    // Number of currently authorized contexts represented by a grouped Vendor inbox row; one for an individual context.
+    // int conversationCount
+    test('to test the property `conversationCount`', () async {
+      // TODO
+    });
+
     // String id
     test('to test the property `id`', () async {
       // TODO
@@ -52,6 +64,7 @@ void main() {
       // TODO
     });
 
+    // Locked reference for this conversation. Vendor Work Package views include only the store allocation or its order snapshot items; the complete immutable Buyer original stays retained internally and available to its Buyer.
     // BuiltMap<String, JsonObject> lockedReference
     test('to test the property `lockedReference`', () async {
       // TODO
@@ -155,6 +168,32 @@ void main() {
 
     // int legacyPage
     test('to test the property `legacyPage`', () async {
+      // TODO
+    });
+
+    // Buyer activity awaiting a manual store reply. Automated replies never clear it.
+    // bool needsHumanResponse
+    test('to test the property `needsHumanResponse`', () async {
+      // TODO
+    });
+
+    // bool canConfigureAutomatedResponse
+    test('to test the property `canConfigureAutomatedResponse`', () async {
+      // TODO
+    });
+
+    // bool canPrepareOrderQuotation
+    test('to test the property `canPrepareOrderQuotation`', () async {
+      // TODO
+    });
+
+    // int orderLockVersion
+    test('to test the property `orderLockVersion`', () async {
+      // TODO
+    });
+
+    // String pendingOrderId
+    test('to test the property `pendingOrderId`', () async {
       // TODO
     });
 

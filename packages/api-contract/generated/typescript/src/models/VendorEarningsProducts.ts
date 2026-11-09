@@ -22,7 +22,7 @@ import {
 } from './VendorEarningsProduct';
 
 /**
- * Sales value per product for the same orders and dates as commercial sales: each product's share of the latest snapshot's line amounts (after vendor discount, VAT included). Delivery belongs to no product, so the products plus delivery equal commercial sales. Largest value first, at most 50 products; total counts all of them.
+ * Sales value per product for the same orders and dates as net sales: each product's share of the latest snapshot's line amounts after vendor discounts, VAT included, before partial refunds. Products plus delivery less breakdown.sales.refunds_centavos equal net sales. Largest value first, at most 50 products; total counts all of them.
  * @export
  * @interface VendorEarningsProducts
  */

@@ -1,0 +1,121 @@
+.mp-performance-vps { display: flex; flex-direction: column; min-width: 0; padding: 16px 20px; }
+.mp-performance-vps-gauge { margin: 0 auto 12px; text-align: center; }
+.mp-performance-star-gauge { width: 216px; height: 122px; }
+.mp-performance-vps-gauge figcaption { display: grid; gap: 4px; font-size: 11px; color: var(--mp-color-text-secondary); }
+.mp-performance-vps-gauge strong { margin-top: 6px; font-size: 38px; line-height: 1.2; color: var(--mp-color-action-primary); font-weight: 650; font-variant-numeric: tabular-nums; }
+.mp-performance-vps-gauge small { font-size: 13px; font-weight: 400; color: var(--mp-color-text-secondary); }
+.mp-performance-publication { display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
+.mp-performance-publication svg { color: var(--mp-color-action-primary); }
+.mp-performance-vps-status { text-align: center; font-size: 12px; line-height: 1.6; font-weight: 500; }
+.mp-performance-vps-formula { margin-top: 8px; text-align: center; color: var(--mp-color-text-secondary); font-size: 11px; line-height: 1.6; }
+.mp-performance-vps-components { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--mp-color-border-default); }
+.mp-performance-vps-components li > p { font-size: 11px; line-height: 1.6; }
+.mp-performance-vps-components > ul { gap: 16px; }
+.mp-performance-component-row { position: relative; padding-left: 34px; }
+.mp-performance-component-icon { position: absolute; inset: 1px auto auto 0; display: grid; place-items: center; width: 26px; height: 26px; border-radius: var(--mp-radius-control); color: var(--mp-color-action-primary); background: var(--mp-color-brand-orange-50); }
+.mp-performance-vps-facts { display: grid; gap: 10px; margin-top: auto; padding-top: 16px; font-size: 12px; }
+.mp-performance-vps-facts > div { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; padding-top: 10px; border-top: 1px solid var(--mp-color-border-default); }
+.mp-performance-vps-facts dt { color: var(--mp-color-text-secondary); font-size: 11px; }
+.mp-performance-vps-facts dd { font-weight: 600; font-variant-numeric: tabular-nums; }
+.mp-performance-operations { display: grid; min-width: 0; align-items: stretch; gap: 12px; }
+.mp-performance-operational-metrics { display: flex; min-width: 0; flex-direction: column; gap: 10px; }
+.mp-performance-metrics { display: grid; flex: 1; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.mp-performance-metrics .mp-metric-card { padding: 14px; background: var(--mp-color-surface-primary); border-color: var(--mp-color-border-default); }
+.mp-performance-metrics .mp-metric-card > .mp-kpi-label { min-height: 44px; align-items: center; gap: 6px; color: var(--mp-color-text-strong); }
+.mp-performance-metrics .mp-metric-heading-actions { gap: 0; }
+.mp-performance-metrics .mp-kpi-icon { width: 28px; height: 28px; }
+.mp-performance-metrics .mp-kpi-value { margin-top: 8px; font-size: 28px; line-height: 1.25; }
+.mp-performance-metric-context { display: block; margin-bottom: 3px; color: var(--mp-color-text-strong); font-weight: 500; }
+.mp-performance-history { display: grid; min-width: 0; }
+.mp-performance-history-empty { display: grid; flex: 1; min-height: 180px; place-content: center; padding: 24px; border: 1px dashed var(--mp-color-border-default); border-radius: var(--mp-radius-control); color: var(--mp-color-text-secondary); font-size: 12px; line-height: 1.6; text-align: center; }
+.mp-performance-primary, .mp-performance-achievements { display: grid; min-width: 0; gap: 12px; }
+.mp-performance-achievements { align-content: start; }
+.mp-performance-achievements .mp-performance-badges { gap: 0 16px; }
+.mp-performance-response-metrics { display: grid; gap: 16px; }
+.mp-performance-rate-metric { position: relative; display: grid; align-content: center; gap: 5px; min-width: 0; min-height: 86px; padding-right: 78px; }
+.mp-performance-rate-metric + .mp-performance-rate-metric { border-top: 1px solid var(--mp-color-border-default); padding-top: 14px; }
+.mp-performance-rate-metric dt { color: var(--mp-color-text-secondary); font-size: 11px; line-height: 1.6; font-weight: 500; }
+.mp-performance-rate-value { color: var(--mp-color-text-strong); font-size: 28px; font-weight: 650; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.mp-performance-rate-detail { color: var(--mp-color-text-secondary); font-size: 11px; line-height: 1.6; }
+.mp-performance-rate-graphic { position: absolute; right: 0; top: 50%; width: 64px; height: 64px; transform: translateY(-50%); color: var(--mp-color-action-primary); }
+.mp-performance-rate-graphic > svg:first-child { width: 64px; height: 64px; fill: none; stroke-width: 5; }
+.mp-performance-rate-graphic > svg:last-child { position: absolute; top: 22px; left: 22px; }
+.mp-performance-rate-track { stroke: var(--mp-color-surface-canvas); }
+.mp-performance-rate-arc { stroke: var(--mp-color-action-primary); stroke-linecap: round; transform: rotate(-90deg); transform-origin: 32px 32px; }
+.mp-performance-rate-metric[data-available="false"] .mp-performance-rate-graphic { color: var(--mp-color-text-secondary); }
+.mp-performance-overview { display: grid; align-items: stretch; gap: 12px; min-width: 0; }
+.mp-performance-rating, .mp-performance-health { display: flex; flex-direction: column; padding: 16px 20px; min-width: 0; }
+.mp-performance-card-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 14px; }
+.mp-performance-card-heading h2 { color: var(--mp-color-text-strong); font-size: 14px; font-weight: 600; }
+.mp-performance-card-heading > svg { flex-shrink: 0; color: var(--mp-color-text-secondary); }
+.mp-performance-card-heading p { margin-top: 4px; font-size: 11px; color: var(--mp-color-text-secondary); }
+.mp-performance-rating .mp-review-ring { width: 100%; margin: 0; }
+.mp-performance-rating .mp-review-ring strong { font-size: 36px; }
+.mp-performance-rating-summary { padding-bottom: 14px; border-bottom: 1px solid var(--mp-color-border-default); }
+.mp-performance-rating-body { min-width: 0; margin-top: 14px; }
+.mp-performance-rating > .mp-performance-rating-body { margin-bottom: 14px; }
+.mp-performance-rating-body h3 { margin-bottom: 6px; font-size: 11px; font-weight: 600; line-height: 1.5; color: var(--mp-color-text-secondary); }
+.mp-performance-criteria { display: grid; font-size: 12px; }
+.mp-performance-criteria > div { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; align-items: center; gap: 5px 8px; padding-block: 8px; }
+.mp-performance-criteria dt { grid-column: 1 / 3; display: flex; align-items: center; gap: 8px; min-width: 0; color: var(--mp-color-text-strong); line-height: 1.5; }
+.mp-performance-criterion-icon, .mp-performance-factor-icon { display: grid; place-items: center; flex-shrink: 0; width: 24px; height: 24px; border-radius: 6px; color: var(--mp-color-action-primary); background: var(--mp-color-brand-orange-50); }
+.mp-performance-criteria dd { display: contents; }
+.mp-performance-criterion-value { grid-column: 3; display: flex; align-items: center; gap: 4px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mp-performance-criterion-value svg { color: var(--mp-color-action-primary); fill: currentColor; }
+.mp-performance-criterion-value small { color: var(--mp-color-text-secondary); font-size: 11px; font-weight: 400; }
+.mp-performance-criterion-track { grid-column: 2 / -1; display: block; height: 4px; overflow: hidden; border-radius: var(--mp-radius-pill); background: var(--mp-color-surface-canvas); }
+.mp-performance-criterion-track > span { display: block; height: 100%; border-radius: inherit; background: var(--mp-color-action-primary); }
+.mp-performance-breakdown { display: grid; min-width: 0; }
+.mp-performance-breakdown > div { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; align-items: center; gap: 3px 8px; padding-block: 5px; border-bottom: 1px solid var(--mp-color-border-default); }
+.mp-performance-breakdown > div:last-child { border-bottom: 0; }
+.mp-performance-breakdown dt { grid-column: 1 / 3; display: flex; align-items: center; gap: 8px; font-size: 11px; line-height: 1.5; color: var(--mp-color-text-strong); }
+.mp-performance-factor-icon { width: 18px; height: 18px; border-radius: 4px; color: var(--mp-color-text-secondary); background: var(--mp-color-surface-canvas); }
+.mp-performance-breakdown dd { display: contents; }
+.mp-performance-breakdown strong { grid-column: 3; font-size: 12px; line-height: 1.5; font-weight: 600; font-variant-numeric: tabular-nums; }
+.mp-performance-breakdown dd > span { grid-column: 2 / -1; font-size: 11px; line-height: 1.5; color: var(--mp-color-text-secondary); font-variant-numeric: tabular-nums; }
+.mp-performance-card-note { margin-top: auto; padding-top: 14px; color: var(--mp-color-text-secondary); font-size: 11px; line-height: 1.6; }
+.mp-performance-rating > .mp-performance-card-note { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--mp-color-border-default); }
+.mp-performance-eligibility { display: grid; gap: 8px; margin-top: 12px; font-size: 11px; line-height: 1.6; color: var(--mp-color-text-secondary); }
+.mp-performance-rating > .mp-performance-eligibility { padding: 10px; border-radius: var(--mp-radius-control); background: var(--mp-color-surface-canvas); }
+.mp-performance-health-state { display: flex; align-items: center; gap: 8px; padding: 9px 10px; border: 1px solid var(--mp-color-border-default); border-radius: var(--mp-radius-control); font-size: 12px; line-height: 1.5; font-weight: 600; }
+.mp-performance-health-state svg { flex-shrink: 0; }
+.mp-performance-health-state[data-state="BELOW_WATCH_LEVEL"] { border-color: var(--mp-color-status-error); }
+.mp-performance-health-state[data-state="WATCH"] { border-color: var(--mp-color-status-warning); }
+.mp-performance-health-state[data-state="HEALTHY"] svg { color: var(--mp-color-status-success); }
+.mp-performance-health-reasons { display: grid; gap: 5px; margin: 12px 0 16px; padding-left: 16px; list-style: disc; font-size: 12px; line-height: 1.6; }
+.mp-performance-health-unavailable { padding-block: 12px; font-size: 12px; line-height: 1.6; }
+.mp-performance-health-help { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; padding-top: 8px; border-top: 1px solid var(--mp-color-border-default); font-weight: 500; }
+.mp-performance-health[data-density="compact"] { gap: 10px; }
+.mp-performance-health[data-density="compact"] :is(.mp-performance-card-heading, .mp-performance-health-reasons, .mp-performance-health-help) { margin: 0; }
+.mp-performance-badges { display: grid; gap: 0 20px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.mp-performance-badges li { display: grid; grid-template-columns: 52px minmax(0, 1fr); align-items: start; gap: 10px; padding-block: 14px; border-bottom: 1px solid var(--mp-color-border-default); }
+.mp-performance-badge-copy { display: grid; align-content: start; min-width: 0; gap: 7px; }
+.mp-performance-badge-copy h3 { font-size: 12px; font-weight: 600; line-height: 1.5; }
+.mp-performance-badge-copy p { font-size: 11px; line-height: 1.6; color: var(--mp-color-text-secondary); }
+.mp-performance-badges-note { margin-top: 12px; color: var(--mp-color-text-secondary); font-size: 11px; line-height: 1.6; }
+.mp-performance-earned-count { display: inline-flex; align-items: center; gap: 6px; align-self: start; padding: 7px 9px; border-radius: var(--mp-radius-control); background: var(--mp-color-brand-orange-50); color: var(--mp-color-text-strong); font-size: 11px; white-space: nowrap; }
+.mp-performance-earned-count > svg { color: var(--mp-color-action-primary); }
+.mp-performance-earned-count strong { font-size: 13px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.mp-performance-earned-count strong span { font-size: 11px; font-weight: 400; }
+.mp-performance-emblem { position: relative; display: block; width: 52px; height: 62px; color: var(--mp-color-text-secondary); }
+.mp-performance-emblem-frame { width: 52px; height: 62px; overflow: visible; stroke-width: 1.5; stroke-linejoin: round; }
+.mp-performance-emblem-ribbon { fill: var(--mp-color-surface-canvas); stroke: var(--mp-color-border-default); }
+.mp-performance-emblem-seal { fill: var(--mp-color-surface-canvas); stroke: var(--mp-color-border-default); }
+.mp-performance-emblem-inner { fill: var(--mp-color-surface-primary); stroke: var(--mp-color-border-default); stroke-width: 1; }
+.mp-performance-emblem-symbol { position: absolute; top: 13px; left: 14px; }
+.mp-performance-emblem-check { position: absolute; bottom: 1px; right: -2px; fill: var(--mp-color-surface-primary); color: var(--mp-color-status-success); }
+.mp-performance-emblem[data-status="EARNED"] { color: var(--mp-color-action-primary); }
+.mp-performance-emblem[data-status="EARNED"] :is(.mp-performance-emblem-ribbon, .mp-performance-emblem-seal) { fill: var(--mp-color-brand-orange-50); stroke: var(--mp-color-action-primary); }
+.mp-performance-emblem[data-status="SUPPRESSED"] .mp-performance-emblem-seal { stroke: var(--mp-color-status-warning); }
+@media (min-width: 640px) { .mp-performance-response-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } .mp-performance-rate-metric + .mp-performance-rate-metric { border-top: 0; border-left: 1px solid var(--mp-color-border-default); padding-top: 0; padding-left: 16px; } }
+@media (min-width: 768px) { .mp-performance-overview { grid-template-columns: repeat(2, minmax(0, 1fr)); } .mp-performance-badges { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 1280px) {
+  .mp-performance-primary { grid-template-columns: minmax(0, 1fr) minmax(0, 1.7fr); align-items: stretch; }
+  .mp-performance-operations[data-with-metrics="true"] { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); }
+  .mp-performance-overview { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .mp-performance-health[data-density="compact"] { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr) minmax(0, 1.5fr) auto; align-items: center; gap: 16px; }
+  .mp-performance-health[data-density="compact"] .mp-performance-card-heading > svg { display: none; }
+  .mp-performance-health[data-density="compact"] .mp-performance-health-unavailable { grid-column: span 2; padding-block: 0; }
+  .mp-performance-health[data-density="compact"] .mp-performance-health-help { border-top: 0; border-left: 1px solid var(--mp-color-border-default); padding: 0 0 0 12px; gap: 8px; max-width: 150px; }
+}
+@media (max-width: 639px) { .mp-performance-vps, .mp-performance-rating, .mp-performance-health { padding: 14px; } .mp-performance-metrics { grid-template-columns: minmax(0, 1fr); } .mp-performance-badges { grid-template-columns: minmax(0, 1fr); } }

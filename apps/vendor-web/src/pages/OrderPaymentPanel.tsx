@@ -19,7 +19,7 @@ export function OrderPaymentPanel({ order, onChanged }: { order: OrderDetail; on
   const verified = payment?.verifiedPayment
   const latest = payment?.latestAttempt
   if (!payment) return null
-  return <section aria-labelledby="order-payment-heading" className="grid gap-3 rounded-surface border border-border-default bg-surface-primary p-4">
+  return <section aria-labelledby="order-payment-heading" className="grid gap-3 mp-card mp-card-padded">
     <div className="flex items-center justify-between gap-2"><h2 id="order-payment-heading" className="text-base font-semibold">Payment</h2><span className="text-xs font-semibold text-text-secondary">TEST</span></div>
     {verified && <div className="grid gap-1 text-sm"><PaymentAttemptBadge status={verified.status} /><p className="text-text-secondary">{formatPesoCentavos(verified.totalCentavos)} via {verified.channelName ?? 'online'} · {formatManilaDateTime(verified.paidAt)}</p></div>}
     {!verified && latest && <div className="grid gap-1 text-sm"><PaymentAttemptBadge status={latest.status} /><p className="text-text-secondary">{latest.message}</p></div>}

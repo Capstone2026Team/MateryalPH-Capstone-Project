@@ -1,14 +1,17 @@
+import { AsyncLoading } from '@materyalph/web-ui'
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { AlertTriangle, ArrowRight, Boxes, CheckCircle2, ClipboardList, Clock, PackageCheck, Scale, ShoppingCart, Undo2, Wallet } from 'lucide-react'
+import { AlertTriangle, ArrowRight, CheckCircle2, ClipboardList, Clock, Percent, Scale, ShoppingCart, Undo2, Wallet } from 'lucide-react'
 import {
-  ActiveFilters, ALL_DATES, AssociationRuleList, BarList, Button, ChartDataTable, DashboardPanel, DateFilter, ForecastNote, IndicatorClassBadge, InfoNote, KpiCard, MethodNote, ScoreTile, SectionWorkspace,
+  AnalyticsChartCard, AnalyticsDashboardLayout, AnalyticsSummary, AssociationRuleList, BarList, Button, ChartDataTable, DashboardHeader, DashboardPanel, DashboardQueueList, DateFilter, EmptyState, ForecastNote, InfoNote, KpiCard, KpiBreakdown, RankedList, ScoreOverview, ScoreCalculationDetails, SectionWorkspace, StatusBadge,
   SegmentScatter, ShareBar, StatusMessage, TrendLineChart, analyticsDay, disputeIssueLabel, disputeStateLabel, formatChartDay, formatCompactCentavos, formatCount, formatDurationSeconds,
-  dateFilterLabel, formatManilaDateTime, formatPesoCentavos, orderStateLabel, useAutomaticRefresh, usePortalResource, type ForecastView, type ShareSegment, type TrendMarker, type VizColor,
+  formatManilaDateTime, formatPesoCentavos, formatDeductionCentavos, sumChartAmounts, useAutomaticRefresh, usePortalResource, type ForecastView, type TrendMarker, type VizColor,
+  VendorRecentActivity,
 } from '@materyalph/web-ui'
 import type { DashboardAction, DashboardForecast, DashboardRate, VendorDashboardOrders } from '@materyalph/api-client-ts'
 import { getVendorDashboardInsights, type VendorDashboardInsights } from '../lib/dashboard-api'
 import { readableApiError } from '../lib/auth-api'
+import { listVendorTeamActivity, readableOnboardingError } from '../lib/onboarding-api'
 import { dateRangeFromParams, dateRangePatch } from '../lib/date-filters'
 
 const SLOTS: VizColor[] = ['--mp-viz-series-1', '--mp-viz-series-2', '--mp-viz-series-3', '--mp-viz-series-4', '--mp-viz-series-5', '--mp-viz-series-6']
@@ -28,7 +31,7 @@ function forecastView(forecast: DashboardForecast): ForecastView {
  * The live Vendor Dashboard: one request per period returns every section the member's fixed role may see. A section
  * without its grant arrives as null and is explained, never shown empty. Peso values are Owner-only.
  */
-export function VendorInsightsWorkspace({ overviewFooter, overviewAside, canViewProductAnalytics = false }: { overviewFooter?: ReactNode; overviewAside?: ReactNode; canViewProductAnalytics?: boolean }) {
+export function VendorInsightsWorkspace({ storeName, overviewFooter, overviewAside, canViewProductAnalytics = false, canViewRecentActivity = false }: { storeName: string; overviewFooter?: ReactNode; overviewAside?: ReactNode; canViewProductAnalytics?: boolean; canViewRecentActivity?: boolean }) {
   const [params, setParams] = useSearchParams()
   const range = dateRangeFromParams(params)
   const loader = useCallback(() => getVendorDashboardInsights({ ...(range.from ? { from: range.from } : {}), ...(range.to ? { to: range.to } : {}) }), [range.from, range.to])
@@ -43,287 +46,244 @@ export function VendorInsightsWorkspace({ overviewFooter, overviewAside, canView
   }, [error])
   useAutomaticRefresh(refresh, { enabled: !pending, intervalMs: error ? 120_000 : 60_000 })
 
-  const dateControls = <>
-    <DateFilter title="Dashboard dates" value={range} disabled={pending && !data} onChange={changeDates} />
-    {data && <p className="text-xs text-text-secondary">Updated {formatManilaDateTime(data.generatedAt)} · {formatChartDay(day(data.period.from))} – {formatChartDay(day(data.period.to))}</p>}
-  </>
-  const activeFilters = <ActiveFilters filters={range.from || range.to ? [{ key: 'dates', label: dateFilterLabel(range), onRemove: () => changeDates(ALL_DATES) }] : []} onClear={() => changeDates(ALL_DATES)} />
-  if (!data) return <div className="space-y-4"><div className="flex flex-wrap items-center gap-3">{dateControls}</div>{activeFilters}
+  const header = <DashboardHeader eyebrow={storeName} description="Your store at a glance. Switch sections to focus on the work that matters today." status={<StatusBadge label="Active" tone="success" />} actions={data ? <p className="text-xs text-text-secondary">Updated {formatManilaDateTime(data.generatedAt)} · Updates automatically</p> : undefined} />
+  const dateControls = <DateFilter title="Dashboard dates" value={range} disabled={pending && !data} onChange={changeDates} />
+  if (!data) return <div className="mp-analytics space-y-3">{header}<div className="flex flex-wrap items-center gap-3">{dateControls}</div>
     {message ? <div className="space-y-3"><StatusMessage tone="error">{message}</StatusMessage><Button variant="secondary" onClick={() => void refresh()}>Retry</Button></div>
-      : <p role="status" className="text-sm text-text-secondary">Loading your store dashboard…</p>}
+      : <AsyncLoading compact label="Loading your store dashboard…" />}
     {overviewAside}
     {overviewFooter}
   </div>
   const periodLabel = `previous ${data.period.days} days`
-  return <div className="space-y-4">
-    {activeFilters}
+  return <div className="mp-analytics space-y-3">
+    {header}
     {message && <StatusMessage tone="error">{message} Showing the last successful update.</StatusMessage>}
     <SectionWorkspace dashboard actions={dateControls} sections={[
-      { label: 'Overview', content: <OverviewSection data={data} periodLabel={periodLabel} footer={overviewFooter} aside={overviewAside} /> },
-      { label: 'Performance', content: <PerformanceSection data={data} /> },
-      { label: 'Sales & Revenue', content: <SalesSection data={data} periodLabel={periodLabel} productAnalytics={canViewProductAnalytics} /> },
+      { label: 'Overview', content: <OverviewSection data={data} periodLabel={periodLabel} footer={overviewFooter} aside={overviewAside} productAnalytics={canViewProductAnalytics} recentActivity={canViewRecentActivity} /> },
       { label: 'Traffic & Volume', content: <TrafficSection data={data} productAnalytics={canViewProductAnalytics} /> },
       { label: 'Disputes & Quality', content: <QualitySection data={data} /> },
     ]} />
   </div>
 }
 
-function OverviewSection({ data, periodLabel, footer, aside }: { data: VendorDashboardInsights; periodLabel: string; footer: ReactNode; aside: ReactNode }) {
+function OverviewSection({ data, periodLabel, footer, aside, productAnalytics, recentActivity }: { data: VendorDashboardInsights; periodLabel: string; footer: ReactNode; aside: ReactNode; productAnalytics: boolean; recentActivity: boolean }) {
   const orders = data.orders
   const awaiting = data.actions.find(action => action.key === 'ORDER_CONFIRMATION')
   const assigned = data.actions.find(action => action.key === 'ASSIGNED_FULFILLMENT')
-  return <>
-    <dl className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      {awaiting && <KpiCard label="Order requests awaiting decision" value={formatCount(awaiting.count)} hint={awaiting.detail ?? 'Decide within the Vendor-response window.'} icon={<ClipboardList size={16} aria-hidden="true" />} accent />}
-      {assigned && <KpiCard label="Orders assigned to you" value={formatCount(assigned.count)} hint="Open fulfillment work in your name." icon={<PackageCheck size={16} aria-hidden="true" />} accent />}
-      {orders && <KpiCard label="Orders confirmed" value={formatCount(orders.kpis.orderVolume.value)} delta={{ changePercent: orders.kpis.orderVolume.changePercent, periodLabel }} sparkline={orders.series.map(point => point.orders)} icon={<ShoppingCart size={16} aria-hidden="true" />} />}
-      {orders && (orders.kpis.grossSalesCentavos
-        ? <KpiCard label="Gross sales" value={formatPesoCentavos(orders.kpis.grossSalesCentavos.value)} delta={{ changePercent: orders.kpis.grossSalesCentavos.changePercent, periodLabel }} sparkline={orders.series.map(point => point.grossSalesCentavos ?? null)} icon={<Wallet size={16} aria-hidden="true" />} hint="Before cancellations, returns and refunds." />
-        : <KpiCard label="Fulfillment rate" value={rateText(orders.kpis.fulfillmentRate)} hint={rateHint(orders.kpis.fulfillmentRate, 'orders due')} icon={<PackageCheck size={16} aria-hidden="true" />} />)}
-      {orders && <KpiCard label="Median response time" value={formatDurationSeconds(orders.kpis.responseTime.medianSeconds)} icon={<Clock size={16} aria-hidden="true" />}
-        hint={orders.kpis.responseTime.answered + orders.kpis.responseTime.unanswered === 0 ? 'No order requests in this period.' : `90th percentile ${formatDurationSeconds(orders.kpis.responseTime.p90Seconds)} · ${formatCount(orders.kpis.responseTime.unanswered)} awaiting a first decision.`} />}
-      {data.stock && !orders && <KpiCard label="Variants out of stock" value={formatCount(data.stock.outOfStock)} hint={`${formatCount(data.stock.limitedStock)} at or below their reorder level.`} icon={<Boxes size={16} aria-hidden="true" />} />}
-    </dl>
-    <div className="grid items-start gap-5 xl:grid-cols-3">
-      <div className="min-w-0 xl:col-span-2">{orders ? <OrdersTrendPanel orders={orders} /> : <DashboardPanel title="Store-wide order trends"><p className="text-sm text-text-secondary">Store-wide order measures are available to the Owner, Store Manager, Store Staff and Customer Service. Your dashboard shows the work assigned to your role.</p></DashboardPanel>}</div>
-      <div className="min-w-0 space-y-5">
-        <DashboardPanel title="Priority actions" description="Work waiting for your role, most urgent first."><ActionList actions={data.actions} /></DashboardPanel>
-        {aside}
+  const sales = data.access.salesValue ? orders?.kpis.grossSalesCentavos : null
+  const earnings = data.access.salesValue ? orders?.kpis.netSalesCentavos : null
+  return <AnalyticsDashboardLayout stretchAside={recentActivity} aside={<>
+      {aside}
+      <StockPanel data={data} />
+      <DashboardPanel divided density="compact" title="Priority actions" description="Work waiting for your role, most urgent first."><ActionList actions={data.actions} /></DashboardPanel>
+      {recentActivity && <VendorRecentActivity list={listVendorTeamActivity} explainError={readableOnboardingError} action={<Link to="/preview/tracking" className="inline-flex min-h-11 items-center gap-1 text-xs font-medium text-action-primary">View all<ArrowRight size={13} aria-hidden="true" /></Link>} />}
+    </>}>
+    <AnalyticsSummary density="compact" context={`${formatChartDay(day(data.period.from))} – ${formatChartDay(day(data.period.to))}`} featured={sales
+      ? { label: 'Earnings', value: formatPesoCentavos(earnings?.value ?? null), hint: 'After cancellations and completed refunds, before commission and business costs.', icon: <Wallet size={17} />, changePercent: earnings?.changePercent, comparison: `vs ${periodLabel}`, comparisonUnavailable: earnings?.previous === 0 ? `No earnings in ${periodLabel}` : 'Previous period comparison unavailable', calculation: <><p><strong>Earnings</strong> = gross sales − completed refund deductions − remaining cancelled-order value. Completed online refunds and confirmed cash reimbursements are deducted once, up to the sale value.</p><p>Uses orders first confirmed in the selected period, not refund payout dates. This is before commission, other charges and business costs. The Sales trend calculation shows the amount breakdown.</p></> }
+      : orders ? { label: 'Fulfillment rate', value: rateText(orders.kpis.fulfillmentRate), hint: rateHint(orders.kpis.fulfillmentRate, 'orders due'), calculation: <><p>Confirmed, non-cancelled orders due for fulfillment in the selected period that were completed by the period’s end ÷ all confirmed, non-cancelled orders due in that period × 100.</p><p>Uses the expected fulfillment date in Asia/Manila. With no orders due, the rate is unavailable.</p></> } : { label: 'Orders assigned to you', value: formatCount(assigned?.count ?? null) }} metrics={[
+        ...(sales && orders ? [
+          { label: 'Gross sales', value: formatPesoCentavos(sales.value), hint: 'Confirmed order value before cancellations, returns and refunds.', icon: <Wallet size={15} />, changePercent: sales.changePercent, comparison: `vs ${periodLabel}`, comparisonUnavailable: sales.previous === 0 ? `No sales in ${periodLabel}` : 'Previous period comparison unavailable', calculation: <><p>Adds the value of your store’s orders first confirmed in the selected period, including materials, NRPC and delivery, before cancellations, returns and refunds. E-wallet transaction fees are excluded.</p><p>Dates use Asia/Manila. The comparison uses the preceding period of the same length; a percentage is unavailable when the previous total is zero.</p></> },
+          { label: 'Average order value', value: formatPesoCentavos(orders.kpis.averageOrderValueCentavos?.value ?? null), hint: orders.kpis.averageOrderValueCentavos?.previous === 0 ? `Nothing to compare in ${periodLabel}.` : 'Gross sales divided by orders confirmed.', icon: <Wallet size={15} />, calculation: <><p><strong>Average order value</strong> = gross sales ÷ orders first confirmed in the selected period, rounded to the nearest centavo.</p><p>Uses the same confirmed orders as Gross sales, including orders later cancelled or refunded. With no confirmed orders, the average is unavailable.</p></> },
+        ] : [{ label: awaiting ? 'Awaiting your decision' : 'Assigned orders', value: formatCount(awaiting?.count ?? assigned?.count ?? null), icon: <ClipboardList size={15} />, hint: awaiting?.detail }]),
+        { label: 'Orders confirmed', value: formatCount(orders?.kpis.orderVolume.value ?? null), icon: <ShoppingCart size={15} />, changePercent: orders?.kpis.orderVolume.changePercent, comparison: `vs ${periodLabel}`, ...(orders ? { comparisonUnavailable: orders.kpis.orderVolume.previous === 0 ? `No confirmed orders in ${periodLabel}` : 'Previous period comparison unavailable', calculation: <><p>Counts your store’s orders first confirmed during the selected dates in Asia/Manila. Each order counts once, even if it is later completed, cancelled or disputed.</p><p>The comparison uses the preceding period of the same length. A previous count of zero has no percentage comparison.</p></> } : {}) },
+        ...(!sales ? [{ label: orders ? 'Median response' : 'Out of stock', value: orders ? formatDurationSeconds(orders.kpis.responseTime.medianSeconds) : formatCount(data.stock?.outOfStock ?? null), icon: <Clock size={15} />, hint: orders ? 'Time to first order decision' : 'Variants needing attention' }] : []),
+      ]} />
+      <div className="mp-card-group mp-analytics-cards mp-analytics-overview">
+        {orders && <>{data.access.salesValue && <SalesTrendPanel orders={orders} />}<OrdersTrendPanel orders={orders} />
+          <SalesByCategoryPanel orders={orders} sales={data.access.salesValue} />
+        </>}
+        {data.performance && <DashboardPanel density="compact" title="Store performance" description="Published scores and progress toward eligibility."
+          action={<Link to="/performance" className="mp-analytics-page-link inline-flex min-h-11 items-center gap-1 text-xs font-semibold text-action-primary">View performance<ArrowRight size={14} aria-hidden="true" /></Link>}
+          calculation={<ScoreCalculationDetails scores={data.performance.scores} />}><ScoreOverview compact scores={data.performance.scores} /></DashboardPanel>}
+        {orders && <TopProductsPanel orders={orders} sales={data.access.salesValue} productAnalytics={productAnalytics} period={data.period} />}
+        {!orders && <DashboardPanel density="compact" title="Your workspace"><p className="text-xs leading-5 text-text-secondary">Store-wide order measures are available to the Owner, Store Manager, Store Staff and Customer Service. Your dashboard shows the work assigned to your role.</p></DashboardPanel>}
       </div>
-    </div>
-    {orders && <DashboardPanel title="Incoming order requests" description="Oldest response deadline first." action={<Link to="/orders" className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-action-primary">All orders<ArrowRight size={14} aria-hidden="true" /></Link>}>
-      {orders.incoming.length === 0 ? <p className="text-sm text-text-secondary">No order requests are waiting for a decision. You’re all caught up.</p>
-        : <ul className="divide-y divide-border-default">{orders.incoming.map(order => <li key={order.orderId}><Link to={`/orders/${order.orderId}`} className="flex min-h-11 flex-wrap items-center justify-between gap-3 py-3 hover:text-action-primary">
-          <span className="min-w-0"><span className="block text-sm font-semibold text-text-strong">{order.reference}</span><span className="block text-xs text-text-secondary">{formatCount(order.lineCount)} {order.lineCount === 1 ? 'item' : 'items'} · {typeLabel(order.procurementType)} · {typeLabel(order.fulfillmentMethod)}</span></span>
-          <span className="text-right"><span className="block text-sm font-semibold tabular-nums text-text-strong">{formatPesoCentavos(order.totalCentavos)}</span>{order.dueAt && <span className="block text-xs text-text-secondary">Decide by {formatManilaDateTime(order.dueAt)}</span>}</span>
-        </Link></li>)}</ul>}
-    </DashboardPanel>}
-    <OperationsSummary data={data} />
-    {footer}
-  </>
+      {orders && <ProductInsightsOverview orders={orders} sales={data.access.salesValue} />}
+      {orders && <IncomingOrdersPanel orders={orders} />}
+      {footer}
+    </AnalyticsDashboardLayout>
+}
+
+function SalesByCategoryPanel({ orders, sales }: { orders: VendorDashboardOrders; sales: boolean }) {
+  return <DashboardPanel scrollBody density="compact" title="Sales by category" description={sales ? 'Product sales after discounts · VAT included.' : 'Share of orders with remaining sales.'}
+    calculation={<><p>Uses the same surviving orders, first-confirmation dates and frozen product amounts as Finance and Product Analytics. Cancelled and fully refunded sales are excluded.</p><p>Product values are before partial refunds and exclude delivery. Product sales plus delivery minus completed partial refunds equals Earnings. Finance shows the amount breakdown.</p><p>Category share uses all product sales. When there are more than six categories, the smaller categories are grouped under Other categories. Order counts are distinct within each category and should not be added across categories.</p></>}>
+    <ShareBar variant="donut" totalLabel={sales ? 'Sales' : 'Matches'} label="Category share" empty="No categories sold in this period." formatValue={value => sales ? formatPesoCentavos(value) : formatCount(value)} formatTotal={value => sales ? formatCompactCentavos(value) : formatCount(value, true)}
+      segments={orders.products.categories.map((category, index) => ({ key: category.category, label: category.category, value: sales ? category.valueCentavos ?? 0 : category.orders, colorVar: SLOTS[index % SLOTS.length] ?? '--mp-viz-series-1' }))} />
+  </DashboardPanel>
+}
+
+function TopProductsPanel({ orders, sales, productAnalytics, period }: { orders: VendorDashboardOrders; sales: boolean; productAnalytics: boolean; period: VendorDashboardInsights['period'] }) {
+  const top = orders.products.top.slice(0, 5)
+  const leadingValue = sales ? top[0]?.valueCentavos ?? 0 : top[0]?.orders ?? 0
+  const analyticsHref = `/analytics/products?${new URLSearchParams({ from: day(period.from), to: day(period.to) })}`
+  return <DashboardPanel scrollBody density="compact" title="Top products" description={sales ? 'Top five by product sales value, matching Finance.' : 'Top five by orders with remaining sales.'}
+    action={productAnalytics ? <Link to={analyticsHref} className="mp-analytics-page-link inline-flex min-h-11 items-center gap-1 text-xs font-semibold text-action-primary">Product analytics<ArrowRight size={14} aria-hidden="true" /></Link> : undefined}
+    calculation={<><p>Uses the same surviving confirmed orders and frozen material amounts as Finance and Product Analytics. Cancelled and fully refunded sales are excluded.</p><p>Product values include Vendor discounts and VAT, exclude delivery, and are before partial refunds. Finance shows how these values reconcile to Earnings.</p><p>Bars compare each product with the first-ranked product. Order and Buyer counts are distinct for each product and should not be added across products. The Product analytics link keeps these reporting dates.</p></>}>
+    <RankedList compact label="Top products in this period" empty="No product sales in this period." items={top.map((product, index) => ({
+      key: `${index}-${product.name}`, label: product.name, title: product.name,
+      meta: `${product.category} · ${formatCount(product.orders)} ${product.orders === 1 ? 'order' : 'orders'} · ${formatCount(product.buyers)} ${product.buyers === 1 ? 'Buyer' : 'Buyers'}`,
+      value: sales ? formatPesoCentavos(product.valueCentavos ?? null) : `${formatCount(product.orders)} ${product.orders === 1 ? 'order' : 'orders'}`,
+      share: leadingValue > 0 ? (sales ? product.valueCentavos ?? 0 : product.orders) / leadingValue : 0,
+    }))} />
+  </DashboardPanel>
+}
+
+function ProductInsightsOverview({ orders, sales }: { orders: VendorDashboardOrders; sales: boolean }) {
+  const { segments, basketRules } = orders.products
+  const points = segments.state === 'OK' ? segments.points : []
+  return <div className="mp-card-group mp-product-overview">
+    <section aria-label="Product demand patterns" className="mp-product-demand">
+      <header><h2 className="text-sm font-semibold text-text-strong">Product demand patterns</h2><p className="mt-1 text-xs leading-5 text-text-secondary">Demand groups for this period and materials often ordered together.</p></header>
+      <div className="mp-product-patterns">
+        <AnalyticsChartCard title="Product demand segments" description="Products grouped by similar demand." calculation={<>
+          <p>K-Means groups products using confirmed orders and distinct Buyers{sales ? ', plus material sales value' : ''}. Features are standardized before grouping. The number of groups is selected using the silhouette score.</p>
+          <p>Groups describe your store’s demand patterns. They do not change prices, listings or Buyer recommendations.</p>
+          {segments.state === 'OK' && <dl className="grid gap-3">{segments.segments.map(segment => <div key={segment.id}><dt>{segment.label} · {formatCount(segment.size)} {segment.size === 1 ? 'product' : 'products'}</dt><dd>About {formatCount(segment.averageOrders)} orders and {formatCount(segment.averageBuyers)} Buyers per product{sales && segment.averageValueCentavos != null ? ` · ${formatPesoCentavos(segment.averageValueCentavos)}` : ''}.</dd><dd>Examples: {segment.examples.join(', ')}.</dd></div>)}</dl>}
+          {points.length > 0 && <ChartDataTable caption="Product demand data" rowHeader="Product" rows={points.map(point => point.name)} columns={[{ key: 'group', header: 'Demand group', values: points.map(point => point.segment) }, { key: 'orders', header: 'Orders', values: points.map(point => formatCount(point.orders)) }, { key: 'buyers', header: 'Distinct Buyers', values: points.map(point => formatCount(point.buyers)) }]} />}
+        </>}>
+          <SegmentScatter compact title="Products by orders and distinct Buyers" xLabel="Orders" yLabel="Distinct Buyers" groups={points.length > 0 ? segments.segments.map(segment => segment.label) : []}
+            points={points.map((point, index) => ({ key: `${index}-${point.name}`, label: point.name, x: point.orders, y: point.buyers, group: point.segment }))} emptyReason={segments.reason ?? 'At least four products with orders in the period are needed to group them.'} />
+        </AnalyticsChartCard>
+        <AnalyticsChartCard title="Frequently ordered together" description={`Materials in the same confirmed order · last ${basketRules.windowDays} days.`} calculation={<>
+          <p>Apriori finds materials that occur together in confirmed orders. A pattern needs at least two orders from two distinct Buyers within the last {basketRules.windowDays} days.</p>
+          <p><strong>Confidence</strong> is the share of orders containing the first materials that also include the second materials. <strong>Lift</strong> compares that share with chance; above 1 means they occur together more often.</p>
+          <p>Use these patterns for stocking decisions. They do not create bundles or recommendations for Buyers.</p>
+        </>}>
+          <AssociationRuleList compact countLabel="orders" rules={basketRules.rules} empty={`No pattern yet. A pair needs at least two orders from two different Buyers (${formatCount(basketRules.baskets)} orders checked).`} />
+        </AnalyticsChartCard>
+      </div>
+    </section>
+  </div>
 }
 
 function OrdersTrendPanel({ orders }: { orders: VendorDashboardOrders }) {
   const labels = orders.series.map(point => day(point.date))
   const forecast = orders.forecast.orders
   const markers: TrendMarker[] = orders.unusualDays.days.map(item => ({ index: labels.indexOf(day(item.date)), label: 'Unusual day' })).filter(marker => marker.index >= 0)
-  return <DashboardPanel title="Orders and 7-day forecast" description="Confirmed orders per day with order requests received; the shaded region is a forecast.">
-    <div className="grid gap-4">
-      <TrendLineChart title="Orders confirmed per day" labels={labels} formatLabel={formatChartDay} formatValue={value => formatCount(Math.round(value * 10) / 10)} emptyReason="No orders in this period."
-        series={[{ key: 'orders', label: 'Orders confirmed', colorVar: '--mp-viz-series-1', values: orders.series.map(point => point.orders), kind: 'bar' }, { key: 'requests', label: 'Order requests', colorVar: '--mp-viz-series-2', values: orders.series.map(point => point.orderRequests) }]}
+  return <AnalyticsChartCard title="Order activity" description="Requests received and orders confirmed each day." calculation={<><p><strong>Order requests</strong> counts requests received by your store each day. <strong>Orders confirmed</strong> counts Vendor child orders first confirmed on each day. Dates use Asia/Manila.</p><p>The two events can happen on different days, so the chart is an activity view rather than a same-day conversion rate.</p><p>When available, the forecast uses up to 90 days of history, a least-squares trend and a weekday pattern, with a 95% prediction range. It needs at least seven active days and is a planning estimate. Diamonds mark unusual days found by DBSCAN density clustering.</p>
+      <ForecastNote forecast={forecastView(forecast)} horizonDays={orders.forecast.horizonDays} unit="orders" formatValue={value => formatCount(Math.round(value))} />
+    </>}>
+      <TrendLineChart variant="bar" title="Orders confirmed per day" labels={labels} formatLabel={formatChartDay} formatValue={value => formatCount(Math.round(value * 10) / 10)} emptyReason="No orders in this period."
+        series={[{ key: 'orders', label: 'Orders confirmed', colorVar: '--mp-viz-series-1', values: orders.series.map(point => point.orders), kind: 'bar' }, { key: 'requests', label: 'Order requests', colorVar: '--mp-viz-series-2', values: orders.series.map(point => point.orderRequests), kind: 'line' }]}
         forecast={forecast.state === 'OK' ? { label: 'Forecast', labels: forecast.points.map(point => day(point.date)), values: forecast.points.map(point => point.value), lower: forecast.points.map(point => point.lower), upper: forecast.points.map(point => point.upper) } : null}
         markers={markers} />
-      <ForecastNote forecast={forecastView(forecast)} horizonDays={orders.forecast.horizonDays} unit="orders" formatValue={value => formatCount(Math.round(value))} />
-      <ChartDataTable caption="Orders per day" rowHeader="Date" rows={labels.map(formatChartDay)} columns={[
-        { key: 'orders', header: 'Orders confirmed', values: orders.series.map(point => formatCount(point.orders)) },
-        { key: 'requests', header: 'Order requests', values: orders.series.map(point => formatCount(point.orderRequests)) },
-        { key: 'average', header: '7-day average', values: orders.series.map(point => point.ordersAverage === null || point.ordersAverage === undefined ? null : formatCount(point.ordersAverage)) },
-      ]} />
-      <MethodNote>Time-series analysis: a least-squares trend plus a weekday pattern is fitted to up to 90 days of confirmed orders; the band is a 95% prediction range. Diamonds mark unusual days found by DBSCAN density clustering. Estimates support planning only and never change a score, price or ranking.</MethodNote>
-    </div>
-  </DashboardPanel>
+  </AnalyticsChartCard>
 }
 
-export function ActionList({ actions, compact = false }: { actions: DashboardAction[]; compact?: boolean }) {
-  if (actions.length === 0) return <p className="text-sm text-text-secondary">No action items apply to your role.</p>
+export function ActionList({ actions, empty = 'No action items apply to your role.' }: { actions: DashboardAction[]; empty?: string }) {
   const sorted = [...actions].sort((a, b) => Number(b.count > 0) - Number(a.count > 0) || Number(b.severity === 'ALERT') - Number(a.severity === 'ALERT') || b.count - a.count)
-  const visible = compact ? sorted.slice(0, 5) : sorted
-  return <ul className="divide-y divide-border-default">{visible.map(action => {
-    const Icon = action.count === 0 ? CheckCircle2 : action.severity === 'ALERT' ? AlertTriangle : ClipboardList
-    return <li key={action.key}><Link to={action.href} className="flex min-h-11 items-start gap-3 py-3 first:pt-0 hover:text-action-primary">
-      <Icon size={18} className={`mt-0.5 shrink-0 ${action.count === 0 ? 'text-status-success' : action.severity === 'ALERT' ? 'text-status-error' : 'text-action-primary'}`} aria-hidden="true" />
-      <span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-text-strong">{action.label}</span>
-        <span className="block text-xs text-text-secondary">{action.count === 0 ? 'Nothing waiting.' : action.severity === 'ALERT' ? 'Needs attention now.' : 'Waiting for action.'}{action.detail ? ` ${action.detail}` : ''}</span></span>
-      <span className={`rounded-pill px-2 text-sm font-semibold tabular-nums ${action.count > 0 ? 'bg-brand-orange-50 text-action-primary' : 'bg-surface-canvas text-text-secondary'}`}>{formatCount(action.count)}</span>
-    </Link></li>
-  })}</ul>
+  return <DashboardQueueList empty={empty} items={sorted.map(action => ({ ...action, attention: action.count > 0 && action.severity === 'ALERT', detail: `${action.count === 0 ? 'Nothing waiting.' : action.severity === 'ALERT' ? 'Needs attention now.' : 'Waiting for action.'}${action.detail ? ` ${action.detail}` : ''}` }))} renderLink={(action, content) => <Link to={action.href}>{content}</Link>} />
 }
 
-function PerformanceSection({ data }: { data: VendorDashboardInsights }) {
-  const performance = data.performance
-  const orders = data.orders
-  if (!performance && !orders) return <InfoNote>Store-wide performance is available to the Owner and Store Manager. Your attributed work appears in each module you use.</InfoNote>
-  const history = performance?.history ?? []
-  const historyNumber = (value: string | null | undefined) => (value === null || value === undefined ? null : Number(value))
-  const bands = performance?.classification.bands ?? {}
-  const operations = (performance?.operations ?? null) as { rates?: Record<string, string>; penalties?: Record<string, string> } | null
-  return <>
-    {performance && <div className="grid items-start gap-5 xl:grid-cols-3">
-      <DashboardPanel title="Store health indicator" description={performance.asOf ? `Scores as of ${formatChartDay(day(performance.asOf))}.` : 'Scores have not been calculated yet.'}>
-        <div className="grid gap-3"><IndicatorClassBadge value={performance.classification._class} label={performance.classification.label} />
-          <ul className="list-disc space-y-1 pl-5 text-sm text-text-strong">{performance.classification.path.map(reason => <li key={reason}>{reason}</li>)}</ul>
-          <MethodNote>Classification: a fixed decision tree over the System Workflow thresholds (VPS below 3.00 or OHS below 2.50, then any OHS metric outside its no-penalty band). It is an indicator only and changes no score, badge, ranking or discovery.</MethodNote></div>
-      </DashboardPanel>
-      <div className="xl:col-span-2"><DashboardPanel title="Published scores" description="The same formulas and sample gates as Store Performance.">
-        <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">{performance.scores.map(score => <ScoreTile key={score.key} name={score.key} value={score.value ?? null} published={score.published} sample={score.sampleCount} minimum={score.minimumSample} window={score.window} status={score.statusText} />)}</div>
-        <Link to="/performance" className="mt-4 inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-action-primary">Open Store Performance<ArrowRight size={14} aria-hidden="true" /></Link>
-      </DashboardPanel></div>
-    </div>}
-    {operations?.rates && <DashboardPanel title="Operational health bands" description="Trailing 30-day OHS rates and the System Workflow penalty band each one falls in.">
-      <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{(['NFR', 'LSR', 'RR', 'ODR'] as const).map(metric => <li key={metric} className="grid gap-1 border-l-2 border-border-default pl-4">
-        <span className="text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary">{{ NFR: 'Non-fulfillment', LSR: 'Late shipment', RR: 'Return rate', ODR: 'Order defects' }[metric]}</span>
-        <span className="text-2xl font-semibold tabular-nums text-text-strong">{operations.rates?.[metric] ?? '—'}%</span>
-        <span className="text-xs text-text-secondary">Band: {(bands[metric] ?? 'NONE').toLowerCase().replace('none', 'no penalty')} · penalty {operations.penalties?.[metric] ?? '0.00'}</span>
-      </li>)}</ul>
-    </DashboardPanel>}
-    {performance && history.some(point => point.vps || point.ohs) && <DashboardPanel title="Score history" description="Daily snapshots of the published VPS and OHS (1.00–5.00).">
-      <TrendLineChart title="VPS and OHS history" labels={history.map(point => day(point.date))} formatLabel={formatChartDay} formatValue={value => value.toFixed(2)} emptyReason="No published scores yet."
-        series={[{ key: 'vps', label: 'VPS', colorVar: '--mp-viz-series-1', values: history.map(point => historyNumber(point.vps)) }, { key: 'ohs', label: 'OHS', colorVar: '--mp-viz-series-2', values: history.map(point => historyNumber(point.ohs)) }]} />
-    </DashboardPanel>}
-    {orders && <dl className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <KpiCard label="Fulfillment rate" value={rateText(orders.kpis.fulfillmentRate)} hint={rateHint(orders.kpis.fulfillmentRate, 'orders due')} icon={<PackageCheck size={16} aria-hidden="true" />} />
-      <KpiCard label="Cancellation rate (all causes)" value={rateText(orders.kpis.cancellationRate)} hint={rateHint(orders.kpis.cancellationRate, 'confirmed orders')} icon={<Undo2 size={16} aria-hidden="true" />} />
-      <KpiCard label="Dispute rate" value={rateText(orders.kpis.disputeRate)} hint={rateHint(orders.kpis.disputeRate, 'confirmed orders')} icon={<Scale size={16} aria-hidden="true" />} />
-      <KpiCard label="Mean response time" value={formatDurationSeconds(orders.kpis.responseTime.meanSeconds)} hint={`Median ${formatDurationSeconds(orders.kpis.responseTime.medianSeconds)} · 90th percentile ${formatDurationSeconds(orders.kpis.responseTime.p90Seconds)}.`} icon={<Clock size={16} aria-hidden="true" />} />
-    </dl>}
-    {performance && performance.badgeMetrics.length > 0 && <DashboardPanel title="Badge metrics"><dl className="grid gap-4 sm:grid-cols-2">{performance.badgeMetrics.map(metric => <div key={metric.key} className="grid gap-1">
-      <dt className="text-xs font-semibold text-text-secondary">{metric.key} · {metric.window}</dt><dd className="text-2xl font-semibold tabular-nums">{metric.value ? `${metric.value}%` : '—'}</dd><dd className="text-xs text-text-secondary">{metric.definition} · {formatCount(metric.sampleCount)} in sample</dd></div>)}</dl></DashboardPanel>}
-  </>
-}
-
-function OperationsSummary({ data }: { data: VendorDashboardInsights }) {
-  const pipeline = (data.orders?.pipeline ?? []).filter(item => item.count > 0)
+function StockPanel({ data }: { data: VendorDashboardInsights }) {
   const stock = data.stock
-  return <>
-    <div className="grid items-start gap-5 xl:grid-cols-2">
-      {data.orders && <DashboardPanel title="Open orders by state" description="Where today’s orders are in the order journey.">
-        <BarList label="Open orders by state" empty="No open orders right now." items={pipeline.map(item => ({ key: item.state, label: orderStateLabel(item.state), value: item.count, display: formatCount(item.count) }))} />
-      </DashboardPanel>}
-      {stock && <DashboardPanel title="Stock status" description="Available to sell = on hand − hard reserved." action={<Link to="/products/inventory" className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-action-primary">Inventory<ArrowRight size={14} aria-hidden="true" /></Link>}>
-        <div className="grid gap-4">
-          <ShareBar label="Variants by stock status" empty="No active variants yet." segments={[{ key: 'in', label: 'In stock', value: stock.inStock, colorVar: '--mp-viz-series-3' }, { key: 'limited', label: 'Limited stock', value: stock.limitedStock, colorVar: '--mp-viz-series-4' }, { key: 'out', label: 'Out of stock', value: stock.outOfStock, colorVar: '--mp-viz-series-2' }]} />
-          {stock.attention.length > 0 && <ul className="divide-y divide-border-default text-sm">{stock.attention.map(item => <li key={`${item.name}-${item.variant ?? ''}`} className="flex items-center justify-between gap-3 py-2">
-            <span className="min-w-0"><span className="block font-semibold text-text-strong">{item.name}</span>{item.variant && <span className="block text-xs text-text-secondary">{item.variant}</span>}</span>
-            <span className="text-right text-xs"><span className="inline-flex items-center gap-1 font-semibold text-text-strong">{item.status === 'OUT_OF_STOCK' ? <AlertTriangle size={14} className="text-status-error" aria-hidden="true" /> : <Clock size={14} className="text-action-primary" aria-hidden="true" />}{item.status === 'OUT_OF_STOCK' ? 'Out of stock' : 'Limited stock'}</span>
-              <span className="block text-text-secondary">{item.available} available{item.reorderLevel ? ` · reorder at ${item.reorderLevel}` : ''}</span></span></li>)}</ul>}
-        </div>
-      </DashboardPanel>}
-    </div>
-  </>
-}
+  if (!stock) return null
+  return <DashboardPanel density="compact" title="Stock status" description="Current inventory." calculation={<><p><strong>Available to sell</strong> = quantity on hand − hard-reserved quantity. Counts active variants on listings that have not been removed, using current stock across all dates.</p><p><strong>Out of stock</strong> means no inventory record or available quantity at or below zero. <strong>Limited stock</strong> means positive available quantity at or below its configured reorder level. The remaining variants are In stock. Each variant belongs to one group.</p></>} action={<Link to="/products/inventory" className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-action-primary">Inventory<ArrowRight size={14} aria-hidden="true" /></Link>}>
+      <div className="grid gap-3">
+        <ShareBar variant="donut" totalLabel="Variants" label="Variants by stock status" empty="No active variants yet." segments={[{ key: 'in', label: 'In stock', value: stock.inStock, colorVar: '--mp-viz-success' }, { key: 'limited', label: 'Limited stock', value: stock.limitedStock, colorVar: '--mp-viz-warning' }, { key: 'out', label: 'Out of stock', value: stock.outOfStock, colorVar: '--mp-viz-error' }]} />
 
-const productAnalyticsLink = <Link to="/performance?tab=products" className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-action-primary">Product analytics<ArrowRight size={14} aria-hidden="true" /></Link>
-
-function SalesSection({ data, periodLabel, productAnalytics }: { data: VendorDashboardInsights; periodLabel: string; productAnalytics: boolean }) {
-  const orders = data.orders
-  if (!orders) return <InfoNote>Sales measures are available to the Owner, Store Manager, Store Staff and Customer Service.</InfoNote>
-  const kpis = orders.kpis
-  const sales = data.access.salesValue
-  const labels = orders.series.map(point => day(point.date))
-  const salesForecast = orders.forecast.sales
-  const products = orders.products
-  const markers: TrendMarker[] = orders.unusualDays.days.map(item => ({ index: labels.indexOf(day(item.date)), label: 'Unusual day' })).filter(marker => marker.index >= 0)
-  const categorySegments: ShareSegment[] = products.categories.map((category, index) => ({ key: category.category, label: category.category, value: sales ? category.valueCentavos ?? 0 : category.orders, colorVar: SLOTS[index % SLOTS.length] ?? '--mp-viz-series-1' }))
-  return <>
-    {sales && kpis.grossSalesCentavos ? <dl className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <KpiCard label="Gross sales" value={formatPesoCentavos(kpis.grossSalesCentavos.value)} delta={{ changePercent: kpis.grossSalesCentavos.changePercent, periodLabel }} icon={<Wallet size={16} aria-hidden="true" />} hint="Confirmed order value before cancellations, returns and refunds." accent />
-      <KpiCard label="Net sales" value={formatPesoCentavos(kpis.netSalesCentavos?.value)} delta={kpis.netSalesCentavos ? { changePercent: kpis.netSalesCentavos.changePercent, periodLabel } : null} hint="After cancellations and refunds already paid back to Buyers." />
-      <KpiCard label="Average order value" value={formatPesoCentavos(kpis.averageOrderValueCentavos?.value ?? null)} hint={kpis.averageOrderValueCentavos?.previous ? `${formatPesoCentavos(kpis.averageOrderValueCentavos.previous)} in the ${periodLabel}.` : `Nothing to compare in the ${periodLabel}.`} />
-      <KpiCard label="Orders confirmed" value={formatCount(kpis.orderVolume.value)} delta={{ changePercent: kpis.orderVolume.changePercent, periodLabel }} icon={<ShoppingCart size={16} aria-hidden="true" />} />
-    </dl> : <InfoNote>Peso sales and earnings figures are available to the Vendor Owner. Your view shows order counts.</InfoNote>}
-    {sales && salesForecast && <DashboardPanel title="Sales and 7-day forecast" description="Gross sales per day; the shaded region is a forecast with its 95% range.">
-      <div className="grid gap-4">
-        <TrendLineChart title="Gross sales per day" labels={labels} formatLabel={formatChartDay} formatValue={value => formatCompactCentavos(Math.round(value))} emptyReason="No sales in this period."
-          series={[{ key: 'gross', label: 'Gross sales', colorVar: '--mp-viz-series-1', values: orders.series.map(point => point.grossSalesCentavos ?? null), kind: 'bar' }, { key: 'average', label: '7-day average', colorVar: '--mp-viz-series-2', values: orders.series.map(point => point.salesAverageCentavos ?? null) }]}
-          forecast={salesForecast.state === 'OK' ? { label: 'Forecast', labels: salesForecast.points.map(point => day(point.date)), values: salesForecast.points.map(point => point.value), lower: salesForecast.points.map(point => point.lower), upper: salesForecast.points.map(point => point.upper) } : null}
-          markers={markers} />
-        <ForecastNote forecast={forecastView(salesForecast)} horizonDays={orders.forecast.horizonDays} unit="in gross sales" formatValue={value => formatPesoCentavos(Math.round(value))} />
-        <ChartDataTable caption="Sales per day" rowHeader="Date" rows={labels.map(formatChartDay)} columns={[
-          { key: 'gross', header: 'Gross sales', values: orders.series.map(point => formatPesoCentavos(point.grossSalesCentavos ?? null)) },
-          { key: 'net', header: 'Net sales', values: orders.series.map(point => formatPesoCentavos(point.netSalesCentavos ?? null)) },
-          { key: 'orders', header: 'Orders', values: orders.series.map(point => formatCount(point.orders)) },
-        ]} />
-        <p className="text-xs text-text-secondary">Internal operational view — not a tax invoice, accounting record or tax return. Commission and withholding are in Earnings and Transactions.</p>
-      </div>
-    </DashboardPanel>}
-    <div className="grid items-start gap-5 xl:grid-cols-2">
-      <DashboardPanel title="Top products" description={sales ? 'By sales value in the period.' : 'By orders in the period.'} action={productAnalytics ? productAnalyticsLink : undefined}>
-        <BarList label="Top products" empty="No products sold in this period." items={products.top.map(product => ({ key: product.name, label: product.name, value: sales ? product.valueCentavos ?? 0 : product.orders,
-          display: sales ? formatPesoCentavos(product.valueCentavos ?? null) : `${formatCount(product.orders)} orders`, detail: `${product.category} · ${formatCount(product.orders)} orders · ${formatCount(product.buyers)} Buyers` }))} />
-      </DashboardPanel>
-      <DashboardPanel title="Category share" description={sales ? 'Share of sales value by category.' : 'Share of orders by category.'}>
-        <ShareBar label="Category share" empty="No categories sold in this period." segments={categorySegments} formatValue={value => (sales ? formatPesoCentavos(value) : formatCount(value))} />
-      </DashboardPanel>
-    </div>
-    <SegmentsPanel orders={orders} sales={sales} />
-    <DashboardPanel title="Frequently ordered together" description={`Materials that appear in the same confirmed order more often than chance, last ${products.basketRules.windowDays} days.`}>
-      <div className="grid gap-4">
-        <AssociationRuleList countLabel="orders" empty={`No pattern yet: a pair must appear in at least two orders from two different Buyers (${formatCount(products.basketRules.baskets)} orders checked).`}
-          rules={products.basketRules.rules.map(rule => ({ antecedent: rule.antecedent, consequent: rule.consequent, confidence: rule.confidence, lift: rule.lift, supportCount: rule.supportCount }))} />
-        <MethodNote>Association rule mining (Apriori): confidence is how often orders with the first materials also contain the last one; lift above 1 means more often than chance. Use it for stocking and bundles. It is co-occurrence, not a recommendation shown to Buyers.</MethodNote>
       </div>
     </DashboardPanel>
-  </>
 }
 
-function SegmentsPanel({ orders, sales }: { orders: VendorDashboardOrders; sales: boolean }) {
-  const segments = orders.products.segments
-  return <DashboardPanel title="Product demand segments" description="Products grouped by similar demand in the period.">
-    {segments.state !== 'OK' ? <p className="text-sm text-text-secondary">{segments.reason ?? 'Not enough products with orders to group yet.'}</p> : <div className="grid gap-5">
-      <SegmentScatter title="Products by orders and distinct Buyers" xLabel="Orders" yLabel="Distinct Buyers" groups={segments.segments.map(segment => segment.label)}
-        points={segments.points.map(point => ({ key: point.name, label: point.name, x: point.orders, y: point.buyers, group: point.segment }))} />
-      <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">{segments.segments.map(segment => <li key={segment.id} className="grid gap-1 border-l-2 border-border-default pl-4 text-sm">
-        <span className="font-semibold text-text-strong">{segment.label}</span>
-        <span className="text-text-secondary">{formatCount(segment.size)} products · about {formatCount(segment.averageOrders)} orders and {formatCount(segment.averageBuyers)} Buyers each{sales && segment.averageValueCentavos !== null && segment.averageValueCentavos !== undefined ? ` · ${formatPesoCentavos(segment.averageValueCentavos)}` : ''}</span>
-        <span className="text-xs text-text-secondary">e.g. {segment.examples.join(', ')}</span></li>)}</ul>
-      <MethodNote>K-Means clustering on {segments.features.join(', ').toLowerCase()} (standardized), with the number of groups chosen by the best silhouette score{segments.silhouette !== null && segments.silhouette !== undefined ? ` (${segments.silhouette.toFixed(2)}; closer to 1 means clearer groups)` : ''}. Groups describe demand patterns only.</MethodNote>
-    </div>}
+function IncomingOrdersPanel({ orders }: { orders: VendorDashboardOrders }) {
+  return <DashboardPanel density="compact" title="Incoming order requests" action={<Link to="/orders" className="inline-flex min-h-11 items-center gap-1 text-xs font-medium text-action-primary">All orders<ArrowRight size={13} aria-hidden="true" /></Link>}>
+    {orders.incoming.length === 0 ? <p className="text-xs leading-5 text-text-secondary">No order requests are waiting for a decision. You’re all caught up.</p> : <div className="overflow-x-auto"><table className="w-full min-w-[460px] text-left text-xs">
+      <thead className="border-b border-border-default text-[10px] text-text-secondary"><tr>{['Order', 'Type', 'Amount', 'Response deadline'].map(label => <th key={label} scope="col" className="px-2 py-2 font-medium first:pl-0 last:text-right">{label}</th>)}</tr></thead>
+      <tbody className="divide-y divide-border-default">{orders.incoming.map(order => <tr key={order.orderId}>
+        <td className="py-3 pr-2"><Link to={`/orders/${order.orderId}`} className="inline-flex min-h-11 items-center font-semibold text-text-strong hover:text-action-primary">{order.reference}</Link><span className="block text-[10px] text-text-secondary">{formatCount(order.lineCount)} items</span></td>
+        <td className="px-2 py-3 text-[10px] text-text-secondary">{typeLabel(order.procurementType)}<span className="block">{typeLabel(order.fulfillmentMethod)}</span></td>
+        <td className="px-2 py-3 whitespace-nowrap font-medium tabular-nums">{formatPesoCentavos(order.totalCentavos)}</td>
+        <td className="py-3 pl-2 text-right text-[10px] text-text-secondary">{order.dueAt ? formatManilaDateTime(order.dueAt) : '—'}</td>
+      </tr>)}</tbody>
+    </table></div>}
   </DashboardPanel>
+}
+
+function SalesTrendPanel({ orders }: { orders: VendorDashboardOrders }) {
+  const labels = orders.series.map(point => day(point.date))
+  const earnings = orders.kpis.netSalesCentavos?.value ?? null
+  const refunds = sumChartAmounts(orders.series.map(point => point.refundsCentavos))
+  const cancellations = sumChartAmounts(orders.series.map(point => point.cancellationDeductionsCentavos))
+  return <AnalyticsChartCard wide title="Sales trend" description="Daily earnings, refunds and cancelled sales." calculation={<><KpiBreakdown caption="Earnings for the selected period" rows={[
+    { key: 'gross', label: 'Gross sales', amount: formatPesoCentavos(orders.kpis.grossSalesCentavos?.value ?? null) },
+    { key: 'refunds', label: 'Refunds', amount: formatDeductionCentavos(refunds) },
+    { key: 'cancellations', label: 'Cancelled sales', amount: formatDeductionCentavos(cancellations) },
+    { key: 'earnings', label: 'Earnings', amount: formatPesoCentavos(earnings), total: true },
+  ]} /><p><strong>Earnings</strong> = gross sales − completed refunds − cancelled sales. E-wallet transaction fees are excluded. Earnings are before commission, other charges and business costs, not profit.</p><p><strong>Refunds</strong> includes completed online refund principal and confirmed cash reimbursements, limited to the sale value. Pending or failed refunds and late-capture compensation are excluded. The minus sign marks a deduction already reflected in Earnings.</p><p><strong>Cancelled sales</strong> removes cancelled order value that has not already been counted as refunded, so cancellation refunds are never deducted twice.</p><p>All headline amounts total the selected period. Bars and tooltips show individual days, grouped by the order’s first confirmation date in Asia/Manila rather than its refund payout date.</p><p>Internal operational view — not a tax invoice, accounting record or tax return. Platform commission charges and creditable withholding tax are shown in Finance.</p></>}>
+      <TrendLineChart variant="bar" title="Earnings, refunds and cancelled sales per day" labels={labels} formatLabel={formatChartDay} formatValue={value => formatCompactCentavos(Math.round(value))} formatTooltipValue={value => formatPesoCentavos(Math.round(value))} emptyReason="No sales in this period."
+        overview={{ label: 'Total gross sales', value: formatPesoCentavos(orders.kpis.grossSalesCentavos?.value ?? null), context: 'Selected period totals', seriesValues: [formatPesoCentavos(earnings), formatDeductionCentavos(refunds), formatDeductionCentavos(cancellations)] }}
+        series={[{ key: 'net', label: 'Earnings', colorVar: '--mp-viz-series-1', values: orders.series.map(point => point.netSalesCentavos ?? null) }, { key: 'refunds', label: 'Refunds', colorVar: '--mp-viz-series-2', values: orders.series.map(point => point.refundsCentavos ?? null), formatValue: value => formatDeductionCentavos(Math.round(value)) }, { key: 'cancellations', label: 'Cancelled sales', colorVar: '--mp-viz-series-5', values: orders.series.map(point => point.cancellationDeductionsCentavos ?? null), formatValue: value => formatDeductionCentavos(Math.round(value)) }]} />
+      <ChartDataTable caption="Sales per day" rowHeader="Date" rows={labels.map(formatChartDay)} columns={[
+        { key: 'gross', header: 'Gross sales', values: orders.series.map(point => formatPesoCentavos(point.grossSalesCentavos ?? null)) },
+        { key: 'net', header: 'Earnings', values: orders.series.map(point => formatPesoCentavos(point.netSalesCentavos ?? null)) },
+        { key: 'refunds', header: 'Refunds', values: orders.series.map(point => formatDeductionCentavos(point.refundsCentavos)) },
+        { key: 'cancellations', header: 'Cancelled sales', values: orders.series.map(point => formatDeductionCentavos(point.cancellationDeductionsCentavos)) },
+        { key: 'orders', header: 'Orders', values: orders.series.map(point => formatCount(point.orders)) },
+      ]} />
+  </AnalyticsChartCard>
 }
 
 function TrafficSection({ data, productAnalytics }: { data: VendorDashboardInsights; productAnalytics: boolean }) {
   const orders = data.orders
-  return <>
-    <InfoNote>{data.traffic.storeVisits.reason} Volume below uses inquiries, quotations and orders the platform records.{productAnalytics && <> <Link className="font-semibold text-action-primary underline underline-offset-4" to="/performance?tab=products">Open product analytics</Link></>}</InfoNote>
+  return <div className="mp-analytics-detail">
+    <InfoNote>MateryalPH does not record storefront visits. Activity below uses recorded inquiries, quotations and orders.{productAnalytics && <> <Link className="font-semibold text-action-primary underline underline-offset-4" to="/analytics/products">Open product analytics</Link></>}</InfoNote>
     {!orders ? <p className="text-sm text-text-secondary">Store-wide volume is available to the Owner, Store Manager, Store Staff and Customer Service.</p> : <>
-      <div className="grid items-start gap-5 xl:grid-cols-2">
-        <DashboardPanel title="Demand funnel" description="From first contact to completed orders in the period.">
+      <div className="mp-card-group mp-analytics-detail-grid">
+        <AnalyticsChartCard title="Demand funnel" description="Recorded activity in the selected period." calculation={<><p>Counts Buyer sales conversations opened, quotation publications and order requests submitted during the selected dates. Confirmed orders are grouped by their first confirmation date; completions are counted among those orders.</p><p><strong>Confirmation rate</strong> = orders confirmed ÷ order requests × 100. <strong>Completion rate</strong> = completed confirmed orders ÷ confirmed orders × 100. A rate is omitted when its denominator is zero.</p><p>Stages are counted separately and may belong to different journeys. An Item-Based order does not require an inquiry or quotation. These rates compare period totals, not a tracked same-day conversion journey. Dates use Asia/Manila.</p></>}>
           <BarList label="Demand funnel" empty="No activity in this period." colorVar="--mp-viz-series-1" items={orders.funnel.map(stage => {
             // Conversion is shown only where a stage is a subset of the one before it; Item-Based orders need no inquiry or quotation.
             const before = orders.funnel.find(item => item.key === CONVERTS_FROM[stage.key])
             return { key: stage.key, label: stage.label, value: stage.count, display: formatCount(stage.count), detail: before && before.count > 0 ? `${Math.round((stage.count / before.count) * 100)}% of ${before.label.toLowerCase()}` : null }
           })} />
           <p className="mt-3 text-xs text-text-secondary">Stages are counted separately; an order request does not always follow an inquiry.</p>
-        </DashboardPanel>
-        <DashboardPanel title="Order mix" description="Confirmed orders in the period.">
-          <div className="grid gap-5">{([['procurement', 'Procurement type'], ['fulfillment', 'Fulfillment method'], ['payment', 'Payment method']] as const).map(([key, title]) => <div key={key} className="grid gap-2">
-            <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary">{title}</h3>
-            <ShareBar label={title} empty="No confirmed orders yet." segments={orders.mix[key].map((item, index) => ({ key: item.key, label: typeLabel(item.key), value: item.count, colorVar: SLOTS[index % SLOTS.length] ?? '--mp-viz-series-1' }))} />
+        </AnalyticsChartCard>
+        <AnalyticsChartCard title="Order mix" description="How confirmed orders are distributed." calculation={<><p>Groups orders first confirmed in the selected period by procurement type, fulfillment method and payment method. Each order contributes once to each grouping, using its recorded commercial arrangement.</p><p><strong>Share</strong> = orders in that category ÷ confirmed orders in the grouping × 100. The three groupings describe the same orders, so their totals must not be added together.</p><p>These are order counts, not sales value or payment collections. Later cancellations and disputes do not erase the original confirmation.</p></>}>
+          <div className="mp-analytics-mix">{([['procurement', 'Procurement type'], ['fulfillment', 'Fulfillment method'], ['payment', 'Payment method']] as const).map(([key, title]) => <div key={key} className="mp-analytics-mix-section">
+            <h3>{title}</h3>
+            <ShareBar variant="donut" label={title} empty="No confirmed orders yet." segments={orders.mix[key].map((item, index) => ({ key: item.key, label: typeLabel(item.key), value: item.count, colorVar: SLOTS[index % SLOTS.length] ?? '--mp-viz-series-1' }))} />
           </div>)}</div>
-        </DashboardPanel>
+        </AnalyticsChartCard>
       </div>
-      <DashboardPanel title="Requests and confirmations per day">
-        <TrendLineChart title="Order requests and confirmed orders" labels={orders.series.map(point => day(point.date))} formatLabel={formatChartDay} formatValue={value => formatCount(Math.round(value))} emptyReason="No activity in this period."
+      <AnalyticsChartCard title="Requests and confirmations per day" description="Daily order activity · Asia/Manila." calculation={<><p><strong>Order requests</strong> counts requests submitted to your store that day. <strong>Orders confirmed</strong> counts orders first confirmed that day.</p><p>An order can be requested on one day and confirmed on another. The two bars show activity, not a same-day conversion rate. Zero means no recorded activity; missing data remains unavailable.</p></>} details={<ChartDataTable caption="Requests and confirmations per day" rowHeader="Date" rows={orders.series.map(point => formatChartDay(day(point.date)))} columns={[
+        { key: 'requests', header: 'Order requests', values: orders.series.map(point => formatCount(point.orderRequests)) },
+        { key: 'orders', header: 'Orders confirmed', values: orders.series.map(point => formatCount(point.orders)) },
+      ]} />}>
+        <TrendLineChart integerAxis variant="bar" title="Order requests and confirmed orders" labels={orders.series.map(point => day(point.date))} formatLabel={formatChartDay} formatValue={value => formatCount(Math.round(value))} emptyReason="No activity in this period."
           series={[{ key: 'requests', label: 'Order requests', colorVar: '--mp-viz-series-1', values: orders.series.map(point => point.orderRequests) }, { key: 'orders', label: 'Orders confirmed', colorVar: '--mp-viz-series-2', values: orders.series.map(point => point.orders) }]} />
-      </DashboardPanel>
+      </AnalyticsChartCard>
     </>}
-  </>
+  </div>
 }
 
 function QualitySection({ data }: { data: VendorDashboardInsights }) {
   const disputes = data.disputes
   const orders = data.orders
   if (!disputes && !orders) return <InfoNote>Case and quality measures are available to roles that handle orders and disputes.</InfoNote>
-  return <>
-    <dl className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      {disputes && <KpiCard label="Open cases" value={formatCount(disputes.open)} hint={`${formatCount(disputes.awaitingResponse)} awaiting your response.`} icon={<Scale size={16} aria-hidden="true" />} accent={disputes.awaitingResponse > 0} />}
-      {orders && <KpiCard label="Dispute rate" value={rateText(orders.kpis.disputeRate)} hint={rateHint(orders.kpis.disputeRate, 'confirmed orders')} />}
-      {disputes && <KpiCard label="Validated returns" value={formatCount(disputes.validatedReturns)} hint="Defect, wrong-item or incomplete-order returns confirmed in the period." icon={<Undo2 size={16} aria-hidden="true" />} />}
-      {disputes && <KpiCard label="Fulfillment issues reported" value={formatCount(disputes.fulfillmentIssues)} hint="Reported by Buyers in the period." icon={<AlertTriangle size={16} aria-hidden="true" />} />}
+  return <div className="mp-analytics-detail">
+    <dl className="mp-card-group mp-analytics-detail-metrics">
+      {disputes && <KpiCard density="compact" label="Open cases" value={formatCount(disputes.open)} hint={`${formatCount(disputes.awaitingResponse)} awaiting your response.`} icon={<Scale size={16} aria-hidden="true" />} accent={disputes.awaitingResponse > 0} calculation={<><p>Counts your store’s currently active cases across all dates, regardless of the selected reporting period. Includes cases awaiting a response, mutual resolution, Admin review or clarification, plus decided cases and open appeals that have not closed.</p><p><strong>Awaiting your response</strong> counts cases currently waiting for the Vendor’s response. A closed case is excluded even if it was filed in the selected period.</p></>} />}
+      {orders && <KpiCard density="compact" label="Dispute rate" value={rateText(orders.kpis.disputeRate)} hint={rateHint(orders.kpis.disputeRate, 'confirmed orders')} icon={<Percent size={16} aria-hidden="true" />} calculation={<><p><strong>Dispute rate</strong> = confirmed orders with at least one dispute case ÷ all orders first confirmed in the selected period × 100.</p><p>{rateHint(orders.kpis.disputeRate, 'confirmed orders')} Each order is counted once, regardless of how many cases it has or whether its case is still open. Dates use Asia/Manila.</p><p>When there are no confirmed orders, the rate is unavailable rather than 0%.</p></>} />}
+      {disputes && <KpiCard density="compact" label="Validated returns" value={formatCount(disputes.validatedReturns)} hint="Defect, wrong-item or incomplete-order returns confirmed in the period." icon={<Undo2 size={16} aria-hidden="true" />} calculation={<><p>Counts recorded validations of defect, wrong-item or incomplete-order returns during the selected period, using the validation date in Asia/Manila.</p><p>A reported issue or an opened dispute alone does not count as a validated return. This is a count of validated return records, not refunded pesos.</p></>} />}
+      {disputes && <KpiCard density="compact" label="Fulfillment issues reported" value={formatCount(disputes.fulfillmentIssues)} hint="Reported by Buyers in the period." icon={<AlertTriangle size={16} aria-hidden="true" />} calculation={<><p>Counts Buyer fulfillment issue reports created during the selected dates in Asia/Manila, including reports that have since been resolved.</p><p>Reports are counted separately, so one order can contribute more than one report. A report does not by itself establish Vendor fault or a validated return.</p></>} />}
     </dl>
-    {disputes && <div className="grid items-start gap-5 xl:grid-cols-2">
-      <DashboardPanel title="Cases filed per day">
-        <TrendLineChart title="Dispute cases filed per day" labels={disputes.series.map(point => day(point.date))} formatLabel={formatChartDay} formatValue={value => formatCount(Math.round(value))} emptyReason="No cases in this period."
-          series={[{ key: 'cases', label: 'Cases filed', colorVar: '--mp-viz-series-2', values: disputes.series.map(point => point.cases), kind: 'bar' }]} />
-      </DashboardPanel>
-      <DashboardPanel title="Issue types" description="Cases filed in the period.">
-        <BarList label="Issue types" empty="No cases filed in this period." colorVar="--mp-viz-series-2" items={disputes.issueTypes.map(item => ({ key: item.key, label: disputeIssueLabel(item.key), value: item.count, display: formatCount(item.count) }))} />
-        {disputes.statuses.length > 0 && <div className="mt-5 grid gap-2"><h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-text-secondary">Open cases by status</h3>
-          <ShareBar label="Open cases by status" empty="No open cases." segments={disputes.statuses.map((item, index) => ({ key: item.key, label: disputeStateLabel(item.key), value: item.count, colorVar: SLOTS[index % SLOTS.length] ?? '--mp-viz-series-1' }))} /></div>}
-      </DashboardPanel>
-    </div>}
-    {orders && <DashboardPanel title="Cancellation" description="All causes, for the confirmed orders in the period. The Vendor-caused rate used for scoring is under Performance.">
-      <p className="text-3xl font-semibold tabular-nums text-text-strong">{rateText(orders.kpis.cancellationRate)}</p><p className="mt-1 text-xs text-text-secondary">{rateHint(orders.kpis.cancellationRate, 'confirmed orders')}</p>
-    </DashboardPanel>}
-  </>
+    <div className="mp-card-group mp-analytics-detail-grid">
+      {disputes && <>
+        <AnalyticsChartCard title="Cases filed per day" description="New cases in the selected period · Asia/Manila." calculation={<><p>Counts cases filed against your store on each calendar day in the selected period. The filing date determines the day, even if the case is now closed.</p><p>The bars total <strong>{formatCount(disputes.filedInPeriod)} {disputes.filedInPeriod === 1 ? 'case' : 'cases'} filed</strong> in the period. This can differ from the current Open cases count, which includes active cases from any date.</p></>} details={<ChartDataTable caption="Cases filed per day" rowHeader="Date" rows={disputes.series.map(point => formatChartDay(day(point.date)))} columns={[{ key: 'cases', header: 'Cases filed', values: disputes.series.map(point => formatCount(point.cases)) }]} />}>
+          <TrendLineChart integerAxis variant="bar" title="Dispute cases filed per day" labels={disputes.series.map(point => day(point.date))} formatLabel={formatChartDay} formatValue={value => formatCount(value)} emptyReason="No cases in this period."
+            series={[{ key: 'cases', label: 'Cases filed', colorVar: '--mp-viz-series-1', values: disputes.series.map(point => point.cases), kind: 'bar' }]} />
+        </AnalyticsChartCard>
+        <AnalyticsChartCard title="Issue types" description="Filed cases grouped by their reported issue." calculation={<><p>Groups cases filed in the selected period by their recorded issue type. Each case contributes once, including cases that have since closed.</p><p>Counts total the same cases as Cases filed per day. A reported issue type is not a final finding of fault or a validated return.</p></>}>
+          {disputes.issueTypes.length ? <ShareBar variant="donut" totalLabel="Cases" label="Issue types" empty="No cases filed in this period." segments={disputes.issueTypes.map((item, index) => ({ key: item.key, label: disputeIssueLabel(item.key), value: item.count, colorVar: SLOTS[index % SLOTS.length]! }))} /> : <EmptyState icon={false} message="No cases filed in this period." />}
+        </AnalyticsChartCard>
+        <AnalyticsChartCard title="Open cases by status" description="Current workload across all dates." calculation={<><p>Groups your store’s currently active cases by their latest status, regardless of the selected reporting dates. Resolved and closed-inconclusive cases are excluded.</p><p><strong>Status share</strong> = cases in that status ÷ all currently open cases × 100. Each case belongs to one status, and the counts total Open cases.</p></>}>
+          {disputes.open > 0 ? <ShareBar variant="donut" totalLabel="Cases" label="Open cases by status" empty="No open cases." segments={disputes.statuses.map((item, index) => ({ key: item.key, label: disputeStateLabel(item.key), value: item.count, colorVar: SLOTS[index % SLOTS.length] ?? '--mp-viz-series-1' }))} /> : <EmptyState icon={<CheckCircle2 size={24} aria-hidden="true" />} message="No open cases. There are no active cases to group by status." />}
+        </AnalyticsChartCard>
+      </>}
+      {orders && <AnalyticsChartCard title="Cancellation" description="All causes · confirmed orders in the selected period." calculation={<><p><strong>Cancellation rate</strong> = orders first confirmed in the selected period that are now cancelled ÷ all orders first confirmed in that period × 100.</p><p>{rateHint(orders.kpis.cancellationRate, 'confirmed orders')} Counts all causes, including Buyer and Vendor cancellations. Requests declined or expired before confirmation are excluded.</p><p>This is separate from the Vendor-caused cancellation rate used for scoring in Store Performance. With no confirmed orders, the rate is unavailable rather than 0%.</p></>}>
+        <p className="mp-analytics-detail-value">{rateText(orders.kpis.cancellationRate)}</p><p className="mt-1 text-xs text-text-secondary">{rateHint(orders.kpis.cancellationRate, 'confirmed orders')}</p>
+        <p className="mt-3 text-xs leading-5 text-text-secondary">The Vendor-caused rate used for scoring is available in Store Performance.</p>
+      </AnalyticsChartCard>}
+    </div>
+  </div>
 }

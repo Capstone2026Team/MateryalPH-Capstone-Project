@@ -1,9 +1,12 @@
 import { EmptyState } from './page-patterns'
-import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { ConfirmDialog } from './confirm-dialog'
+import { FormDialog } from './form-dialog'
 import { Button } from './button'
 import { Field } from './field'
-import { ArrowLeft, ImagePlus, Pencil, Plus, Truck, Upload, Trash2 } from 'lucide-react'
+import { ImagePlus, Pencil, Plus, Truck, Upload, Trash2 } from 'lucide-react'
+
+export type VehicleCapacitySource = { id: string; label: string; volumeM3: string; kgPerM3: string }
 
 export type DeliveryVehicleDraft = {
   key: string; id?: string; category: string; type: string; customType: string; name: string; brand: string;
@@ -13,6 +16,8 @@ export type DeliveryVehicleDraft = {
   mobilizationFee: string; mobilizationBasis: string
   /** Operational fleet fields: per-vehicle service limit, temporary availability, removal and optimistic version. */
   maxDistance: string; available: boolean; removed: boolean; lockVersion?: number
+  /** Advisory UI state only. Saved capacities remain Vendor-entered operational values. */
+  capacitySourceId?: string; capacityReviewRequired?: boolean
 }
 type Option = { value: string; label: string; description: string }
 export const vehicleCategories: Option[] = [
@@ -105,38 +110,35 @@ function VehicleThumbnail({ vehicle, resolve }: { vehicle: DeliveryVehicleDraft;
   </div>
 }
 
-export function DeliveryVehicles({ vehicles, onChange, uploadImage, resolveImage, onImagePending, errors = {}, operational = false, notices = {}, disabled = false }: {
+export function DeliveryVehicles({ vehicles, onChange, uploadImage, resolveImage, onImagePending, errors = {}, operational = false, notices = {}, disabled = false, editorActions, editorFeedback, capacitySources = [], initialEditorKey, resetEditorRevision, onEditorChange }: {
   onImagePending?: (key: string, pending: boolean) => void;
   errors?: Record<string, Record<string, string>>;
   vehicles: DeliveryVehicleDraft[]; onChange: (vehicles: DeliveryVehicleDraft[]) => void;
   uploadImage: (file: File) => Promise<string>; resolveImage: (id: string) => Promise<string>; coverageKm: number
   /** Operational fleet mode adds the per-vehicle distance limit, enabled/availability state and confirmed removal. */
   operational?: boolean; notices?: Record<string, ReactNode>; disabled?: boolean
+  editorActions?: ReactNode; editorFeedback?: ReactNode; capacitySources?: VehicleCapacitySource[]; initialEditorKey?: string | null
+  resetEditorRevision?: number; onEditorChange?: (editing: boolean) => void
 }) {
   const currentVehicles = useRef(vehicles)
   currentVehicles.current = vehicles
   const [pendingRemoval, setPendingRemoval] = useState<DeliveryVehicleDraft | null>(null)
-  const [editorKey, setEditorKey] = useState<string | null>(null)
-  const [visited, setVisited] = useState<Set<string>>(() => new Set())
+  const [pendingImageKeys, setPendingImageKeys] = useState<Set<string>>(() => new Set())
+  const [editorState, setEditorState] = useState<{ key: string | null; revision: number | undefined }>({ key: null, revision: resetEditorRevision })
+  const editorKey = editorState.revision === resetEditorRevision ? editorState.key : null
   const panel = useRef<HTMLElement>(null)
-  const focusNext = useRef(false)
   const selectedKey = vehicles.some(vehicle => vehicle.key === editorKey && !vehicle.removed) ? editorKey : null
   function edit(key: string | null) {
-    focusNext.current = true
-    if (key) setVisited(previous => new Set([...previous, key]))
-    setEditorKey(key)
+    setEditorState({ key, revision: resetEditorRevision })
   }
+  useEffect(() => { if (initialEditorKey) setEditorState({ key: initialEditorKey, revision: resetEditorRevision }) }, [initialEditorKey, resetEditorRevision])
+  useEffect(() => { setPendingImageKeys(new Set()) }, [resetEditorRevision])
+  useEffect(() => { onEditorChange?.(Boolean(selectedKey)) }, [selectedKey, onEditorChange])
   useEffect(() => {
     if (!operational) return
     const first = Object.keys(errors).find(key => Object.keys(errors[key] ?? {}).length > 0)
     if (first) edit(first)
   }, [errors, operational])
-  useLayoutEffect(() => {
-    if (!focusNext.current) return
-    const heading = panel.current?.querySelector<HTMLElement>(selectedKey ? `[data-vehicle-editor="${selectedKey}"] h3` : '[data-vehicle-overview]')
-    heading?.focus()
-    focusNext.current = false
-  }, [selectedKey])
   function update(key: string, change: Partial<DeliveryVehicleDraft>) { onChange(currentVehicles.current.map(vehicle => vehicle.key === key ? { ...vehicle, ...change } : vehicle)) }
   function remove(vehicle: DeliveryVehicleDraft) {
     if (operational && vehicle.id) { setPendingRemoval(vehicle); return }
@@ -146,68 +148,109 @@ export function DeliveryVehicles({ vehicles, onChange, uploadImage, resolveImage
   }
   const visible = vehicles.filter(vehicle => operational ? !vehicle.removed : vehicle.active)
   const amount = (value: string, suffix = '') => value.trim() && Number.isFinite(Number(value)) ? `₱${Number(value).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${suffix}` : 'Not set'
-  return <section ref={panel} aria-label="Delivery Configuration" className="rounded-surface border border-border-default bg-surface-primary p-5 sm:p-7">
-    {operational && selectedKey ? <Button className="mb-5" variant="quiet" disabled={disabled} onClick={() => edit(null)}><ArrowLeft size={18} aria-hidden="true" />Back to vehicles</Button> : null}
+  const selected = visible.find(vehicle => vehicle.key === selectedKey)
+  const editorBusy = disabled || Boolean(selectedKey && pendingImageKeys.has(selectedKey))
+  function imagePending(key: string, pending: boolean) {
+    setPendingImageKeys(previous => { const next = new Set(previous); if (pending) next.add(key); else next.delete(key); return next })
+    onImagePending?.(key, pending)
+  }
+  const editor = <div className="grid min-w-0 gap-6">{visible.map((vehicle, index) => {
+      if (operational && selectedKey !== vehicle.key) return null
+      const issues = errors[vehicle.key] ?? {}
+      const prefix = `vehicle-${vehicle.key}`
+      const mixer = vehicle.type === 'CONCRETE_MIXER'
+      const detail = vehicle.category && vehicle.type
+      const input = (label: string, field: keyof DeliveryVehicleDraft, type = 'text', hint?: string) => <Field label={label} error={issues[field] ?? ''} name={`${prefix}-${field}`} value={String(vehicle[field] ?? '')} onChange={event => update(vehicle.key, { [field]: event.target.value, ...(field === 'mixer' ? { capacityReviewRequired: false } : {}) })} type={type} {...(type === 'number' ? { min: field === 'count' || field === 'maxDistance' ? '1' : '0.0001', step: field === 'count' || field === 'maxDistance' ? '1' : '0.0001' } : {})} hint={hint} />
+      return <fieldset key={vehicle.key} data-vehicle-editor={vehicle.key} disabled={disabled} className="min-w-0"><legend className="sr-only">Vehicle {index + 1}{vehicle.name ? ` — ${vehicle.name}` : ''}</legend>
+        {!operational && <div className="mb-5 flex items-center justify-between gap-3"><h3 className="text-lg font-semibold">Vehicle {index + 1}{vehicle.name ? ` — ${vehicle.name}` : ''}</h3><Button type="button" variant="quiet" aria-label={`Remove vehicle ${index + 1}`} onClick={() => remove(vehicle)}><Trash2 size={16} aria-hidden="true" />Remove</Button></div>}
+        {notices[vehicle.key] && <div className="mb-4">{notices[vehicle.key]}</div>}
+        <div className="grid min-w-0 items-start gap-6 md:grid-cols-[minmax(0,1fr)_15rem]">
+          <div className="grid min-w-0 gap-4">
+            <h3 className="font-semibold">Vehicle details</h3>
+            <div className="grid min-w-0 gap-4 sm:grid-cols-2">
+              <Select id={`${prefix}-category`} label="Vehicle Category" error={issues.category} value={vehicle.category} options={vehicleCategories} onChange={category => update(vehicle.key, { category, type: category === 'MOTORCYCLE' ? 'MOTORCYCLE' : '', customType: '', mixer: '', capacityReviewRequired: false })} />
+              {vehicle.category && vehicle.category !== 'MOTORCYCLE' && <Select id={`${prefix}-type`} label="Vehicle Type" error={issues.type} value={vehicle.type} options={[...(vehicleTypes[vehicle.category] ?? []), customType]} onChange={type => update(vehicle.key, { type, capacityReviewRequired: false })} />}
+              {detail && <>{vehicle.type === 'CUSTOM' && input('Custom Vehicle Type', 'customType')}{input('Vehicle Name', 'name')}{input('Vehicle Brand', 'brand', 'text', 'Brand or manufacturer, where applicable.')}</>}
+            </div>
+            {operational && <fieldset className="flex flex-wrap gap-x-6 gap-y-1 border-t border-border-default pt-3"><legend className="sr-only">Service status</legend>
+              <label className="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" className="h-5 w-5 accent-action-primary" checked={vehicle.active} onChange={event => update(vehicle.key, { active: event.target.checked })} />Enabled for future deliveries</label>
+              <label className="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" className="h-5 w-5 accent-action-primary" checked={vehicle.available} onChange={event => update(vehicle.key, { available: event.target.checked })} />Available now</label>
+            </fieldset>}
+          </div>
+          {detail && <div className="min-w-0">{issues.imageId && <p role="alert" className="mb-3 text-sm text-status-error">{issues.imageId}</p>}<VehicleImage onPending={pending => imagePending(vehicle.key, pending)} vehicle={vehicle} upload={uploadImage} resolve={resolveImage} onChange={imageId => update(vehicle.key, { imageId })} /></div>}
+        </div>
+        {detail && <div className="mt-5 grid min-w-0 gap-5">
+          <section className="border-t border-border-default pt-4" aria-label="Capacity and access"><h3 className="font-semibold">Capacity and access</h3>
+            <div className="mt-4 grid min-w-0 gap-4 sm:grid-cols-2 lg:grid-cols-3">{input('Number of Vehicles', 'count', 'number')}{mixer && input('Mixer Capacity (m³)', 'mixer', 'number', 'Actual usable drum volume per truck per trip. Confirm any listing-based prefill.')}{input('Maximum Weight Capacity (kg)', 'weight', 'number', 'Actual rated payload, excluding the truck’s own weight.')}{!mixer && <>{input('Cargo Length (m)', 'length', 'number', 'Usable cargo length in meters.')}{input('Cargo Width (m)', 'width', 'number', 'Usable cargo width in meters.')}{input('Cargo Height (m)', 'height', 'number', 'Usable cargo height in meters.')}</>}
+            <Select id={`${prefix}-heavy`} label="Heavy Vehicle Classification" error={issues.heavy} value={vehicle.heavy} options={[{ value: 'HEAVY', label: 'Heavy vehicle', description: 'Check road restrictions, site entry and unloading space for every delivery.' }, { value: 'NOT_HEAVY', label: 'Not a heavy vehicle', description: 'Normal road and site-access checks still apply.' }]} onChange={heavy => update(vehicle.key, { heavy })} /></div>
+            <CapacityGuidance vehicle={vehicle} sources={capacitySources} onChange={change => update(vehicle.key, change)} />
+            {vehicle.capacitySourceId && vehicle.capacityReviewRequired !== undefined && <label className="mt-3 flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" className="h-5 w-5 accent-action-primary" checked={!vehicle.capacityReviewRequired} onChange={event => update(vehicle.key, { capacityReviewRequired: !event.target.checked })} />I checked this mixer capacity against the actual truck.</label>}
+            {issues.capacityReviewRequired && <p role="alert" className="text-sm text-status-error">{issues.capacityReviewRequired}</p>}
+          </section>
+          <section aria-label={`Vehicle ${index + 1} delivery rates`} className="min-w-0 border-t border-border-default pt-4"><h3 className="font-semibold">Delivery rates</h3><p className="mt-1 text-sm text-text-secondary">Amounts in Philippine pesos. You confirm the final arrangement and fee before Buyer acceptance.</p><div className="mt-4 grid min-w-0 gap-4 sm:grid-cols-2 lg:grid-cols-3">{input('Base Fee (₱)', 'baseFee', 'text', 'Fixed amount per vehicle trip.')}{input('Per-Kilometer Rate (₱/km)', 'perKm', 'text', 'Distance-based amount per trip.')}{operational && input('Maximum Delivery Distance (km)', 'maxDistance', 'number', 'Within your store’s delivery area.')}</div>{mixer && <MobilizationFields prefix={prefix} vehicle={vehicle} issues={issues} onChange={change => update(vehicle.key, change)} />}<details open={!operational} className="mt-4 border-t border-border-default pt-3"><summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold">Try the delivery rate calculator</summary><DeliveryRateCalculator baseFee={vehicle.baseFee} perKm={vehicle.perKm} mobilizationFee={mixer ? vehicle.mobilizationFee : ''} mobilizationBasis={mixer ? vehicle.mobilizationBasis : ''} /></details></section>
+        </div>}
+      </fieldset>
+    })}</div>
+  return <section ref={panel} aria-label="Delivery Configuration" className="mp-card mp-card-padded">
     <div className="flex flex-wrap items-start justify-between gap-4">
-      <div><h3 data-vehicle-overview tabIndex={-1} className={operational && !selectedKey ? 'sr-only' : 'text-lg font-semibold'}>{operational ? selectedKey ? 'Vehicle details' : 'Your vehicles' : 'Delivery Configuration'}</h3></div>
-      {operational && !selectedKey && visible.length > 0 && <Button variant="secondary" disabled={disabled} onClick={() => { const vehicle = emptyDeliveryVehicle(); onChange([...vehicles, vehicle]); edit(vehicle.key) }}><Plus size={18} aria-hidden="true" />Add vehicle</Button>}
+      <div><h3 data-vehicle-overview className="text-lg font-semibold">{operational ? 'Your vehicles' : 'Delivery Configuration'}</h3>{operational && <p className="mt-1 text-sm text-text-secondary">{visible.length} {visible.length === 1 ? 'configuration' : 'configurations'} · Capacity and rates per vehicle</p>}</div>
+      {operational && visible.length > 0 && <Button disabled={disabled} onClick={() => { const vehicle = emptyDeliveryVehicle(); onChange([...vehicles, vehicle]); edit(vehicle.key) }}><Plus size={18} aria-hidden="true" />Add vehicle</Button>}
     </div>
     <p className={operational ? 'sr-only' : 'mt-2 max-w-3xl text-sm leading-6 text-text-secondary'}>{operational ? 'Changes apply to future delivery proposals. Accepted orders keep their confirmed vehicle, rate and address.' : 'Configure the vehicles your store operates or legitimately controls. At least one eligible vehicle is required for Vendor Delivery before Store Activation.'}</p>
     <ConfirmDialog open={pendingRemoval !== null} title="Remove this vehicle?" confirmLabel="Remove vehicle" onCancel={() => setPendingRemoval(null)} onConfirm={() => { if (pendingRemoval) { update(pendingRemoval.key, { removed: true }); onImagePending?.(pendingRemoval.key, false) }; edit(null); setPendingRemoval(null) }}>
       <p>“{pendingRemoval?.name || 'This vehicle'}” will no longer be offered for future deliveries after you save. Accepted orders keep their confirmed vehicle. To stop using it for a while instead, turn off “Available now”.</p>
     </ConfirmDialog>
-    {operational && !selectedKey && <div className="mt-6 divide-y divide-border-default border-t border-border-default">
+    {operational && <div className="mt-4 divide-y divide-border-default border-t border-border-default">
       {visible.length === 0 && <EmptyState icon={<Truck size={24} aria-hidden="true" />} message="No vehicles yet." action={<Button variant="secondary" disabled={disabled} onClick={() => { const vehicle = emptyDeliveryVehicle(); onChange([...vehicles, vehicle]); edit(vehicle.key) }}>Add vehicle</Button>} />}
-      {visible.map((vehicle, index) => <article key={vehicle.key} aria-label={vehicle.name || `Vehicle ${index + 1}`} className="grid min-w-0 gap-5 py-6 lg:grid-cols-[8rem_minmax(0,1fr)]">
+      {visible.map((vehicle, index) => <article key={vehicle.key} aria-label={vehicle.name || `Vehicle ${index + 1}`} className="grid min-w-0 gap-4 py-4 sm:grid-cols-[8rem_minmax(0,1fr)]">
         <VehicleThumbnail vehicle={vehicle} resolve={resolveImage} />
-        <div className="min-w-0 space-y-4">
+        <div className="min-w-0 space-y-3">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0"><p className="break-words text-sm text-text-secondary">{vehicleCategories.find(category => category.value === vehicle.category)?.label || 'Category not set'}{vehicle.type && ` · ${vehicle.type === 'CUSTOM' ? vehicle.customType || 'Custom type' : vehicleTypes[vehicle.category]?.find(type => type.value === vehicle.type)?.label || (vehicle.type === 'MOTORCYCLE' ? 'Motorcycle' : vehicle.type)}`}</p><h4 className="mt-1 break-words text-lg font-semibold">{vehicle.name || 'New vehicle'}</h4><p className="mt-1 text-sm text-text-secondary">{!vehicle.id ? 'Not saved · ' : ''}{!vehicle.active ? 'Disabled for deliveries' : vehicle.available ? 'Enabled · Available now' : 'Enabled · Unavailable now'}</p></div>
             <div className="flex flex-wrap gap-2"><Button variant="secondary" disabled={disabled} aria-label={`Edit ${vehicle.name || `vehicle ${index + 1}`}`} onClick={() => edit(vehicle.key)}><Pencil size={16} aria-hidden="true" />Edit</Button><Button variant="quiet" disabled={disabled} aria-label={`Remove vehicle ${index + 1}`} onClick={() => remove(vehicle)}><Trash2 size={16} aria-hidden="true" />Remove</Button></div>
           </div>
-          <dl className="grid grid-cols-2 gap-x-5 gap-y-4 xl:grid-cols-4">
-            {([['Capacity per vehicle', vehicle.weight ? `${Number(vehicle.weight).toLocaleString('en-PH')} kg` : 'Not set'], ['Vehicles / max. distance', `${vehicle.count || '—'} / ${vehicle.maxDistance ? `${vehicle.maxDistance} km` : 'Not set'}`], ['Base fee per trip', amount(vehicle.baseFee)], ['Per-kilometer rate', amount(vehicle.perKm, '/km')], ...(vehicle.type === 'CONCRETE_MIXER' ? [['Mobilization fee', vehicle.mobilizationFee.trim() && Number(vehicle.mobilizationFee) > 0 ? amount(vehicle.mobilizationFee, vehicle.mobilizationBasis === 'PER_TRIP' ? ' per trip' : ' per truck') : 'None']] : [])]).map(([label, value]) => <div key={label} className="min-w-0"><dt className="text-sm text-text-secondary">{label}</dt><dd className="mt-1 break-words font-semibold">{value}</dd></div>)}
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-2 xl:grid-cols-4">
+            {([['Capacity per vehicle', vehicle.weight ? `${Number(vehicle.weight).toLocaleString('en-PH')} kg${vehicle.type === 'CONCRETE_MIXER' && vehicle.mixer ? ` · ${vehicle.mixer} m³` : ''}` : 'Not set'], ['Vehicles / max. distance', `${vehicle.count || '—'} / ${vehicle.maxDistance ? `${vehicle.maxDistance} km` : 'Not set'}`], ['Base fee per trip', amount(vehicle.baseFee)], ['Per-kilometer rate', amount(vehicle.perKm, '/km')], ...(vehicle.type === 'CONCRETE_MIXER' ? [['Mobilization fee', vehicle.mobilizationFee.trim() && Number(vehicle.mobilizationFee) > 0 ? amount(vehicle.mobilizationFee, vehicle.mobilizationBasis === 'PER_TRIP' ? ' per trip' : ' per truck') : 'None']] : [])]).map(([label, value]) => <div key={label} className="min-w-0"><dt className="text-sm text-text-secondary">{label}</dt><dd className="mt-0.5 break-words text-sm font-semibold">{value}</dd></div>)}
           </dl>
           {notices[vehicle.key]}
           {Object.keys(errors[vehicle.key] ?? {}).length > 0 && <p className="text-sm font-semibold text-status-error">Review this vehicle’s highlighted fields before saving.</p>}
         </div>
       </article>)}
     </div>}
-    <div className={operational && !selectedKey ? 'hidden' : 'mt-6 grid min-w-0 grid-cols-1 gap-8'}>{visible.map((vehicle, index) => {
-      if (operational && !visited.has(vehicle.key)) return null
-      const issues = errors[vehicle.key] ?? {}
-      const prefix = `vehicle-${vehicle.key}`
-      const mixer = vehicle.type === 'CONCRETE_MIXER'
-      const detail = vehicle.category && vehicle.type
-      const input = (label: string, field: keyof DeliveryVehicleDraft, type = 'text', hint?: string) => <Field label={label} error={issues[field] ?? ''} name={`${prefix}-${field}`} value={String(vehicle[field] ?? '')} onChange={event => update(vehicle.key, { [field]: event.target.value })} type={type} {...(type === 'number' ? { min: field === 'count' || field === 'maxDistance' ? '1' : '0.0001', step: field === 'count' || field === 'maxDistance' ? '1' : '0.0001' } : {})} hint={hint} />
-      return <fieldset key={vehicle.key} data-vehicle-editor={vehicle.key} hidden={operational && selectedKey !== vehicle.key} disabled={disabled} className="min-w-0 border-t border-border-default pt-6"><legend className="sr-only">Vehicle {index + 1}{vehicle.name ? ` — ${vehicle.name}` : ''}</legend>
-        <div className="mb-6 flex items-start justify-between gap-3"><h3 tabIndex={-1} className="min-w-0 break-words pt-2 text-lg font-semibold">{operational ? vehicle.id ? `Edit ${vehicle.name || 'vehicle'}` : 'Add vehicle' : `Vehicle ${index + 1}${vehicle.name ? ` — ${vehicle.name}` : ''}`}</h3><Button className="shrink-0 text-sm" type="button" variant="quiet" disabled={disabled} aria-label={`Remove vehicle ${index + 1}`} onClick={() => remove(vehicle)}><Trash2 size={16} aria-hidden="true" />Remove</Button></div>
-        {(!operational || selectedKey === vehicle.key) && notices[vehicle.key] && <div className="mb-6">{notices[vehicle.key]}</div>}
-        {operational && <fieldset className="mb-6 grid min-w-0 gap-2 sm:grid-cols-2"><legend className="mb-2 text-sm font-semibold">Service status</legend>
-          <label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" className="h-5 w-5 accent-action-primary" checked={vehicle.active} disabled={disabled} onChange={event => update(vehicle.key, { active: event.target.checked })} />Enabled for future deliveries</label>
-          <label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" className="h-5 w-5 accent-action-primary" checked={vehicle.available} disabled={disabled} onChange={event => update(vehicle.key, { available: event.target.checked })} />Available now</label>
-        </fieldset>}
-        <div className="grid min-w-0 grid-cols-1 items-start gap-6 md:grid-cols-2 md:gap-8">
-          <div className="grid min-w-0 grid-cols-1 gap-5">
-            <Select id={`${prefix}-category`} label="Vehicle Category" error={issues.category} value={vehicle.category} options={vehicleCategories} onChange={category => update(vehicle.key, { category, type: category === 'MOTORCYCLE' ? 'MOTORCYCLE' : '', customType: '', mixer: '' })} />
-            {vehicle.category && vehicle.category !== 'MOTORCYCLE' && <Select id={`${prefix}-type`} label="Vehicle Type" error={issues.type} value={vehicle.type} options={[...(vehicleTypes[vehicle.category] ?? []), customType]} onChange={type => update(vehicle.key, { type })} />}
-            {detail && <>{vehicle.type === 'CUSTOM' && input('Custom Vehicle Type', 'customType')}{input('Vehicle Name', 'name')}{input('Vehicle Brand', 'brand', 'text', 'Brand or manufacturer, where applicable.')}</>}
-          </div>
-          {detail && <div className="min-w-0">{issues.imageId && <p role="alert" className="mb-3 text-sm text-status-error">{issues.imageId}</p>}<VehicleImage onPending={pending => onImagePending?.(vehicle.key, pending)} vehicle={vehicle} upload={uploadImage} resolve={resolveImage} onChange={imageId => update(vehicle.key, { imageId })} /></div>}
-        </div>
-        {detail && <div className="mt-8 grid min-w-0 grid-cols-1 gap-6">
-          <div className="border-t border-border-default pt-5"><h4 className="font-semibold">Capacity and access</h4><div className="mt-4 grid min-w-0 grid-cols-1 gap-5 md:grid-cols-2">{input('Number of Vehicles', 'count', 'number')}{input('Maximum Weight Capacity (kg)', 'weight', 'number')}{mixer ? input('Mixer Capacity (m³)', 'mixer', 'number', 'Ready-mixed concrete volume per vehicle per trip.') : <>{input('Cargo Length (m)', 'length', 'number', 'In meters, e.g. 4.5 (not centimeters).')}{input('Cargo Width (m)', 'width', 'number', 'In meters, e.g. 2.0.')}{input('Cargo Height (m)', 'height', 'number', 'In meters, e.g. 1.5.')}</>}
-          <Select id={`${prefix}-heavy`} label="Heavy Vehicle Classification" error={issues.heavy} value={vehicle.heavy} options={[{ value: 'HEAVY', label: 'Heavy vehicle', description: 'Subject to applicable heavy-vehicle or site-access restrictions.' }, { value: 'NOT_HEAVY', label: 'Not a heavy vehicle', description: 'Normal road and site-access checks still apply.' }]} onChange={heavy => update(vehicle.key, { heavy })} /></div>{mixer && <p className="mt-3 text-sm text-text-secondary">Cargo dimensions: Not applicable. Mixer capacity is used for ready-mixed concrete delivery.</p>}</div>
-          <section aria-label={`Vehicle ${index + 1} delivery rates`} className="min-w-0 rounded-surface border border-border-default bg-surface-canvas p-4 sm:p-6"><h4 className="text-lg font-semibold">Delivery rates</h4><p className="mt-2 text-sm leading-6 text-text-secondary">Enter amounts in Philippine pesos. The final delivery charge requires Vendor confirmation of vehicles, trips and the delivery arrangement.</p><div className="mt-4 grid min-w-0 grid-cols-1 gap-5 md:grid-cols-2">{input('Base Fee (₱)', 'baseFee', 'text', 'Fixed delivery amount per applicable trip, e.g. 500.00.')}{input('Per-Kilometer Rate (₱/km)', 'perKm', 'text', 'Distance-based amount, e.g. 25.50.')}{operational && input('Maximum Delivery Distance (km)', 'maxDistance', 'number', 'Farthest drop-off this vehicle serves, 1 to 1,000 km, within your delivery area.')}</div>{mixer && <MobilizationFields prefix={prefix} vehicle={vehicle} issues={issues} onChange={change => update(vehicle.key, change)} />}<DeliveryRateCalculator baseFee={vehicle.baseFee} perKm={vehicle.perKm} mobilizationFee={mixer ? vehicle.mobilizationFee : ''} mobilizationBasis={mixer ? vehicle.mobilizationBasis : ''} /></section>
-        </div>}
-      </fieldset>
-    })}</div>
+    {operational ? selected && <FormDialog initialFocus="title" open title={selected.id ? `Edit ${selected.name || 'vehicle'}` : 'Add vehicle'} description="Configure the vehicle, confirm capacity and access, then set delivery rates." busy={editorBusy} onClose={() => edit(null)} footer={<div className="flex flex-wrap items-center justify-between gap-3"><Button variant="secondary" disabled={editorBusy} onClick={() => edit(null)}>Back to vehicles</Button><div className="flex flex-wrap items-center gap-3">{editorActions}</div></div>}>
+      {editorFeedback && <div className="mb-4 space-y-3">{editorFeedback}</div>}
+      {editor}
+    </FormDialog> : editor}
+    {!selectedKey && editorActions && <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-border-default pt-4">{editorActions}</div>}
     {!operational && <Button className="mt-6" type="button" variant="secondary" disabled={disabled} onClick={() => onChange([...vehicles, emptyDeliveryVehicle()])}>Add delivery vehicle</Button>}
   </section>
 }
 
 export function emptyDeliveryVehicle(): DeliveryVehicleDraft {
   return { key: crypto.randomUUID(), category: '', type: '', customType: '', name: '', brand: '', count: '', weight: '', mixer: '', length: '', width: '', height: '', heavy: '', baseFee: '', perKm: '', mobilizationFee: '', mobilizationBasis: '', imageId: '', active: true, maxDistance: '', available: true, removed: false }
+}
+
+/** Listing quantities are a planning starting point, never proof of a truck's drum size or rated payload. */
+function CapacityGuidance({ vehicle, sources, onChange }: { vehicle: DeliveryVehicleDraft; sources: VehicleCapacitySource[]; onChange: (change: Partial<DeliveryVehicleDraft>) => void }) {
+  const source = sources.find(item => item.id === vehicle.capacitySourceId) ?? (sources.length === 1 ? sources[0] : undefined)
+  const [manualDensity, setManualDensity] = useState('')
+  const density = Number(source?.kgPerM3 || manualDensity)
+  const volume = Number(vehicle.mixer)
+  const payload = volume > 0 && Number.isFinite(volume) && density > 0 && Number.isFinite(density) ? Math.ceil(volume * density) : null
+  const id = useId()
+  const mixer = vehicle.type === 'CONCRETE_MIXER'
+  return <div className="mt-3 grid gap-2 rounded-control border border-border-default bg-surface-canvas p-3 text-sm">
+    <p className="font-semibold">{mixer ? 'Mixer capacity recommendation' : 'Confirm your vehicle’s capacity'}</p>
+    {mixer ? <>
+      {sources.length > 0 && <div className="grid gap-2"><label htmlFor={id} className="font-semibold">Ready-mix listing / strength</label><select id={id} className="min-h-11 w-full min-w-0 rounded-control border border-border-default bg-surface-primary px-3" value={source?.id ?? ''} onChange={event => onChange({ capacitySourceId: event.target.value })}><option value="">Choose a listing</option>{sources.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</select></div>}
+      {source && <div className="flex flex-wrap items-center justify-between gap-2"><p className="min-w-0 flex-1 basis-64 text-text-secondary">Listing batch volume: {source.volumeM3 || 'not recorded'} m³. This is supply volume; confirm how much one truck can carry before saving.</p>{Number(source.volumeM3) > 0 && <Button variant="secondary" onClick={() => onChange({ mixer: source.volumeM3, capacitySourceId: source.id, capacityReviewRequired: true })}>Prefill mixer capacity</Button>}</div>}
+      {!source?.kgPerM3 && <Field label="Concrete weight per m³ (kg)" name={`${id}-density`} type="number" min="0.0001" step="0.0001" value={manualDensity} onChange={event => setManualDensity(event.target.value)} hint="Enter the mix’s actual weight to calculate the suggested payload." />}
+      {payload !== null && <div className="flex flex-wrap items-center justify-between gap-2"><div className="min-w-0 flex-1 basis-64"><p className="font-semibold">Suggested payload: {payload.toLocaleString('en-PH')} kg</p><p className="text-text-secondary">{vehicle.mixer} m³ × {density.toLocaleString('en-PH')} kg/m³{source?.kgPerM3 ? ' from the listing' : ''}. This is the load weight; verify the truck’s rated payload.</p>{Number(vehicle.weight) > 0 && Number(vehicle.weight) < payload && <p className="text-status-warning">At the entered payload, carry at most {Number((Number(vehicle.weight) / density).toFixed(3)).toLocaleString('en-PH')} m³ per trip.</p>}</div><Button variant="secondary" onClick={() => onChange({ weight: String(payload) })}>Use suggested payload</Button></div>}
+      <p className="text-text-secondary">Recommended access classification: Heavy vehicle. Confirm it for your actual truck.</p>
+      {vehicle.heavy !== 'HEAVY' && <Button className="w-fit" variant="secondary" onClick={() => onChange({ heavy: 'HEAVY' })}>Confirm heavy vehicle</Button>}
+    </> : <p className="text-text-secondary">Enter the rated payload and measure the usable cargo area. Vehicle type alone cannot establish capacity.</p>}
+    <p className="text-text-secondary">You can type the actual values directly. Check road restrictions, entry width, overhead clearance, turning and unloading space for each delivery.</p>
+  </div>
 }
 
 export const mobilizationBases: Option[] = [
@@ -220,9 +263,7 @@ function MobilizationFields({ prefix, vehicle, issues, onChange }: { prefix: str
   return <div className="mt-6 grid min-w-0 grid-cols-1 gap-5 border-t border-border-default pt-5 md:grid-cols-2">
     <div className="grid gap-2 md:col-span-2">
       <h5 className="font-semibold">Mixer mobilization</h5>
-      <p className="text-sm leading-6 text-text-secondary"><strong className="font-semibold text-text-primary">What it is:</strong> a separate charge for getting a mixer truck ready and out to the site, such as dispatching the truck and driver, preparing the drum and positioning it for the pour. It is on top of the base fee and distance rate, and does not depend on how far the site is.</p>
-      <p className="text-sm leading-6 text-text-secondary"><strong className="font-semibold text-text-primary">Purpose:</strong> it recovers the fixed cost of each truck dispatch so small or short-haul orders do not run at a loss. The Buyer sees it as part of the delivery fee before paying.</p>
-      <p className="text-sm leading-6 text-text-secondary">Optional. Leave blank or 0 to charge none. Choose whether it is charged once per truck dispatched or on every trip.</p>
+      <p className="text-sm text-text-secondary">Optional dispatch/setup charge, added to base and distance fees. Leave blank or 0 for none; otherwise choose per truck or per trip. The Buyer sees it in the delivery fee before payment.</p>
     </div>
     <Field label="Mobilization Fee (₱)" name={`${prefix}-mobilizationFee`} value={vehicle.mobilizationFee} error={issues.mobilizationFee ?? ''} hint="For example 1500.00." onChange={event => onChange({ mobilizationFee: event.target.value })} />
     <Select id={`${prefix}-mobilizationBasis`} label="Charge mobilization" error={issues.mobilizationBasis} value={vehicle.mobilizationBasis} options={mobilizationBases} onChange={mobilizationBasis => onChange({ mobilizationBasis })} />

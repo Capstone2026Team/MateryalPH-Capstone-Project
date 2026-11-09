@@ -184,6 +184,7 @@ DiscoveryResultPage _pageFromJson(
   hasMore: false,
 );
 
+// Public awards are read live, so offline copies cannot retain a revoked or suppressed badge.
 Map<String, Object?> _itemToJson(SupplierResultView item) => {
   'id': item.resultId,
   'tier': item.tier.name,

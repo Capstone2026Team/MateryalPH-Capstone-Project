@@ -2,5 +2,5 @@
   "name": "@materyalph/shared-config",
   "private": true,
   "version": "0.0.0",
-  "files": ["tsconfig.react.json"]
+  "files": ["tsconfig.react.json", "vite-api-client.mjs", "vite-api-client.d.mts"]
 }

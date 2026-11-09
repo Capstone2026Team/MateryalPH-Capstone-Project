@@ -7,6 +7,18 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(ConversationDetail, () {
+    // Opaque authorized-context epoch for the combined Vendor timeline. Discard retained pages when it changes; it is never an authorization credential.
+    // String threadAuthority
+    test('to test the property `threadAuthority`', () async {
+      // TODO
+    });
+
+    // Authorized original references used to resolve older messages, quotations, files and receipts within the single chat. No reply-subject selector is shown.
+    // BuiltList<ConversationView> threadContexts
+    test('to test the property `threadContexts`', () async {
+      // TODO
+    });
+
     // ConversationView conversation
     test('to test the property `conversation`', () async {
       // TODO

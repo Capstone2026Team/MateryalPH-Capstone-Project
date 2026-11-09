@@ -11,7 +11,7 @@ import 'package:built_value/serializer.dart';
 
 part 'vendor_earnings_breakdown.g.dart';
 
-/// The components behind the headline Earnings cards, in the same scope and dates as each card's own total: sales (materials before discounts less vendor discounts plus delivery equals commercial sales), online (verified principal less confirmed refunded principal equals online collections) and physical (Cash on Delivery plus In-Store Payment equals physical collections). Records only; no derived income figure.
+/// The components behind the headline Earnings cards, in the same scope and dates as each card's own total: sales (materials before discounts less vendor discounts plus delivery less completed refunds equals net sales), online (verified principal less confirmed refunded principal equals online collections) and physical (Cash on Delivery plus In-Store Payment equals physical collections). Records only; no derived income figure.
 ///
 /// Properties:
 /// * [sales]

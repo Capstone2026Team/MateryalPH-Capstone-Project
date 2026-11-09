@@ -74,6 +74,11 @@ import {
     VendorFinanceOverviewEnvelopeToJSON,
 } from '../models/VendorFinanceOverviewEnvelope';
 import {
+    type VendorThresholdPaymentsEnvelope,
+    VendorThresholdPaymentsEnvelopeFromJSON,
+    VendorThresholdPaymentsEnvelopeToJSON,
+} from '../models/VendorThresholdPaymentsEnvelope';
+import {
     type VendorTinRevealEnvelope,
     VendorTinRevealEnvelopeFromJSON,
     VendorTinRevealEnvelopeToJSON,
@@ -115,6 +120,10 @@ export interface ExportVendorTransactionsRequest {
      */
     status?: ExportVendorTransactionsStatusEnum;
     /**
+     * STATEMENTS only; ignored by other tabs. PAID selects fully paid statements. NOT_PAID selects every other published state, including voided statements. Omit for all published statements. Filtered before pagination and export bounds; dates refer to statement issue dates.
+     */
+    statementState?: ExportVendorTransactionsStatementStateEnum;
+    /**
      * Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Same timestamp and filters as the selected Transaction History tab; filtered before the existing 5000-row export bound.
      */
     from?: Date;
@@ -133,11 +142,11 @@ export interface GetVendorCommissionMonitoringRequest {
 
 export interface GetVendorEarningsRequest {
     /**
-     * Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Commercial sales use order accepted_at; online collections paid_at; physical collections recorded_at; remittances created_at; commission earned_at and approved credit approved_at; estimates created_at; unpaid statements issued_on. Taxpayer thresholds are never recalculated by this view.
+     * Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Net sales use the order first-confirmation timestamp; online collections paid_at; physical collections recorded_at; remittances created_at; commission earned_at and approved credit approved_at; estimates created_at; unpaid statements issued_on. Taxpayer thresholds are never recalculated by this view.
      */
     from?: Date;
     /**
-     * Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Commercial sales use order accepted_at; online collections paid_at; physical collections recorded_at; remittances created_at; commission earned_at and approved credit approved_at; estimates created_at; unpaid statements issued_on. Taxpayer thresholds are never recalculated by this view.
+     * Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Net sales use the order first-confirmation timestamp; online collections paid_at; physical collections recorded_at; remittances created_at; commission earned_at and approved credit approved_at; estimates created_at; unpaid statements issued_on. Taxpayer thresholds are never recalculated by this view.
      */
     to?: Date;
 }
@@ -156,6 +165,13 @@ export interface GetVendorFeeStatementRequest {
     statementId: string;
 }
 
+export interface ListVendorThresholdPaymentsRequest {
+    /**
+     *
+     */
+    page?: number;
+}
+
 export interface ListVendorTransactionsRequest {
     /**
      *
@@ -169,6 +185,10 @@ export interface ListVendorTransactionsRequest {
      * Payments tab only; ignored by every other tab. Each value matches the status badge a Payments row shows. PAID has no refund activity; LATE_CAPTURE covers every late-captured payment awaiting or after its refund; PENDING is any attempt not yet settled. PHYSICAL_* values select Cash on Delivery / In-Store obligations: COLLECTED (nothing remains), PARTIAL (part recorded), TO_RECORD (delivered or picked up, no cash recorded yet), AWAITING (before handover), RELEASED (cancelled unpaid).
      */
     status?: ListVendorTransactionsStatusEnum;
+    /**
+     * STATEMENTS only; ignored by other tabs. PAID selects fully paid statements. NOT_PAID selects every other published state, including voided statements. Omit for all published statements. Filtered before pagination and export bounds; dates refer to statement issue dates.
+     */
+    statementState?: ListVendorTransactionsStatementStateEnum;
     /**
      * Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. PAYMENTS paid_at with created_at fallback; PHYSICAL recorded_at; REMITTANCES created_at; STATEMENTS issued_on; REFUNDS created_at; TAX_DOCUMENTS period_end.
      */
@@ -400,6 +420,10 @@ export class VendorFinanceApi extends runtime.BaseAPI {
 
         if (requestParameters['status'] != null) {
             queryParameters['status'] = requestParameters['status'];
+        }
+
+        if (requestParameters['statementState'] != null) {
+            queryParameters['statement_state'] = requestParameters['statementState'];
         }
 
         if (requestParameters['from'] != null) {
@@ -683,6 +707,51 @@ export class VendorFinanceApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates request options for listVendorThresholdPayments without sending the request
+     */
+    async listVendorThresholdPaymentsRequestOpts(requestParameters: ListVendorThresholdPaymentsRequest): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        if (requestParameters['page'] != null) {
+            queryParameters['page'] = requestParameters['page'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/vendor/finance/threshold-payments`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Owner-only paginated retained payments from the current taxpayer-year POSTED merchant assessments. Completed full principal refunds are omitted; completed partial refunds reduce the returned principal, fee and collection amounts once. Pending and failed refunds do not reduce amounts. Totals describe current retained payments, not a rewrite of the posted annual tax basis or crossed-threshold status. Own-store order references only; other stores sharing the taxpayer are aggregate-only without identities. VOIDED assessments, other years, direct COD and In-Store cash are excluded. Read-only TEST records.
+     */
+    async listVendorThresholdPaymentsRaw(requestParameters: ListVendorThresholdPaymentsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorThresholdPaymentsEnvelope>> {
+        const requestOptions = await this.listVendorThresholdPaymentsRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => VendorThresholdPaymentsEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * Owner-only paginated retained payments from the current taxpayer-year POSTED merchant assessments. Completed full principal refunds are omitted; completed partial refunds reduce the returned principal, fee and collection amounts once. Pending and failed refunds do not reduce amounts. Totals describe current retained payments, not a rewrite of the posted annual tax basis or crossed-threshold status. Own-store order references only; other stores sharing the taxpayer are aggregate-only without identities. VOIDED assessments, other years, direct COD and In-Store cash are excluded. Read-only TEST records.
+     */
+    async listVendorThresholdPayments(requestParameters: ListVendorThresholdPaymentsRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorThresholdPaymentsEnvelope> {
+        const response = await this.listVendorThresholdPaymentsRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Creates request options for listVendorTransactions without sending the request
      */
     async listVendorTransactionsRequestOpts(requestParameters: ListVendorTransactionsRequest): Promise<runtime.RequestOpts> {
@@ -698,6 +767,10 @@ export class VendorFinanceApi extends runtime.BaseAPI {
 
         if (requestParameters['status'] != null) {
             queryParameters['status'] = requestParameters['status'];
+        }
+
+        if (requestParameters['statementState'] != null) {
+            queryParameters['statement_state'] = requestParameters['statementState'];
         }
 
         if (requestParameters['from'] != null) {
@@ -726,7 +799,7 @@ export class VendorFinanceApi extends runtime.BaseAPI {
     }
 
     /**
-     * Owner-only read-only Transaction History (former Wallet label). No balance, wallet or escrow.
+     * Owner-only read-only Transaction History (former Wallet label). PAYMENTS is the unified list of payments and their recorded remittance/withholding assessments, with unlinked historical assessments retained as separate records. No balance, wallet or escrow.
      */
     async listVendorTransactionsRaw(requestParameters: ListVendorTransactionsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<FinanceTransactionListEnvelope>> {
         const requestOptions = await this.listVendorTransactionsRequestOpts(requestParameters);
@@ -736,7 +809,7 @@ export class VendorFinanceApi extends runtime.BaseAPI {
     }
 
     /**
-     * Owner-only read-only Transaction History (former Wallet label). No balance, wallet or escrow.
+     * Owner-only read-only Transaction History (former Wallet label). PAYMENTS is the unified list of payments and their recorded remittance/withholding assessments, with unlinked historical assessments retained as separate records. No balance, wallet or escrow.
      */
     async listVendorTransactions(requestParameters: ListVendorTransactionsRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<FinanceTransactionListEnvelope> {
         const response = await this.listVendorTransactionsRaw(requestParameters, initOverrides);
@@ -1098,6 +1171,14 @@ export type ExportVendorTransactionsStatusEnum = typeof ExportVendorTransactions
 /**
  * @export
  */
+export const ExportVendorTransactionsStatementStateEnum = {
+    Paid: 'PAID',
+    NotPaid: 'NOT_PAID',
+} as const;
+export type ExportVendorTransactionsStatementStateEnum = typeof ExportVendorTransactionsStatementStateEnum[keyof typeof ExportVendorTransactionsStatementStateEnum];
+/**
+ * @export
+ */
 export const ListVendorTransactionsTabEnum = {
     Payments: 'PAYMENTS',
     Physical: 'PHYSICAL',
@@ -1127,3 +1208,11 @@ export const ListVendorTransactionsStatusEnum = {
     PhysicalReleased: 'PHYSICAL_RELEASED',
 } as const;
 export type ListVendorTransactionsStatusEnum = typeof ListVendorTransactionsStatusEnum[keyof typeof ListVendorTransactionsStatusEnum];
+/**
+ * @export
+ */
+export const ListVendorTransactionsStatementStateEnum = {
+    Paid: 'PAID',
+    NotPaid: 'NOT_PAID',
+} as const;
+export type ListVendorTransactionsStatementStateEnum = typeof ListVendorTransactionsStatementStateEnum[keyof typeof ListVendorTransactionsStatementStateEnum];

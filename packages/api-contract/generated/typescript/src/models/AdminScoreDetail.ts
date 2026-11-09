@@ -51,6 +51,22 @@ export interface AdminScoreDetail {
     /**
      *
      */
+    ratingComponents?: { [key: string]: any; };
+    /**
+     *
+     */
+    completedOrders?: { [key: string]: any; };
+    /**
+     *
+     */
+    ohsCalculatedOn?: Date | null;
+    /**
+     *
+     */
+    nextOhsRecalculationOn?: Date;
+    /**
+     *
+     */
     vendorId?: string;
     /**
      *
@@ -127,6 +143,10 @@ export function AdminScoreDetailFromJSONTyped(json: any, ignoreDiscriminator: bo
     }
     return {
 
+        'ratingComponents': json['rating_components'] == null ? undefined : json['rating_components'],
+        'completedOrders': json['completed_orders'] == null ? undefined : json['completed_orders'],
+        'ohsCalculatedOn': json['ohs_calculated_on'] === undefined ? undefined : json['ohs_calculated_on'] === null ? null : (parseDate(json['ohs_calculated_on'])),
+        'nextOhsRecalculationOn': json['next_ohs_recalculation_on'] == null ? undefined : (parseDate(json['next_ohs_recalculation_on'])),
         'vendorId': json['vendor_id'] == null ? undefined : json['vendor_id'],
         'storeName': json['store_name'] == null ? undefined : json['store_name'],
         'calculated': json['calculated'] == null ? undefined : json['calculated'],
@@ -156,6 +176,10 @@ export function AdminScoreDetailToJSONTyped(value?: AdminScoreDetail | null, ign
 
     return {
 
+        'rating_components': value['ratingComponents'],
+        'completed_orders': value['completedOrders'],
+        'ohs_calculated_on': value['ohsCalculatedOn'] == null ? value['ohsCalculatedOn'] : serializeDate(value['ohsCalculatedOn']),
+        'next_ohs_recalculation_on': value['nextOhsRecalculationOn'] == null ? value['nextOhsRecalculationOn'] : serializeDate(value['nextOhsRecalculationOn']),
         'vendor_id': value['vendorId'],
         'store_name': value['storeName'],
         'calculated': value['calculated'],

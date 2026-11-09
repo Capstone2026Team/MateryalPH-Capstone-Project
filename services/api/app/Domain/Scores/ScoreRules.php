@@ -28,6 +28,8 @@ final class ScoreRules
 
     public const MIN_VENDOR_RATINGS = 5;
 
+    public const MIN_BUYER_RATINGS = 5;
+
     public const MIN_PRODUCT_RATINGS = 5;
 
     public const MIN_OHS_ORDERS = 10;

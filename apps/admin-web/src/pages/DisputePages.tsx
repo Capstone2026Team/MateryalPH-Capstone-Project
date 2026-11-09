@@ -1,18 +1,19 @@
-import { useNavigationRefresh } from '@materyalph/web-ui'
+import { BackNavigation } from '@materyalph/web-ui'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Gavel, Info, RefreshCw, Scale, ShieldAlert, UserRoundCheck } from 'lucide-react'
+import { Gavel, Info, RefreshCw, Scale, ShieldAlert, UserRoundCheck } from 'lucide-react'
 import {
-  ALL_DATES, Button, ConfirmDialog, DateFilter, DisputeDeadlines, DisputeStatusBadge, DisputeTimeline, FilterChips, OriginalPaymentMethodNotice, RefundTimeline, StatusMessage, Toolbar,
+  dateRangePatch, Button, ConfirmDialog, DateFilter, DisputeDeadlines, DisputeStatusBadge, DisputeTimeline, FilterPanel, FilterTabs, InfoNote, OriginalPaymentMethodNotice, QueueSectionLinks, QueueSurface, useQueueStatusCounts, RefundTimeline, ResponsiveRecordList, StatusMessage, type RecordColumn,
   DisputeComplaintDetails, disputeIssueLabel, disputeRemedyLabel, disputeRoleLabel, formatManilaDateTime, formatPesoCentavos,
 } from '@materyalph/web-ui'
 import {
   adminApiBasePath, assignToMe, confirmRemedy, decide, decideAppeal, escalateCase, getCase, listQueue, newKey, requestClarification,
-  type DecisionInput, type DisputeDetail, type DisputeListMeta, type DisputeSanctionInput, type DisputeSummary, type QueueStatus,
+  type DecisionInput, type DisputeDetail, type DisputeSanctionInput, type DisputeSummary, type QueueStatus,
 } from '../lib/disputes-api'
 import { readableVerificationError } from '../lib/vendor-verification-api'
 import { AdminShell, ErrorState, LoadingState, PageHeader } from './PhaseThreeAdminPages'
 import { Pager } from '../components/OperationsKit'
+import { useAdminQueue, useQueueParams } from '../lib/use-admin-queue'
 
 const control = 'min-h-12 w-full min-w-0 rounded-control border border-border-default bg-surface-primary px-3 text-base font-normal'
 const STATUSES: { value: QueueStatus; label: string }[] = [
@@ -24,36 +25,34 @@ const peso = (value: string): number | null => { const text = value.trim().repla
 
 /** Dispute and Appeal Queue for Order and Dispute Staff: deadlines, handler, requested remedy and refund state. */
 export function AdminDisputeQueuePage() {
-  const [params, setParams] = useSearchParams()
+  const { params, page, range, change, setPage, context } = useQueueParams()
   const status = (STATUSES.some(item => item.value === params.get('status')) ? params.get('status') : 'NEEDS_ADMIN') as QueueStatus
-  const [rows, setRows] = useState<DisputeSummary[] | null>(null)
-  const [meta, setMeta] = useState<DisputeListMeta | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [attempt, setAttempt] = useState(0)
-  useNavigationRefresh(() => setAttempt(value => value + 1))
-  const [page, setPage] = useState(1)
-  const [range, setRange] = useState(ALL_DATES)
-  useEffect(() => {
-    let active = true
-    setRows(null); setError(null)
-    listQueue(status, page, range).then(result => { if (active) { setRows(result.items); setMeta(result.meta) } }).catch(async cause => { const text = await readableVerificationError(cause); if (active) setError(text) })
-    return () => { active = false }
-  }, [status, page, range, attempt])
-  return <AdminShell activeHref="/disputes"><div className="grid min-w-0 gap-6">
-    <PageHeader eyebrow="Compliance & quality" title="Disputes & Appeals" description="Review escalated cases, request clarification, decide with a remedy, reason and conflict check, and track remedies until they complete. Refunds return only to the original payment; Admins never hold or disburse money."
-      actions={<Button variant="secondary" onClick={() => setAttempt(value => value + 1)}><RefreshCw size={16} aria-hidden="true" />Refresh</Button>} />
-    <FilterChips label="Case queue" value={status} onChange={value => { setParams({ status: value }); setPage(1) }} chips={STATUSES.map(item => ({ value: item.value, label: item.label, count: meta?.counts?.[item.value] }))} />
-    <Toolbar filters={<><DateFilter title="Case opened dates" value={range} onChange={value => { setRange(value); setPage(1) }} />{(range.from || range.to) && <Button variant="quiet" onClick={() => { setRange(ALL_DATES); setPage(1) }}>Reset dates</Button>}</>} />
-    {error ? <ErrorState message={error} onRetry={() => setAttempt(value => value + 1)} /> : rows === null ? <LoadingState /> : rows.length === 0
-      ? <p className="rounded-surface border border-dashed border-border-default px-6 py-10 text-center text-sm text-text-secondary">No cases in this queue.</p>
-      : <ul className="grid divide-y divide-border-default rounded-surface border border-border-default bg-surface-primary">{rows.map(row => <li key={row.id} className="grid gap-2 px-4 py-3 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-center">
-        <div className="grid min-w-0 gap-0.5"><Link to={`/disputes/${row.id}`} className="font-semibold text-action-primary underline-offset-4 hover:underline">{row.reference}</Link>
-          <span className="text-xs text-text-secondary">Order {row.orderReference} · {row.buyerName ?? 'Buyer'} v. {row.vendorName}</span></div>
-        <div className="grid gap-0.5 text-sm"><span className="font-semibold">{disputeIssueLabel(row.issueType)}</span><span className="text-text-secondary">{disputeRemedyLabel(row.requestedRemedy)}{row.requestedAmountCentavos ? ` · ${formatPesoCentavos(row.requestedAmountCentavos)}` : ''}</span></div>
-        <div className="grid justify-items-start gap-1"><DisputeStatusBadge status={row.status} /><span className="text-xs text-text-secondary">{row.nextDeadline ? `${row.nextDeadline.kind.replaceAll('_', ' ').toLowerCase()} · ${row.nextDeadline.label}` : 'No open deadline'}{row.assignedToAdmin ? ' · assigned' : ' · unassigned'}</span></div>
-        <Link to={`/disputes/${row.id}`} className="inline-flex min-h-11 items-center justify-center rounded-control border border-border-default px-4 text-sm font-semibold hover:bg-surface-canvas">Review</Link>
-      </li>)}</ul>}
-    {rows && meta && <Pager page={page} lastPage={Math.max(page, Math.ceil((meta.total ?? rows.length) / (meta.perPage ?? 25)), meta.hasMore ? page + 1 : 1)} total={meta.total} onChange={setPage} />}
+  const queue = useAdminQueue(`disputes:${JSON.stringify([status, page, range.from, range.to])}`, () => listQueue(status, page, range))
+  const rows = queue.data?.items ?? [], meta = queue.data?.meta
+  const counts = useQueueStatusCounts(meta?.counts, Boolean(queue.error))
+  const total = typeof meta?.total === 'number' ? meta.total : null
+  const lastPage = Math.max(1, Math.ceil((total ?? 0) / (meta?.perPage ?? 25)), meta?.hasMore ? page + 1 : 1)
+  const href = (id: string) => `/disputes/${id}${context}`
+  const identity = (row: DisputeSummary) => <span className="grid min-w-0 gap-0.5"><Link to={href(row.id)} className="inline-flex min-h-11 items-center font-semibold text-action-primary underline-offset-4 hover:underline">{row.reference}</Link><span className="text-xs text-text-secondary">Order {row.orderReference}</span><span className="text-xs text-text-secondary">{row.buyerName ?? 'Buyer'} v. {row.vendorName}</span></span>
+  const columns: RecordColumn<DisputeSummary>[] = [
+    { key: 'case', header: 'Case · parties', cell: identity },
+    { key: 'issue', header: 'Issue · requested remedy', cell: row => <span className="grid gap-0.5"><span className="font-semibold">{disputeIssueLabel(row.issueType)}</span><span className="text-xs text-text-secondary">{disputeRemedyLabel(row.requestedRemedy)}{row.requestedAmountCentavos ? ` · ${formatPesoCentavos(row.requestedAmountCentavos)}` : ''}</span></span> },
+    { key: 'status', header: 'Status · handler', cell: row => <span className="grid justify-items-start gap-1"><DisputeStatusBadge status={row.status} /><span className="text-xs text-text-secondary">{row.assignedToAdmin ? 'Assigned to Admin' : 'Unassigned'}</span></span> },
+    { key: 'deadline', header: 'Next deadline', cell: row => row.nextDeadline ? <span className="grid gap-0.5"><span className="font-medium">{row.nextDeadline.kind.replaceAll('_', ' ').toLowerCase()}</span><span className="text-xs text-text-secondary">{row.nextDeadline.label}</span></span> : <span className="text-text-secondary">No open deadline</span> },
+    { key: 'refund', header: 'Refund', cell: row => <span className="text-xs text-text-secondary">{row.refundState === 'NOT_REQUESTED' ? 'None' : row.refundState.replaceAll('_', ' ').toLowerCase()}</span> },
+    { key: 'action', header: 'Action', cell: row => <Link to={href(row.id)} className="inline-flex min-h-11 items-center justify-center rounded-control border border-border-default bg-surface-primary px-4 text-sm font-semibold hover:bg-surface-canvas">Review case</Link> },
+  ]
+  return <AdminShell activeHref="/disputes"><div className="mp-queue-workspace">
+    <PageHeader eyebrow="Compliance & quality" title="Disputes & Appeals" description="Review escalated cases, decide appeals and follow remedies through completion."
+      actions={<Button variant="secondary" disabled={queue.loading} onClick={() => void queue.retry()}><RefreshCw size={16} aria-hidden="true" />{queue.loading && queue.data ? 'Refreshing…' : 'Refresh'}</Button>} />
+
+    <InfoNote>Check both parties’ evidence, request clarification when needed and record a reasoned decision with a conflict check. Refunds return only to the original payment; Admins never hold or disburse money.</InfoNote>
+    <FilterTabs appearance="chips" label="Case queue" value={status} onChange={value => change({ status: value })} chips={STATUSES.map(item => ({ value: item.value, label: item.label, count: counts[item.value] }))} />
+    <FilterPanel compact label="Case filters" footer={<div className="mp-filter-date"><span>Case opened dates</span><DateFilter title="Case opened dates" value={range} onChange={value => change(dateRangePatch(value))} /></div>} />
+    <QueueSurface title={STATUSES.find(item => item.value === status)!.label} description="Review the case, requested remedy, assigned handler and next deadline before recording a decision." count={total} shown={rows.length} loaded={Boolean(queue.data)} busy={queue.loading} error={queue.error && <ErrorState message={queue.error} onRetry={queue.retry} />} emptyTitle={page > 1 ? 'No cases on this page.' : 'No cases in this queue.'} emptyDescription="No cases match this queue and case-opened period. Choose another queue or adjust the dates." emptyAction={page > 1 ? <Button variant="secondary" onClick={() => setPage(1)}>Return to first page</Button> : undefined}
+      footer={queue.data && (page > 1 || lastPage > 1) && <Pager page={page} lastPage={lastPage} total={meta?.total} busy={queue.loading} onChange={setPage} />}>
+      <ResponsiveRecordList compact tableClassName="mp-queue-record-table" caption="Admin dispute and appeal cases" rows={rows} columns={columns} rowKey={row => row.id} cardTitle={identity} />
+    </QueueSurface>
   </div></AdminShell>
 }
 
@@ -62,6 +61,11 @@ type Changed = (detail: DisputeDetail, text: string) => void
 /** One case: chronological timeline, decision support and the decision, clarification and appeal forms. */
 export function AdminDisputeCasePage() {
   const { caseId = '' } = useParams()
+  return <DisputeCase key={caseId} caseId={caseId} />
+}
+
+function DisputeCase({ caseId }: { caseId: string }) {
+  const [params] = useSearchParams()
   const [detail, setDetail] = useState<DisputeDetail | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
@@ -75,13 +79,13 @@ export function AdminDisputeCasePage() {
     getCase(caseId).then(value => { if (active) setDetail(value) }).catch(async cause => { const text = await readableVerificationError(cause); if (active) setError(text) })
     return () => { active = false }
   }, [caseId, attempt])
-  const changed: Changed = (next, text) => { setDetail(next); setNotice(text); window.scrollTo({ top: 0, behavior: 'smooth' }) }
-  const back = <Link to="/disputes" className="inline-flex min-h-11 w-fit items-center gap-2 text-sm font-semibold text-text-secondary hover:text-text-strong"><ArrowLeft size={16} aria-hidden="true" />Case queue</Link>
+  const changed: Changed = (next, text) => { setDetail(next); setNotice(text); window.scrollTo({ top: 0, behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }) }
+  const back = <BackNavigation><Link to={`/disputes${params.size ? `?${params.toString()}` : ''}`}>Case queue</Link></BackNavigation>
   if (error) return <AdminShell activeHref="/disputes"><div className="grid gap-4">{back}<ErrorState message={error} onRetry={reload} /></div></AdminShell>
   if (!detail) return <AdminShell activeHref="/disputes"><div className="grid gap-4">{back}<LoadingState /></div></AdminShell>
   const actions = new Set(detail.availableActions)
   const admin = detail.admin
-  return <AdminShell activeHref="/disputes"><div className="grid min-w-0 gap-6">
+  return <AdminShell activeHref="/disputes"><div className="mp-queue-workspace">
     {back}
     <PageHeader compact eyebrow={`${disputeIssueLabel(detail.issueType)} · ${detail.caseKind === 'POST_COMPLETION_RETURN' ? 'post-completion return' : 'transaction case'}`} title={detail.reference}
       description={`Order ${detail.order.reference} · ${admin?.buyer.displayName ?? 'Buyer'} v. ${admin?.vendor.displayName ?? 'Store'} · requested ${disputeRemedyLabel(detail.requestedRemedy).toLowerCase()}${detail.requestedAmountCentavos ? ` (${formatPesoCentavos(detail.requestedAmountCentavos)})` : ''}`}
@@ -93,21 +97,26 @@ export function AdminDisputeCasePage() {
         <Button variant="secondary" onClick={reload}><RefreshCw size={16} aria-hidden="true" />Refresh</Button></>} />
     {notice && <StatusMessage tone="success">{notice}</StatusMessage>}
     {assignError && <StatusMessage tone="error">{assignError}</StatusMessage>}
+    <QueueSectionLinks links={[{ href: '#complaint-heading', label: 'Complaint & evidence' }, { href: '#admin-timeline-heading', label: 'Timeline' }, ...(detail.decisions.length ? [{ href: '#admin-decisions-heading', label: 'Decisions' }] : []), ...(detail.refunds.length || detail.remedies.length ? [{ href: '#admin-remedies-heading', label: 'Remedies' }] : []), { href: '#dispute-actions', label: 'Review actions' }]} />
     <DisputeDeadlines deadlines={detail.deadlines} onExpire={reload} />
-    <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_28rem]">
-      <div className="grid min-w-0 content-start gap-6">
-        <section aria-labelledby="complaint-heading" className="grid gap-3 rounded-surface border border-border-default bg-surface-primary p-4 sm:p-5">
+    <section className="flex min-w-0 flex-wrap items-center justify-between gap-3 mp-card mp-card-padded" aria-label="Linked order">
+      <div><h2 className="font-semibold">Order {detail.order.reference}</h2><p className="mt-1 text-sm text-text-secondary">Review all order items, recorded payments, fulfillment evidence, cancellation, refunds and status history before assessing this case.</p></div>
+      <Link className="inline-flex min-h-11 items-center rounded-control border border-border-default px-4 text-sm font-semibold text-action-primary hover:underline" to={`/audit/orders/${detail.order.id}?${new URLSearchParams({ ...Object.fromEntries(params), caseId: detail.id })}`}>View full order · read only</Link>
+    </section>
+    <div className="mp-queue-detail-columns">
+      <div className="mp-queue-detail-stack">
+        <section aria-labelledby="complaint-heading" className="grid gap-3 mp-card mp-card-padded">
           <h2 id="complaint-heading" className="text-lg font-semibold">Original complaint</h2>
           <DisputeComplaintDetails detail={detail} />
           {detail.affectedLines.length > 0 && <ul className="grid gap-1 text-sm">{detail.affectedLines.map(line => <li key={line.orderLineId} className="flex flex-wrap justify-between gap-x-3"><span>{line.displayName}</span>
             <span className="tabular-nums text-text-secondary">{formatPesoCentavos(line.lineTotalCentavos)} · {formatPesoCentavos(line.refundableCentavos)} still refundable</span></li>)}</ul>}
           {detail.originalPaymentMethod && <OriginalPaymentMethodNotice label={detail.originalPaymentMethod.label} notice={detail.originalPaymentMethod.notice} />}
         </section>
-        <section aria-labelledby="admin-timeline-heading" className="grid gap-4 rounded-surface border border-border-default bg-surface-primary p-4 sm:p-5">
+        <section aria-labelledby="admin-timeline-heading" className="grid gap-4 mp-card mp-card-padded">
           <h2 id="admin-timeline-heading" className="text-lg font-semibold">Case timeline</h2>
           <DisputeTimeline entries={detail.timeline} apiBasePath={adminApiBasePath} onLinkExpired={reload} />
         </section>
-        {detail.decisions.length > 0 && <section aria-labelledby="admin-decisions-heading" className="grid gap-3 rounded-surface border border-border-default bg-surface-primary p-4 sm:p-5">
+        {detail.decisions.length > 0 && <section aria-labelledby="admin-decisions-heading" className="grid gap-3 mp-card mp-card-padded">
           <h2 id="admin-decisions-heading" className="flex items-center gap-2 text-lg font-semibold"><Gavel size={18} aria-hidden="true" />Decisions (immutable)</h2>
           <ul className="grid gap-3">{detail.decisions.map(decision => <li key={decision.id} className={`grid gap-1 border-l-4 pl-3 ${decision.current ? 'border-action-primary' : 'border-border-default'}`}>
             <p className="font-semibold">v{decision.version} · {decision.kind.replaceAll('_', ' ').toLowerCase()} · {disputeRemedyLabel(decision.outcome)}{decision.awardedCentavos ? ` · ${formatPesoCentavos(decision.awardedCentavos)}` : ''}{decision.appealResult ? ` · ${decision.appealResult.toLowerCase()}` : ''}</p>
@@ -116,7 +125,7 @@ export function AdminDisputeCasePage() {
             {decision.evidenceLimitation && <p className="text-sm text-text-secondary">Evidence limitation: {decision.evidenceLimitation}</p>}
           </li>)}</ul>
         </section>}
-        {(detail.refunds.length > 0 || detail.remedies.length > 0) && <section aria-labelledby="admin-remedies-heading" className="grid gap-3 rounded-surface border border-border-default bg-surface-primary p-4 sm:p-5">
+        {(detail.refunds.length > 0 || detail.remedies.length > 0) && <section aria-labelledby="admin-remedies-heading" className="grid gap-3 mp-card mp-card-padded">
           <h2 id="admin-remedies-heading" className="text-lg font-semibold">Remedies</h2>
           <ul className="grid gap-2 text-sm">{detail.remedies.map(remedy => <li key={remedy.id} className="flex flex-wrap items-center justify-between gap-2 rounded-control border border-border-default p-3">
             <span><strong>{remedy.kind.replaceAll('_', ' ').toLowerCase()}</strong>{remedy.amountCentavos ? ` · ${formatPesoCentavos(remedy.amountCentavos)}` : ''} · {remedy.state.toLowerCase()}{remedy.note ? ` — ${remedy.note}` : ''}</span>
@@ -125,8 +134,8 @@ export function AdminDisputeCasePage() {
           {detail.refunds.length > 0 && <RefundTimeline timeline={{ refunds: detail.refunds, reimbursements: detail.reimbursements ?? [], noLongerDueCentavos: 0 }} audience="ADMIN" />}
         </section>}
       </div>
-      <aside className="grid min-w-0 content-start gap-4" aria-label="Review actions">
-        {admin && <section className="grid gap-2 rounded-surface border border-border-default bg-surface-primary p-4 text-sm" aria-label="Decision support">
+      <aside id="dispute-actions" className="mp-queue-detail-stack" aria-label="Review actions">
+        {admin && <section className="grid gap-2 mp-card mp-card-padded text-sm" aria-label="Decision support">
           <h2 className="flex items-center gap-2 text-base font-semibold"><Info size={16} aria-hidden="true" />Decision support</h2>
           <p>Refundable now: <strong className="tabular-nums">{formatPesoCentavos(admin.refundable.onlineCentavos)}</strong> online{admin.refundable.cashCentavos > 0 ? <>, <strong className="tabular-nums">{formatPesoCentavos(admin.refundable.cashCentavos)}</strong> cash by Vendor reimbursement</> : ''}.</p>
           {admin.alreadyAwardedCentavos > 0 && <p>Already awarded in this case: <strong className="tabular-nums">{formatPesoCentavos(admin.alreadyAwardedCentavos)}</strong>. A new award pays only the difference.</p>}
@@ -136,14 +145,14 @@ export function AdminDisputeCasePage() {
         {actions.has('DECIDE_APPEAL') && <DecisionForm detail={detail} mode="APPEAL" onChanged={changed} />}
         {actions.has('REQUEST_CLARIFICATION') && <ClarificationForm caseId={detail.id} onChanged={changed} />}
         {actions.has('ESCALATE') && <EscalateForm caseId={detail.id} onChanged={changed} />}
-        {actions.size === 0 && <p className="rounded-surface border border-border-default bg-surface-primary p-4 text-sm text-text-secondary">No review action is available for this case state or your role.</p>}
+        {actions.size === 0 && <p className="mp-card mp-card-padded text-sm text-text-secondary">No review action is available for this case state or your role.</p>}
       </aside>
     </div>
   </div></AdminShell>
 }
 
 function Card({ title, icon, children }: { title: string; icon: ReactNode; children: ReactNode }) {
-  return <section className="grid gap-3 rounded-surface border border-border-default bg-surface-primary p-4" aria-label={title}><h2 className="flex items-center gap-2 text-base font-semibold">{icon}{title}</h2>{children}</section>
+  return <section className="grid gap-3 mp-card mp-card-padded" aria-label={title}><h2 className="flex items-center gap-2 text-base font-semibold">{icon}{title}</h2>{children}</section>
 }
 
 type SanctionDraft = { subject: 'BUYER' | 'VENDOR'; action: string; reason: string; durationDays: string; restorationCondition: string }

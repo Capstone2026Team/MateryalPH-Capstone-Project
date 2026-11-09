@@ -7,6 +7,12 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(DeliveryPlanVehicle, () {
+    // Frozen display details when available; older snapshots may omit them. Image bytes require the existing authorized order file endpoint.
+    // DeliveryVehicleProfile vehicleDetails
+    test('to test the property `vehicleDetails`', () async {
+      // TODO
+    });
+
     // True for the lowest eligible formula-fee plan in this group
     // bool recommended
     test('to test the property `recommended`', () async {

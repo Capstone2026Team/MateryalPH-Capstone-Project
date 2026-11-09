@@ -75,13 +75,31 @@ export interface EnforcementSubjectEnvelopeData {
      *
      */
     sanctions: Array<EnforcementSummary>;
+    /**
+     *
+     */
+    recordableActions: Array<EnforcementSubjectEnvelopeDataRecordableActionsEnum>;
 }
+
+
+/**
+ * @export
+ */
+export const EnforcementSubjectEnvelopeDataRecordableActionsEnum = {
+    Warning: 'WARNING',
+    TemporaryRestriction: 'TEMPORARY_RESTRICTION',
+    Suspension: 'SUSPENSION',
+    PermanentBan: 'PERMANENT_BAN',
+} as const;
+export type EnforcementSubjectEnvelopeDataRecordableActionsEnum = typeof EnforcementSubjectEnvelopeDataRecordableActionsEnum[keyof typeof EnforcementSubjectEnvelopeDataRecordableActionsEnum];
+
 
 /**
  * Check if a given object implements the EnforcementSubjectEnvelopeData interface.
  */
 export function instanceOfEnforcementSubjectEnvelopeData(value: object): value is EnforcementSubjectEnvelopeData {
     if (!('sanctions' in value) || value['sanctions'] === undefined) return false;
+    if ((!('recordableActions' in (value as Record<string, any>)) && !('recordable_actions' in (value as Record<string, any>))) || ((value as Record<string, any>)['recordableActions'] === undefined && (value as Record<string, any>)['recordable_actions'] === undefined)) return false;
     return true;
 }
 
@@ -107,6 +125,7 @@ export function EnforcementSubjectEnvelopeDataFromJSONTyped(json: any, ignoreDis
         'disputesOpen': json['disputes_open'] == null ? undefined : json['disputes_open'],
         'commerceRestrictedUntil': json['commerce_restricted_until'] == null ? undefined : (parseDateTime(json['commerce_restricted_until'])),
         'sanctions': ((json['sanctions'] as Array<any>).map(EnforcementSummaryFromJSON)),
+        'recordableActions': json['recordable_actions'],
     };
 }
 
@@ -133,6 +152,7 @@ export function EnforcementSubjectEnvelopeDataToJSONTyped(value?: EnforcementSub
         'disputes_open': value['disputesOpen'],
         'commerce_restricted_until': value['commerceRestrictedUntil'] == null ? value['commerceRestrictedUntil'] : serializeDateTime(value['commerceRestrictedUntil']),
         'sanctions': ((value['sanctions'] as Array<any>).map(EnforcementSummaryToJSON)),
+        'recordable_actions': value['recordableActions'],
     };
 }
 

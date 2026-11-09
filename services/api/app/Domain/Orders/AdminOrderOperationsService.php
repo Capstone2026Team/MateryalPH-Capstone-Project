@@ -85,20 +85,24 @@ final class AdminOrderOperationsService
 
     /**
      * @param  array<string, mixed>  $filters
-     * @return list<array<string, mixed>>
+     * @return array{items: list<array<string, mixed>>, meta: array<string, mixed>}
      */
     public function reimbursements(Request $request, array $filters = []): array
     {
         $this->access->requireAdmin($request, self::VIEW);
 
-        return PortalDateRange::apply(DB::table('physical_reimbursements as p')->join('orders as o', 'o.id', '=', 'p.order_id')->leftJoin('store_profiles as sp', 'sp.vendor_organization_id', '=', 'o.vendor_organization_id'), 'p.created_at', $filters)
-            ->orderByRaw("CASE p.state WHEN 'VENDOR_REIMBURSEMENT_PENDING' THEN 0 ELSE 1 END")->orderByDesc('p.created_at')->limit(100)
+        $query = PortalDateRange::apply(DB::table('physical_reimbursements as p')->join('orders as o', 'o.id', '=', 'p.order_id')->leftJoin('store_profiles as sp', 'sp.vendor_organization_id', '=', 'o.vendor_organization_id'), 'p.created_at', $filters);
+        $page = max(1, (int) ($filters['page'] ?? 1));
+        $total = (clone $query)->count();
+        $rows = $query->orderByRaw("CASE p.state WHEN 'VENDOR_REIMBURSEMENT_PENDING' THEN 0 ELSE 1 END")->orderByDesc('p.created_at')->orderByDesc('p.id')->offset(($page - 1) * 25)->limit(25)
             ->get(['p.*', 'o.reference as order_reference', 'sp.public_store_name'])->map(fn (object $row): array => [
-                'id' => (string) $row->id, 'order_reference' => (string) $row->order_reference, 'vendor_name' => $row->public_store_name, 'state' => (string) $row->state,
+                'id' => (string) $row->id, 'order_id' => (string) $row->order_id, 'order_reference' => (string) $row->order_reference, 'vendor_name' => $row->public_store_name, 'state' => (string) $row->state,
                 'amount_centavos' => (int) $row->amount_centavos, 'method' => (string) $row->method, 'has_evidence' => $row->evidence_file_id !== null,
                 'reimbursed_at' => self::iso($row->reimbursed_at), 'buyer_acknowledged_at' => self::iso($row->buyer_acknowledged_at), 'confirmed_by_review' => $row->confirmed_by_user_id !== null,
                 'can_decide' => $row->state === 'VENDOR_REIMBURSEMENT_PENDING' && $row->evidence_file_id !== null && $this->allows($request, 'reimbursements.decide'),
             ])->values()->all();
+
+        return ['items' => $rows, 'meta' => ['page' => $page, 'per_page' => 25, 'total' => $total, 'has_more' => $page * 25 < $total]];
     }
 
     /**

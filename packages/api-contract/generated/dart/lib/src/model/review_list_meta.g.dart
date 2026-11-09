@@ -8,6 +8,8 @@ part of 'review_list_meta.dart';
 
 class _$ReviewListMeta extends ReviewListMeta {
   @override
+  final BuiltMap<String, int>? counts;
+  @override
   final int? page;
   @override
   final int? perPage;
@@ -26,7 +28,8 @@ class _$ReviewListMeta extends ReviewListMeta {
       (ReviewListMetaBuilder()..update(updates))._build();
 
   _$ReviewListMeta._(
-      {this.page,
+      {this.counts,
+      this.page,
       this.perPage,
       this.total,
       this.type,
@@ -45,6 +48,7 @@ class _$ReviewListMeta extends ReviewListMeta {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is ReviewListMeta &&
+        counts == other.counts &&
         page == other.page &&
         perPage == other.perPage &&
         total == other.total &&
@@ -57,6 +61,7 @@ class _$ReviewListMeta extends ReviewListMeta {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, counts.hashCode);
     _$hash = $jc(_$hash, page.hashCode);
     _$hash = $jc(_$hash, perPage.hashCode);
     _$hash = $jc(_$hash, total.hashCode);
@@ -71,6 +76,7 @@ class _$ReviewListMeta extends ReviewListMeta {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'ReviewListMeta')
+          ..add('counts', counts)
           ..add('page', page)
           ..add('perPage', perPage)
           ..add('total', total)
@@ -85,6 +91,11 @@ class _$ReviewListMeta extends ReviewListMeta {
 class ReviewListMetaBuilder
     implements Builder<ReviewListMeta, ReviewListMetaBuilder> {
   _$ReviewListMeta? _$v;
+
+  MapBuilder<String, int>? _counts;
+  MapBuilder<String, int> get counts =>
+      _$this._counts ??= MapBuilder<String, int>();
+  set counts(MapBuilder<String, int>? counts) => _$this._counts = counts;
 
   int? _page;
   int? get page => _$this._page;
@@ -124,6 +135,7 @@ class ReviewListMetaBuilder
   ReviewListMetaBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _counts = $v.counts?.toBuilder();
       _page = $v.page;
       _perPage = $v.perPage;
       _total = $v.total;
@@ -154,6 +166,7 @@ class ReviewListMetaBuilder
     try {
       _$result = _$v ??
           _$ReviewListMeta._(
+            counts: _counts?.build(),
             page: page,
             perPage: perPage,
             total: total,
@@ -165,6 +178,9 @@ class ReviewListMetaBuilder
     } catch (_) {
       late String _$failedField;
       try {
+        _$failedField = 'counts';
+        _counts?.build();
+
         _$failedField = 'summary';
         _summary?.build();
         _$failedField = 'scores';

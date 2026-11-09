@@ -35,6 +35,13 @@ void main() {
       // TODO
     });
 
+    // The signed-in Buyer's received store ratings, newest first, with a server-calculated Contractor Community Score (CCS). Only that Buyer's completed orders and revealed, non-moderated, non-disputed, non-excluded ratings appear. CCS and criterion averages use all eligible ratings in the last 90 days before pagination; numeric scores remain null below five eligible completed transactions. This read does not alter history.
+    //
+    //Future<BuyerReceivedRatingsEnvelope> listBuyerReceivedRatings({ int page }) async
+    test('test listBuyerReceivedRatings', () async {
+      // TODO
+    });
+
     // Visible Product Reviews of one listing with its own product average (separate from the Vendor's MQS).
     //
     //Future<PublicReviewListEnvelope> listListingReviews(String listingId, { int page }) async

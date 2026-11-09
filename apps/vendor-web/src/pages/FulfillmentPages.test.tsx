@@ -70,7 +70,7 @@ test('resubmitting an unchanged search retains results and assignment navigation
   fireEvent.click(screen.getByRole('button', { name: 'Search' }))
   expect(screen.getByRole('link', { name: 'ORD-DELIVERY-ONE' })).toBeVisible()
   fireEvent.click(screen.getByRole('link', { name: 'ORD-DELIVERY-ONE' }))
-  expect(await screen.findByRole('link', { name: '← Assigned deliveries' })).toHaveAttribute('href', '/fulfillment?status=OUT_FOR_DELIVERY&sort=NEWEST&q=Delivery')
+  expect(await screen.findByRole('link', { name: 'Assigned deliveries' })).toHaveAttribute('href', '/fulfillment?status=OUT_FOR_DELIVERY&sort=NEWEST&q=Delivery')
 })
 
 test('staff acknowledge, open the order thread, and cannot deliver without submitted proof', async () => {
@@ -120,7 +120,7 @@ test('staff submit delivery proof and an older automatic read cannot restore the
   expect(screen.queryByRole('button', { name: 'Record delivery' })).not.toBeInTheDocument()
   await act(async () => { completeRead(order); await oldRead })
   expect(screen.getByText('Site Foreman')).toBeVisible()
-  expect(screen.getByRole('button', { name: 'View proof photo' })).toBeVisible()
+  expect(screen.getByRole('region', { name: 'Delivery proof' })).toBeVisible()
   expect(screen.queryByRole('textbox', { name: /Receiver name/ })).not.toBeInTheDocument()
 })
 

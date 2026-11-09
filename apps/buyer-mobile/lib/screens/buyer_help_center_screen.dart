@@ -42,7 +42,7 @@ const buyerHelpTopics = <HelpTopic>[
     HelpAnswer(
       'Where are my Purchase Order and invoice?',
       'Order Details shows the Purchase Order and any invoice the Vendor has uploaded, and lets you '
-          'request a copy or correction. The Purchase Order and payment confirmation are not the '
+          'request a copy or correction. The Purchase Order is not the '
           'Vendor’s tax invoice.',
     ),
   ]),

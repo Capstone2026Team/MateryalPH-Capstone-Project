@@ -18,6 +18,7 @@ use App\Domain\Orders\OrderStates;
 use App\Domain\Payments\PaymentMethodPolicy;
 use App\Domain\Procurement\DeliveryPreviewService;
 use App\Domain\Procurement\ListingPublicFacts;
+use App\Domain\Scores\PublicScores;
 use App\Domain\Vendors\DeliveryRecommendationService;
 use App\Domain\Vendors\VendorDeliveryEligibility;
 use Illuminate\Http\Request;
@@ -445,9 +446,13 @@ final class ProjectEstimateService
      * @param array<string, mixed> $snapshot
      * @param array<string, mixed> $favorites
      * @param array<string, list<array<string, mixed>>> $purchases separate Item-Based purchases by Work Package line id
+     * @param array<string, list<array<string, mixed>>>|null $publicBadges current awards batched for a comparison list
      * @return array<string, mixed> */
-    private function view(Request $request, array $snapshot, string $rowId, string $estimateId, mixed $expiresAt, object $w, array $favorites, array $purchases, bool $projectOnly = false): array
+    private function view(Request $request, array $snapshot, string $rowId, string $estimateId, mixed $expiresAt, object $w, array $favorites, array $purchases, bool $projectOnly = false, ?array $publicBadges = null): array
     {
+        // Awards are current public facts, never frozen into a commercial estimate.
+        $vendorId = (string) $snapshot['vendor_id'];
+        $snapshot['badges'] = ($publicBadges ?? app(PublicScores::class)->badges([$vendorId]))[$vendorId] ?? [];
         if ($w->selected_vendor_organization_id === null) {
             $snapshot = self::deliveryOnly($snapshot);
         }
@@ -724,7 +729,8 @@ final class ProjectEstimateService
         $sort = $options['sort'] ?? 'BEST_MATCH';
         $purchases = PackageFulfillment::purchases($w, $buyer);
         $ordered = $filtered->orderByRaw(self::ordering($sort, $options['direction'] ?? null))->orderBy('id');
-        $render = fn (object $row): array => $this->view($request, json_decode($row->snapshot, true), (string) $row->id, (string) $e->id, $e->expires_at, $w, $favorites, $purchases);
+        $badges = app(PublicScores::class)->badges((clone $filtered)->pluck('vendor_organization_id')->all());
+        $render = fn (object $row): array => $this->view($request, json_decode($row->snapshot, true), (string) $row->id, (string) $e->id, $e->expires_at, $w, $favorites, $purchases, false, $badges);
         if ($sort === 'PRICE' || ($options['within_budget'] ?? false)) {
             $rows = array_map($render, $ordered->get()->all());
             if ($options['within_budget'] ?? false) {

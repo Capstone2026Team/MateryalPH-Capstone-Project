@@ -432,6 +432,8 @@ class _$EnforcementDetail extends EnforcementDetail {
   @override
   final String? continuationNote;
   @override
+  final BuiltList<EnforcementEvidence> evidence;
+  @override
   final String? restorationCondition;
   @override
   final String scope;
@@ -492,6 +494,7 @@ class _$EnforcementDetail extends EnforcementDetail {
 
   _$EnforcementDetail._(
       {this.continuationNote,
+      required this.evidence,
       this.restorationCondition,
       required this.scope,
       required this.subjectReview,
@@ -533,6 +536,7 @@ class _$EnforcementDetail extends EnforcementDetail {
     if (identical(other, this)) return true;
     return other is EnforcementDetail &&
         continuationNote == other.continuationNote &&
+        evidence == other.evidence &&
         restorationCondition == other.restorationCondition &&
         scope == other.scope &&
         subjectReview == other.subjectReview &&
@@ -566,6 +570,7 @@ class _$EnforcementDetail extends EnforcementDetail {
   int get hashCode {
     var _$hash = 0;
     _$hash = $jc(_$hash, continuationNote.hashCode);
+    _$hash = $jc(_$hash, evidence.hashCode);
     _$hash = $jc(_$hash, restorationCondition.hashCode);
     _$hash = $jc(_$hash, scope.hashCode);
     _$hash = $jc(_$hash, subjectReview.hashCode);
@@ -601,6 +606,7 @@ class _$EnforcementDetail extends EnforcementDetail {
   String toString() {
     return (newBuiltValueToStringHelper(r'EnforcementDetail')
           ..add('continuationNote', continuationNote)
+          ..add('evidence', evidence)
           ..add('restorationCondition', restorationCondition)
           ..add('scope', scope)
           ..add('subjectReview', subjectReview)
@@ -642,6 +648,12 @@ class EnforcementDetailBuilder
   String? get continuationNote => _$this._continuationNote;
   set continuationNote(covariant String? continuationNote) =>
       _$this._continuationNote = continuationNote;
+
+  ListBuilder<EnforcementEvidence>? _evidence;
+  ListBuilder<EnforcementEvidence> get evidence =>
+      _$this._evidence ??= ListBuilder<EnforcementEvidence>();
+  set evidence(covariant ListBuilder<EnforcementEvidence>? evidence) =>
+      _$this._evidence = evidence;
 
   String? _restorationCondition;
   String? get restorationCondition => _$this._restorationCondition;
@@ -786,6 +798,7 @@ class EnforcementDetailBuilder
     final $v = _$v;
     if ($v != null) {
       _continuationNote = $v.continuationNote;
+      _evidence = $v.evidence.toBuilder();
       _restorationCondition = $v.restorationCondition;
       _scope = $v.scope;
       _subjectReview = $v.subjectReview;
@@ -837,6 +850,7 @@ class EnforcementDetailBuilder
       _$result = _$v ??
           _$EnforcementDetail._(
             continuationNote: continuationNote,
+            evidence: evidence.build(),
             restorationCondition: restorationCondition,
             scope: BuiltValueNullFieldError.checkNotNull(
                 scope, r'EnforcementDetail', 'scope'),
@@ -881,6 +895,9 @@ class EnforcementDetailBuilder
     } catch (_) {
       late String _$failedField;
       try {
+        _$failedField = 'evidence';
+        evidence.build();
+
         _$failedField = 'allowedActions';
         allowedActions.build();
         _$failedField = 'priorSubjectState';

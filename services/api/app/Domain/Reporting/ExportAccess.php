@@ -22,6 +22,9 @@ final class ExportAccess
         if ($organizationId !== null && $user->account_type === 'VENDOR' && $scope['organization_id'] !== $organizationId) {
             return false;
         }
+        if ($type === 'TRANSACTION_HISTORY' && $user->account_type === 'ADMIN') {
+            return in_array('finance.view', $scope['permissions'], true) && in_array('finance.export', $scope['permissions'], true);
+        }
         if (in_array($type, ['TRANSACTION_HISTORY', 'EARNINGS'], true)) {
             return $user->account_type === 'VENDOR' && $scope['role'] === 'OWNER';
         }
@@ -36,7 +39,7 @@ final class ExportAccess
             // Aggregate export needs both the aggregate view and the separate export permission (Admin Workflow §2).
             return $user->account_type === 'ADMIN' && in_array('analytics.view_aggregates', $scope['permissions'], true) && in_array('analytics.export', $scope['permissions'], true);
         }
-        if (in_array($type, ['PURCHASE_ORDER', 'PAYMENT_CONFIRMATION', 'OPERATIONAL_ORDER'], true)) {
+        if (in_array($type, ['PURCHASE_ORDER', 'OPERATIONAL_ORDER'], true)) {
             return $resourceId !== null && app(NotificationPolicy::class)->allows($user, (object) ['user_id' => $user->getKey(), 'category' => 'ORDERS', 'resource_type' => 'ORDER', 'resource_id' => $resourceId]);
         }
         if (in_array($type, ['PROJECT_SUMMARY', 'BUDGET_REPORT'], true)) {

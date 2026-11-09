@@ -1,3 +1,4 @@
+import '../design_system/components/async_state.dart';
 import 'package:flutter/material.dart';
 import '../design_system/components/buyer_app_bar.dart';
 import 'package:materyalph_api_client/materyalph_api_client.dart';
@@ -104,7 +105,7 @@ class _TermsScreenState extends State<TermsScreen> {
                         )
                       : _terms == null
                       ? const Center(
-                          child: CircularProgressIndicator(
+                          child: BuyerLoadingIndicator(
                             semanticsLabel: 'Loading Terms',
                           ),
                         )

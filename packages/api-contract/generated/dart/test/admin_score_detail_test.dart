@@ -7,6 +7,26 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(AdminScoreDetail, () {
+    // BuiltMap<String, JsonObject> ratingComponents
+    test('to test the property `ratingComponents`', () async {
+      // TODO
+    });
+
+    // BuiltMap<String, JsonObject> completedOrders
+    test('to test the property `completedOrders`', () async {
+      // TODO
+    });
+
+    // Date ohsCalculatedOn
+    test('to test the property `ohsCalculatedOn`', () async {
+      // TODO
+    });
+
+    // Date nextOhsRecalculationOn
+    test('to test the property `nextOhsRecalculationOn`', () async {
+      // TODO
+    });
+
     // String vendorId
     test('to test the property `vendorId`', () async {
       // TODO

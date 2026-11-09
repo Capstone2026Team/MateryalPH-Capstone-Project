@@ -17,8 +17,9 @@ Name | Type | Description | Notes
 **platformDocuments** | [**BuiltList&lt;PlatformDocumentRef&gt;**](PlatformDocumentRef.md) |  |
 **billingDetails** | [**BuyerInvoiceBillingDetails**](BuyerInvoiceBillingDetails.md) |  | [optional]
 **canEditBillingDetails** | **bool** |  |
-**canRequestCopy** | **bool** |  |
+**canRequestCopy** | **bool** | False once a Vendor sales invoice copy has been sent, including legacy uploaded copies. Corrections remain a separate action. |
 **canRequestCorrection** | **bool** |  |
+**orderSummary** | [**InvoiceOrderSummary**](InvoiceOrderSummary.md) |  | [optional]
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

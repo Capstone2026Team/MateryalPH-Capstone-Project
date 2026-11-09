@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import 'discovery_models.dart';
@@ -205,24 +207,36 @@ class DiscoveryController extends ChangeNotifier {
     final radius = radiusKm;
     final activeFilters = filters;
     final cacheKey = discoveryCacheKey(currentOrigin, radius, activeFilters);
-    // A saved copy of this exact location + radius is shown immediately, before any request.
-    final saved = cacheKey == null || force || _store == null
-        ? null
-        : await _store.read(cacheKey);
-    if (!_current(sequence, currentOrigin, radius, activeFilters)) return;
-    if (saved != null && !saved.isExpired(_now())) {
+    // Disk reads must not delay the authoritative request. A saved preview may
+    // arrive while it is pending, but never replace a completed server response.
+    var requestSettled = false;
+    DiscoveryFailure? savedPreviewFailure;
+    Future<void> restorePreview() async {
+      if (cacheKey == null || force || _store == null) return;
+      CachedDiscovery? saved;
+      try {
+        saved = await _store.read(cacheKey);
+      } catch (_) {
+        return; // An unavailable preview never prevents a fresh search.
+      }
+      if ((requestSettled && savedPreviewFailure == null) ||
+          !_current(sequence, currentOrigin, radius, activeFilters) ||
+          saved == null ||
+          saved.isExpired(_now())) {
+        return;
+      }
       _clearSelection();
       page = saved.page;
       items = saved.items;
       _loadedPage = 1;
-      failure = null;
+      failure = savedPreviewFailure;
       resultsStale = true;
-      showingSavedResults = true;
+      showingSavedResults = !requestSettled;
       phase = DiscoveryPhase.ready;
-      _notify();
       keepSelection = true;
+      _notify();
     }
-    // With a saved copy on screen the list stays visible while the server confirms it.
+
     if (!keepSelection || page == null) phase = DiscoveryPhase.loading;
     failure = null;
     if (!background) {
@@ -237,12 +251,14 @@ class DiscoveryController extends ChangeNotifier {
       resultsStale = false;
     }
     _notify();
+    unawaited(restorePreview());
     try {
       final result = await _repository.search(
         origin: currentOrigin,
         radiusKm: radius,
         filters: activeFilters,
       );
+      requestSettled = true;
       if (!_current(sequence, currentOrigin, radius, activeFilters)) return;
       if (keepSelection && page != null) {
         // Swap once, after every page arrived, so the visible list never shrinks to page 1 and regrows.
@@ -306,6 +322,7 @@ class DiscoveryController extends ChangeNotifier {
         await _persist();
       }
     } on DiscoveryFailure catch (error) {
+      requestSettled = true;
       if (!_current(sequence, currentOrigin, radius, activeFilters)) return;
       showingSavedResults = false;
       failure = error;
@@ -330,6 +347,8 @@ class DiscoveryController extends ChangeNotifier {
         _notify();
         return;
       }
+      // A slow disk may still provide the usual labelled offline preview.
+      savedPreviewFailure = error;
       // Keep earlier results visible but labelled, and never present an old ETA as current.
       resultsStale = items.isNotEmpty;
       _routeSequence++;
@@ -337,6 +356,8 @@ class DiscoveryController extends ChangeNotifier {
       routePhase = RoutePhase.idle;
       phase = items.isEmpty ? DiscoveryPhase.failed : DiscoveryPhase.ready;
       _notify();
+    } finally {
+      requestSettled = true;
     }
   }
 

@@ -12,5 +12,11 @@ void main() {
       // TODO
     });
 
+    // Normal Buyer/store chat to open after sharing a Work Package. The id field preserves historical quotation linkage.
+    // String storeConversationId
+    test('to test the property `storeConversationId`', () async {
+      // TODO
+    });
+
   });
 }

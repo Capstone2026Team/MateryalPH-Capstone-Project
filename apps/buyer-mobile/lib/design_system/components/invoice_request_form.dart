@@ -275,7 +275,7 @@ class _InvoiceRequestFormScreenState extends State<InvoiceRequestFormScreen> {
                   ),
                 ]),
               const Text(
-                'The Vendor issues the official invoice through its registered process. MateryalPH records your details and requests. Purchase Orders and payment confirmations are not tax invoices.',
+                'The Vendor issues the official invoice through its registered process. MateryalPH records your details and requests. The Purchase Order is not a tax invoice.',
                 style: TextStyle(fontSize: 12, color: BuyerTheme.muted),
               ),
               const SizedBox(height: 12),

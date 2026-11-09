@@ -13,6 +13,7 @@ Method | HTTP request | Description
 [**editBuyerReview**](BuyerReviewsApi.md#editbuyerreview) | **PATCH** /buyers/reviews/{reviewId} |
 [**getBuyerOrderReviews**](BuyerReviewsApi.md#getbuyerorderreviews) | **GET** /buyers/orders/{orderId}/reviews |
 [**getBuyerReviewPhoto**](BuyerReviewsApi.md#getbuyerreviewphoto) | **GET** /buyers/reviews/{reviewId}/media/{mediaId}/content |
+[**listBuyerReceivedRatings**](BuyerReviewsApi.md#listbuyerreceivedratings) | **GET** /buyers/ratings |
 [**listListingReviews**](BuyerReviewsApi.md#listlistingreviews) | **GET** /buyers/listings/{listingId}/reviews |
 [**listStoreReviews**](BuyerReviewsApi.md#liststorereviews) | **GET** /buyers/stores/{vendorId}/reviews |
 [**removeBuyerReviewMedia**](BuyerReviewsApi.md#removebuyerreviewmedia) | **DELETE** /buyers/reviews/{reviewId}/media/{mediaId} |
@@ -201,6 +202,49 @@ Name | Type | Description  | Notes
 
  - **Content-Type**: Not defined
  - **Accept**: image/png, image/jpeg, video/mp4, video/quicktime, application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **listBuyerReceivedRatings**
+> BuyerReceivedRatingsEnvelope listBuyerReceivedRatings(page)
+
+
+
+The signed-in Buyer's received store ratings, newest first, with a server-calculated Contractor Community Score (CCS). Only that Buyer's completed orders and revealed, non-moderated, non-disputed, non-excluded ratings appear. CCS and criterion averages use all eligible ratings in the last 90 days before pagination; numeric scores remain null below five eligible completed transactions. This read does not alter history.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+
+final api = MateryalphApiClient().getBuyerReviewsApi();
+final int page = 56; // int |
+
+try {
+    final response = api.listBuyerReceivedRatings(page);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling BuyerReviewsApi->listBuyerReceivedRatings: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **page** | **int**|  | [optional] [default to 1]
+
+### Return type
+
+[**BuyerReceivedRatingsEnvelope**](BuyerReceivedRatingsEnvelope.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 

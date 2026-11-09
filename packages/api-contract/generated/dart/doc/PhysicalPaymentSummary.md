@@ -11,7 +11,7 @@ Name | Type | Description | Notes
 **applicable** | **bool** |  |
 **method** | **String** |  |
 **state** | **String** |  |
-**remainingCentavos** | **int** |  | [optional]
+**remainingCentavos** | **int** | Current collectible physical balance. A CANCELLATION_RELEASE resolves to zero and state CANCELLED_UNPAID; historical records retain the amount released. | [optional]
 **onlineBalanceApproved** | **bool** |  |
 **handoverCash** | [**PhysicalHandoverCash**](PhysicalHandoverCash.md) |  | [optional]
 **records** | [**BuiltList&lt;PhysicalPaymentRecord&gt;**](PhysicalPaymentRecord.md) |  |

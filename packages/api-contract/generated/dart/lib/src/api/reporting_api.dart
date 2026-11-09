@@ -12,6 +12,7 @@ import 'package:materyalph_api_client/src/api_util.dart';
 import 'package:materyalph_api_client/src/model/date.dart';
 import 'package:materyalph_api_client/src/model/document_export_input.dart';
 import 'package:materyalph_api_client/src/model/list_document_exports200_response.dart';
+import 'package:materyalph_api_client/src/model/list_order_documents200_response.dart';
 import 'package:materyalph_api_client/src/model/list_tax_packages200_response.dart';
 import 'package:materyalph_api_client/src/model/prepare_tax_package201_response.dart';
 import 'package:materyalph_api_client/src/model/record_tax_simulation200_response.dart';
@@ -53,6 +54,89 @@ class ReportingApi {
     ProgressCallback? onReceiveProgress,
   }) async {
     final _path = r'/{audience}/reports/{exportId}/download'.replaceAll('{' r'audience' '}', encodeQueryParameter(_serializers, audience, const FullType(String)).toString()).replaceAll('{' r'exportId' '}', encodeQueryParameter(_serializers, exportId, const FullType(String)).toString());
+    final _options = Options(
+      method: r'GET',
+      responseType: ResponseType.bytes,
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'passportBearer',
+          },
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    Uint8List? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : rawResponse as Uint8List;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<Uint8List>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// Download an already generated order PDF
+  /// Read-only, private, audited attachment. Rechecks current order access and file checksum; never generates a new report. Canonical files follow commercial-record retention rather than the 24-hour report-copy expiry.
+  ///
+  /// Parameters:
+  /// * [audience] - Authenticated surface; account type must match.
+  /// * [orderId]
+  /// * [kind]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [Uint8List] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<Uint8List>> downloadOrderDocument({
+    required String audience,
+    required String orderId,
+    required String kind,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/{audience}/orders/{orderId}/documents/{kind}/download'.replaceAll('{' r'audience' '}', encodeQueryParameter(_serializers, audience, const FullType(String)).toString()).replaceAll('{' r'orderId' '}', encodeQueryParameter(_serializers, orderId, const FullType(String)).toString()).replaceAll('{' r'kind' '}', encodeQueryParameter(_serializers, kind, const FullType(String)).toString());
     final _options = Options(
       method: r'GET',
       responseType: ResponseType.bytes,
@@ -281,6 +365,89 @@ class ReportingApi {
     }
 
     return Response<ListDocumentExports200Response>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// List automatically issued order documents
+  /// Read-only. The Purchase Order includes payment and fulfillment methods, recorded Buyer/Vendor details, and Buyer account email/mobile. Separate payment confirmations are retired. Documents are retained commercial records, not expiring report copies or Vendor tax invoices. No document is generated by this read.
+  ///
+  /// Parameters:
+  /// * [audience] - Authenticated surface; account type must match.
+  /// * [orderId]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [ListOrderDocuments200Response] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<ListOrderDocuments200Response>> listOrderDocuments({
+    required String audience,
+    required String orderId,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/{audience}/orders/{orderId}/documents'.replaceAll('{' r'audience' '}', encodeQueryParameter(_serializers, audience, const FullType(String)).toString()).replaceAll('{' r'orderId' '}', encodeQueryParameter(_serializers, orderId, const FullType(String)).toString());
+    final _options = Options(
+      method: r'GET',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'passportBearer',
+          },
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    ListOrderDocuments200Response? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(ListOrderDocuments200Response),
+      ) as ListOrderDocuments200Response;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<ListOrderDocuments200Response>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -570,7 +737,7 @@ class ReportingApi {
   }
 
   /// request Document Export
-  /// Private immutable snapshot. Current access checked at request, generation and download. Admin requires recent authentication. Files expire 24 hours after generation. MAT audience suppression applies.
+  /// Private immutable snapshot. Current access checked at request, generation and download. Admin requires recent authentication. Files expire 24 hours after generation. MAT audience suppression applies. Admin TRANSACTION_HISTORY exports only successful Vendor commission payments, with finance.view plus finance.export; from, to and status filters match the commission payment ledger. Monthly statements are created and issued automatically with immutable invoices.
   ///
   /// Parameters:
   /// * [audience] - Authenticated surface. The server rejects mismatched account types.

@@ -11,6 +11,7 @@ import 'dart:typed_data';
 import 'package:built_collection/built_collection.dart';
 import 'package:materyalph_api_client/src/api_util.dart';
 import 'package:materyalph_api_client/src/model/buyer_order_reviews_envelope.dart';
+import 'package:materyalph_api_client/src/model/buyer_received_ratings_envelope.dart';
 import 'package:materyalph_api_client/src/model/buyer_review_edit_request.dart';
 import 'package:materyalph_api_client/src/model/buyer_review_submit_request.dart';
 import 'package:materyalph_api_client/src/model/public_review_list_envelope.dart';
@@ -396,6 +397,92 @@ class BuyerReviewsApi {
     }
 
     return Response<Uint8List>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// listBuyerReceivedRatings
+  /// The signed-in Buyer&#39;s received store ratings, newest first, with a server-calculated Contractor Community Score (CCS). Only that Buyer&#39;s completed orders and revealed, non-moderated, non-disputed, non-excluded ratings appear. CCS and criterion averages use all eligible ratings in the last 90 days before pagination; numeric scores remain null below five eligible completed transactions. This read does not alter history.
+  ///
+  /// Parameters:
+  /// * [page]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [BuyerReceivedRatingsEnvelope] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<BuyerReceivedRatingsEnvelope>> listBuyerReceivedRatings({
+    int? page = 1,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/buyers/ratings';
+    final _options = Options(
+      method: r'GET',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[
+          {
+            'type': 'http',
+            'scheme': 'bearer',
+            'name': 'passportBearer',
+          },
+        ],
+        ...?extra,
+      },
+      validateStatus: validateStatus,
+    );
+
+    final _queryParameters = <String, dynamic>{
+      if (page != null) r'page': encodeQueryParameter(_serializers, page, const FullType(int)),
+    };
+
+    final _response = await _dio.request<Object>(
+      _path,
+      options: _options,
+      queryParameters: _queryParameters,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    BuyerReceivedRatingsEnvelope? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(BuyerReceivedRatingsEnvelope),
+      ) as BuyerReceivedRatingsEnvelope;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<BuyerReceivedRatingsEnvelope>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

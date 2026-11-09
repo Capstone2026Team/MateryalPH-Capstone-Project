@@ -1,0 +1,76 @@
+.mp-service-directory { container-type: inline-size; }
+.mp-service-directory-columns { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; align-items: stretch; }
+.mp-service-scope {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--mp-color-border-default);
+  border-radius: var(--mp-radius-control);
+  background: var(--mp-color-surface-canvas);
+  color: var(--mp-color-text-secondary);
+  font-size: 12px;
+  line-height: 18px;
+}
+.mp-service-scope > svg { flex-shrink: 0; margin-top: 1px; }
+.mp-service-scope strong { font-weight: 600; color: var(--mp-color-text-strong); }
+
+/* Size the directory by its card, so a desktop sidebar cannot crowd the checks. */
+@container (min-width: 480px) {
+  .mp-service-directory-columns { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-rows: 1fr; }
+}
+@container (min-width: 720px) {
+  .mp-service-directory-columns { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+.mp-service-group {
+  --mp-service-accent: var(--mp-color-text-secondary);
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0 12px 12px;
+  border-color: color-mix(in srgb, var(--mp-service-accent) 12%, var(--mp-color-border-default));
+  box-shadow: none;
+}
+.mp-service-group[data-service-role="infrastructure"] { --mp-service-accent: var(--mp-color-ranking-distance); }
+.mp-service-group[data-service-role="payments"] { --mp-service-accent: var(--mp-color-ranking-price-budget); }
+.mp-service-group[data-service-role="storage"] { --mp-service-accent: var(--mp-color-ranking-stock-match); }
+.mp-service-group[data-service-role="identity"] { --mp-service-accent: var(--mp-color-ranking-vendor-performance); }
+.mp-service-group[data-service-role="communication"] { --mp-service-accent: var(--mp-color-ranking-product-rating); }
+.mp-service-group[data-service-role="verification"] { --mp-service-accent: var(--mp-color-payment-physical); }
+.mp-service-group-heading {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  margin: 0 -12px;
+  padding: 12px;
+  border-bottom: 1px solid var(--mp-color-border-default);
+  border-start-start-radius: inherit;
+  border-start-end-radius: inherit;
+  background: color-mix(in srgb, var(--mp-service-accent) 4%, var(--mp-color-surface-primary));
+}
+.mp-service-role-icon { display: grid; place-items: center; width: 28px; height: 28px; border-radius: var(--mp-radius-control); color: var(--mp-service-accent); background: var(--mp-color-surface-primary); }
+.mp-service-count { display: grid; place-items: center; min-width: 24px; height: 24px; padding-inline: 4px; border: 1px solid var(--mp-color-border-default); border-radius: var(--mp-radius-control); background: var(--mp-color-surface-primary); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.mp-service-entry { display: grid; min-width: 0; gap: 6px; padding-block: 8px; }
+.mp-service-entry:last-child { padding-bottom: 0; }
+.mp-service-entry-heading { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; align-items: center; gap: 8px; }
+.mp-service-console { min-width: 44px; max-width: 96px; text-align: center; }
+.mp-service-console > svg { flex-shrink: 0; }
+.mp-service-check { display: grid; min-width: 0; gap: 4px; padding-block: 6px; }
+.mp-service-check:first-child { padding-top: 0; }
+.mp-service-check:last-child { padding-bottom: 0; }
+.mp-service-check-heading { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: 8px; }
+.mp-service-check-heading > h5 { line-height: 18px; }
+.mp-service-check-heading > span { flex-shrink: 0; }
+.mp-service-check-meta { display: grid; gap: 2px; overflow-wrap: anywhere; }
+
+/* Equal-height monitoring cards keep their contents together at the top. */
+.mp-monitoring-health > section { align-content: start; gap: 12px; }
+.mp-monitoring-health > section > div:first-child { align-items: center; gap: 8px; padding-bottom: 12px; border-bottom: 1px solid var(--mp-color-border-default); }
+.mp-monitoring-health > section > div:first-child > div:first-child { flex: 1 1 120px; }
+.mp-monitoring-health figure { align-content: start; }
+.mp-monitoring-health [data-chart-variant="donut"] > div { align-items: start; }

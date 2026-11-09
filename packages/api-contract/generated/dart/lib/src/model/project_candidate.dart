@@ -8,6 +8,7 @@ import 'package:materyalph_api_client/src/model/project_payment_method.dart';
 import 'package:materyalph_api_client/src/model/project_draft_vendor_group.dart';
 import 'package:materyalph_api_client/src/model/project_fulfillment.dart';
 import 'package:built_value/json_object.dart';
+import 'package:materyalph_api_client/src/model/public_badge.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -16,6 +17,7 @@ part 'project_candidate.g.dart';
 /// ProjectCandidate
 ///
 /// Properties:
+/// * [badges] - Current active public awards for this Vendor; suppressed or revoked badges are omitted. Never part of the saved commercial estimate.
 /// * [id]
 /// * [estimateId]
 /// * [vendorId]
@@ -63,6 +65,10 @@ part 'project_candidate.g.dart';
 /// * [procurementTotalCentavos] - Materials and each supplying Vendor delivery counted once. Null while any delivery remains unconfirmed or unavailable. Processing fees are excluded until payment.
 @BuiltValue()
 abstract class ProjectCandidate implements Built<ProjectCandidate, ProjectCandidateBuilder> {
+  /// Current active public awards for this Vendor; suppressed or revoked badges are omitted. Never part of the saved commercial estimate.
+  @BuiltValueField(wireName: r'badges')
+  BuiltList<PublicBadge>? get badges;
+
   @BuiltValueField(wireName: r'id')
   String get id;
 
@@ -235,6 +241,13 @@ class _$ProjectCandidateSerializer implements PrimitiveSerializer<ProjectCandida
     ProjectCandidate object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.badges != null) {
+      yield r'badges';
+      yield serializers.serialize(
+        object.badges,
+        specifiedType: const FullType(BuiltList, [FullType(PublicBadge)]),
+      );
+    }
     yield r'id';
     yield serializers.serialize(
       object.id,
@@ -517,6 +530,14 @@ class _$ProjectCandidateSerializer implements PrimitiveSerializer<ProjectCandida
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'badges':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltList, [FullType(PublicBadge)]),
+          ) as BuiltList<PublicBadge>?;
+          if (valueDes == null) continue;
+          result.badges.replace(valueDes);
+          break;
         case r'id':
           final valueDes = serializers.deserialize(
             value,

@@ -210,21 +210,21 @@ class ProcurementNavigation {
     BuildContext context, {
     bool fromResults = false,
   }) async {
+    // Catalog search starts across all materials; editing a text search keeps its filters.
+    final filters = fromResults && explore.query.trim().isNotEmpty
+        ? explore.filters
+        : const ListingFilters();
     final query = await Navigator.of(context).push<String>(
       MaterialPageRoute(
         builder: (_) => MaterialSearchScreen(
           controller: explore,
-          filters: fromResults ? explore.filters : const ListingFilters(),
+          filters: filters,
           onSetLocation: () => openLocation(context),
         ),
       ),
     );
     if (query == null || !context.mounted) return;
-    explore.search(
-      query: query,
-      filters: fromResults ? null : const ListingFilters(),
-      sort: () => null,
-    );
+    explore.search(query: query, filters: filters, sort: () => null);
     if (!fromResults) await openResults(context);
   }
 

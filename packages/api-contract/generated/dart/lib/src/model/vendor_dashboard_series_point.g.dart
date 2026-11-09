@@ -20,6 +20,10 @@ class _$VendorDashboardSeriesPoint extends VendorDashboardSeriesPoint {
   @override
   final int? netSalesCentavos;
   @override
+  final int? refundsCentavos;
+  @override
+  final int? cancellationDeductionsCentavos;
+  @override
   final int? salesAverageCentavos;
 
   factory _$VendorDashboardSeriesPoint(
@@ -33,6 +37,8 @@ class _$VendorDashboardSeriesPoint extends VendorDashboardSeriesPoint {
       this.ordersAverage,
       this.grossSalesCentavos,
       this.netSalesCentavos,
+      this.refundsCentavos,
+      this.cancellationDeductionsCentavos,
       this.salesAverageCentavos})
       : super._();
   @override
@@ -54,6 +60,9 @@ class _$VendorDashboardSeriesPoint extends VendorDashboardSeriesPoint {
         ordersAverage == other.ordersAverage &&
         grossSalesCentavos == other.grossSalesCentavos &&
         netSalesCentavos == other.netSalesCentavos &&
+        refundsCentavos == other.refundsCentavos &&
+        cancellationDeductionsCentavos ==
+            other.cancellationDeductionsCentavos &&
         salesAverageCentavos == other.salesAverageCentavos;
   }
 
@@ -66,6 +75,8 @@ class _$VendorDashboardSeriesPoint extends VendorDashboardSeriesPoint {
     _$hash = $jc(_$hash, ordersAverage.hashCode);
     _$hash = $jc(_$hash, grossSalesCentavos.hashCode);
     _$hash = $jc(_$hash, netSalesCentavos.hashCode);
+    _$hash = $jc(_$hash, refundsCentavos.hashCode);
+    _$hash = $jc(_$hash, cancellationDeductionsCentavos.hashCode);
     _$hash = $jc(_$hash, salesAverageCentavos.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
@@ -80,6 +91,9 @@ class _$VendorDashboardSeriesPoint extends VendorDashboardSeriesPoint {
           ..add('ordersAverage', ordersAverage)
           ..add('grossSalesCentavos', grossSalesCentavos)
           ..add('netSalesCentavos', netSalesCentavos)
+          ..add('refundsCentavos', refundsCentavos)
+          ..add(
+              'cancellationDeductionsCentavos', cancellationDeductionsCentavos)
           ..add('salesAverageCentavos', salesAverageCentavos))
         .toString();
   }
@@ -118,6 +132,17 @@ class VendorDashboardSeriesPointBuilder
   set netSalesCentavos(int? netSalesCentavos) =>
       _$this._netSalesCentavos = netSalesCentavos;
 
+  int? _refundsCentavos;
+  int? get refundsCentavos => _$this._refundsCentavos;
+  set refundsCentavos(int? refundsCentavos) =>
+      _$this._refundsCentavos = refundsCentavos;
+
+  int? _cancellationDeductionsCentavos;
+  int? get cancellationDeductionsCentavos =>
+      _$this._cancellationDeductionsCentavos;
+  set cancellationDeductionsCentavos(int? cancellationDeductionsCentavos) =>
+      _$this._cancellationDeductionsCentavos = cancellationDeductionsCentavos;
+
   int? _salesAverageCentavos;
   int? get salesAverageCentavos => _$this._salesAverageCentavos;
   set salesAverageCentavos(int? salesAverageCentavos) =>
@@ -136,6 +161,8 @@ class VendorDashboardSeriesPointBuilder
       _ordersAverage = $v.ordersAverage;
       _grossSalesCentavos = $v.grossSalesCentavos;
       _netSalesCentavos = $v.netSalesCentavos;
+      _refundsCentavos = $v.refundsCentavos;
+      _cancellationDeductionsCentavos = $v.cancellationDeductionsCentavos;
       _salesAverageCentavos = $v.salesAverageCentavos;
       _$v = null;
     }
@@ -167,6 +194,8 @@ class VendorDashboardSeriesPointBuilder
           ordersAverage: ordersAverage,
           grossSalesCentavos: grossSalesCentavos,
           netSalesCentavos: netSalesCentavos,
+          refundsCentavos: refundsCentavos,
+          cancellationDeductionsCentavos: cancellationDeductionsCentavos,
           salesAverageCentavos: salesAverageCentavos,
         );
     replace(_$result);

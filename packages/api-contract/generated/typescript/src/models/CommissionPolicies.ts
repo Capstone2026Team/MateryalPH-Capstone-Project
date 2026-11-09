@@ -46,6 +46,18 @@ export interface CommissionPolicies {
     /**
      *
      */
+    minNoticeDays?: number;
+    /**
+     *
+     */
+    eligibleVendorCount?: number;
+    /**
+     *
+     */
+    canExport?: boolean;
+    /**
+     *
+     */
     versions: Array<CommissionPolicy>;
 }
 
@@ -73,6 +85,9 @@ export function CommissionPoliciesFromJSONTyped(json: any, ignoreDiscriminator: 
         'next': json['next'] === undefined ? undefined : json['next'] === null ? null : CommissionPolicyFromJSON(json['next']),
         'latestVersion': json['latest_version'],
         'canManage': json['can_manage'],
+        'minNoticeDays': json['min_notice_days'] == null ? undefined : json['min_notice_days'],
+        'eligibleVendorCount': json['eligible_vendor_count'] == null ? undefined : json['eligible_vendor_count'],
+        'canExport': json['can_export'] == null ? undefined : json['can_export'],
         'versions': ((json['versions'] as Array<any>).map(CommissionPolicyFromJSON)),
     };
 }
@@ -92,6 +107,9 @@ export function CommissionPoliciesToJSONTyped(value?: CommissionPolicies | null,
         'next': CommissionPolicyToJSON(value['next']),
         'latest_version': value['latestVersion'],
         'can_manage': value['canManage'],
+        'min_notice_days': value['minNoticeDays'],
+        'eligible_vendor_count': value['eligibleVendorCount'],
+        'can_export': value['canExport'],
         'versions': ((value['versions'] as Array<any>).map(CommissionPolicyToJSON)),
     };
 }

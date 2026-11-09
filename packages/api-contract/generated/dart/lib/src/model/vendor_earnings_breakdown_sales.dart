@@ -16,6 +16,7 @@ part 'vendor_earnings_breakdown_sales.g.dart';
 /// * [vendorDiscountsCentavos]
 /// * [materialsAfterDiscountCentavos]
 /// * [deliveryCentavos]
+/// * [refundsCentavos] - Completed principal refunds and confirmed cash reimbursements for the remaining noncancelled, not fully refunded sales in this confirmation-date range. Subtract once from materials plus delivery to reconcile the product report and Net sales.
 @BuiltValue()
 abstract class VendorEarningsBreakdownSales implements Built<VendorEarningsBreakdownSales, VendorEarningsBreakdownSalesBuilder> {
   @BuiltValueField(wireName: r'orders')
@@ -32,6 +33,10 @@ abstract class VendorEarningsBreakdownSales implements Built<VendorEarningsBreak
 
   @BuiltValueField(wireName: r'delivery_centavos')
   int get deliveryCentavos;
+
+  /// Completed principal refunds and confirmed cash reimbursements for the remaining noncancelled, not fully refunded sales in this confirmation-date range. Subtract once from materials plus delivery to reconcile the product report and Net sales.
+  @BuiltValueField(wireName: r'refunds_centavos')
+  int get refundsCentavos;
 
   VendorEarningsBreakdownSales._();
 
@@ -79,6 +84,11 @@ class _$VendorEarningsBreakdownSalesSerializer implements PrimitiveSerializer<Ve
     yield r'delivery_centavos';
     yield serializers.serialize(
       object.deliveryCentavos,
+      specifiedType: const FullType(int),
+    );
+    yield r'refunds_centavos';
+    yield serializers.serialize(
+      object.refundsCentavos,
       specifiedType: const FullType(int),
     );
   }
@@ -138,6 +148,13 @@ class _$VendorEarningsBreakdownSalesSerializer implements PrimitiveSerializer<Ve
             specifiedType: const FullType(int),
           ) as int;
           result.deliveryCentavos = valueDes;
+          break;
+        case r'refunds_centavos':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.refundsCentavos = valueDes;
           break;
         default:
           unhandled.add(key);

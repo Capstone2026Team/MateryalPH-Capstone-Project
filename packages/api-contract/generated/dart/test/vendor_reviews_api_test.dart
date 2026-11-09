@@ -28,6 +28,13 @@ void main() {
       // TODO
     });
 
+    // reviews.view. Five-minute signed Buyer profile photo for a named received review in the current store. Rechecks blind reveal, dispute withholding, moderation, score exclusions and current membership on every fetch. Legacy anonymous reviews now show the actual Buyer identity. Store-authored Buyer ratings, missing photos and foreign reviews return 404. Returns only the sanitized PNG; no Buyer ID, contact or private storage key is exposed.
+    //
+    //Future<Uint8List> getVendorReviewBuyerPhoto(String reviewId, int expires, String signature) async
+    test('test getVendorReviewBuyerPhoto', () async {
+      // TODO
+    });
+
     // Photo of a visible review of your store behind a signed link.
     //
     //Future<Uint8List> getVendorReviewPhoto(String reviewId, String mediaId, int expires, String signature) async

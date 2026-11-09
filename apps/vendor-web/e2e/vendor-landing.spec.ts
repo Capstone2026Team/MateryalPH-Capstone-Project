@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 
 test('Vendor landing remains usable, truthful, and responsive', async ({ page }) => {
+  await page.route('**/api/v1/commission-policy', route => route.fulfill({ json: { data: { current: { id: 'policy-2', version: 2, commission_basis_points: 325, rate_label: '3.25%', effective_from: '2026-10-01T00:00:00Z', status: 'CURRENT' }, next: null }, meta: {}, errors: [] } }))
   await page.goto('/')
 
   await expect(page.getByRole('heading', { name: 'Build your store’s next chapter.' })).toBeVisible()
@@ -43,12 +44,12 @@ test('Vendor landing remains usable, truthful, and responsive', async ({ page })
 
   const fees = page.locator('#payments-fees')
   await expect(fees.getByRole('heading', { name: 'Plain-language payments and fees, before you commit' })).toBeVisible()
-  await expect(fees.getByText(/initial default Vendor-paid platform commission is/)).toContainText('2%')
+  await expect(fees.getByText(/current Vendor-paid platform commission is/)).toContainText('3.25%')
   await expect(fees.getByText(/Third-party processing fees are distinct/)).toContainText('vary by payment method')
   await expect(page.getByText(/TEST\/DEMO|capstone environment|escrow|payment-account onboarding/i)).toHaveCount(0)
 
   await expect(fees.getByText('₱140,000', { exact: true })).toBeVisible()
-  await expect(fees.getByText('₱2,800', { exact: true })).toBeVisible()
+  await expect(fees.getByText('₱4,550.00', { exact: true })).toBeVisible()
   await expect(fees.getByText(/Material VAT already excluded/)).toBeVisible()
   await page.getByRole('button', { name: /Inquiries A project brief/ }).click()
   await expect(page.locator('#landing-feature-preview')).toContainText('Material requirements')

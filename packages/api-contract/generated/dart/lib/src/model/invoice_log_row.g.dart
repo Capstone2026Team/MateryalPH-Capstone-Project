@@ -8,6 +8,8 @@ part of 'invoice_log_row.dart';
 
 class _$InvoiceLogRow extends InvoiceLogRow {
   @override
+  final String? buyerName;
+  @override
   final String? id;
   @override
   final String? orderId;
@@ -68,7 +70,8 @@ class _$InvoiceLogRow extends InvoiceLogRow {
       (InvoiceLogRowBuilder()..update(updates))._build();
 
   _$InvoiceLogRow._(
-      {this.id,
+      {this.buyerName,
+      this.id,
       this.orderId,
       this.orderReference,
       this.orderState,
@@ -108,6 +111,7 @@ class _$InvoiceLogRow extends InvoiceLogRow {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is InvoiceLogRow &&
+        buyerName == other.buyerName &&
         id == other.id &&
         orderId == other.orderId &&
         orderReference == other.orderReference &&
@@ -142,6 +146,7 @@ class _$InvoiceLogRow extends InvoiceLogRow {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, buyerName.hashCode);
     _$hash = $jc(_$hash, id.hashCode);
     _$hash = $jc(_$hash, orderId.hashCode);
     _$hash = $jc(_$hash, orderReference.hashCode);
@@ -177,6 +182,7 @@ class _$InvoiceLogRow extends InvoiceLogRow {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'InvoiceLogRow')
+          ..add('buyerName', buyerName)
           ..add('id', id)
           ..add('orderId', orderId)
           ..add('orderReference', orderReference)
@@ -213,6 +219,10 @@ class _$InvoiceLogRow extends InvoiceLogRow {
 class InvoiceLogRowBuilder
     implements Builder<InvoiceLogRow, InvoiceLogRowBuilder> {
   _$InvoiceLogRow? _$v;
+
+  String? _buyerName;
+  String? get buyerName => _$this._buyerName;
+  set buyerName(String? buyerName) => _$this._buyerName = buyerName;
 
   String? _id;
   String? get id => _$this._id;
@@ -345,6 +355,7 @@ class InvoiceLogRowBuilder
   InvoiceLogRowBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _buyerName = $v.buyerName;
       _id = $v.id;
       _orderId = $v.orderId;
       _orderReference = $v.orderReference;
@@ -396,6 +407,7 @@ class InvoiceLogRowBuilder
     try {
       _$result = _$v ??
           _$InvoiceLogRow._(
+            buyerName: buyerName,
             id: id,
             orderId: orderId,
             orderReference: orderReference,

@@ -70,6 +70,8 @@ class _$OrderDeliveryVehicleMobilizationBasisEnumSerializer
 
 class _$OrderDeliveryVehicle extends OrderDeliveryVehicle {
   @override
+  final DeliveryVehicleProfile? vehicleDetails;
+  @override
   final String? name;
   @override
   final String? vehicleCategory;
@@ -107,7 +109,8 @@ class _$OrderDeliveryVehicle extends OrderDeliveryVehicle {
       (OrderDeliveryVehicleBuilder()..update(updates))._build();
 
   _$OrderDeliveryVehicle._(
-      {this.name,
+      {this.vehicleDetails,
+      this.name,
       this.vehicleCategory,
       this.vehicleType,
       this.customTypeName,
@@ -137,6 +140,7 @@ class _$OrderDeliveryVehicle extends OrderDeliveryVehicle {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is OrderDeliveryVehicle &&
+        vehicleDetails == other.vehicleDetails &&
         name == other.name &&
         vehicleCategory == other.vehicleCategory &&
         vehicleType == other.vehicleType &&
@@ -158,6 +162,7 @@ class _$OrderDeliveryVehicle extends OrderDeliveryVehicle {
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, vehicleDetails.hashCode);
     _$hash = $jc(_$hash, name.hashCode);
     _$hash = $jc(_$hash, vehicleCategory.hashCode);
     _$hash = $jc(_$hash, vehicleType.hashCode);
@@ -181,6 +186,7 @@ class _$OrderDeliveryVehicle extends OrderDeliveryVehicle {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'OrderDeliveryVehicle')
+          ..add('vehicleDetails', vehicleDetails)
           ..add('name', name)
           ..add('vehicleCategory', vehicleCategory)
           ..add('vehicleType', vehicleType)
@@ -204,6 +210,12 @@ class _$OrderDeliveryVehicle extends OrderDeliveryVehicle {
 class OrderDeliveryVehicleBuilder
     implements Builder<OrderDeliveryVehicle, OrderDeliveryVehicleBuilder> {
   _$OrderDeliveryVehicle? _$v;
+
+  DeliveryVehicleProfileBuilder? _vehicleDetails;
+  DeliveryVehicleProfileBuilder get vehicleDetails =>
+      _$this._vehicleDetails ??= DeliveryVehicleProfileBuilder();
+  set vehicleDetails(DeliveryVehicleProfileBuilder? vehicleDetails) =>
+      _$this._vehicleDetails = vehicleDetails;
 
   String? _name;
   String? get name => _$this._name;
@@ -289,6 +301,7 @@ class OrderDeliveryVehicleBuilder
   OrderDeliveryVehicleBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _vehicleDetails = $v.vehicleDetails?.toBuilder();
       _name = $v.name;
       _vehicleCategory = $v.vehicleCategory;
       _vehicleType = $v.vehicleType;
@@ -324,29 +337,47 @@ class OrderDeliveryVehicleBuilder
   OrderDeliveryVehicle build() => _build();
 
   _$OrderDeliveryVehicle _build() {
-    final _$result = _$v ??
-        _$OrderDeliveryVehicle._(
-          name: name,
-          vehicleCategory: vehicleCategory,
-          vehicleType: vehicleType,
-          customTypeName: customTypeName,
-          brand: brand,
-          capacityKg: capacityKg,
-          heavyClassification: heavyClassification,
-          configurationVersion: configurationVersion,
-          rateVersion: rateVersion,
-          numberOfVehicles: BuiltValueNullFieldError.checkNotNull(
-              numberOfVehicles, r'OrderDeliveryVehicle', 'numberOfVehicles'),
-          totalVehicleTrips: BuiltValueNullFieldError.checkNotNull(
-              totalVehicleTrips, r'OrderDeliveryVehicle', 'totalVehicleTrips'),
-          perTripCentavos: BuiltValueNullFieldError.checkNotNull(
-              perTripCentavos, r'OrderDeliveryVehicle', 'perTripCentavos'),
-          tripTotalCentavos: BuiltValueNullFieldError.checkNotNull(
-              tripTotalCentavos, r'OrderDeliveryVehicle', 'tripTotalCentavos'),
-          mobilizationBasis: mobilizationBasis,
-          mobilizationFeeCentavos: mobilizationFeeCentavos,
-          mobilizationTotalCentavos: mobilizationTotalCentavos,
-        );
+    _$OrderDeliveryVehicle _$result;
+    try {
+      _$result = _$v ??
+          _$OrderDeliveryVehicle._(
+            vehicleDetails: _vehicleDetails?.build(),
+            name: name,
+            vehicleCategory: vehicleCategory,
+            vehicleType: vehicleType,
+            customTypeName: customTypeName,
+            brand: brand,
+            capacityKg: capacityKg,
+            heavyClassification: heavyClassification,
+            configurationVersion: configurationVersion,
+            rateVersion: rateVersion,
+            numberOfVehicles: BuiltValueNullFieldError.checkNotNull(
+                numberOfVehicles, r'OrderDeliveryVehicle', 'numberOfVehicles'),
+            totalVehicleTrips: BuiltValueNullFieldError.checkNotNull(
+                totalVehicleTrips,
+                r'OrderDeliveryVehicle',
+                'totalVehicleTrips'),
+            perTripCentavos: BuiltValueNullFieldError.checkNotNull(
+                perTripCentavos, r'OrderDeliveryVehicle', 'perTripCentavos'),
+            tripTotalCentavos: BuiltValueNullFieldError.checkNotNull(
+                tripTotalCentavos,
+                r'OrderDeliveryVehicle',
+                'tripTotalCentavos'),
+            mobilizationBasis: mobilizationBasis,
+            mobilizationFeeCentavos: mobilizationFeeCentavos,
+            mobilizationTotalCentavos: mobilizationTotalCentavos,
+          );
+    } catch (_) {
+      late String _$failedField;
+      try {
+        _$failedField = 'vehicleDetails';
+        _vehicleDetails?.build();
+      } catch (e) {
+        throw BuiltValueNestedFieldError(
+            r'OrderDeliveryVehicle', _$failedField, e.toString());
+      }
+      rethrow;
+    }
     replace(_$result);
     return _$result;
   }

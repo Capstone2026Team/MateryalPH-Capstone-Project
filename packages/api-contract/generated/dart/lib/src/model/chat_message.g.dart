@@ -16,6 +16,8 @@ const ChatMessageKindEnum _$chatMessageKindEnum_PRODUCT =
     const ChatMessageKindEnum._('PRODUCT');
 const ChatMessageKindEnum _$chatMessageKindEnum_TEXT_WITH_PRODUCT =
     const ChatMessageKindEnum._('TEXT_WITH_PRODUCT');
+const ChatMessageKindEnum _$chatMessageKindEnum_WORK_PACKAGE =
+    const ChatMessageKindEnum._('WORK_PACKAGE');
 
 ChatMessageKindEnum _$chatMessageKindEnumValueOf(String name) {
   switch (name) {
@@ -29,6 +31,8 @@ ChatMessageKindEnum _$chatMessageKindEnumValueOf(String name) {
       return _$chatMessageKindEnum_PRODUCT;
     case 'TEXT_WITH_PRODUCT':
       return _$chatMessageKindEnum_TEXT_WITH_PRODUCT;
+    case 'WORK_PACKAGE':
+      return _$chatMessageKindEnum_WORK_PACKAGE;
     default:
       throw ArgumentError(name);
   }
@@ -41,6 +45,7 @@ final BuiltSet<ChatMessageKindEnum> _$chatMessageKindEnumValues =
   _$chatMessageKindEnum_ATTACHMENT,
   _$chatMessageKindEnum_PRODUCT,
   _$chatMessageKindEnum_TEXT_WITH_PRODUCT,
+  _$chatMessageKindEnum_WORK_PACKAGE,
 ]);
 
 Serializer<ChatMessageKindEnum> _$chatMessageKindEnumSerializer =
@@ -54,6 +59,7 @@ class _$ChatMessageKindEnumSerializer
     'ATTACHMENT': 'ATTACHMENT',
     'PRODUCT': 'PRODUCT',
     'TEXT_WITH_PRODUCT': 'TEXT_WITH_PRODUCT',
+    'WORK_PACKAGE': 'WORK_PACKAGE',
   };
   static const Map<Object, String> _fromWire = const <Object, String>{
     'TEXT': 'TEXT',
@@ -61,6 +67,7 @@ class _$ChatMessageKindEnumSerializer
     'ATTACHMENT': 'ATTACHMENT',
     'PRODUCT': 'PRODUCT',
     'TEXT_WITH_PRODUCT': 'TEXT_WITH_PRODUCT',
+    'WORK_PACKAGE': 'WORK_PACKAGE',
   };
 
   @override
@@ -82,6 +89,8 @@ class _$ChatMessageKindEnumSerializer
 
 class _$ChatMessage extends ChatMessage {
   @override
+  final String? conversationId;
+  @override
   final String id;
   @override
   final String clientMessageId;
@@ -101,12 +110,17 @@ class _$ChatMessage extends ChatMessage {
   final bool readByRecipient;
   @override
   final ChatProduct? product;
+  @override
+  final ChatAutomatedReply? automatedReply;
+  @override
+  final ChatWorkPackageAttachment? workPackageAttachment;
 
   factory _$ChatMessage([void Function(ChatMessageBuilder)? updates]) =>
       (ChatMessageBuilder()..update(updates))._build();
 
   _$ChatMessage._(
-      {required this.id,
+      {this.conversationId,
+      required this.id,
       required this.clientMessageId,
       required this.body,
       required this.kind,
@@ -115,7 +129,9 @@ class _$ChatMessage extends ChatMessage {
       required this.mine,
       required this.attachments,
       required this.readByRecipient,
-      this.product})
+      this.product,
+      this.automatedReply,
+      this.workPackageAttachment})
       : super._();
   @override
   ChatMessage rebuild(void Function(ChatMessageBuilder) updates) =>
@@ -128,6 +144,7 @@ class _$ChatMessage extends ChatMessage {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is ChatMessage &&
+        conversationId == other.conversationId &&
         id == other.id &&
         clientMessageId == other.clientMessageId &&
         body == other.body &&
@@ -137,12 +154,15 @@ class _$ChatMessage extends ChatMessage {
         mine == other.mine &&
         attachments == other.attachments &&
         readByRecipient == other.readByRecipient &&
-        product == other.product;
+        product == other.product &&
+        automatedReply == other.automatedReply &&
+        workPackageAttachment == other.workPackageAttachment;
   }
 
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, conversationId.hashCode);
     _$hash = $jc(_$hash, id.hashCode);
     _$hash = $jc(_$hash, clientMessageId.hashCode);
     _$hash = $jc(_$hash, body.hashCode);
@@ -153,6 +173,8 @@ class _$ChatMessage extends ChatMessage {
     _$hash = $jc(_$hash, attachments.hashCode);
     _$hash = $jc(_$hash, readByRecipient.hashCode);
     _$hash = $jc(_$hash, product.hashCode);
+    _$hash = $jc(_$hash, automatedReply.hashCode);
+    _$hash = $jc(_$hash, workPackageAttachment.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -160,6 +182,7 @@ class _$ChatMessage extends ChatMessage {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'ChatMessage')
+          ..add('conversationId', conversationId)
           ..add('id', id)
           ..add('clientMessageId', clientMessageId)
           ..add('body', body)
@@ -169,13 +192,20 @@ class _$ChatMessage extends ChatMessage {
           ..add('mine', mine)
           ..add('attachments', attachments)
           ..add('readByRecipient', readByRecipient)
-          ..add('product', product))
+          ..add('product', product)
+          ..add('automatedReply', automatedReply)
+          ..add('workPackageAttachment', workPackageAttachment))
         .toString();
   }
 }
 
 class ChatMessageBuilder implements Builder<ChatMessage, ChatMessageBuilder> {
   _$ChatMessage? _$v;
+
+  String? _conversationId;
+  String? get conversationId => _$this._conversationId;
+  set conversationId(String? conversationId) =>
+      _$this._conversationId = conversationId;
 
   String? _id;
   String? get id => _$this._id;
@@ -221,6 +251,19 @@ class ChatMessageBuilder implements Builder<ChatMessage, ChatMessageBuilder> {
   ChatProductBuilder get product => _$this._product ??= ChatProductBuilder();
   set product(ChatProductBuilder? product) => _$this._product = product;
 
+  ChatAutomatedReplyBuilder? _automatedReply;
+  ChatAutomatedReplyBuilder get automatedReply =>
+      _$this._automatedReply ??= ChatAutomatedReplyBuilder();
+  set automatedReply(ChatAutomatedReplyBuilder? automatedReply) =>
+      _$this._automatedReply = automatedReply;
+
+  ChatWorkPackageAttachmentBuilder? _workPackageAttachment;
+  ChatWorkPackageAttachmentBuilder get workPackageAttachment =>
+      _$this._workPackageAttachment ??= ChatWorkPackageAttachmentBuilder();
+  set workPackageAttachment(
+          ChatWorkPackageAttachmentBuilder? workPackageAttachment) =>
+      _$this._workPackageAttachment = workPackageAttachment;
+
   ChatMessageBuilder() {
     ChatMessage._defaults(this);
   }
@@ -228,6 +271,7 @@ class ChatMessageBuilder implements Builder<ChatMessage, ChatMessageBuilder> {
   ChatMessageBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _conversationId = $v.conversationId;
       _id = $v.id;
       _clientMessageId = $v.clientMessageId;
       _body = $v.body;
@@ -238,6 +282,8 @@ class ChatMessageBuilder implements Builder<ChatMessage, ChatMessageBuilder> {
       _attachments = $v.attachments.toBuilder();
       _readByRecipient = $v.readByRecipient;
       _product = $v.product?.toBuilder();
+      _automatedReply = $v.automatedReply?.toBuilder();
+      _workPackageAttachment = $v.workPackageAttachment?.toBuilder();
       _$v = null;
     }
     return this;
@@ -261,6 +307,7 @@ class ChatMessageBuilder implements Builder<ChatMessage, ChatMessageBuilder> {
     try {
       _$result = _$v ??
           _$ChatMessage._(
+            conversationId: conversationId,
             id: BuiltValueNullFieldError.checkNotNull(id, r'ChatMessage', 'id'),
             clientMessageId: BuiltValueNullFieldError.checkNotNull(
                 clientMessageId, r'ChatMessage', 'clientMessageId'),
@@ -277,6 +324,8 @@ class ChatMessageBuilder implements Builder<ChatMessage, ChatMessageBuilder> {
             readByRecipient: BuiltValueNullFieldError.checkNotNull(
                 readByRecipient, r'ChatMessage', 'readByRecipient'),
             product: _product?.build(),
+            automatedReply: _automatedReply?.build(),
+            workPackageAttachment: _workPackageAttachment?.build(),
           );
     } catch (_) {
       late String _$failedField;
@@ -289,6 +338,10 @@ class ChatMessageBuilder implements Builder<ChatMessage, ChatMessageBuilder> {
 
         _$failedField = 'product';
         _product?.build();
+        _$failedField = 'automatedReply';
+        _automatedReply?.build();
+        _$failedField = 'workPackageAttachment';
+        _workPackageAttachment?.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
             r'ChatMessage', _$failedField, e.toString());

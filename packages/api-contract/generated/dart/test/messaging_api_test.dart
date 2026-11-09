@@ -28,6 +28,13 @@ void main() {
       // TODO
     });
 
+    // Buyer-only explicit button selection for the active welcome message. Rechecks membership, enabled settings, read-only closure and human takeover. Same client_message_id replays safely.
+    //
+    //Future<ChatIdResponse> chooseChatAutomatedResponse(String conversationId, ChatAutomatedChoice chatAutomatedChoice) async
+    test('test chooseChatAutomatedResponse', () async {
+      // TODO
+    });
+
     // Buyer-only Item-Based inquiry. Project inquiry entry remains gated until Phase 10; both contexts use the same quotation engine. Fulfillment thread creation has no public endpoint and Phase 12 entry remains disabled.
     //
     //Future<ChatIdResponse> createConversation(String messagingPortal, String idempotencyKey, ChatCreate chatCreate) async
@@ -56,6 +63,13 @@ void main() {
       // TODO
     });
 
+    // Owner and Store Manager only. Static store text, disabled by default.
+    //
+    //Future<AutomatedResponseSettingsEnvelope> getAutomatedResponseSettings() async
+    test('test getAutomatedResponseSettings', () async {
+      // TODO
+    });
+
     // Current purpose, participant, account and fixed-role authority are checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses native bearer transport.
     //
     //Future<Uint8List> getChatAvatar(String messagingPortal, String conversationId, int userId) async
@@ -72,8 +86,15 @@ void main() {
 
     // Current purpose, participant, account and fixed-role authority are checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses native bearer transport.
     //
-    //Future<ConversationDetailResponse> getConversation(String messagingPortal, String conversationId, { int page, String before, int legacyPage }) async
+    //Future<ConversationDetailResponse> getConversation(String messagingPortal, String conversationId, { int page, String before, int legacyPage, bool storeThread }) async
     test('test getConversation', () async {
+      // TODO
+    });
+
+    // One normal Buyer/store chat. The server uses the authorized store sales conversation for ordinary replies automatically, preserving order closure and original commercial permissions. Work Packages appear as message attachments; users never choose a reply subject.
+    //
+    //Future<ConversationDetailResponse> getVendorBuyerThread(String conversationId, { String before, int page }) async
+    test('test getVendorBuyerThread', () async {
       // TODO
     });
 
@@ -98,10 +119,17 @@ void main() {
       // TODO
     });
 
-    // One sales inbox entry per Buyer and Store. The authorized Item-Based conversation is the main thread; when unavailable to the viewer, use their oldest authorized project inquiry. Preview, activity ordering and unread count include all currently authorized sales inquiries in that group. Detail messages and read receipts remain conversation-specific. Assigned Fulfillment Staff retain their separate order threads. Current purpose, participant, account and fixed-role authority are checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses native bearer transport.
+    // Unified paginated inbox of authorized SALES inquiry threads, including Work Packages directly. Fulfillment remains order-specific. Each inquiry preserves its own receipts and personal archive.
     //
     //Future<ConversationPageResponse> listConversations(String messagingPortal, { int page, bool archived }) async
     test('test listConversations', () async {
+      // TODO
+    });
+
+    // Compatibility read for historical clients. The application has no subject picker; normal chat replies are routed automatically.
+    //
+    //Future<ConversationPageResponse> listVendorBuyerThreadContexts(String conversationId, { int page }) async
+    test('test listVendorBuyerThreadContexts', () async {
       // TODO
     });
 
@@ -109,6 +137,20 @@ void main() {
     //
     //Future<FulfillmentConversationPageResponse> listVendorFulfillmentConversations(String conversationId, { int page }) async
     test('test listVendorFulfillmentConversations', () async {
+      // TODO
+    });
+
+    // Buyer-only Message action. Reuses the normal store chat and posts its locked Work Package attachment; never changes an order, quotation or procurement selection.
+    //
+    //Future<ChatIdResponse> messageWorkPackageOrder(String orderId, String idempotencyKey) async
+    test('test messageWorkPackageOrder', () async {
+      // TODO
+    });
+
+    // Authorized sales publisher opens the inquiry attached to this pending unconfirmed order. Opening never removes or cancels the order. Buyer acceptance atomically cancels the original pending request and creates its quotation-backed replacement. Accepted orders and any order with payment records cannot be replaced.
+    //
+    //Future<ChatIdResponse> openPendingOrderQuotation(String orderId, String idempotencyKey, PendingOrderQuotationInput pendingOrderQuotationInput) async
+    test('test openPendingOrderQuotation', () async {
       // TODO
     });
 
@@ -154,6 +196,13 @@ void main() {
       // TODO
     });
 
+    // Versioned, idempotent static response settings. Up to three explicit button rules; no AI or NLP.
+    //
+    //Future<AutomatedResponseSettingsEnvelope> saveAutomatedResponseSettings(String idempotencyKey, AutomatedResponseSettings automatedResponseSettings) async
+    test('test saveAutomatedResponseSettings', () async {
+      // TODO
+    });
+
     // Current purpose, participant, account and fixed-role authority are checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses native bearer transport.
     //
     //Future<ChatQuotationPageResponse> saveChatQuotationDraft(String messagingPortal, String conversationId, ChatDraftSave chatDraftSave) async
@@ -179,6 +228,13 @@ void main() {
     //
     //Future<ChatEmptyResponse> sendChatTyping(String messagingPortal, String conversationId, ChatTyping chatTyping) async
     test('test sendChatTyping', () async {
+      // TODO
+    });
+
+    // Buyer-only Message action. Reuses the normal store chat and posts its locked Work Package attachment; never changes an order, quotation or procurement selection.
+    //
+    //Future<ChatIdResponse> shareChatWorkPackage(String conversationId, String idempotencyKey) async
+    test('test shareChatWorkPackage', () async {
       // TODO
     });
 

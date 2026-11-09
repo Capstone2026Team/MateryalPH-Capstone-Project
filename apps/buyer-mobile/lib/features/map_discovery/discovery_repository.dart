@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 
 import '../../core/api_guard.dart';
+import '../trust/trust_models.dart' show StoreBadgeView;
 import 'discovery_models.dart';
 import 'map_geometry.dart';
 
@@ -531,6 +532,15 @@ final class ApiDiscoveryRepository implements DiscoveryRepository {
       },
       scoreText: result.scoreLabel.text,
       scoreValue: result.scoreLabel.value,
+      badges: [
+        for (final badge in vendor?.badges ?? const <api.PublicBadge>[])
+          StoreBadgeView(
+            code: badge.code.name,
+            name: badge.name,
+            description: badge.description,
+            scopeLabel: badge.scopeLabel,
+          ),
+      ],
       isFavorite: result.isFavorite,
       logoUrl: vendor?.logoUrl,
       supplierType: vendor?.supplierType,

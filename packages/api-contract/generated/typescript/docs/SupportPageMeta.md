@@ -6,6 +6,7 @@
 
 Name | Type
 ------------ | -------------
+`counts` | { [key: string]: number; }
 `nextCursor` | string
 `correlationId` | string
 
@@ -16,6 +17,7 @@ import type { SupportPageMeta } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "counts": null,
   "nextCursor": null,
   "correlationId": null,
 } satisfies SupportPageMeta

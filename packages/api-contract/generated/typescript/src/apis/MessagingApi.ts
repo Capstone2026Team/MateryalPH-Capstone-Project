@@ -14,6 +14,21 @@
 
 import * as runtime from '../runtime';
 import {
+    type AutomatedResponseSettings,
+    AutomatedResponseSettingsFromJSON,
+    AutomatedResponseSettingsToJSON,
+} from '../models/AutomatedResponseSettings';
+import {
+    type AutomatedResponseSettingsEnvelope,
+    AutomatedResponseSettingsEnvelopeFromJSON,
+    AutomatedResponseSettingsEnvelopeToJSON,
+} from '../models/AutomatedResponseSettingsEnvelope';
+import {
+    type ChatAutomatedChoice,
+    ChatAutomatedChoiceFromJSON,
+    ChatAutomatedChoiceToJSON,
+} from '../models/ChatAutomatedChoice';
+import {
     type ChatChannelAuth,
     ChatChannelAuthFromJSON,
     ChatChannelAuthToJSON,
@@ -134,6 +149,11 @@ import {
     FulfillmentConversationPageResponseToJSON,
 } from '../models/FulfillmentConversationPageResponse';
 import {
+    type PendingOrderQuotationInput,
+    PendingOrderQuotationInputFromJSON,
+    PendingOrderQuotationInputToJSON,
+} from '../models/PendingOrderQuotationInput';
+import {
     type QuotationLocationEnvelope,
     QuotationLocationEnvelopeFromJSON,
     QuotationLocationEnvelopeToJSON,
@@ -208,6 +228,17 @@ export interface CancelSiteInspectionRequest {
      *
      */
     siteInspectionVersion: SiteInspectionVersion;
+}
+
+export interface ChooseChatAutomatedResponseRequest {
+    /**
+     *
+     */
+    conversationId: string;
+    /**
+     *
+     */
+    chatAutomatedChoice: ChatAutomatedChoice;
 }
 
 export interface CreateConversationRequest {
@@ -329,6 +360,25 @@ export interface GetConversationRequest {
      * Page of preserved legacy inquiry references, 25 per page.
      */
     legacyPage?: number;
+    /**
+     * Buyer app opens one normal store chat with all authorized sales history. The server selects the normal chat automatically. Dedicated fulfillment and raw commercial history remain separately authorized.
+     */
+    storeThread?: boolean;
+}
+
+export interface GetVendorBuyerThreadRequest {
+    /**
+     *
+     */
+    conversationId: string;
+    /**
+     *
+     */
+    before?: string;
+    /**
+     *
+     */
+    page?: number;
 }
 
 export interface ListChatHandlersRequest {
@@ -399,6 +449,17 @@ export interface ListConversationsRequest {
     archived?: boolean;
 }
 
+export interface ListVendorBuyerThreadContextsRequest {
+    /**
+     *
+     */
+    conversationId: string;
+    /**
+     *
+     */
+    page?: number;
+}
+
 export interface ListVendorFulfillmentConversationsRequest {
     /**
      *
@@ -408,6 +469,32 @@ export interface ListVendorFulfillmentConversationsRequest {
      *
      */
     page?: number;
+}
+
+export interface MessageWorkPackageOrderRequest {
+    /**
+     *
+     */
+    orderId: string;
+    /**
+     *
+     */
+    idempotencyKey: string;
+}
+
+export interface OpenPendingOrderQuotationRequest {
+    /**
+     *
+     */
+    orderId: string;
+    /**
+     *
+     */
+    idempotencyKey: string;
+    /**
+     *
+     */
+    pendingOrderQuotationInput: PendingOrderQuotationInput;
 }
 
 export interface OpenVendorOrderConversationRequest {
@@ -492,6 +579,17 @@ export interface RestoreChatConversationRequest {
     conversationId: string;
 }
 
+export interface SaveAutomatedResponseSettingsRequest {
+    /**
+     *
+     */
+    idempotencyKey: string;
+    /**
+     *
+     */
+    automatedResponseSettings: AutomatedResponseSettings;
+}
+
 export interface SaveChatQuotationDraftRequest {
     /**
      *
@@ -546,6 +644,17 @@ export interface SendChatTypingRequest {
      *
      */
     chatTyping: ChatTyping;
+}
+
+export interface ShareChatWorkPackageRequest {
+    /**
+     *
+     */
+    conversationId: string;
+    /**
+     *
+     */
+    idempotencyKey: string;
 }
 
 export interface StartNextChatQuotationRequest {
@@ -825,6 +934,69 @@ export class MessagingApi extends runtime.BaseAPI {
      */
     async cancelSiteInspection(requestParameters: CancelSiteInspectionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SiteInspectionListResponse> {
         const response = await this.cancelSiteInspectionRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for chooseChatAutomatedResponse without sending the request
+     */
+    async chooseChatAutomatedResponseRequestOpts(requestParameters: ChooseChatAutomatedResponseRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['conversationId'] == null) {
+            throw new runtime.RequiredError(
+                'conversationId',
+                'Required parameter "conversationId" was null or undefined when calling chooseChatAutomatedResponse().'
+            );
+        }
+
+        if (requestParameters['chatAutomatedChoice'] == null) {
+            throw new runtime.RequiredError(
+                'chatAutomatedChoice',
+                'Required parameter "chatAutomatedChoice" was null or undefined when calling chooseChatAutomatedResponse().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("passportBearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/buyers/conversations/{conversationId}/automated-response`;
+        urlPath = urlPath.replace('{conversationId}', encodeURIComponent(String(requestParameters['conversationId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: ChatAutomatedChoiceToJSON(requestParameters['chatAutomatedChoice']),
+        };
+    }
+
+    /**
+     * Buyer-only explicit button selection for the active welcome message. Rechecks membership, enabled settings, read-only closure and human takeover. Same client_message_id replays safely.
+     */
+    async chooseChatAutomatedResponseRaw(requestParameters: ChooseChatAutomatedResponseRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ChatIdResponse>> {
+        const requestOptions = await this.chooseChatAutomatedResponseRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ChatIdResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Buyer-only explicit button selection for the active welcome message. Rechecks membership, enabled settings, read-only closure and human takeover. Same client_message_id replays safely.
+     */
+    async chooseChatAutomatedResponse(requestParameters: ChooseChatAutomatedResponseRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ChatIdResponse> {
+        const response = await this.chooseChatAutomatedResponseRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -1153,6 +1325,55 @@ export class MessagingApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates request options for getAutomatedResponseSettings without sending the request
+     */
+    async getAutomatedResponseSettingsRequestOpts(): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("passportBearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/vendor/messaging/automated-response`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Owner and Store Manager only. Static store text, disabled by default.
+     */
+    async getAutomatedResponseSettingsRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AutomatedResponseSettingsEnvelope>> {
+        const requestOptions = await this.getAutomatedResponseSettingsRequestOpts();
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => AutomatedResponseSettingsEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * Owner and Store Manager only. Static store text, disabled by default.
+     */
+    async getAutomatedResponseSettings(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AutomatedResponseSettingsEnvelope> {
+        const response = await this.getAutomatedResponseSettingsRaw(initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Creates request options for getChatAvatar without sending the request
      */
     async getChatAvatarRequestOpts(requestParameters: GetChatAvatarRequest): Promise<runtime.RequestOpts> {
@@ -1314,6 +1535,10 @@ export class MessagingApi extends runtime.BaseAPI {
             queryParameters['legacy_page'] = requestParameters['legacyPage'];
         }
 
+        if (requestParameters['storeThread'] != null) {
+            queryParameters['store_thread'] = requestParameters['storeThread'];
+        }
+
         const headerParameters: runtime.HTTPHeaders = {};
 
         if (this.configuration && this.configuration.accessToken) {
@@ -1356,6 +1581,63 @@ export class MessagingApi extends runtime.BaseAPI {
      */
     async getConversation(requestParameters: GetConversationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ConversationDetailResponse> {
         const response = await this.getConversationRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for getVendorBuyerThread without sending the request
+     */
+    async getVendorBuyerThreadRequestOpts(requestParameters: GetVendorBuyerThreadRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['conversationId'] == null) {
+            throw new runtime.RequiredError(
+                'conversationId',
+                'Required parameter "conversationId" was null or undefined when calling getVendorBuyerThread().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['before'] != null) {
+            queryParameters['before'] = requestParameters['before'];
+        }
+
+        if (requestParameters['page'] != null) {
+            queryParameters['page'] = requestParameters['page'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/vendor/conversations/{conversationId}/buyer-thread`;
+        urlPath = urlPath.replace('{conversationId}', encodeURIComponent(String(requestParameters['conversationId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * One normal Buyer/store chat. The server uses the authorized store sales conversation for ordinary replies automatically, preserving order closure and original commercial permissions. Work Packages appear as message attachments; users never choose a reply subject.
+     */
+    async getVendorBuyerThreadRaw(requestParameters: GetVendorBuyerThreadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ConversationDetailResponse>> {
+        const requestOptions = await this.getVendorBuyerThreadRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ConversationDetailResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * One normal Buyer/store chat. The server uses the authorized store sales conversation for ordinary replies automatically, preserving order closure and original commercial permissions. Work Packages appear as message attachments; users never choose a reply subject.
+     */
+    async getVendorBuyerThread(requestParameters: GetVendorBuyerThreadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ConversationDetailResponse> {
+        const response = await this.getVendorBuyerThreadRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -1499,6 +1781,7 @@ export class MessagingApi extends runtime.BaseAPI {
 
     /**
      * Creates request options for listChatProjectInquiries without sending the request
+     * @deprecated
      */
     async listChatProjectInquiriesRequestOpts(requestParameters: ListChatProjectInquiriesRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['messagingPortal'] == null) {
@@ -1546,6 +1829,7 @@ export class MessagingApi extends runtime.BaseAPI {
 
     /**
      * Lists open Project-Based quotation inquiries for this authorized sales conversation\'s Buyer and Store. Includes only currently authorized assignments for the current version of an undeleted, unassigned Active or Quotation Inquiry Work Package in an Active Project. Quotations must be Draft, Published, Viewed, Countered or Stock Revalidation Required; Published, Viewed and Countered deadlines must still be in the future. Filters before pagination, newest activity first. Closed and older inquiries retain directly authorized conversation and quotation history. Never creates an inquiry. Fulfillment threads cannot use this endpoint.
+     * @deprecated
      */
     async listChatProjectInquiriesRaw(requestParameters: ListChatProjectInquiriesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ConversationPageResponse>> {
         const requestOptions = await this.listChatProjectInquiriesRequestOpts(requestParameters);
@@ -1556,6 +1840,7 @@ export class MessagingApi extends runtime.BaseAPI {
 
     /**
      * Lists open Project-Based quotation inquiries for this authorized sales conversation\'s Buyer and Store. Includes only currently authorized assignments for the current version of an undeleted, unassigned Active or Quotation Inquiry Work Package in an Active Project. Quotations must be Draft, Published, Viewed, Countered or Stock Revalidation Required; Published, Viewed and Countered deadlines must still be in the future. Filters before pagination, newest activity first. Closed and older inquiries retain directly authorized conversation and quotation history. Never creates an inquiry. Fulfillment threads cannot use this endpoint.
+     * @deprecated
      */
     async listChatProjectInquiries(requestParameters: ListChatProjectInquiriesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ConversationPageResponse> {
         const response = await this.listChatProjectInquiriesRaw(requestParameters, initOverrides);
@@ -1610,7 +1895,7 @@ export class MessagingApi extends runtime.BaseAPI {
     }
 
     /**
-     * One sales inbox entry per Buyer and Store. The authorized Item-Based conversation is the main thread; when unavailable to the viewer, use their oldest authorized project inquiry. Preview, activity ordering and unread count include all currently authorized sales inquiries in that group. Detail messages and read receipts remain conversation-specific. Assigned Fulfillment Staff retain their separate order threads. Current purpose, participant, account and fixed-role authority are checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses native bearer transport.
+     * Unified paginated inbox of authorized SALES inquiry threads, including Work Packages directly. Fulfillment remains order-specific. Each inquiry preserves its own receipts and personal archive.
      */
     async listConversationsRaw(requestParameters: ListConversationsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ConversationPageResponse>> {
         const requestOptions = await this.listConversationsRequestOpts(requestParameters);
@@ -1620,10 +1905,66 @@ export class MessagingApi extends runtime.BaseAPI {
     }
 
     /**
-     * One sales inbox entry per Buyer and Store. The authorized Item-Based conversation is the main thread; when unavailable to the viewer, use their oldest authorized project inquiry. Preview, activity ordering and unread count include all currently authorized sales inquiries in that group. Detail messages and read receipts remain conversation-specific. Assigned Fulfillment Staff retain their separate order threads. Current purpose, participant, account and fixed-role authority are checked server-side. Vendor uses HttpOnly cookies and CSRF; Buyer uses native bearer transport.
+     * Unified paginated inbox of authorized SALES inquiry threads, including Work Packages directly. Fulfillment remains order-specific. Each inquiry preserves its own receipts and personal archive.
      */
     async listConversations(requestParameters: ListConversationsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ConversationPageResponse> {
         const response = await this.listConversationsRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for listVendorBuyerThreadContexts without sending the request
+     * @deprecated
+     */
+    async listVendorBuyerThreadContextsRequestOpts(requestParameters: ListVendorBuyerThreadContextsRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['conversationId'] == null) {
+            throw new runtime.RequiredError(
+                'conversationId',
+                'Required parameter "conversationId" was null or undefined when calling listVendorBuyerThreadContexts().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['page'] != null) {
+            queryParameters['page'] = requestParameters['page'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/vendor/conversations/{conversationId}/buyer-thread/contexts`;
+        urlPath = urlPath.replace('{conversationId}', encodeURIComponent(String(requestParameters['conversationId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Compatibility read for historical clients. The application has no subject picker; normal chat replies are routed automatically.
+     * @deprecated
+     */
+    async listVendorBuyerThreadContextsRaw(requestParameters: ListVendorBuyerThreadContextsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ConversationPageResponse>> {
+        const requestOptions = await this.listVendorBuyerThreadContextsRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ConversationPageResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Compatibility read for historical clients. The application has no subject picker; normal chat replies are routed automatically.
+     * @deprecated
+     */
+    async listVendorBuyerThreadContexts(requestParameters: ListVendorBuyerThreadContextsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ConversationPageResponse> {
+        const response = await this.listVendorBuyerThreadContextsRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -1673,6 +2014,148 @@ export class MessagingApi extends runtime.BaseAPI {
      */
     async listVendorFulfillmentConversations(requestParameters: ListVendorFulfillmentConversationsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<FulfillmentConversationPageResponse> {
         const response = await this.listVendorFulfillmentConversationsRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for messageWorkPackageOrder without sending the request
+     */
+    async messageWorkPackageOrderRequestOpts(requestParameters: MessageWorkPackageOrderRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['orderId'] == null) {
+            throw new runtime.RequiredError(
+                'orderId',
+                'Required parameter "orderId" was null or undefined when calling messageWorkPackageOrder().'
+            );
+        }
+
+        if (requestParameters['idempotencyKey'] == null) {
+            throw new runtime.RequiredError(
+                'idempotencyKey',
+                'Required parameter "idempotencyKey" was null or undefined when calling messageWorkPackageOrder().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (requestParameters['idempotencyKey'] != null) {
+            headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("passportBearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/buyers/orders/{orderId}/work-package-message`;
+        urlPath = urlPath.replace('{orderId}', encodeURIComponent(String(requestParameters['orderId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Buyer-only Message action. Reuses the normal store chat and posts its locked Work Package attachment; never changes an order, quotation or procurement selection.
+     */
+    async messageWorkPackageOrderRaw(requestParameters: MessageWorkPackageOrderRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ChatIdResponse>> {
+        const requestOptions = await this.messageWorkPackageOrderRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ChatIdResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Buyer-only Message action. Reuses the normal store chat and posts its locked Work Package attachment; never changes an order, quotation or procurement selection.
+     */
+    async messageWorkPackageOrder(requestParameters: MessageWorkPackageOrderRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ChatIdResponse> {
+        const response = await this.messageWorkPackageOrderRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for openPendingOrderQuotation without sending the request
+     */
+    async openPendingOrderQuotationRequestOpts(requestParameters: OpenPendingOrderQuotationRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['orderId'] == null) {
+            throw new runtime.RequiredError(
+                'orderId',
+                'Required parameter "orderId" was null or undefined when calling openPendingOrderQuotation().'
+            );
+        }
+
+        if (requestParameters['idempotencyKey'] == null) {
+            throw new runtime.RequiredError(
+                'idempotencyKey',
+                'Required parameter "idempotencyKey" was null or undefined when calling openPendingOrderQuotation().'
+            );
+        }
+
+        if (requestParameters['pendingOrderQuotationInput'] == null) {
+            throw new runtime.RequiredError(
+                'pendingOrderQuotationInput',
+                'Required parameter "pendingOrderQuotationInput" was null or undefined when calling openPendingOrderQuotation().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (requestParameters['idempotencyKey'] != null) {
+            headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("passportBearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/vendor/orders/{orderId}/quotation-inquiry`;
+        urlPath = urlPath.replace('{orderId}', encodeURIComponent(String(requestParameters['orderId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: PendingOrderQuotationInputToJSON(requestParameters['pendingOrderQuotationInput']),
+        };
+    }
+
+    /**
+     * Authorized sales publisher opens the inquiry attached to this pending unconfirmed order. Opening never removes or cancels the order. Buyer acceptance atomically cancels the original pending request and creates its quotation-backed replacement. Accepted orders and any order with payment records cannot be replaced.
+     */
+    async openPendingOrderQuotationRaw(requestParameters: OpenPendingOrderQuotationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ChatIdResponse>> {
+        const requestOptions = await this.openPendingOrderQuotationRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ChatIdResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Authorized sales publisher opens the inquiry attached to this pending unconfirmed order. Opening never removes or cancels the order. Buyer acceptance atomically cancels the original pending request and creates its quotation-backed replacement. Accepted orders and any order with payment records cannot be replaced.
+     */
+    async openPendingOrderQuotation(requestParameters: OpenPendingOrderQuotationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ChatIdResponse> {
+        const response = await this.openPendingOrderQuotationRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
@@ -2084,6 +2567,76 @@ export class MessagingApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates request options for saveAutomatedResponseSettings without sending the request
+     */
+    async saveAutomatedResponseSettingsRequestOpts(requestParameters: SaveAutomatedResponseSettingsRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['idempotencyKey'] == null) {
+            throw new runtime.RequiredError(
+                'idempotencyKey',
+                'Required parameter "idempotencyKey" was null or undefined when calling saveAutomatedResponseSettings().'
+            );
+        }
+
+        if (requestParameters['automatedResponseSettings'] == null) {
+            throw new runtime.RequiredError(
+                'automatedResponseSettings',
+                'Required parameter "automatedResponseSettings" was null or undefined when calling saveAutomatedResponseSettings().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (requestParameters['idempotencyKey'] != null) {
+            headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("passportBearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/vendor/messaging/automated-response`;
+
+        return {
+            path: urlPath,
+            method: 'PUT',
+            headers: headerParameters,
+            query: queryParameters,
+            body: AutomatedResponseSettingsToJSON(requestParameters['automatedResponseSettings']),
+        };
+    }
+
+    /**
+     * Versioned, idempotent static response settings. Up to three explicit button rules; no AI or NLP.
+     */
+    async saveAutomatedResponseSettingsRaw(requestParameters: SaveAutomatedResponseSettingsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<AutomatedResponseSettingsEnvelope>> {
+        const requestOptions = await this.saveAutomatedResponseSettingsRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => AutomatedResponseSettingsEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * Versioned, idempotent static response settings. Up to three explicit button rules; no AI or NLP.
+     */
+    async saveAutomatedResponseSettings(requestParameters: SaveAutomatedResponseSettingsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<AutomatedResponseSettingsEnvelope> {
+        const response = await this.saveAutomatedResponseSettingsRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Creates request options for saveChatQuotationDraft without sending the request
      */
     async saveChatQuotationDraftRequestOpts(requestParameters: SaveChatQuotationDraftRequest): Promise<runtime.RequestOpts> {
@@ -2356,6 +2909,70 @@ export class MessagingApi extends runtime.BaseAPI {
      */
     async sendChatTyping(requestParameters: SendChatTypingRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ChatEmptyResponse> {
         const response = await this.sendChatTypingRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for shareChatWorkPackage without sending the request
+     */
+    async shareChatWorkPackageRequestOpts(requestParameters: ShareChatWorkPackageRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['conversationId'] == null) {
+            throw new runtime.RequiredError(
+                'conversationId',
+                'Required parameter "conversationId" was null or undefined when calling shareChatWorkPackage().'
+            );
+        }
+
+        if (requestParameters['idempotencyKey'] == null) {
+            throw new runtime.RequiredError(
+                'idempotencyKey',
+                'Required parameter "idempotencyKey" was null or undefined when calling shareChatWorkPackage().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (requestParameters['idempotencyKey'] != null) {
+            headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
+        }
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("passportBearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/buyers/conversations/{conversationId}/work-package-attachment`;
+        urlPath = urlPath.replace('{conversationId}', encodeURIComponent(String(requestParameters['conversationId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Buyer-only Message action. Reuses the normal store chat and posts its locked Work Package attachment; never changes an order, quotation or procurement selection.
+     */
+    async shareChatWorkPackageRaw(requestParameters: ShareChatWorkPackageRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ChatIdResponse>> {
+        const requestOptions = await this.shareChatWorkPackageRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => ChatIdResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Buyer-only Message action. Reuses the normal store chat and posts its locked Work Package attachment; never changes an order, quotation or procurement selection.
+     */
+    async shareChatWorkPackage(requestParameters: ShareChatWorkPackageRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ChatIdResponse> {
+        const response = await this.shareChatWorkPackageRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

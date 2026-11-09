@@ -13,27 +13,6 @@
  */
 
 import { mapValues, parseDate, parseDateTime, serializeDate, serializeDateTime } from '../runtime';
-import type { VendorProductAnalyticsBasketRules } from './VendorProductAnalyticsBasketRules';
-import {
-    VendorProductAnalyticsBasketRulesFromJSON,
-    VendorProductAnalyticsBasketRulesFromJSONTyped,
-    VendorProductAnalyticsBasketRulesToJSON,
-    VendorProductAnalyticsBasketRulesToJSONTyped,
-} from './VendorProductAnalyticsBasketRules';
-import type { ProductAnalyticsPeriod } from './ProductAnalyticsPeriod';
-import {
-    ProductAnalyticsPeriodFromJSON,
-    ProductAnalyticsPeriodFromJSONTyped,
-    ProductAnalyticsPeriodToJSON,
-    ProductAnalyticsPeriodToJSONTyped,
-} from './ProductAnalyticsPeriod';
-import type { ProductAnalyticsTracking } from './ProductAnalyticsTracking';
-import {
-    ProductAnalyticsTrackingFromJSON,
-    ProductAnalyticsTrackingFromJSONTyped,
-    ProductAnalyticsTrackingToJSON,
-    ProductAnalyticsTrackingToJSONTyped,
-} from './ProductAnalyticsTracking';
 import type { VendorProductAnalyticsAccess } from './VendorProductAnalyticsAccess';
 import {
     VendorProductAnalyticsAccessFromJSON,
@@ -41,13 +20,6 @@ import {
     VendorProductAnalyticsAccessToJSON,
     VendorProductAnalyticsAccessToJSONTyped,
 } from './VendorProductAnalyticsAccess';
-import type { VendorProductAnalyticsKpis } from './VendorProductAnalyticsKpis';
-import {
-    VendorProductAnalyticsKpisFromJSON,
-    VendorProductAnalyticsKpisFromJSONTyped,
-    VendorProductAnalyticsKpisToJSON,
-    VendorProductAnalyticsKpisToJSONTyped,
-} from './VendorProductAnalyticsKpis';
 import type { VendorProductAnalyticsCategoriesInner } from './VendorProductAnalyticsCategoriesInner';
 import {
     VendorProductAnalyticsCategoriesInnerFromJSON,
@@ -62,20 +34,6 @@ import {
     ProductAnalyticsRowToJSON,
     ProductAnalyticsRowToJSONTyped,
 } from './ProductAnalyticsRow';
-import type { ProductAnalyticsSegments } from './ProductAnalyticsSegments';
-import {
-    ProductAnalyticsSegmentsFromJSON,
-    ProductAnalyticsSegmentsFromJSONTyped,
-    ProductAnalyticsSegmentsToJSON,
-    ProductAnalyticsSegmentsToJSONTyped,
-} from './ProductAnalyticsSegments';
-import type { ProductAnalyticsSuggestion } from './ProductAnalyticsSuggestion';
-import {
-    ProductAnalyticsSuggestionFromJSON,
-    ProductAnalyticsSuggestionFromJSONTyped,
-    ProductAnalyticsSuggestionToJSON,
-    ProductAnalyticsSuggestionToJSONTyped,
-} from './ProductAnalyticsSuggestion';
 import type { VendorProductAnalyticsProducts } from './VendorProductAnalyticsProducts';
 import {
     VendorProductAnalyticsProductsFromJSON,
@@ -97,9 +55,58 @@ import {
     VendorProductAnalyticsForecastToJSON,
     VendorProductAnalyticsForecastToJSONTyped,
 } from './VendorProductAnalyticsForecast';
+import type { VendorProductAnalyticsBasketRules } from './VendorProductAnalyticsBasketRules';
+import {
+    VendorProductAnalyticsBasketRulesFromJSON,
+    VendorProductAnalyticsBasketRulesFromJSONTyped,
+    VendorProductAnalyticsBasketRulesToJSON,
+    VendorProductAnalyticsBasketRulesToJSONTyped,
+} from './VendorProductAnalyticsBasketRules';
+import type { ProductAnalyticsRatedProduct } from './ProductAnalyticsRatedProduct';
+import {
+    ProductAnalyticsRatedProductFromJSON,
+    ProductAnalyticsRatedProductFromJSONTyped,
+    ProductAnalyticsRatedProductToJSON,
+    ProductAnalyticsRatedProductToJSONTyped,
+} from './ProductAnalyticsRatedProduct';
+import type { ProductAnalyticsPeriod } from './ProductAnalyticsPeriod';
+import {
+    ProductAnalyticsPeriodFromJSON,
+    ProductAnalyticsPeriodFromJSONTyped,
+    ProductAnalyticsPeriodToJSON,
+    ProductAnalyticsPeriodToJSONTyped,
+} from './ProductAnalyticsPeriod';
+import type { ProductAnalyticsTracking } from './ProductAnalyticsTracking';
+import {
+    ProductAnalyticsTrackingFromJSON,
+    ProductAnalyticsTrackingFromJSONTyped,
+    ProductAnalyticsTrackingToJSON,
+    ProductAnalyticsTrackingToJSONTyped,
+} from './ProductAnalyticsTracking';
+import type { VendorProductAnalyticsKpis } from './VendorProductAnalyticsKpis';
+import {
+    VendorProductAnalyticsKpisFromJSON,
+    VendorProductAnalyticsKpisFromJSONTyped,
+    VendorProductAnalyticsKpisToJSON,
+    VendorProductAnalyticsKpisToJSONTyped,
+} from './VendorProductAnalyticsKpis';
+import type { ProductAnalyticsSegments } from './ProductAnalyticsSegments';
+import {
+    ProductAnalyticsSegmentsFromJSON,
+    ProductAnalyticsSegmentsFromJSONTyped,
+    ProductAnalyticsSegmentsToJSON,
+    ProductAnalyticsSegmentsToJSONTyped,
+} from './ProductAnalyticsSegments';
+import type { ProductAnalyticsSuggestion } from './ProductAnalyticsSuggestion';
+import {
+    ProductAnalyticsSuggestionFromJSON,
+    ProductAnalyticsSuggestionFromJSONTyped,
+    ProductAnalyticsSuggestionToJSON,
+    ProductAnalyticsSuggestionToJSONTyped,
+} from './ProductAnalyticsSuggestion';
 
 /**
- *
+ * Product values use the same latest financial snapshot lines and first-confirmation dates as Finance and Dashboard product reports. Cancelled and fully refunded sales contribute zero. Materials include discounts and VAT, exclude delivery, and are before partial refunds; Finance shows the completed partial-refund deduction separately when reconciling to Net sales.
  * @export
  * @interface VendorProductAnalytics
  */
@@ -148,6 +155,10 @@ export interface VendorProductAnalytics {
      *
      */
     mostViewed: Array<ProductAnalyticsRow>;
+    /**
+     * Up to five products ranked by all-time visible Product Quality average descending, count descending, then listing ID ascending, independent of the selected period. Null without reviews.view; an empty array means no rated published products. Uses the same blind-reveal, moderation, active-dispute and score-exclusion gates as Buyer product averages.
+     */
+    topRated?: Array<ProductAnalyticsRatedProduct> | null;
     /**
      *
      */
@@ -214,6 +225,7 @@ export function VendorProductAnalyticsFromJSONTyped(json: any, ignoreDiscriminat
         'topSelling': ((json['top_selling'] as Array<any>).map(ProductAnalyticsRowFromJSON)),
         'topPerforming': ((json['top_performing'] as Array<any>).map(ProductAnalyticsRowFromJSON)),
         'mostViewed': ((json['most_viewed'] as Array<any>).map(ProductAnalyticsRowFromJSON)),
+        'topRated': json['top_rated'] === undefined ? undefined : json['top_rated'] === null ? null : ((json['top_rated'] as Array<any>).map(ProductAnalyticsRatedProductFromJSON)),
         'categories': ((json['categories'] as Array<any>).map(VendorProductAnalyticsCategoriesInnerFromJSON)),
         'segments': ProductAnalyticsSegmentsFromJSON(json['segments']),
         'basketRules': VendorProductAnalyticsBasketRulesFromJSON(json['basket_rules']),
@@ -244,6 +256,7 @@ export function VendorProductAnalyticsToJSONTyped(value?: VendorProductAnalytics
         'top_selling': ((value['topSelling'] as Array<any>).map(ProductAnalyticsRowToJSON)),
         'top_performing': ((value['topPerforming'] as Array<any>).map(ProductAnalyticsRowToJSON)),
         'most_viewed': ((value['mostViewed'] as Array<any>).map(ProductAnalyticsRowToJSON)),
+        'top_rated': value['topRated'] == null ? undefined : ((value['topRated'] as Array<any>).map(ProductAnalyticsRatedProductToJSON)),
         'categories': ((value['categories'] as Array<any>).map(VendorProductAnalyticsCategoriesInnerToJSON)),
         'segments': ProductAnalyticsSegmentsToJSON(value['segments']),
         'basket_rules': VendorProductAnalyticsBasketRulesToJSON(value['basketRules']),

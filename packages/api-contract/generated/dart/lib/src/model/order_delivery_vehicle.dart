@@ -4,6 +4,7 @@
 
 // ignore_for_file: unused_element
 import 'package:built_collection/built_collection.dart';
+import 'package:materyalph_api_client/src/model/delivery_vehicle_profile.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -12,6 +13,7 @@ part 'order_delivery_vehicle.g.dart';
 /// OrderDeliveryVehicle
 ///
 /// Properties:
+/// * [vehicleDetails] - Frozen display details when available; older snapshots may omit them. Image bytes require the existing authorized order file endpoint.
 /// * [name]
 /// * [vehicleCategory]
 /// * [vehicleType]
@@ -30,6 +32,10 @@ part 'order_delivery_vehicle.g.dart';
 /// * [mobilizationTotalCentavos] - Zero for snapshots before mobilization existed.
 @BuiltValue()
 abstract class OrderDeliveryVehicle implements Built<OrderDeliveryVehicle, OrderDeliveryVehicleBuilder> {
+  /// Frozen display details when available; older snapshots may omit them. Image bytes require the existing authorized order file endpoint.
+  @BuiltValueField(wireName: r'vehicle_details')
+  DeliveryVehicleProfile? get vehicleDetails;
+
   @BuiltValueField(wireName: r'name')
   String? get name;
 
@@ -103,6 +109,13 @@ class _$OrderDeliveryVehicleSerializer implements PrimitiveSerializer<OrderDeliv
     OrderDeliveryVehicle object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.vehicleDetails != null) {
+      yield r'vehicle_details';
+      yield serializers.serialize(
+        object.vehicleDetails,
+        specifiedType: const FullType.nullable(DeliveryVehicleProfile),
+      );
+    }
     yield r'name';
     yield object.name == null ? null : serializers.serialize(
       object.name,
@@ -212,6 +225,14 @@ class _$OrderDeliveryVehicleSerializer implements PrimitiveSerializer<OrderDeliv
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'vehicle_details':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(DeliveryVehicleProfile),
+          ) as DeliveryVehicleProfile?;
+          if (valueDes == null) continue;
+          result.vehicleDetails.replace(valueDes);
+          break;
         case r'name':
           final valueDes = serializers.deserialize(
             value,

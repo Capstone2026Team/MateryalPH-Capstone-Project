@@ -15,6 +15,11 @@ part 'commission_policy_publish_request.g.dart';
 /// * [expectedVersion]
 /// * [effectiveFrom] - Omit or null to apply now; otherwise a future instant.
 /// * [reason]
+/// * [vendorMessage]
+/// * [noticeOverride]
+/// * [noticeOverrideReason]
+/// * [supersedesPolicyId]
+/// * [cancelScheduled]
 @BuiltValue()
 abstract class CommissionPolicyPublishRequest implements Built<CommissionPolicyPublishRequest, CommissionPolicyPublishRequestBuilder> {
   @BuiltValueField(wireName: r'commission_basis_points')
@@ -30,12 +35,29 @@ abstract class CommissionPolicyPublishRequest implements Built<CommissionPolicyP
   @BuiltValueField(wireName: r'reason')
   String get reason;
 
+  @BuiltValueField(wireName: r'vendor_message')
+  String? get vendorMessage;
+
+  @BuiltValueField(wireName: r'notice_override')
+  bool? get noticeOverride;
+
+  @BuiltValueField(wireName: r'notice_override_reason')
+  String? get noticeOverrideReason;
+
+  @BuiltValueField(wireName: r'supersedes_policy_id')
+  String? get supersedesPolicyId;
+
+  @BuiltValueField(wireName: r'cancel_scheduled')
+  bool? get cancelScheduled;
+
   CommissionPolicyPublishRequest._();
 
   factory CommissionPolicyPublishRequest([void updates(CommissionPolicyPublishRequestBuilder b)]) = _$CommissionPolicyPublishRequest;
 
   @BuiltValueHook(initializeBuilder: true)
-  static void _defaults(CommissionPolicyPublishRequestBuilder b) => b;
+  static void _defaults(CommissionPolicyPublishRequestBuilder b) => b
+      ..noticeOverride = false
+      ..cancelScheduled = false;
 
   @BuiltValueSerializer(custom: true)
   static Serializer<CommissionPolicyPublishRequest> get serializer => _$CommissionPolicyPublishRequestSerializer();
@@ -75,6 +97,41 @@ class _$CommissionPolicyPublishRequestSerializer implements PrimitiveSerializer<
       object.reason,
       specifiedType: const FullType(String),
     );
+    if (object.vendorMessage != null) {
+      yield r'vendor_message';
+      yield serializers.serialize(
+        object.vendorMessage,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
+    if (object.noticeOverride != null) {
+      yield r'notice_override';
+      yield serializers.serialize(
+        object.noticeOverride,
+        specifiedType: const FullType(bool),
+      );
+    }
+    if (object.noticeOverrideReason != null) {
+      yield r'notice_override_reason';
+      yield serializers.serialize(
+        object.noticeOverrideReason,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
+    if (object.supersedesPolicyId != null) {
+      yield r'supersedes_policy_id';
+      yield serializers.serialize(
+        object.supersedesPolicyId,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
+    if (object.cancelScheduled != null) {
+      yield r'cancel_scheduled';
+      yield serializers.serialize(
+        object.cancelScheduled,
+        specifiedType: const FullType(bool),
+      );
+    }
   }
 
   @override
@@ -126,6 +183,46 @@ class _$CommissionPolicyPublishRequestSerializer implements PrimitiveSerializer<
             specifiedType: const FullType(String),
           ) as String;
           result.reason = valueDes;
+          break;
+        case r'vendor_message':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.vendorMessage = valueDes;
+          break;
+        case r'notice_override':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.noticeOverride = valueDes;
+          break;
+        case r'notice_override_reason':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.noticeOverrideReason = valueDes;
+          break;
+        case r'supersedes_policy_id':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.supersedesPolicyId = valueDes;
+          break;
+        case r'cancel_scheduled':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(bool),
+          ) as bool?;
+          if (valueDes == null) continue;
+          result.cancelScheduled = valueDes;
           break;
         default:
           unhandled.add(key);

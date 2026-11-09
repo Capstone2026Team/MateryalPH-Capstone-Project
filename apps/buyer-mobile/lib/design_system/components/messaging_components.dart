@@ -6,7 +6,10 @@ import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 import '../theme.dart';
 import 'order_components.dart';
 import 'quotation_details.dart';
-import 'procurement_components.dart' show BuyerDeliveryRecommendation;
+import 'procurement_components.dart'
+    show BuyerDeliveryRecommendation, BuyerLoadingIndicator;
+import 'work_package_attachment.dart';
+import '../../features/projects/projects_repository.dart' show projectObject;
 
 class QuotationDeliveryTerms extends StatelessWidget {
   const QuotationDeliveryTerms({super.key, required this.content});
@@ -206,6 +209,16 @@ class ConversationInboxTile extends StatelessWidget {
                           : FontWeight.w600,
                     ),
                   ),
+                  if (c.contextType.name == 'PROJECT_BASED')
+                    Text(
+                      c.inquiryLabel ?? 'Work Package inquiry',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   const SizedBox(height: 4),
                   Text(
                     c.lastMessagePreview?.isNotEmpty == true
@@ -270,7 +283,9 @@ class ConversationMessageBubble extends StatelessWidget {
     this.onOpenProduct,
     this.loadImage,
     this.onSaveImage,
+    this.onAutomatedOption,
   });
+  final ValueChanged<int>? onAutomatedOption;
   final api.ChatMessage message;
   final ValueChanged<api.ChatAttachment> onOpenFile;
   final bool busy;
@@ -290,7 +305,7 @@ class ConversationMessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final m = message;
-    if (m.kind.name == 'SYSTEM') {
+    if (m.kind.name == 'SYSTEM' && m.automatedReply == null) {
       return Semantics(
         liveRegion: true,
         child: Padding(
@@ -338,10 +353,38 @@ class ConversationMessageBubble extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                   ],
-                  if (m.body.isNotEmpty && !_placeholderBody)
+                  if (m.automatedReply != null &&
+                      m.automatedReply!.options.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Text(
+                        'Choose an option or continue messaging',
+                        style: Theme.of(context).textTheme.labelSmall,
+                      ),
+                    ),
+                  if (m.body.isNotEmpty &&
+                      m.kind.name != 'WORK_PACKAGE' &&
+                      !_placeholderBody)
                     Text(
                       m.body,
                       style: const TextStyle(fontSize: 14, height: 1.5),
+                    ),
+                  if (m.automatedReply != null)
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      children: [
+                        for (final option in m.automatedReply!.options)
+                          OutlinedButton(
+                            onPressed:
+                                busy ||
+                                    !option.available ||
+                                    onAutomatedOption == null
+                                ? null
+                                : () => onAutomatedOption!(option.index),
+                            child: Text(option.label),
+                          ),
+                      ],
                     ),
                   if (m.product != null)
                     ChatProductCard(
@@ -349,6 +392,30 @@ class ConversationMessageBubble extends StatelessWidget {
                       onOpen: onOpenProduct == null
                           ? null
                           : () => onOpenProduct!(m.product!.listingId),
+                    ),
+                  if (m.workPackageAttachment != null)
+                    WorkPackageAttachment(
+                      compact: true,
+                      title: switch (projectObject(
+                        m.workPackageAttachment!.reference,
+                      )['material_scope']) {
+                        'VENDOR_ORDER' => 'Order materials',
+                        'VENDOR_ALLOCATION' => 'Materials for this store',
+                        _ => null,
+                      },
+                      original: projectObject(
+                        projectObject(
+                          m.workPackageAttachment!.reference,
+                        )['work_package'],
+                      ),
+                      proposed: projectObject(
+                        projectObject(
+                          m.workPackageAttachment!.reference,
+                        )['working_duplicate'],
+                      ),
+                      version: projectObject(
+                        m.workPackageAttachment!.reference,
+                      )['version'],
                     ),
                   for (final file in m.attachments)
                     if (loadImage != null &&
@@ -446,7 +513,7 @@ class ChatImageAttachment extends StatelessWidget {
               child = const Center(
                 child: SizedBox.square(
                   dimension: 24,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+                  child: BuyerLoadingIndicator(strokeWidth: 2),
                 ),
               );
             }
@@ -743,7 +810,37 @@ class QuotationVersionCard extends StatelessWidget {
                 : '${chatSentence(version.state)} · ${version.viewed ? 'Viewed by Buyer' : 'Not yet viewed'}',
             style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
           ),
-          const Divider(height: 28),
+          const SizedBox(height: 20),
+          const Text(
+            'Quotation total',
+            style: TextStyle(fontSize: 12, color: BuyerTheme.muted),
+          ),
+          Text(
+            chatMoney(c.commercial.commercialTotalCentavos),
+            style: const TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.w700,
+              height: 1.2,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '${c.lines.length} material line${c.lines.length == 1 ? '' : 's'} · ${c.fulfillmentMethod == 'PICKUP' ? 'Self-Pickup' : 'Site Delivery'}',
+            style: const TextStyle(fontSize: 13, color: BuyerTheme.muted),
+          ),
+          const Text(
+            'Before any payment processing fee',
+            style: TextStyle(fontSize: 12, color: BuyerTheme.muted),
+          ),
+          if (version.replacesOrderId != null)
+            const Padding(
+              padding: EdgeInsets.only(top: 12),
+              child: Text(
+                'Replacement quotation for your pending order. The original request stays linked until you accept.',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+          const Divider(height: 32),
           if (c.message?.trim().isNotEmpty == true) ...[
             Text(c.message!),
             const SizedBox(height: 16),
@@ -754,8 +851,9 @@ class QuotationVersionCard extends StatelessWidget {
             selectedPaymentMethod: version.selectedPaymentMethod,
             accepted: version.state == 'ACCEPTED',
           ),
+          const SizedBox(height: 12),
           QuotationDeliveryTerms(content: c),
-          const Divider(height: 28),
+          const Divider(height: 32),
           QuotationChangeList(
             notes: importantQuotationChanges(c, c.changes),
             emptyLabel: version.version == 1

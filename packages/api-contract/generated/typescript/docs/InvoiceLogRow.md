@@ -7,6 +7,7 @@ One row of the selected view: an open request, an order without an invoice copy 
 
 Name | Type
 ------------ | -------------
+`buyerName` | string
 `id` | string
 `orderId` | string
 `orderReference` | string
@@ -43,6 +44,7 @@ import type { InvoiceLogRow } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "buyerName": null,
   "id": null,
   "orderId": null,
   "orderReference": null,

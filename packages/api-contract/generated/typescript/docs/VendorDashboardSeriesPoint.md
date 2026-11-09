@@ -12,6 +12,8 @@ Name | Type
 `ordersAverage` | number
 `grossSalesCentavos` | number
 `netSalesCentavos` | number
+`refundsCentavos` | number
+`cancellationDeductionsCentavos` | number
 `salesAverageCentavos` | number
 
 ## Example
@@ -27,6 +29,8 @@ const example = {
   "ordersAverage": null,
   "grossSalesCentavos": null,
   "netSalesCentavos": null,
+  "refundsCentavos": null,
+  "cancellationDeductionsCentavos": null,
   "salesAverageCentavos": null,
 } satisfies VendorDashboardSeriesPoint
 

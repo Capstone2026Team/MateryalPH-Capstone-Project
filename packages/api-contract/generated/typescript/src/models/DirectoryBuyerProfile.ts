@@ -48,6 +48,13 @@ import {
     DirectoryBuyerProfileActivityToJSON,
     DirectoryBuyerProfileActivityToJSONTyped,
 } from './DirectoryBuyerProfileActivity';
+import type { BuyerRatingSummary } from './BuyerRatingSummary';
+import {
+    BuyerRatingSummaryFromJSON,
+    BuyerRatingSummaryFromJSONTyped,
+    BuyerRatingSummaryToJSON,
+    BuyerRatingSummaryToJSONTyped,
+} from './BuyerRatingSummary';
 
 /**
  *
@@ -95,6 +102,10 @@ export interface DirectoryBuyerProfile {
      *
      */
     canViewEnforcement: boolean;
+    /**
+     *
+     */
+    rating: BuyerRatingSummary;
 }
 
 
@@ -135,6 +146,7 @@ export function instanceOfDirectoryBuyerProfile(value: object): value is Directo
     if ((!('recentOrders' in (value as Record<string, any>)) && !('recent_orders' in (value as Record<string, any>))) || ((value as Record<string, any>)['recentOrders'] === undefined && (value as Record<string, any>)['recent_orders'] === undefined)) return false;
     if (!('sanctions' in value) || value['sanctions'] === undefined) return false;
     if ((!('canViewEnforcement' in (value as Record<string, any>)) && !('can_view_enforcement' in (value as Record<string, any>))) || ((value as Record<string, any>)['canViewEnforcement'] === undefined && (value as Record<string, any>)['can_view_enforcement'] === undefined)) return false;
+    if (!('rating' in value) || value['rating'] === undefined) return false;
     return true;
 }
 
@@ -158,6 +170,7 @@ export function DirectoryBuyerProfileFromJSONTyped(json: any, ignoreDiscriminato
         'recentOrders': ((json['recent_orders'] as Array<any>).map(DirectoryBuyerProfileRecentOrdersInnerFromJSON)),
         'sanctions': ((json['sanctions'] as Array<any>).map(DirectorySanctionFromJSON)),
         'canViewEnforcement': json['can_view_enforcement'],
+        'rating': BuyerRatingSummaryFromJSON(json['rating']),
     };
 }
 
@@ -182,6 +195,7 @@ export function DirectoryBuyerProfileToJSONTyped(value?: DirectoryBuyerProfile |
         'recent_orders': ((value['recentOrders'] as Array<any>).map(DirectoryBuyerProfileRecentOrdersInnerToJSON)),
         'sanctions': ((value['sanctions'] as Array<any>).map(DirectorySanctionToJSON)),
         'can_view_enforcement': value['canViewEnforcement'],
+        'rating': BuyerRatingSummaryToJSON(value['rating']),
     };
 }
 

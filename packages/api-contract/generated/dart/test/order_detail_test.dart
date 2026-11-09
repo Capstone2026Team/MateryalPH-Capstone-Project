@@ -147,6 +147,11 @@ void main() {
       // TODO
     });
 
+    // OrderLocationMap locationMap
+    test('to test the property `locationMap`', () async {
+      // TODO
+    });
+
     // AutoAcceptOutcome autoAccept
     test('to test the property `autoAccept`', () async {
       // TODO

@@ -19,6 +19,11 @@ import {
     BuyerOrderReviewsEnvelopeToJSON,
 } from '../models/BuyerOrderReviewsEnvelope';
 import {
+    type BuyerReceivedRatingsEnvelope,
+    BuyerReceivedRatingsEnvelopeFromJSON,
+    BuyerReceivedRatingsEnvelopeToJSON,
+} from '../models/BuyerReceivedRatingsEnvelope';
+import {
     type BuyerReviewEditRequest,
     BuyerReviewEditRequestFromJSON,
     BuyerReviewEditRequestToJSON,
@@ -99,6 +104,13 @@ export interface GetBuyerReviewPhotoRequest {
      *
      */
     signature: string;
+}
+
+export interface ListBuyerReceivedRatingsRequest {
+    /**
+     *
+     */
+    page?: number;
 }
 
 export interface ListListingReviewsRequest {
@@ -459,6 +471,55 @@ export class BuyerReviewsApi extends runtime.BaseAPI {
      */
     async getBuyerReviewPhoto(requestParameters: GetBuyerReviewPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Blob> {
         const response = await this.getBuyerReviewPhotoRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for listBuyerReceivedRatings without sending the request
+     */
+    async listBuyerReceivedRatingsRequestOpts(requestParameters: ListBuyerReceivedRatingsRequest): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        if (requestParameters['page'] != null) {
+            queryParameters['page'] = requestParameters['page'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("passportBearer", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/buyers/ratings`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * The signed-in Buyer\'s received store ratings, newest first, with a server-calculated Contractor Community Score (CCS). Only that Buyer\'s completed orders and revealed, non-moderated, non-disputed, non-excluded ratings appear. CCS and criterion averages use all eligible ratings in the last 90 days before pagination; numeric scores remain null below five eligible completed transactions. This read does not alter history.
+     */
+    async listBuyerReceivedRatingsRaw(requestParameters: ListBuyerReceivedRatingsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<BuyerReceivedRatingsEnvelope>> {
+        const requestOptions = await this.listBuyerReceivedRatingsRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => BuyerReceivedRatingsEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * The signed-in Buyer\'s received store ratings, newest first, with a server-calculated Contractor Community Score (CCS). Only that Buyer\'s completed orders and revealed, non-moderated, non-disputed, non-excluded ratings appear. CCS and criterion averages use all eligible ratings in the last 90 days before pagination; numeric scores remain null below five eligible completed transactions. This read does not alter history.
+     */
+    async listBuyerReceivedRatings(requestParameters: ListBuyerReceivedRatingsRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<BuyerReceivedRatingsEnvelope> {
+        const response = await this.listBuyerReceivedRatingsRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

@@ -52,6 +52,7 @@ void main() {
       // TODO
     });
 
+    // False once a Vendor sales invoice copy has been sent, including legacy uploaded copies. Corrections remain a separate action.
     // bool canRequestCopy
     test('to test the property `canRequestCopy`', () async {
       // TODO
@@ -59,6 +60,11 @@ void main() {
 
     // bool canRequestCorrection
     test('to test the property `canRequestCorrection`', () async {
+      // TODO
+    });
+
+    // InvoiceOrderSummary orderSummary
+    test('to test the property `orderSummary`', () async {
       // TODO
     });
 

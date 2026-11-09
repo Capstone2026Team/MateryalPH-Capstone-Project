@@ -11,9 +11,13 @@ foreach (['buyers' => ['auth.transport:MOBILE', 'auth:api', 'account.access:BUYE
         Route::post('/messaging/auth', [C::class, 'authorizeChannel']);
         Route::get('/conversations', [C::class, 'index']);
         if ($prefix === 'vendor') {
+            Route::get('/messaging/automated-response', [C::class, 'automatedSettings']);
+            Route::put('/messaging/automated-response', [C::class, 'saveAutomatedSettings']);
             Route::post('/orders/{orderId}/conversation', [C::class, 'fromOrder'])->whereUuid('orderId');
+            Route::post('/orders/{orderId}/quotation-inquiry', [C::class, 'pendingOrderQuotation'])->whereUuid('orderId');
         }
         if ($prefix === 'buyers') {
+            Route::post('/orders/{orderId}/work-package-message', [C::class, 'messageWorkPackageOrder'])->whereUuid('orderId');
             Route::post('/conversations', [C::class, 'create']);
             Route::post('/site-inspections', [C::class, 'requestSiteInspection']);
         }
@@ -25,6 +29,8 @@ foreach (['buyers' => ['auth.transport:MOBILE', 'auth:api', 'account.access:BUYE
             Route::post('/typing', [C::class, 'typing']);
             Route::post('/read', [C::class, 'read']);
             if ($prefix === 'buyers') {
+                Route::post('/work-package-attachment', [C::class, 'shareWorkPackage']);
+                Route::post('/automated-response', [C::class, 'automatedChoice']);
                 Route::put('/destination', [C::class, 'destination']);
                 Route::put('/archive', [C::class, 'archive']);
                 Route::delete('/archive', [C::class, 'restore']);
@@ -33,6 +39,8 @@ foreach (['buyers' => ['auth.transport:MOBILE', 'auth:api', 'account.access:BUYE
             Route::get('/attachments/{attachmentId}', [C::class, 'download'])->whereUuid('attachmentId');
             Route::get('/avatars/{userId}', [C::class, 'avatar'])->whereNumber('userId');
             if ($prefix === 'vendor') {
+                Route::get('/buyer-thread', [C::class, 'buyerThread']);
+                Route::get('/buyer-thread/contexts', [C::class, 'buyerThreadContexts']);
                 Route::get('/fulfillment-conversations', [C::class, 'fulfillmentConversations']);
                 Route::get('/handlers', [C::class, 'handlers']);
                 Route::post('/transfer', [C::class, 'transfer']);

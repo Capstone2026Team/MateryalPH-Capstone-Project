@@ -23,5 +23,11 @@ void main() {
       // TODO
     });
 
+    // Current listing photo included in Vendor review details. Uses existing catalog media delivery; null when no ready, clean photo is available. Purchased name and variant remain the order snapshot.
+    // String imageUrl
+    test('to test the property `imageUrl`', () async {
+      // TODO
+    });
+
   });
 }

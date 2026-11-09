@@ -437,10 +437,7 @@ void main() {
         blindRevealText:
             'Ratings stay hidden until both parties submit or the 14-day window ends.',
         speedLabel: 'Processing Speed',
-        displayOptions: [
-          (choice: 'FIRST_NAME_LAST_INITIAL', preview: 'Juan C.'),
-          (choice: 'VERIFIED_BUYER', preview: 'Verified Buyer'),
-        ],
+        displayOptions: [(choice: 'FULL_NAME', preview: 'Juan dela Cruz')],
         vendorRating: null,
         canSubmitVendorRating: true,
         lines: [

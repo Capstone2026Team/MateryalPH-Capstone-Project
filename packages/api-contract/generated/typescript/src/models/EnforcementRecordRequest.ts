@@ -55,6 +55,10 @@ export interface EnforcementRecordRequest {
      *
      */
     continuationNote?: string | null;
+    /**
+     * Clean private proof files uploaded by this Admin for the same subject. Immutable once recorded.
+     */
+    evidenceFileIds?: Set<string>;
 }
 
 
@@ -122,6 +126,7 @@ export function EnforcementRecordRequestFromJSONTyped(json: any, ignoreDiscrimin
         'restorationCondition': json['restoration_condition'] === undefined ? undefined : json['restoration_condition'] === null ? null : json['restoration_condition'],
         'continuationPlan': json['continuation_plan'] === undefined ? undefined : json['continuation_plan'] === null ? null : json['continuation_plan'],
         'continuationNote': json['continuation_note'] === undefined ? undefined : json['continuation_note'] === null ? null : json['continuation_note'],
+        'evidenceFileIds': json['evidence_file_ids'] == null ? undefined : new Set(json['evidence_file_ids']),
     };
 }
 
@@ -145,6 +150,7 @@ export function EnforcementRecordRequestToJSONTyped(value?: EnforcementRecordReq
         'restoration_condition': value['restorationCondition'],
         'continuation_plan': value['continuationPlan'],
         'continuation_note': value['continuationNote'],
+        'evidence_file_ids': value['evidenceFileIds'] == null ? undefined : Array.from(value['evidenceFileIds'] as Set<any>),
     };
 }
 

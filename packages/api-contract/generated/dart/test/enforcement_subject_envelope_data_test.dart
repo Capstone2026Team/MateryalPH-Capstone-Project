@@ -67,5 +67,10 @@ void main() {
       // TODO
     });
 
+    // BuiltList<String> recordableActions
+    test('to test the property `recordableActions`', () async {
+      // TODO
+    });
+
   });
 }

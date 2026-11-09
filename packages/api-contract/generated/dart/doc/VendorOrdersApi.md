@@ -12,7 +12,9 @@ Method | HTTP request | Description
 [**confirmVendorOrder**](VendorOrdersApi.md#confirmvendororder) | **POST** /vendor/orders/{orderId}/confirm |
 [**declineVendorOrder**](VendorOrdersApi.md#declinevendororder) | **POST** /vendor/orders/{orderId}/decline |
 [**getVendorOrder**](VendorOrdersApi.md#getvendororder) | **GET** /vendor/orders/{orderId} |
+[**getVendorOrderBuyerPhoto**](VendorOrdersApi.md#getvendororderbuyerphoto) | **GET** /vendor/orders/{orderId}/buyer-photo |
 [**getVendorOrderDeliveryPlan**](VendorOrdersApi.md#getvendororderdeliveryplan) | **POST** /vendor/orders/{orderId}/delivery-recommendations |
+[**getVendorOrderRoute**](VendorOrdersApi.md#getvendororderroute) | **GET** /vendor/orders/{orderId}/route |
 [**listVendorOrders**](VendorOrdersApi.md#listvendororders) | **GET** /vendor/orders |
 
 
@@ -131,7 +133,7 @@ Name | Type | Description  | Notes
 
 
 
-Job-order detail with lines, authorized inventory, reservations, auto-accept outcome, confirmed delivery, NRPC, money breakdown, history, role-aware permissions and one primary action per state. Buyer coordinates are never returned.
+Job-order detail with lines, authorized inventory, reservations, auto-accept outcome, confirmed delivery, NRPC, money breakdown, history, role-aware permissions and one primary action per state. Location map points are limited to the registered store and the order's saved vehicle drop-off, available only to current authorized order viewers.
 
 ### Example
 ```dart
@@ -170,6 +172,55 @@ Name | Type | Description  | Notes
 
  - **Content-Type**: Not defined
  - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **getVendorOrderBuyerPhoto**
+> Uint8List getVendorOrderBuyerPhoto(orderId, version)
+
+
+
+Current sanitized Buyer profile photo for an authorized order viewer, including Self-Pickup and closed orders. Rechecks membership, organization, assignment where applicable and photo version after storage access. Phone authorization is unchanged. Private, no-store PNG.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getVendorOrdersApi();
+final String orderId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+final int version = 56; // int |
+
+try {
+    final response = api.getVendorOrderBuyerPhoto(orderId, version);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling VendorOrdersApi->getVendorOrderBuyerPhoto: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **orderId** | **String**|  |
+ **version** | **int**|  |
+
+### Return type
+
+[**Uint8List**](Uint8List.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: image/png, application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
@@ -222,6 +273,53 @@ Name | Type | Description  | Notes
 ### HTTP request headers
 
  - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **getVendorOrderRoute**
+> DeliveryNavigationRouteEnvelope getVendorOrderRoute(orderId)
+
+
+
+Read-only Google driving estimate from the registered store to this order's saved vehicle drop-off, including requests and closed orders. Current order-view authorization is rechecked after the provider call. No device location, live tracking or commercial recalculation.
+
+### Example
+```dart
+import 'package:materyalph_api_client/api.dart';
+// TODO Configure API key authorization: accessCookie
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKey = 'YOUR_API_KEY';
+// uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+//defaultApiClient.getAuthentication<ApiKeyAuth>('accessCookie').apiKeyPrefix = 'Bearer';
+
+final api = MateryalphApiClient().getVendorOrdersApi();
+final String orderId = 38400000-8cf0-11bd-b23e-10b96e4ef00d; // String |
+
+try {
+    final response = api.getVendorOrderRoute(orderId);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling VendorOrdersApi->getVendorOrderRoute: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **orderId** | **String**|  |
+
+### Return type
+
+[**DeliveryNavigationRouteEnvelope**](DeliveryNavigationRouteEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
  - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)

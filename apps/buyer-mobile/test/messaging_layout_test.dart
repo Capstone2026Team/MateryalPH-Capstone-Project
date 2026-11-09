@@ -115,25 +115,20 @@ api.ChatQuotationVersion layoutQuotation({
 );
 
 class LayoutMessagingRepository implements MessagingRepository {
+  final automatedChoices = <(String, int)>[];
+  @override
+  Future<void> chooseAutomatedResponse(
+    String id,
+    String welcomeId,
+    int index,
+    String key,
+  ) async {
+    automatedChoices.add((welcomeId, index));
+  }
+
   final quotationVersions = <api.ChatQuotationVersion>[];
   final quotationPages = <int>[];
   bool paginateQuotations = false;
-  final projectRows = <api.ConversationView>[];
-  final projectPages = <int>[];
-  @override
-  Future<api.ConversationPage> projectInquiries(
-    String id, {
-    int page = 1,
-  }) async {
-    projectPages.add(page);
-    return api.ConversationPage(
-      (b) => b
-        ..items.addAll(projectRows.skip((page - 1) * 25).take(25))
-        ..page = page
-        ..hasMore = projectRows.length > page * 25,
-    );
-  }
-
   final stores = [
     layoutConversation('one', 'Sampaloc Lumber Hardware', unread: 2),
     layoutConversation('two', 'L&D Hardware & Construction Supplies'),
@@ -487,6 +482,7 @@ void main() {
       );
       repository.stores[0] = repository.stores.first.rebuild(
         (b) => b
+          ..id = 'fulfillment-one'
           ..purpose = api.ConversationViewPurposeEnum.FULFILLMENT
           ..orderId = 'order-2'
           ..fulfillmentEntryEnabled = true,

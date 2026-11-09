@@ -13,7 +13,7 @@ Sign in to the Vendor Portal and open <strong>My Products → Inventory</strong>
 @endsection
 
 @section('action')
-@include('mail.notification-link')
+@include('mail.notification-link', ['purposeLabel' => 'Review inventory'])
 @endsection
 
 @section('security', 'MateryalPH will never ask you to send a password, one-time code or private document by email.')

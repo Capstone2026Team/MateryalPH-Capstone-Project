@@ -99,7 +99,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     if (!_inbox.loaded && _inbox.error == null)
                       const Padding(
                         padding: EdgeInsets.symmetric(vertical: 24),
-                        child: LinearProgressIndicator(),
+                        child: BuyerLoadingProgress(),
                       ),
                     if (_inbox.error != null) _failure(context),
                   ],

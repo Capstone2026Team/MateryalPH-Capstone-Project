@@ -36,7 +36,25 @@ final class DeliveryBuyerContact
 
     public function photo(Request $request, string $orderId, ?int $version): StreamedResponse
     {
-        $order = $this->authorizedOrder($request, $orderId);
+        return $this->readPhoto($request, $orderId, $version, true);
+    }
+
+    /** Profile identity follows order-view access; phone access remains delivery-only. */
+    public function orderPhoto(Request $request, string $orderId, int $version): StreamedResponse
+    {
+        return $this->readPhoto($request, $orderId, $version, false);
+    }
+
+    public function orderPhotoPath(object $order): ?string
+    {
+        $buyer = $this->buyer($order);
+
+        return $buyer?->profile_photo_key === null ? null : '/vendor/orders/'.$order->id.'/buyer-photo?version='.$buyer->lock_version;
+    }
+
+    private function readPhoto(Request $request, string $orderId, ?int $version, bool $deliveryOnly): StreamedResponse
+    {
+        $order = $this->authorizedOrder($request, $orderId, $deliveryOnly);
         $buyer = $this->buyer($order);
         if ($buyer?->profile_photo_key === null || ($version !== null && $version !== (int) $buyer->lock_version)) {
             throw new AuthenticationException('FILE_NOT_FOUND', 'This Buyer photo is unavailable.', 404);
@@ -45,8 +63,8 @@ final class DeliveryBuyerContact
         if (! is_string($bytes)) {
             throw new AuthenticationException('FILE_UNAVAILABLE', 'The Buyer photo is temporarily unavailable.', 503);
         }
-        // Storage may be remote. Reassignment, closure or account revocation must take effect before bytes leave.
-        $current = $this->buyer($this->authorizedOrder($request, $orderId));
+        // Storage may be remote. Recheck the current order/contact scope and photo before bytes leave.
+        $current = $this->buyer($this->authorizedOrder($request, $orderId, $deliveryOnly));
         if ($current?->profile_photo_key !== $buyer->profile_photo_key || $current?->profile_photo_disk !== $buyer->profile_photo_disk
             || $current?->lock_version !== $buyer->lock_version) {
             throw new AuthenticationException('FILE_NOT_FOUND', 'This Buyer photo changed. Reload the delivery information.', 404);
@@ -57,13 +75,15 @@ final class DeliveryBuyerContact
         }, 200, ['Content-Type' => 'image/png', 'Cache-Control' => 'private, no-store', 'X-Content-Type-Options' => 'nosniff']);
     }
 
-    private function authorizedOrder(Request $request, string $orderId): object
+    private function authorizedOrder(Request $request, string $orderId, bool $deliveryOnly = true): object
     {
         $request->user()->refresh();
         $scope = $this->access->vendorScope($request);
-        $this->access->require($scope, OrderAccess::RECORD_FULFILLMENT, 'Buyer delivery contact is restricted to fulfillment personnel.');
+        if ($deliveryOnly) {
+            $this->access->require($scope, OrderAccess::RECORD_FULFILLMENT, 'Buyer delivery contact is restricted to fulfillment personnel.');
+        }
         $order = $this->access->vendorOrder($scope, $orderId);
-        if (! $this->available($order, $scope)) {
+        if ($deliveryOnly && ! $this->available($order, $scope)) {
             throw new AuthenticationException('DELIVERY_CONTACT_UNAVAILABLE', 'Buyer contact is available only for an accepted, open Site Delivery order.', 404);
         }
 

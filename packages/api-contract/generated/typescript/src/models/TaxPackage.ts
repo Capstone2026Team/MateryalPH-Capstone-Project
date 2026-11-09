@@ -20,6 +20,10 @@ import { mapValues } from '../runtime';
  */
 export interface TaxPackage {
     /**
+     * Read-only current display names for retained snapshot payees. Snapshot IDs and monetary history stay unchanged.
+     */
+    vendorNames?: { [key: string]: string; };
+    /**
      *
      */
     id: string;
@@ -108,6 +112,7 @@ export function TaxPackageFromJSONTyped(json: any, ignoreDiscriminator: boolean)
     }
     return {
 
+        'vendorNames': json['vendor_names'] == null ? undefined : json['vendor_names'],
         'id': json['id'],
         'packageType': json['package_type'],
         'state': json['state'],
@@ -137,6 +142,7 @@ export function TaxPackageToJSONTyped(value?: TaxPackage | null, ignoreDiscrimin
 
     return {
 
+        'vendor_names': value['vendorNames'],
         'id': value['id'],
         'package_type': value['packageType'],
         'state': value['state'],

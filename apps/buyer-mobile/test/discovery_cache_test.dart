@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:materyalph/features/map_discovery/directory_photo_loader.dart';
 import 'package:materyalph/features/map_discovery/discovery_controller.dart';
@@ -19,6 +21,104 @@ DiscoveryController _controller(
 ) => DiscoveryController(repository: repo, store: store, now: now);
 
 void main() {
+  test(
+    'a slow disk read never delays the network or overwrites fresh results',
+    () async {
+      final store = _DelayedResultStore();
+      final repo = FakeDiscoveryRepository();
+      final controller = DiscoveryController(repository: repo, store: store);
+      addTearDown(controller.dispose);
+
+      final search = controller.setOrigin(_saved);
+      expect(repo.searches, hasLength(1));
+      await search;
+      expect(controller.items.first.resultId, 'v-1');
+
+      store.pending.complete(
+        CachedDiscovery(
+          items: [verifiedSupplier('old-vendor')],
+          page: resultPage([verifiedSupplier('old-vendor')]),
+          savedAt: DateTime.now(),
+        ),
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(controller.items.first.resultId, 'v-1');
+      expect(controller.showingSavedResults, isFalse);
+      expect(controller.resultsStale, isFalse);
+    },
+  );
+
+  test(
+    'a late disk preview cannot restore results after access is denied',
+    () async {
+      final store = _DelayedResultStore();
+      final repo = FakeDiscoveryRepository()
+        ..searchFailure = const DiscoveryFailure(
+          DiscoveryFailureKind.forbidden,
+          'Unavailable',
+        );
+      final controller = DiscoveryController(repository: repo, store: store);
+      addTearDown(controller.dispose);
+
+      await controller.setOrigin(_saved);
+      store.pending.complete(
+        CachedDiscovery(
+          items: [verifiedSupplier('old-vendor')],
+          page: resultPage([verifiedSupplier('old-vendor')]),
+          savedAt: DateTime.now(),
+        ),
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(controller.items, isEmpty);
+      expect(controller.phase, DiscoveryPhase.failed);
+      expect(controller.showingSavedResults, isFalse);
+    },
+  );
+
+  test(
+    'a late disk preview remains available after a network failure',
+    () async {
+      final store = _DelayedResultStore();
+      final repo = FakeDiscoveryRepository()
+        ..searchFailure = const DiscoveryFailure(
+          DiscoveryFailureKind.offline,
+          'Offline',
+        );
+      final controller = DiscoveryController(repository: repo, store: store);
+      addTearDown(controller.dispose);
+
+      await controller.setOrigin(_saved);
+      expect(controller.phase, DiscoveryPhase.failed);
+      store.pending.complete(
+        CachedDiscovery(
+          items: [verifiedSupplier('saved-vendor')],
+          page: resultPage([verifiedSupplier('saved-vendor')]),
+          savedAt: DateTime.now(),
+        ),
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(controller.items.single.resultId, 'saved-vendor');
+      expect(controller.resultsStale, isTrue);
+      expect(controller.failure?.kind, DiscoveryFailureKind.offline);
+      expect(controller.phase, DiscoveryPhase.ready);
+    },
+  );
+
+  test('a failed disk read still allows a successful fresh search', () async {
+    final store = _DelayedResultStore();
+    final repo = FakeDiscoveryRepository()..manual = true;
+    final controller = DiscoveryController(repository: repo, store: store);
+    addTearDown(controller.dispose);
+
+    final search = controller.setOrigin(_saved);
+    store.pending.completeError(StateError('Disk unavailable'));
+    await Future<void>.delayed(Duration.zero);
+    repo.searches.single.completer.complete(repo.page);
+    await search;
+    expect(controller.phase, DiscoveryPhase.ready);
+    expect(controller.items.first.resultId, 'v-1');
+  });
+
   test(
     'recent saved results survive restart and always revalidate both tiers',
     () async {
@@ -222,4 +322,11 @@ void main() {
     expect(repo.photoCalls, 2);
     loader.dispose();
   });
+}
+
+class _DelayedResultStore extends MemoryDiscoveryResultStore {
+  final pending = Completer<CachedDiscovery?>();
+
+  @override
+  Future<CachedDiscovery?> read(String key) => pending.future;
 }

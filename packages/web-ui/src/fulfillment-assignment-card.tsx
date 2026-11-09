@@ -25,7 +25,7 @@ export function FulfillmentAssignmentCard({ order, reference, action }: { order:
   const delivered = ['DELIVERED', 'PICKED_UP', 'COMPLETED'].includes(fulfillment?.state ?? '')
   const issue = !delivered && (fulfillment?.vehicleIssues?.length ?? 0) > 0
   const unread = fulfillment?.thread.unreadCount ?? 0
-  return <article className="flex h-full min-w-0 flex-col gap-4 rounded-surface border border-border-default bg-surface-primary p-4 [overflow-wrap:anywhere] sm:p-5">
+  return <article className="flex h-full min-w-0 flex-col gap-4 mp-card mp-card-padded [overflow-wrap:anywhere] sm:p-5">
     <header className="flex min-w-0 flex-wrap items-start justify-between gap-3">
       <div className="min-w-0"><p className="text-xs text-text-secondary">{order.fulfillmentMethod === 'PICKUP' ? 'Self-Pickup' : 'Site Delivery'}</p><h3 className="mt-1 break-words text-base font-semibold text-text-strong [overflow-wrap:anywhere]">{reference}</h3></div>
       <StatusBadge label={orderStateLabel(fulfillment?.state ?? '')} tone={delivered ? 'success' : fulfillment?.state === 'OUT_FOR_DELIVERY' ? 'info' : 'neutral'} />

@@ -14,10 +14,31 @@ void main() {
       // TODO
     });
 
+    // Audited read-only order detail with immutable commercial terms, all recorded payment attempts, cash records, fulfillment evidence, cancellation decision, refunds and state history. Requires orders.operations.view; when case_id is provided requires disputes.view and an existing matching case/order relationship. No inventory, Buyer budget, staff contacts, provider identifiers or checkout URLs. No actions or transitions.
+    //
+    //Future<OrderDetailEnvelope> getAdminAuditOrder(String orderId, { String caseId }) async
+    test('test getAdminAuditOrder', () async {
+      // TODO
+    });
+
+    // Audited private evidence read. Reauthorizes orders.operations.view or disputes.view plus matching case_id on every request. Only CLEAN private files referenced by this order are available; no public storage URL is returned.
+    //
+    //Future<Uint8List> getAdminAuditOrderFile(String orderId, String fileId, { String caseId }) async
+    test('test getAdminAuditOrderFile', () async {
+      // TODO
+    });
+
     // orders.operations.view. All-record refund and order-linked reimbursement totals, independent of list filters, plus counts of failed and pending refunds, pending reimbursements, open cancellation requests and recent NFR events.
     //
     //Future<AdminOrderOperationsSummaryEnvelope> getAdminOrderOperationsSummary() async
     test('test getAdminOrderOperationsSummary', () async {
+      // TODO
+    });
+
+    // Read-only platform order history; requires orders.operations.view. No expiry, reconciliation or commercial mutation runs on a read. Buyer names and public store names only in the paginated list.
+    //
+    //Future<OrderListEnvelope> listAdminAuditOrders({ String q, int page, OrderState orderState, OrderPaymentState paymentState, String refundState, String paymentMethod, Date from, Date to }) async
+    test('test listAdminAuditOrders', () async {
       // TODO
     });
 
@@ -35,9 +56,9 @@ void main() {
       // TODO
     });
 
-    // orders.operations.view. Vendor cash reimbursements of cancelled orders.
+    // orders.operations.view. Paginated Vendor cash reimbursement instructions and confirmed records, including cancellation and dispute remedies.
     //
-    //Future<AdminReimbursementListEnvelope> listAdminReimbursements({ Date from, Date to }) async
+    //Future<AdminReimbursementListEnvelope> listAdminReimbursements({ int page, Date from, Date to }) async
     test('test listAdminReimbursements', () async {
       // TODO
     });

@@ -4,8 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../design_system/components/buyer_overlays.dart';
 import '../../design_system/components/ranking_indicator.dart';
+import '../../design_system/components/discovery_controls.dart' show ScoreBadge;
+import '../../design_system/components/vendor_performance.dart';
 import '../../design_system/theme.dart';
 import '../map_discovery/discovery_models.dart';
+import '../trust/trust_models.dart' show StoreBadgeView;
 import 'projects_repository.dart';
 import 'work_package_material_widgets.dart';
 
@@ -292,9 +295,12 @@ class VendorResultCard extends StatelessWidget {
                                 LucideIcons.mapPin,
                                 kilometres(c.distanceMeters),
                               ),
-                              _Fact(
-                                LucideIcons.star,
-                                projectText(c.scoreLabel),
+                              ScoreBadge(
+                                kind: c.vps == null
+                                    ? ScoreKind.newVendor
+                                    : ScoreKind.vps,
+                                text: c.scoreLabel,
+                                value: c.vps,
                               ),
                             ],
                           ),
@@ -331,6 +337,21 @@ class VendorResultCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 12),
+                if (c.badges?.isNotEmpty ?? false) ...[
+                  VendorBadges(
+                    compact: true,
+                    badges: [
+                      for (final badge in c.badges!)
+                        StoreBadgeView(
+                          code: badge.code.name,
+                          name: badge.name,
+                          description: badge.description,
+                          scopeLabel: badge.scopeLabel,
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                ],
                 _VendorCostRow(
                   'Materials · all suppliers',
                   projectMoney(c.procurementMaterialsCentavos),
@@ -958,11 +979,13 @@ class _Fact extends StatelessWidget {
     children: [
       Icon(icon, size: 14, color: BuyerTheme.muted),
       const SizedBox(width: 4),
-      Text(
-        text,
-        style: Theme.of(
-          context,
-        ).textTheme.bodySmall?.copyWith(color: BuyerTheme.muted),
+      Flexible(
+        child: Text(
+          text,
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: BuyerTheme.muted),
+        ),
       ),
     ],
   );

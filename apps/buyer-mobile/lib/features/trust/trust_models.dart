@@ -351,6 +351,60 @@ class ReviewRatingsView {
 }
 
 @immutable
+class BuyerRatingSummaryView {
+  const BuyerRatingSummaryView({
+    required this.count,
+    this.score,
+    this.minimumCount = 5,
+    this.windowDays = 90,
+    this.inquirySeriousness,
+    this.communicationQuality,
+    this.paymentReliability,
+  });
+  final double? score;
+  final int count;
+  final int minimumCount;
+  final int windowDays;
+  final double? inquirySeriousness;
+  final double? communicationQuality;
+  final double? paymentReliability;
+}
+
+@immutable
+class BuyerReceivedRatingView {
+  const BuyerReceivedRatingView({
+    required this.id,
+    required this.storeName,
+    required this.orderReference,
+    required this.ratings,
+    required this.submittedAt,
+    this.comment,
+  });
+  final String id;
+  final String storeName;
+  final String orderReference;
+  final ReviewRatingsView ratings;
+  final DateTime submittedAt;
+  final String? comment;
+}
+
+@immutable
+class BuyerReceivedRatingsView {
+  const BuyerReceivedRatingsView({
+    required this.summary,
+    required this.items,
+    required this.total,
+    this.page = 1,
+    this.perPage = 20,
+  });
+  final BuyerRatingSummaryView summary;
+  final List<BuyerReceivedRatingView> items;
+  final int total;
+  final int page;
+  final int perPage;
+}
+
+@immutable
 class ReviewMediaView {
   const ReviewMediaView({
     required this.id,

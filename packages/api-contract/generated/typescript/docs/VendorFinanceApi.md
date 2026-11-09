@@ -12,6 +12,7 @@ All URIs are relative to */api/v1*
 | [**getVendorFeePayment**](VendorFinanceApi.md#getvendorfeepayment) | **GET** /vendor/finance/payments/{paymentId} |  |
 | [**getVendorFeeStatement**](VendorFinanceApi.md#getvendorfeestatement) | **GET** /vendor/finance/statements/{statementId} |  |
 | [**getVendorFinanceOverview**](VendorFinanceApi.md#getvendorfinanceoverview) | **GET** /vendor/finance |  |
+| [**listVendorThresholdPayments**](VendorFinanceApi.md#listvendorthresholdpayments) | **GET** /vendor/finance/threshold-payments |  |
 | [**listVendorTransactions**](VendorFinanceApi.md#listvendortransactions) | **GET** /vendor/finance/transactions |  |
 | [**payVendorFeeStatement**](VendorFinanceApi.md#payvendorfeestatement) | **POST** /vendor/finance/statements/{statementId}/payments |  |
 | [**recordVendorPhysicalPayment**](VendorFinanceApi.md#recordvendorphysicalpayment) | **POST** /vendor/orders/{orderId}/physical-payments |  |
@@ -187,7 +188,7 @@ example().catch(console.error);
 
 ## exportVendorTransactions
 
-> string exportVendorTransactions(tab, status, from, to)
+> string exportVendorTransactions(tab, status, statementState, from, to)
 
 
 
@@ -217,6 +218,8 @@ async function example() {
     tab: tab_example,
     // 'PAID' | 'PAID_PARTIALLY_REFUNDED' | 'PAID_REFUND_PENDING' | 'PAID_REFUNDED' | 'PAID_REFUND_FAILED' | 'PENDING' | 'FAILED' | 'EXPIRED' | 'LATE_CAPTURE' | 'PHYSICAL_COLLECTED' | 'PHYSICAL_PARTIAL' | 'PHYSICAL_TO_RECORD' | 'PHYSICAL_AWAITING' | 'PHYSICAL_RELEASED' | Payments tab only; ignored by every other tab. Each value matches the status badge a Payments row shows. PAID has no refund activity; LATE_CAPTURE covers every late-captured payment awaiting or after its refund; PENDING is any attempt not yet settled. PHYSICAL_* values select Cash on Delivery / In-Store obligations: COLLECTED (nothing remains), PARTIAL (part recorded), TO_RECORD (delivered or picked up, no cash recorded yet), AWAITING (before handover), RELEASED (cancelled unpaid). (optional)
     status: status_example,
+    // 'PAID' | 'NOT_PAID' | STATEMENTS only; ignored by other tabs. PAID selects fully paid statements. NOT_PAID selects every other published state, including voided statements. Omit for all published statements. Filtered before pagination and export bounds; dates refer to statement issue dates. (optional)
+    statementState: statementState_example,
     // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Same timestamp and filters as the selected Transaction History tab; filtered before the existing 5000-row export bound. (optional)
     from: 2013-10-20,
     // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Same timestamp and filters as the selected Transaction History tab; filtered before the existing 5000-row export bound. (optional)
@@ -242,6 +245,7 @@ example().catch(console.error);
 |------------- | ------------- | ------------- | -------------|
 | **tab** | `PAYMENTS`, `PHYSICAL`, `REMITTANCES`, `STATEMENTS`, `REFUNDS`, `TAX_DOCUMENTS` |  | [Defaults to `undefined`] [Enum: PAYMENTS, PHYSICAL, REMITTANCES, STATEMENTS, REFUNDS, TAX_DOCUMENTS] |
 | **status** | `PAID`, `PAID_PARTIALLY_REFUNDED`, `PAID_REFUND_PENDING`, `PAID_REFUNDED`, `PAID_REFUND_FAILED`, `PENDING`, `FAILED`, `EXPIRED`, `LATE_CAPTURE`, `PHYSICAL_COLLECTED`, `PHYSICAL_PARTIAL`, `PHYSICAL_TO_RECORD`, `PHYSICAL_AWAITING`, `PHYSICAL_RELEASED` | Payments tab only; ignored by every other tab. Each value matches the status badge a Payments row shows. PAID has no refund activity; LATE_CAPTURE covers every late-captured payment awaiting or after its refund; PENDING is any attempt not yet settled. PHYSICAL_* values select Cash on Delivery / In-Store obligations: COLLECTED (nothing remains), PARTIAL (part recorded), TO_RECORD (delivered or picked up, no cash recorded yet), AWAITING (before handover), RELEASED (cancelled unpaid). | [Optional] [Defaults to `undefined`] [Enum: PAID, PAID_PARTIALLY_REFUNDED, PAID_REFUND_PENDING, PAID_REFUNDED, PAID_REFUND_FAILED, PENDING, FAILED, EXPIRED, LATE_CAPTURE, PHYSICAL_COLLECTED, PHYSICAL_PARTIAL, PHYSICAL_TO_RECORD, PHYSICAL_AWAITING, PHYSICAL_RELEASED] |
+| **statementState** | `PAID`, `NOT_PAID` | STATEMENTS only; ignored by other tabs. PAID selects fully paid statements. NOT_PAID selects every other published state, including voided statements. Omit for all published statements. Filtered before pagination and export bounds; dates refer to statement issue dates. | [Optional] [Defaults to `undefined`] [Enum: PAID, NOT_PAID] |
 | **from** | `Date` | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Same timestamp and filters as the selected Transaction History tab; filtered before the existing 5000-row export bound. | [Optional] [Defaults to `undefined`] |
 | **to** | `Date` | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Same timestamp and filters as the selected Transaction History tab; filtered before the existing 5000-row export bound. | [Optional] [Defaults to `undefined`] |
 
@@ -374,9 +378,9 @@ async function example() {
   const api = new VendorFinanceApi(config);
 
   const body = {
-    // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Commercial sales use order accepted_at; online collections paid_at; physical collections recorded_at; remittances created_at; commission earned_at and approved credit approved_at; estimates created_at; unpaid statements issued_on. Taxpayer thresholds are never recalculated by this view. (optional)
+    // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Net sales use the order first-confirmation timestamp; online collections paid_at; physical collections recorded_at; remittances created_at; commission earned_at and approved credit approved_at; estimates created_at; unpaid statements issued_on. Taxpayer thresholds are never recalculated by this view. (optional)
     from: 2013-10-20,
-    // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Commercial sales use order accepted_at; online collections paid_at; physical collections recorded_at; remittances created_at; commission earned_at and approved credit approved_at; estimates created_at; unpaid statements issued_on. Taxpayer thresholds are never recalculated by this view. (optional)
+    // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Net sales use the order first-confirmation timestamp; online collections paid_at; physical collections recorded_at; remittances created_at; commission earned_at and approved credit approved_at; estimates created_at; unpaid statements issued_on. Taxpayer thresholds are never recalculated by this view. (optional)
     to: 2013-10-20,
   } satisfies GetVendorEarningsRequest;
 
@@ -397,8 +401,8 @@ example().catch(console.error);
 
 | Name | Type | Description  | Notes |
 |------------- | ------------- | ------------- | -------------|
-| **from** | `Date` | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Commercial sales use order accepted_at; online collections paid_at; physical collections recorded_at; remittances created_at; commission earned_at and approved credit approved_at; estimates created_at; unpaid statements issued_on. Taxpayer thresholds are never recalculated by this view. | [Optional] [Defaults to `undefined`] |
-| **to** | `Date` | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Commercial sales use order accepted_at; online collections paid_at; physical collections recorded_at; remittances created_at; commission earned_at and approved credit approved_at; estimates created_at; unpaid statements issued_on. Taxpayer thresholds are never recalculated by this view. | [Optional] [Defaults to `undefined`] |
+| **from** | `Date` | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Net sales use the order first-confirmation timestamp; online collections paid_at; physical collections recorded_at; remittances created_at; commission earned_at and approved credit approved_at; estimates created_at; unpaid statements issued_on. Taxpayer thresholds are never recalculated by this view. | [Optional] [Defaults to `undefined`] |
+| **to** | `Date` | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. Net sales use the order first-confirmation timestamp; online collections paid_at; physical collections recorded_at; remittances created_at; commission earned_at and approved credit approved_at; estimates created_at; unpaid statements issued_on. Taxpayer thresholds are never recalculated by this view. | [Optional] [Defaults to `undefined`] |
 
 ### Return type
 
@@ -643,13 +647,90 @@ This endpoint does not need any parameter.
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 
 
+## listVendorThresholdPayments
+
+> VendorThresholdPaymentsEnvelope listVendorThresholdPayments(page)
+
+
+
+Owner-only paginated retained payments from the current taxpayer-year POSTED merchant assessments. Completed full principal refunds are omitted; completed partial refunds reduce the returned principal, fee and collection amounts once. Pending and failed refunds do not reduce amounts. Totals describe current retained payments, not a rewrite of the posted annual tax basis or crossed-threshold status. Own-store order references only; other stores sharing the taxpayer are aggregate-only without identities. VOIDED assessments, other years, direct COD and In-Store cash are excluded. Read-only TEST records.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  VendorFinanceApi,
+} from '@materyalph/api-client-ts';
+import type { ListVendorThresholdPaymentsRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // To configure API key authorization: accessCookie
+    apiKey: "YOUR API KEY",
+    // To configure API key authorization: webCsrf
+    apiKey: "YOUR API KEY",
+  });
+  const api = new VendorFinanceApi(config);
+
+  const body = {
+    // number (optional)
+    page: 56,
+  } satisfies ListVendorThresholdPaymentsRequest;
+
+  try {
+    const data = await api.listVendorThresholdPayments(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **page** | `number` |  | [Optional] [Defaults to `1`] |
+
+### Return type
+
+[**VendorThresholdPaymentsEnvelope**](VendorThresholdPaymentsEnvelope.md)
+
+### Authorization
+
+[accessCookie](../README.md#accessCookie), [webCsrf](../README.md#webCsrf)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | Payment-source records and complete annual totals. Pagination metadata describes own-store records only. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **409** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
 ## listVendorTransactions
 
-> FinanceTransactionListEnvelope listVendorTransactions(tab, page, status, from, to)
+> FinanceTransactionListEnvelope listVendorTransactions(tab, page, status, statementState, from, to)
 
 
 
-Owner-only read-only Transaction History (former Wallet label). No balance, wallet or escrow.
+Owner-only read-only Transaction History (former Wallet label). PAYMENTS is the unified list of payments and their recorded remittance/withholding assessments, with unlinked historical assessments retained as separate records. No balance, wallet or escrow.
 
 ### Example
 
@@ -677,6 +758,8 @@ async function example() {
     page: 56,
     // 'PAID' | 'PAID_PARTIALLY_REFUNDED' | 'PAID_REFUND_PENDING' | 'PAID_REFUNDED' | 'PAID_REFUND_FAILED' | 'PENDING' | 'FAILED' | 'EXPIRED' | 'LATE_CAPTURE' | 'PHYSICAL_COLLECTED' | 'PHYSICAL_PARTIAL' | 'PHYSICAL_TO_RECORD' | 'PHYSICAL_AWAITING' | 'PHYSICAL_RELEASED' | Payments tab only; ignored by every other tab. Each value matches the status badge a Payments row shows. PAID has no refund activity; LATE_CAPTURE covers every late-captured payment awaiting or after its refund; PENDING is any attempt not yet settled. PHYSICAL_* values select Cash on Delivery / In-Store obligations: COLLECTED (nothing remains), PARTIAL (part recorded), TO_RECORD (delivered or picked up, no cash recorded yet), AWAITING (before handover), RELEASED (cancelled unpaid). (optional)
     status: status_example,
+    // 'PAID' | 'NOT_PAID' | STATEMENTS only; ignored by other tabs. PAID selects fully paid statements. NOT_PAID selects every other published state, including voided statements. Omit for all published statements. Filtered before pagination and export bounds; dates refer to statement issue dates. (optional)
+    statementState: statementState_example,
     // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. PAYMENTS paid_at with created_at fallback; PHYSICAL recorded_at; REMITTANCES created_at; STATEMENTS issued_on; REFUNDS created_at; TAX_DOCUMENTS period_end. (optional)
     from: 2013-10-20,
     // Date | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. PAYMENTS paid_at with created_at fallback; PHYSICAL recorded_at; REMITTANCES created_at; STATEMENTS issued_on; REFUNDS created_at; TAX_DOCUMENTS period_end. (optional)
@@ -703,6 +786,7 @@ example().catch(console.error);
 | **tab** | `PAYMENTS`, `PHYSICAL`, `REMITTANCES`, `STATEMENTS`, `REFUNDS`, `TAX_DOCUMENTS` |  | [Optional] [Defaults to `undefined`] [Enum: PAYMENTS, PHYSICAL, REMITTANCES, STATEMENTS, REFUNDS, TAX_DOCUMENTS] |
 | **page** | `number` |  | [Optional] [Defaults to `undefined`] |
 | **status** | `PAID`, `PAID_PARTIALLY_REFUNDED`, `PAID_REFUND_PENDING`, `PAID_REFUNDED`, `PAID_REFUND_FAILED`, `PENDING`, `FAILED`, `EXPIRED`, `LATE_CAPTURE`, `PHYSICAL_COLLECTED`, `PHYSICAL_PARTIAL`, `PHYSICAL_TO_RECORD`, `PHYSICAL_AWAITING`, `PHYSICAL_RELEASED` | Payments tab only; ignored by every other tab. Each value matches the status badge a Payments row shows. PAID has no refund activity; LATE_CAPTURE covers every late-captured payment awaiting or after its refund; PENDING is any attempt not yet settled. PHYSICAL_* values select Cash on Delivery / In-Store obligations: COLLECTED (nothing remains), PARTIAL (part recorded), TO_RECORD (delivered or picked up, no cash recorded yet), AWAITING (before handover), RELEASED (cancelled unpaid). | [Optional] [Defaults to `undefined`] [Enum: PAID, PAID_PARTIALLY_REFUNDED, PAID_REFUND_PENDING, PAID_REFUNDED, PAID_REFUND_FAILED, PENDING, FAILED, EXPIRED, LATE_CAPTURE, PHYSICAL_COLLECTED, PHYSICAL_PARTIAL, PHYSICAL_TO_RECORD, PHYSICAL_AWAITING, PHYSICAL_RELEASED] |
+| **statementState** | `PAID`, `NOT_PAID` | STATEMENTS only; ignored by other tabs. PAID selects fully paid statements. NOT_PAID selects every other published state, including voided statements. Omit for all published statements. Filtered before pagination and export bounds; dates refer to statement issue dates. | [Optional] [Defaults to `undefined`] [Enum: PAID, NOT_PAID] |
 | **from** | `Date` | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. PAYMENTS paid_at with created_at fallback; PHYSICAL recorded_at; REMITTANCES created_at; STATEMENTS issued_on; REFUNDS created_at; TAX_DOCUMENTS period_end. | [Optional] [Defaults to `undefined`] |
 | **to** | `Date` | Inclusive Asia/Manila calendar date; omit to leave this boundary unrestricted. PAYMENTS paid_at with created_at fallback; PHYSICAL recorded_at; REMITTANCES created_at; STATEMENTS issued_on; REFUNDS created_at; TAX_DOCUMENTS period_end. | [Optional] [Defaults to `undefined`] |
 

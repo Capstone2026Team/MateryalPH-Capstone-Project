@@ -94,6 +94,8 @@ class _$BuyerOrderInvoices extends BuyerOrderInvoices {
   final bool canRequestCopy;
   @override
   final bool canRequestCorrection;
+  @override
+  final InvoiceOrderSummary? orderSummary;
 
   factory _$BuyerOrderInvoices(
           [void Function(BuyerOrderInvoicesBuilder)? updates]) =>
@@ -110,7 +112,8 @@ class _$BuyerOrderInvoices extends BuyerOrderInvoices {
       this.billingDetails,
       required this.canEditBillingDetails,
       required this.canRequestCopy,
-      required this.canRequestCorrection})
+      required this.canRequestCorrection,
+      this.orderSummary})
       : super._();
   @override
   BuyerOrderInvoices rebuild(
@@ -135,7 +138,8 @@ class _$BuyerOrderInvoices extends BuyerOrderInvoices {
         billingDetails == other.billingDetails &&
         canEditBillingDetails == other.canEditBillingDetails &&
         canRequestCopy == other.canRequestCopy &&
-        canRequestCorrection == other.canRequestCorrection;
+        canRequestCorrection == other.canRequestCorrection &&
+        orderSummary == other.orderSummary;
   }
 
   @override
@@ -152,6 +156,7 @@ class _$BuyerOrderInvoices extends BuyerOrderInvoices {
     _$hash = $jc(_$hash, canEditBillingDetails.hashCode);
     _$hash = $jc(_$hash, canRequestCopy.hashCode);
     _$hash = $jc(_$hash, canRequestCorrection.hashCode);
+    _$hash = $jc(_$hash, orderSummary.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -169,7 +174,8 @@ class _$BuyerOrderInvoices extends BuyerOrderInvoices {
           ..add('billingDetails', billingDetails)
           ..add('canEditBillingDetails', canEditBillingDetails)
           ..add('canRequestCopy', canRequestCopy)
-          ..add('canRequestCorrection', canRequestCorrection))
+          ..add('canRequestCorrection', canRequestCorrection)
+          ..add('orderSummary', orderSummary))
         .toString();
   }
 }
@@ -235,6 +241,12 @@ class BuyerOrderInvoicesBuilder
   set canRequestCorrection(bool? canRequestCorrection) =>
       _$this._canRequestCorrection = canRequestCorrection;
 
+  InvoiceOrderSummaryBuilder? _orderSummary;
+  InvoiceOrderSummaryBuilder get orderSummary =>
+      _$this._orderSummary ??= InvoiceOrderSummaryBuilder();
+  set orderSummary(InvoiceOrderSummaryBuilder? orderSummary) =>
+      _$this._orderSummary = orderSummary;
+
   BuyerOrderInvoicesBuilder() {
     BuyerOrderInvoices._defaults(this);
   }
@@ -253,6 +265,7 @@ class BuyerOrderInvoicesBuilder
       _canEditBillingDetails = $v.canEditBillingDetails;
       _canRequestCopy = $v.canRequestCopy;
       _canRequestCorrection = $v.canRequestCorrection;
+      _orderSummary = $v.orderSummary?.toBuilder();
       _$v = null;
     }
     return this;
@@ -298,6 +311,7 @@ class BuyerOrderInvoicesBuilder
                 canRequestCorrection,
                 r'BuyerOrderInvoices',
                 'canRequestCorrection'),
+            orderSummary: _orderSummary?.build(),
           );
     } catch (_) {
       late String _$failedField;
@@ -310,6 +324,9 @@ class BuyerOrderInvoicesBuilder
         platformDocuments.build();
         _$failedField = 'billingDetails';
         _billingDetails?.build();
+
+        _$failedField = 'orderSummary';
+        _orderSummary?.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
             r'BuyerOrderInvoices', _$failedField, e.toString());

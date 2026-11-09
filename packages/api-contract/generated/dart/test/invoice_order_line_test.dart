@@ -17,5 +17,30 @@ void main() {
       // TODO
     });
 
+    // String category
+    test('to test the property `category`', () async {
+      // TODO
+    });
+
+    // String quantity
+    test('to test the property `quantity`', () async {
+      // TODO
+    });
+
+    // String unitName
+    test('to test the property `unitName`', () async {
+      // TODO
+    });
+
+    // int unitPriceCentavos
+    test('to test the property `unitPriceCentavos`', () async {
+      // TODO
+    });
+
+    // int lineTotalCentavos
+    test('to test the property `lineTotalCentavos`', () async {
+      // TODO
+    });
+
   });
 }

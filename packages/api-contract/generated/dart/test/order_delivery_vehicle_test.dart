@@ -7,6 +7,12 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(OrderDeliveryVehicle, () {
+    // Frozen display details when available; older snapshots may omit them. Image bytes require the existing authorized order file endpoint.
+    // DeliveryVehicleProfile vehicleDetails
+    test('to test the property `vehicleDetails`', () async {
+      // TODO
+    });
+
     // String name
     test('to test the property `name`', () async {
       // TODO

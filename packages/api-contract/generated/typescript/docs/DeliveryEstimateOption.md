@@ -6,6 +6,7 @@
 
 Name | Type
 ------------ | -------------
+`vehicleDetails` | [DeliveryVehicleProfile](DeliveryVehicleProfile.md)
 `vehicleId` | string
 `loadKey` | string
 `vehicleName` | string
@@ -26,6 +27,7 @@ import type { DeliveryEstimateOption } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "vehicleDetails": null,
   "vehicleId": null,
   "loadKey": null,
   "vehicleName": null,

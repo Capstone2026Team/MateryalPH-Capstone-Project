@@ -1,0 +1,28 @@
+.mp-moderation-workspace { display: grid; gap: 16px; min-width: 0; max-width: 1440px; margin-inline: auto; }
+.mp-moderation-queue-header { display: flex; min-width: 0; flex-wrap: wrap; align-items: start; justify-content: space-between; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--mp-color-border-default); }
+.mp-moderation-queue-header h2 { font-size: 14px; font-weight: 600; }
+.mp-moderation-queue-header p { margin-top: 4px; font-size: 12px; line-height: 20px; color: var(--mp-color-text-secondary); }
+.mp-moderation-queue-state { min-width: 0; min-height: 240px; }
+.mp-moderation-queue-row { display: grid; min-width: 0; gap: 12px; padding: 16px 20px; }
+.mp-moderation-queue-row a:focus-visible { outline: 2px solid var(--mp-color-focus-ring); outline-offset: 2px; }
+.mp-moderation-queue-row .mp-review-card-criteria { max-width: 360px; }
+.mp-moderation-empty { display: flex; min-height: 240px; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px 20px; text-align: center; }
+.mp-moderation-detail-grid { display: grid; min-width: 0; align-items: start; gap: 12px; }
+.mp-moderation-detail-column { display: grid; min-width: 0; gap: 12px; }
+.mp-moderation-detail-nav { display: flex; flex-wrap: wrap; gap: 4px 16px; border-block: 1px solid var(--mp-color-border-default); }
+.mp-moderation-detail-nav a { display: inline-flex; min-height: 44px; align-items: center; border-radius: var(--mp-radius-control); color: var(--mp-color-text-secondary); font-size: 12px; font-weight: 500; }
+.mp-moderation-detail-nav a:hover { color: var(--mp-color-action-primary); }
+.mp-moderation-detail-nav a:focus-visible { outline: 2px solid var(--mp-color-focus-ring); outline-offset: 2px; }
+.mp-moderation-workspace :is(section[id], form) { scroll-margin-top: 16px; }
+.mp-review-detail-compact > section { gap: 12px; padding: 16px; }
+@media (min-width: 1024px) {
+  .mp-moderation-queue-row { grid-template-columns: minmax(0, 1fr) minmax(160px, 200px); gap: 20px; }
+}
+@media (min-width: 1280px) {
+  .mp-moderation-detail-grid { grid-template-columns: minmax(0, 1fr) minmax(300px, 360px); }
+  .mp-moderation-detail-rail { grid-column: 2; grid-row: 1 / span 2; }
+}
+@media (max-width: 639px) {
+  .mp-moderation-queue-header, .mp-moderation-queue-row { padding-inline: 16px; }
+  .mp-moderation-detail-nav { gap: 0 16px; }
+}

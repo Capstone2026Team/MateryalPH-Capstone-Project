@@ -8,6 +8,8 @@ part of 'chat_quotation_version.dart';
 
 class _$ChatQuotationVersion extends ChatQuotationVersion {
   @override
+  final String? conversationId;
+  @override
   final String? requestedChanges;
   @override
   final String? changeRequestedAt;
@@ -41,13 +43,16 @@ class _$ChatQuotationVersion extends ChatQuotationVersion {
   final String? quotationId;
   @override
   final String? acceptedOrderId;
+  @override
+  final String? replacesOrderId;
 
   factory _$ChatQuotationVersion(
           [void Function(ChatQuotationVersionBuilder)? updates]) =>
       (ChatQuotationVersionBuilder()..update(updates))._build();
 
   _$ChatQuotationVersion._(
-      {this.requestedChanges,
+      {this.conversationId,
+      this.requestedChanges,
       this.changeRequestedAt,
       this.vendorResponseDueAt,
       this.availablePaymentMethods,
@@ -63,7 +68,8 @@ class _$ChatQuotationVersion extends ChatQuotationVersion {
       required this.viewed,
       required this.actions,
       this.quotationId,
-      this.acceptedOrderId})
+      this.acceptedOrderId,
+      this.replacesOrderId})
       : super._();
   @override
   ChatQuotationVersion rebuild(
@@ -78,6 +84,7 @@ class _$ChatQuotationVersion extends ChatQuotationVersion {
   bool operator ==(Object other) {
     if (identical(other, this)) return true;
     return other is ChatQuotationVersion &&
+        conversationId == other.conversationId &&
         requestedChanges == other.requestedChanges &&
         changeRequestedAt == other.changeRequestedAt &&
         vendorResponseDueAt == other.vendorResponseDueAt &&
@@ -94,12 +101,14 @@ class _$ChatQuotationVersion extends ChatQuotationVersion {
         viewed == other.viewed &&
         actions == other.actions &&
         quotationId == other.quotationId &&
-        acceptedOrderId == other.acceptedOrderId;
+        acceptedOrderId == other.acceptedOrderId &&
+        replacesOrderId == other.replacesOrderId;
   }
 
   @override
   int get hashCode {
     var _$hash = 0;
+    _$hash = $jc(_$hash, conversationId.hashCode);
     _$hash = $jc(_$hash, requestedChanges.hashCode);
     _$hash = $jc(_$hash, changeRequestedAt.hashCode);
     _$hash = $jc(_$hash, vendorResponseDueAt.hashCode);
@@ -117,6 +126,7 @@ class _$ChatQuotationVersion extends ChatQuotationVersion {
     _$hash = $jc(_$hash, actions.hashCode);
     _$hash = $jc(_$hash, quotationId.hashCode);
     _$hash = $jc(_$hash, acceptedOrderId.hashCode);
+    _$hash = $jc(_$hash, replacesOrderId.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -124,6 +134,7 @@ class _$ChatQuotationVersion extends ChatQuotationVersion {
   @override
   String toString() {
     return (newBuiltValueToStringHelper(r'ChatQuotationVersion')
+          ..add('conversationId', conversationId)
           ..add('requestedChanges', requestedChanges)
           ..add('changeRequestedAt', changeRequestedAt)
           ..add('vendorResponseDueAt', vendorResponseDueAt)
@@ -140,7 +151,8 @@ class _$ChatQuotationVersion extends ChatQuotationVersion {
           ..add('viewed', viewed)
           ..add('actions', actions)
           ..add('quotationId', quotationId)
-          ..add('acceptedOrderId', acceptedOrderId))
+          ..add('acceptedOrderId', acceptedOrderId)
+          ..add('replacesOrderId', replacesOrderId))
         .toString();
   }
 }
@@ -148,6 +160,11 @@ class _$ChatQuotationVersion extends ChatQuotationVersion {
 class ChatQuotationVersionBuilder
     implements Builder<ChatQuotationVersion, ChatQuotationVersionBuilder> {
   _$ChatQuotationVersion? _$v;
+
+  String? _conversationId;
+  String? get conversationId => _$this._conversationId;
+  set conversationId(String? conversationId) =>
+      _$this._conversationId = conversationId;
 
   String? _requestedChanges;
   String? get requestedChanges => _$this._requestedChanges;
@@ -226,6 +243,11 @@ class ChatQuotationVersionBuilder
   set acceptedOrderId(String? acceptedOrderId) =>
       _$this._acceptedOrderId = acceptedOrderId;
 
+  String? _replacesOrderId;
+  String? get replacesOrderId => _$this._replacesOrderId;
+  set replacesOrderId(String? replacesOrderId) =>
+      _$this._replacesOrderId = replacesOrderId;
+
   ChatQuotationVersionBuilder() {
     ChatQuotationVersion._defaults(this);
   }
@@ -233,6 +255,7 @@ class ChatQuotationVersionBuilder
   ChatQuotationVersionBuilder get _$this {
     final $v = _$v;
     if ($v != null) {
+      _conversationId = $v.conversationId;
       _requestedChanges = $v.requestedChanges;
       _changeRequestedAt = $v.changeRequestedAt;
       _vendorResponseDueAt = $v.vendorResponseDueAt;
@@ -250,6 +273,7 @@ class ChatQuotationVersionBuilder
       _actions = $v.actions.toBuilder();
       _quotationId = $v.quotationId;
       _acceptedOrderId = $v.acceptedOrderId;
+      _replacesOrderId = $v.replacesOrderId;
       _$v = null;
     }
     return this;
@@ -273,6 +297,7 @@ class ChatQuotationVersionBuilder
     try {
       _$result = _$v ??
           _$ChatQuotationVersion._(
+            conversationId: conversationId,
             requestedChanges: requestedChanges,
             changeRequestedAt: changeRequestedAt,
             vendorResponseDueAt: vendorResponseDueAt,
@@ -298,6 +323,7 @@ class ChatQuotationVersionBuilder
             actions: actions.build(),
             quotationId: quotationId,
             acceptedOrderId: acceptedOrderId,
+            replacesOrderId: replacesOrderId,
           );
     } catch (_) {
       late String _$failedField;

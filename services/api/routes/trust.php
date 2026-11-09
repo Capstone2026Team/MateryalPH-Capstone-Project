@@ -12,6 +12,7 @@ $buyer = ['auth.transport:MOBILE', 'auth:api', 'account.access:BUYER'];
 $web = fn (string $audience): array => ['auth.transport:WEB', 'auth.cookie', VerifyAccountCsrf::class, 'auth:api', 'account.access:'.$audience];
 
 Route::prefix('buyers')->middleware($buyer)->group(function (): void {
+    Route::get('/ratings', [R::class, 'buyerRatings']);
     Route::get('/orders/{orderId}/reviews', [R::class, 'buyerOrder'])->whereUuid('orderId');
     Route::post('/orders/{orderId}/reviews', [R::class, 'buyerSubmit'])->whereUuid('orderId');
     Route::patch('/reviews/{reviewId}', [R::class, 'buyerEdit'])->whereUuid('reviewId');
@@ -60,6 +61,8 @@ Route::prefix('admin')->middleware($web('ADMIN'))->group(function (): void {
 });
 
 // Five-minute signed review photo links; the fetch re-authorizes the signed-in caller against the review.
+Route::get('/vendor/reviews/{reviewId}/buyer-photo', [R::class, 'buyerPhoto'])->whereUuid('reviewId')
+    ->middleware(['auth.transport:WEB', 'auth.cookie', 'auth:api', 'account.access:VENDOR', 'signed'])->name('reviews.vendor.buyer-photo');
 Route::get('/buyers/reviews/{reviewId}/media/{mediaId}/content', [R::class, 'media'])->whereUuid('reviewId')->whereUuid('mediaId')
     ->middleware(['auth.transport:MOBILE', 'auth:api', 'account.access:BUYER', 'signed'])->name('reviews.buyer.media');
 Route::get('/vendor/reviews/{reviewId}/media/{mediaId}/content', [R::class, 'media'])->whereUuid('reviewId')->whereUuid('mediaId')

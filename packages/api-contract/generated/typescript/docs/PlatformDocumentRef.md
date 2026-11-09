@@ -12,6 +12,9 @@ Name | Type
 `notTaxInvoice` | boolean
 `label` | string
 `availability` | string
+`generatedAt` | string
+`checksum` | string
+`downloadUrl` | string
 
 ## Example
 
@@ -25,6 +28,9 @@ const example = {
   "notTaxInvoice": null,
   "label": null,
   "availability": null,
+  "generatedAt": null,
+  "checksum": null,
+  "downloadUrl": null,
 } satisfies PlatformDocumentRef
 
 console.log(example)

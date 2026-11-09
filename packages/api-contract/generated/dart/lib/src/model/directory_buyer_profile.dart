@@ -5,6 +5,7 @@
 // ignore_for_file: unused_element
 import 'package:materyalph_api_client/src/model/directory_buyer_profile_ratings.dart';
 import 'package:built_collection/built_collection.dart';
+import 'package:materyalph_api_client/src/model/buyer_rating_summary.dart';
 import 'package:materyalph_api_client/src/model/directory_buyer_profile_activity.dart';
 import 'package:materyalph_api_client/src/model/directory_buyer_profile_recent_orders_inner.dart';
 import 'package:materyalph_api_client/src/model/directory_sanction.dart';
@@ -27,6 +28,7 @@ part 'directory_buyer_profile.g.dart';
 /// * [recentOrders]
 /// * [sanctions] - Empty unless the caller also holds enforcement.view.
 /// * [canViewEnforcement]
+/// * [rating]
 @BuiltValue()
 abstract class DirectoryBuyerProfile implements Built<DirectoryBuyerProfile, DirectoryBuyerProfileBuilder> {
   @BuiltValueField(wireName: r'id')
@@ -61,6 +63,9 @@ abstract class DirectoryBuyerProfile implements Built<DirectoryBuyerProfile, Dir
 
   @BuiltValueField(wireName: r'can_view_enforcement')
   bool get canViewEnforcement;
+
+  @BuiltValueField(wireName: r'rating')
+  BuyerRatingSummary get rating;
 
   DirectoryBuyerProfile._();
 
@@ -134,6 +139,11 @@ class _$DirectoryBuyerProfileSerializer implements PrimitiveSerializer<Directory
     yield serializers.serialize(
       object.canViewEnforcement,
       specifiedType: const FullType(bool),
+    );
+    yield r'rating';
+    yield serializers.serialize(
+      object.rating,
+      specifiedType: const FullType(BuyerRatingSummary),
     );
   }
 
@@ -227,6 +237,13 @@ class _$DirectoryBuyerProfileSerializer implements PrimitiveSerializer<Directory
             specifiedType: const FullType(bool),
           ) as bool;
           result.canViewEnforcement = valueDes;
+          break;
+        case r'rating':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(BuyerRatingSummary),
+          ) as BuyerRatingSummary;
+          result.rating.replace(valueDes);
           break;
         default:
           unhandled.add(key);

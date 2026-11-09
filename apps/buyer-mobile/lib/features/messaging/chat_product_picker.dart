@@ -1,3 +1,4 @@
+import '../../design_system/components/async_state.dart';
 import 'package:flutter/material.dart';
 import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 import '../../design_system/components/messaging_components.dart';
@@ -73,7 +74,7 @@ class _ChatProductPickerState extends State<ChatProductPicker> {
         ),
         Expanded(
           child: _loading
-              ? const Center(child: CircularProgressIndicator())
+              ? const BuyerLoadingState(label: 'Loading products…')
               : _failed
               ? Center(
                   child: TextButton(

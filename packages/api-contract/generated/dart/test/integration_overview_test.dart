@@ -12,6 +12,7 @@ void main() {
       // TODO
     });
 
+    // Safe app and commerce labels. deployment is HOSTINGER_VPS only for the staging API on the approved MateryalPH Duck DNS host pattern; OTHER responses must not be presented as VPS provider health.
     // BuiltMap<String, JsonObject> environment
     test('to test the property `environment`', () async {
       // TODO
@@ -24,6 +25,11 @@ void main() {
 
     // BuiltMap<String, JsonObject> queues
     test('to test the property `queues`', () async {
+      // TODO
+    });
+
+    // AutomaticRecoveryHealth automaticRecovery
+    test('to test the property `automaticRecovery`', () async {
       // TODO
     });
 

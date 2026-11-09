@@ -715,6 +715,162 @@ void main() {
     expect(find.text('Request a correction'), findsOneWidget);
   });
 
+  testWidgets(
+    'sent invoices show the attachment before details and keep its file type at 320px',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 1800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final repository = FakeDisputesRepository()
+        ..invoiceData = invoicesView(
+          records: const [
+            InvoiceRecordItem(
+              id: 'sent-1',
+              invoiceType: 'VENDOR_GOODS_INVOICE',
+              issuer: 'Sample Construction Supply Corporation',
+              invoiceNumber: 'SI-000123',
+              issuedOn: '2026-11-04',
+              amountCentavos: 225000,
+              vatCentavos: 24107,
+              sourceSystem: 'REGISTERED_CAS',
+              invoicingMethod: 'COMPUTERIZED',
+              originLabel: 'DEMO sample (TEST)',
+              complianceNote: 'Reference copy from the registered issuer.',
+              reconciliationState: 'MATCHED',
+              reconciliationDifferenceCentavos: 0,
+              buyerTotalUnchanged: true,
+              downloadUrl: '/signed/sample',
+              fileName: 'sales-invoice.png',
+              contentType: 'image/png',
+              fileSizeBytes: 1024,
+              orderSummary: InvoiceOrderSnapshot(
+                billingName: 'Sample Buyer',
+                billingAddress: 'Sample billing address',
+                materialsCentavos: 200000,
+                deliveryCentavos: 25000,
+                vatCentavos: 24107,
+                totalCentavos: 225000,
+                lines: [
+                  InvoiceOrderLineItem(
+                    name: 'Portland cement 40 kg',
+                    quantity: '10.0000',
+                    unit: 'bag',
+                    unitPriceCentavos: 20000,
+                    totalCentavos: 200000,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      // An unavailable image retains its secure Open action and all document details.
+      repository.files['/signed/sample'] = Uint8List.fromList([1, 2, 3]);
+      String? openedName;
+      String? openedType;
+      await tester.pumpWidget(
+        _app(
+          OrderInvoicesScreen(
+            orderId: 'order-1',
+            repository: repository,
+            openFile: (_, bytes, name, type) async {
+              openedName = name;
+              openedType = type;
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Request a copy'), findsNothing);
+      expect(find.text('Request a correction'), findsOneWidget);
+      expect(find.text('sales-invoice.png'), findsOneWidget);
+      expect(find.text('Invoice details'), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.text('sales-invoice.png')).dy,
+        lessThan(tester.getTopLeft(find.text('Invoice details')).dy),
+      );
+      expect(find.text('10 bag × ₱200.00'), findsOneWidget);
+      await tester.tap(find.text('Open invoice copy'));
+      await tester.pumpAndSettle();
+      expect(openedName, 'sales-invoice.png');
+      expect(openedType, 'image/png');
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'returning an invoice requires a reason and safely retries the same return',
+    (tester) async {
+      await _tall(tester);
+      final repository = FakeDisputesRepository()
+        ..invoiceData = invoicesView(
+          records: const [
+            InvoiceRecordItem(
+              id: 'inv-1',
+              invoiceType: 'VENDOR_GOODS_INVOICE',
+              issuer: 'Sample Supply',
+              invoiceNumber: 'SI-1',
+              issuedOn: '2026-11-04',
+              amountCentavos: 10000,
+              originLabel: 'DEMO sample',
+              complianceNote: 'Reference copy.',
+              reconciliationState: 'MATCHED',
+              reconciliationDifferenceCentavos: 0,
+              buyerTotalUnchanged: true,
+            ),
+          ],
+          requests: [
+            InvoiceRequestItem(
+              id: 'req-1',
+              kind: 'COPY',
+              state: 'UPLOADED',
+              serviceTargetAt: _now(),
+              serviceTargetLabel: 'Nov 4',
+              overdue: false,
+              canReturn: true,
+              canClose: true,
+            ),
+          ],
+        )
+        ..failOnce = (call) => call.startsWith('answerInvoice')
+            ? const DiscoveryFailure(
+                DiscoveryFailureKind.offline,
+                'You are offline.',
+              )
+            : null;
+      await tester.pumpWidget(
+        _app(OrderInvoicesScreen(orderId: 'order-1', repository: repository)),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Return for correction'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Return invoice'));
+      await tester.pumpAndSettle();
+      expect(find.text('Enter at least 10 characters.'), findsOneWidget);
+      expect(repository.invoiceReturnReasons, isEmpty);
+      const reason = 'Please correct the invoice date.';
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Correction needed'),
+        reason,
+      );
+      await tester.tap(find.text('Return invoice'));
+      await tester.pumpAndSettle();
+      expect(find.text('You are offline.'), findsOneWidget);
+      await tester.tap(find.text('Return for correction'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Correction needed'),
+        reason,
+      );
+      await tester.tap(find.text('Return invoice'));
+      await tester.pumpAndSettle();
+      expect(repository.invoiceReturnReasons, [reason, reason]);
+      expect(repository.keys.toSet(), hasLength(1));
+      expect(
+        find.text('Returned to the store for correction.'),
+        findsOneWidget,
+      );
+    },
+  );
+
   testWidgets('a forbidden case shows the permission state with retry', (
     tester,
   ) async {

@@ -4,6 +4,7 @@
 
 // ignore_for_file: unused_element
 import 'package:built_collection/built_collection.dart';
+import 'package:materyalph_api_client/src/model/product_compliance_queue_envelope_meta.dart';
 import 'package:materyalph_api_client/src/model/product_compliance_queue_item.dart';
 import 'package:built_value/json_object.dart';
 import 'package:built_value/built_value.dart';
@@ -23,7 +24,7 @@ abstract class ProductComplianceQueueEnvelope implements Built<ProductCompliance
   BuiltList<ProductComplianceQueueItem> get data;
 
   @BuiltValueField(wireName: r'meta')
-  BuiltMap<String, JsonObject?> get meta;
+  ProductComplianceQueueEnvelopeMeta get meta;
 
   @BuiltValueField(wireName: r'errors')
   BuiltList<BuiltMap<String, JsonObject?>> get errors;
@@ -59,7 +60,7 @@ class _$ProductComplianceQueueEnvelopeSerializer implements PrimitiveSerializer<
     yield r'meta';
     yield serializers.serialize(
       object.meta,
-      specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
+      specifiedType: const FullType(ProductComplianceQueueEnvelopeMeta),
     );
     yield r'errors';
     yield serializers.serialize(
@@ -99,8 +100,8 @@ class _$ProductComplianceQueueEnvelopeSerializer implements PrimitiveSerializer<
         case r'meta':
           final valueDes = serializers.deserialize(
             value,
-            specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
-          ) as BuiltMap<String, JsonObject?>;
+            specifiedType: const FullType(ProductComplianceQueueEnvelopeMeta),
+          ) as ProductComplianceQueueEnvelopeMeta;
           result.meta.replace(valueDes);
           break;
         case r'errors':

@@ -4,7 +4,9 @@
 
 // ignore_for_file: unused_element
 import 'package:materyalph_api_client/src/model/chat_attachment.dart';
+import 'package:materyalph_api_client/src/model/chat_automated_reply.dart';
 import 'package:built_collection/built_collection.dart';
+import 'package:materyalph_api_client/src/model/chat_work_package_attachment.dart';
 import 'package:materyalph_api_client/src/model/chat_product.dart';
 import 'package:materyalph_api_client/src/model/chat_identity.dart';
 import 'package:built_value/built_value.dart';
@@ -15,6 +17,7 @@ part 'chat_message.g.dart';
 /// ChatMessage
 ///
 /// Properties:
+/// * [conversationId] - Original authorized context for files and read receipts, including in a combined Buyer timeline.
 /// * [id]
 /// * [clientMessageId]
 /// * [body]
@@ -25,8 +28,14 @@ part 'chat_message.g.dart';
 /// * [attachments]
 /// * [readByRecipient]
 /// * [product]
+/// * [automatedReply] - Static store reply. SYSTEM messages with this field do not count as human responses.
+/// * [workPackageAttachment]
 @BuiltValue()
 abstract class ChatMessage implements Built<ChatMessage, ChatMessageBuilder> {
+  /// Original authorized context for files and read receipts, including in a combined Buyer timeline.
+  @BuiltValueField(wireName: r'conversation_id')
+  String? get conversationId;
+
   @BuiltValueField(wireName: r'id')
   String get id;
 
@@ -38,7 +47,7 @@ abstract class ChatMessage implements Built<ChatMessage, ChatMessageBuilder> {
 
   @BuiltValueField(wireName: r'kind')
   ChatMessageKindEnum get kind;
-  // enum kindEnum {  TEXT,  SYSTEM,  ATTACHMENT,  PRODUCT,  TEXT_WITH_PRODUCT,  };
+  // enum kindEnum {  TEXT,  SYSTEM,  ATTACHMENT,  PRODUCT,  TEXT_WITH_PRODUCT,  WORK_PACKAGE,  };
 
   @BuiltValueField(wireName: r'sender')
   ChatIdentity get sender;
@@ -57,6 +66,13 @@ abstract class ChatMessage implements Built<ChatMessage, ChatMessageBuilder> {
 
   @BuiltValueField(wireName: r'product')
   ChatProduct? get product;
+
+  /// Static store reply. SYSTEM messages with this field do not count as human responses.
+  @BuiltValueField(wireName: r'automated_reply')
+  ChatAutomatedReply? get automatedReply;
+
+  @BuiltValueField(wireName: r'work_package_attachment')
+  ChatWorkPackageAttachment? get workPackageAttachment;
 
   ChatMessage._();
 
@@ -81,6 +97,13 @@ class _$ChatMessageSerializer implements PrimitiveSerializer<ChatMessage> {
     ChatMessage object, {
     FullType specifiedType = FullType.unspecified,
   }) sync* {
+    if (object.conversationId != null) {
+      yield r'conversation_id';
+      yield serializers.serialize(
+        object.conversationId,
+        specifiedType: const FullType(String),
+      );
+    }
     yield r'id';
     yield serializers.serialize(
       object.id,
@@ -133,6 +156,20 @@ class _$ChatMessageSerializer implements PrimitiveSerializer<ChatMessage> {
         specifiedType: const FullType(ChatProduct),
       );
     }
+    if (object.automatedReply != null) {
+      yield r'automated_reply';
+      yield serializers.serialize(
+        object.automatedReply,
+        specifiedType: const FullType(ChatAutomatedReply),
+      );
+    }
+    if (object.workPackageAttachment != null) {
+      yield r'work_package_attachment';
+      yield serializers.serialize(
+        object.workPackageAttachment,
+        specifiedType: const FullType(ChatWorkPackageAttachment),
+      );
+    }
   }
 
   @override
@@ -156,6 +193,14 @@ class _$ChatMessageSerializer implements PrimitiveSerializer<ChatMessage> {
       final key = serializedList[i] as String;
       final value = serializedList[i + 1];
       switch (key) {
+        case r'conversation_id':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.conversationId = valueDes;
+          break;
         case r'id':
           final valueDes = serializers.deserialize(
             value,
@@ -227,6 +272,22 @@ class _$ChatMessageSerializer implements PrimitiveSerializer<ChatMessage> {
           if (valueDes == null) continue;
           result.product.replace(valueDes);
           break;
+        case r'automated_reply':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(ChatAutomatedReply),
+          ) as ChatAutomatedReply?;
+          if (valueDes == null) continue;
+          result.automatedReply.replace(valueDes);
+          break;
+        case r'work_package_attachment':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(ChatWorkPackageAttachment),
+          ) as ChatWorkPackageAttachment?;
+          if (valueDes == null) continue;
+          result.workPackageAttachment.replace(valueDes);
+          break;
         default:
           unhandled.add(key);
           unhandled.add(value);
@@ -269,6 +330,8 @@ class ChatMessageKindEnum extends EnumClass {
   static const ChatMessageKindEnum PRODUCT = _$chatMessageKindEnum_PRODUCT;
   @BuiltValueEnumConst(wireName: r'TEXT_WITH_PRODUCT')
   static const ChatMessageKindEnum TEXT_WITH_PRODUCT = _$chatMessageKindEnum_TEXT_WITH_PRODUCT;
+  @BuiltValueEnumConst(wireName: r'WORK_PACKAGE')
+  static const ChatMessageKindEnum WORK_PACKAGE = _$chatMessageKindEnum_WORK_PACKAGE;
 
   static Serializer<ChatMessageKindEnum> get serializer => _$chatMessageKindEnumSerializer;
 

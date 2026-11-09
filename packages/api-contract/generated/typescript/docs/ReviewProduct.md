@@ -9,6 +9,7 @@ Name | Type
 `listingId` | string
 `name` | string
 `variantLabel` | string
+`imageUrl` | string
 
 ## Example
 
@@ -20,6 +21,7 @@ const example = {
   "listingId": null,
   "name": null,
   "variantLabel": null,
+  "imageUrl": null,
 } satisfies ReviewProduct
 
 console.log(example)

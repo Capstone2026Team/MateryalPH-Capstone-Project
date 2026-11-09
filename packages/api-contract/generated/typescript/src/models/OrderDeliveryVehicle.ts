@@ -13,12 +13,24 @@
  */
 
 import { mapValues } from '../runtime';
+import type { DeliveryVehicleProfile } from './DeliveryVehicleProfile';
+import {
+    DeliveryVehicleProfileFromJSON,
+    DeliveryVehicleProfileFromJSONTyped,
+    DeliveryVehicleProfileToJSON,
+    DeliveryVehicleProfileToJSONTyped,
+} from './DeliveryVehicleProfile';
+
 /**
  *
  * @export
  * @interface OrderDeliveryVehicle
  */
 export interface OrderDeliveryVehicle {
+    /**
+     * Frozen display details when available; older snapshots may omit them. Image bytes require the existing authorized order file endpoint.
+     */
+    vehicleDetails?: DeliveryVehicleProfile | null;
     /**
      *
      */
@@ -126,6 +138,7 @@ export function OrderDeliveryVehicleFromJSONTyped(json: any, ignoreDiscriminator
     }
     return {
 
+        'vehicleDetails': json['vehicle_details'] === undefined ? undefined : json['vehicle_details'] === null ? null : DeliveryVehicleProfileFromJSON(json['vehicle_details']),
         'name': json['name'],
         'vehicleCategory': json['vehicle_category'],
         'vehicleType': json['vehicle_type'],
@@ -156,6 +169,7 @@ export function OrderDeliveryVehicleToJSONTyped(value?: OrderDeliveryVehicle | n
 
     return {
 
+        'vehicle_details': DeliveryVehicleProfileToJSON(value['vehicleDetails']),
         'name': value['name'],
         'vehicle_category': value['vehicleCategory'],
         'vehicle_type': value['vehicleType'],

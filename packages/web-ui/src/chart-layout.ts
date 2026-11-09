@@ -12,10 +12,10 @@ export function chartLeftInset(labels: string[], minimum = 56): number {
 }
 
 /** Very long edge labels get a scrollable canvas rather than overlapping or smaller text. */
-export function chartMinimumWidth(labels: string[], left: number, right: number, minimum = 480): number {
+export function chartMinimumWidth(labels: string[], left: number, right: number, minimum = 480, plotMinimum = 240): number {
   const first = chartLabelWidth(labels[0] ?? '')
   const last = labels.length > 1 ? chartLabelWidth(labels[labels.length - 1] ?? '') : 0
-  return Math.max(minimum, left + right + Math.max(240, first + last + TICK_GAP, ...labels.map(chartLabelWidth)))
+  return Math.max(minimum, left + right + Math.max(plotMinimum, first + last + TICK_GAP, ...labels.map(chartLabelWidth)))
 }
 
 export type ChartTick = { index: number; label: string; x: number; textAnchor: 'start' | 'middle' | 'end' }

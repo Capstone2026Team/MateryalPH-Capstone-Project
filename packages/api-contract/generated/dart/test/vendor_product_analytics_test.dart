@@ -62,6 +62,12 @@ void main() {
       // TODO
     });
 
+    // Up to five products ranked by all-time visible Product Quality average descending, count descending, then listing ID ascending, independent of the selected period. Null without reviews.view; an empty array means no rated published products. Uses the same blind-reveal, moderation, active-dispute and score-exclusion gates as Buyer product averages.
+    // BuiltList<ProductAnalyticsRatedProduct> topRated
+    test('to test the property `topRated`', () async {
+      // TODO
+    });
+
     // BuiltList<VendorProductAnalyticsCategoriesInner> categories
     test('to test the property `categories`', () async {
       // TODO

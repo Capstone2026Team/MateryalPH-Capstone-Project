@@ -20,6 +20,14 @@ import { mapValues } from '../runtime';
  */
 export interface FeeStatement {
     /**
+     * Admin draft heading; frozen on issue.
+     */
+    invoiceHeading?: string;
+    /**
+     * Admin draft Vendor message; frozen on issue.
+     */
+    invoiceMessage?: string;
+    /**
      *
      */
     id: string;
@@ -127,6 +135,8 @@ export function FeeStatementFromJSONTyped(json: any, ignoreDiscriminator: boolea
     }
     return {
 
+        'invoiceHeading': json['invoice_heading'] == null ? undefined : json['invoice_heading'],
+        'invoiceMessage': json['invoice_message'] == null ? undefined : json['invoice_message'],
         'id': json['id'],
         'reference': json['reference'],
         'state': json['state'],
@@ -156,6 +166,8 @@ export function FeeStatementToJSONTyped(value?: FeeStatement | null, ignoreDiscr
 
     return {
 
+        'invoice_heading': value['invoiceHeading'],
+        'invoice_message': value['invoiceMessage'],
         'id': value['id'],
         'reference': value['reference'],
         'state': value['state'],

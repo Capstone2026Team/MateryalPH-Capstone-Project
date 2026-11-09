@@ -6,6 +6,7 @@
 
 Name | Type
 ------------ | -------------
+`vehicleDetails` | [DeliveryVehicleProfile](DeliveryVehicleProfile.md)
 `recommended` | boolean
 `vehicleId` | string
 `name` | string
@@ -40,6 +41,7 @@ import type { DeliveryPlanVehicle } from '@materyalph/api-client-ts'
 
 // TODO: Update the object below with actual values
 const example = {
+  "vehicleDetails": null,
   "recommended": null,
   "vehicleId": null,
   "name": null,

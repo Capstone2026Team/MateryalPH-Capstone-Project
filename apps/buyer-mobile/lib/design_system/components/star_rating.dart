@@ -3,6 +3,49 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../theme.dart';
 
+/// Fractional, read-only stars for a server-published score; null is never rendered as a zero rating.
+class StarRatingDisplay extends StatelessWidget {
+  const StarRatingDisplay({
+    super.key,
+    required this.value,
+    required this.label,
+  });
+  final double? value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    label: value == null
+        ? '$label: not yet published'
+        : '$label: ${value!.toStringAsFixed(2)} out of 5',
+    excludeSemantics: true,
+    child: Wrap(
+      spacing: 3,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        for (var star = 1; star <= 5; star++)
+          Icon(
+            value == null || value! < star - 0.5
+                ? Icons.star_border_rounded
+                : value! < star
+                ? Icons.star_half_rounded
+                : Icons.star_rounded,
+            color: value == null ? BuyerTheme.muted : BuyerTheme.action,
+            size: 22,
+          ),
+        if (value != null)
+          Padding(
+            padding: const EdgeInsets.only(left: 5),
+            child: Text(
+              '${value!.toStringAsFixed(2)} / 5',
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ),
+      ],
+    ),
+  );
+}
+
 /// A labelled 1–5 rating with 44 px targets; each star announces its value and selection.
 class StarRatingField extends StatelessWidget {
   const StarRatingField({
@@ -109,21 +152,26 @@ class StarRatingLine extends StatelessWidget {
   Widget build(BuildContext context) => Semantics(
     label: '$label: $value of 5',
     excludeSemantics: true,
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
+    child: Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         if (showLabel)
           Text(
             '$label ',
             style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
           ),
-        for (var star = 1; star <= 5; star++)
-          Icon(
-            LucideIcons.star,
-            size: 14,
-            color: star <= value ? BuyerTheme.action : BuyerTheme.border,
-            fill: star <= value ? 1 : 0,
-          ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var star = 1; star <= 5; star++)
+              Icon(
+                LucideIcons.star,
+                size: 14,
+                color: star <= value ? BuyerTheme.action : BuyerTheme.border,
+                fill: star <= value ? 1 : 0,
+              ),
+          ],
+        ),
       ],
     ),
   );

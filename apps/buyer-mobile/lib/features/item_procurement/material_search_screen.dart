@@ -199,7 +199,7 @@ class _MaterialSearchScreenState extends State<MaterialSearchScreen> {
     if (_loading) {
       return const Align(
         alignment: Alignment.topCenter,
-        child: LinearProgressIndicator(),
+        child: BuyerLoadingProgress(),
       );
     }
     if (_failure != null) {

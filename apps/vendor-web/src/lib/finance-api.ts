@@ -3,6 +3,7 @@ import {
   type VendorCommissionMonitoring,
   type FeeStatementDetail,
   type ListVendorTransactionsStatusEnum,
+  type ListVendorTransactionsStatementStateEnum,
   type ListVendorTransactionsTabEnum,
   type PaymentAttempt,
   type PaymentChannelOption,
@@ -12,7 +13,7 @@ import {
   type VendorEarningsTrendPoint,
   type VendorFinanceOverview,
 } from '@materyalph/api-client-ts'
-import { createWebApiConfiguration, type PaymentChannelRow, type ThresholdPanelData } from '@materyalph/web-ui'
+import { createWebApiConfiguration, type AssessedPaymentPage, type PaymentChannelRow, type ThresholdPanelData } from '@materyalph/web-ui'
 import { newIdempotencyKey } from './onboarding-api'
 import { apiDateFilters, type DateFilters } from './date-filters'
 
@@ -27,6 +28,12 @@ export type FinanceRow = Record<string, unknown>
 
 export async function getFinanceOverview(): Promise<VendorFinanceOverview> {
   return (await financeApi().getVendorFinanceOverview()).data
+}
+
+export async function getThresholdPayments(page: number): Promise<AssessedPaymentPage> {
+  const response = await financeApi().listVendorThresholdPayments({ page })
+  const meta = response.meta as { has_more?: boolean; total?: number }
+  return { data: response.data, hasMore: Boolean(meta.has_more), total: Number(meta.total ?? response.data.payments.length) }
 }
 
 export async function getCommissionMonitoring(page = 1): Promise<{ monitoring: VendorCommissionMonitoring; hasMore: boolean }> {
@@ -45,17 +52,17 @@ export async function updatePhysicalPayments(lockVersion: number, codEnabled: bo
 
 /** Payments-tab status filter; each value matches the badge a Payments row shows. */
 export type PaymentStatusFilter = ListVendorTransactionsStatusEnum
-export type TransactionFilters = DateFilters & { status?: PaymentStatusFilter }
+export type TransactionFilters = DateFilters & { status?: PaymentStatusFilter; statementState?: ListVendorTransactionsStatementStateEnum }
 
 export async function listTransactions(tab: FinanceTab, page = 1, filters: TransactionFilters = {}): Promise<{ items: FinanceRow[]; hasMore: boolean; total: number }> {
-  const response = await financeApi().listVendorTransactions({ tab: tab as ListVendorTransactionsTabEnum, page, ...(filters.status ? { status: filters.status } : {}), ...apiDateFilters(filters) })
+  const response = await financeApi().listVendorTransactions({ tab: tab as ListVendorTransactionsTabEnum, page, ...(filters.status ? { status: filters.status } : {}), ...(filters.statementState ? { statementState: filters.statementState } : {}), ...apiDateFilters(filters) })
   const meta = response.meta as { has_more?: boolean; total?: number }
   return { items: response.data as FinanceRow[], hasMore: Boolean(meta.has_more), total: Number(meta.total ?? response.data.length) }
 }
 
 /** Owner-only CSV export; the download is audited by the server. */
 export async function exportTransactions(tab: FinanceTab, filters: TransactionFilters = {}): Promise<Blob> {
-  const raw = await financeApi().exportVendorTransactionsRaw({ tab, ...(filters.status ? { status: filters.status } : {}), ...apiDateFilters(filters) })
+  const raw = await financeApi().exportVendorTransactionsRaw({ tab, ...(filters.status ? { status: filters.status } : {}), ...(filters.statementState ? { statementState: filters.statementState } : {}), ...apiDateFilters(filters) })
   return raw.raw.blob()
 }
 

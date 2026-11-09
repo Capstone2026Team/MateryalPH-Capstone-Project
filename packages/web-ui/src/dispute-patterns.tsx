@@ -8,6 +8,10 @@ import { DeadlineCountdown, formatPesoCentavos } from './order-patterns'
 import { StatusBadge } from './portal-shell'
 import { formatManilaDateTime } from './stock-ledger'
 import { readSignedCaseFile } from './web-api-session'
+import { createWebApiConfiguration } from './web-api-session'
+import { ReportingApi } from '@materyalph/api-client-ts'
+import { saveDocumentBlob } from './document-export-dialog'
+import { notificationError } from './notification-error'
 
 type Tone = 'success' | 'warning' | 'error' | 'info' | 'neutral'
 
@@ -195,7 +199,7 @@ const INVOICE_TYPES: Record<string, string> = { VENDOR_GOODS_INVOICE: 'Vendor sa
  */
 export function InvoiceRecordList({ records, apiBasePath, renderAction }: { records: InvoiceRecordView[]; apiBasePath: string; renderAction?: (record: InvoiceRecordView) => ReactNode }) {
   if (records.length === 0) return <p className="text-sm text-text-secondary">No invoice copy uploaded yet.</p>
-  return <ul className="grid divide-y divide-border-default rounded-surface border border-border-default bg-surface-primary" aria-label="Invoice records">
+  return <ul className="grid divide-y divide-border-default mp-card" aria-label="Invoice records">
     {records.map(record => {
       const [reconciliation, tone] = RECONCILIATION[record.reconciliationState] ?? [record.reconciliationState, 'neutral' as Tone]
       return <li key={record.id} className="grid min-w-0 gap-2 px-4 py-3">
@@ -227,12 +231,48 @@ export function InvoiceRecordList({ records, apiBasePath, renderAction }: { reco
   </ul>
 }
 
-/** MateryalPH's own Purchase Order and payment confirmation, each visibly labelled "Not a tax invoice". */
-export function PlatformDocumentNotice({ documents }: { documents: PlatformDocumentRef[] }) {
-  return <ul className="grid min-w-0 divide-y divide-border-default rounded-control border border-border-default bg-surface-canvas px-3" aria-label="MateryalPH documents">
+/** MateryalPH's Purchase Order with its current download availability. */
+export function PlatformDocumentNotice({ documents, orderId, apiBasePath, audience = 'vendor', onRefresh }: { documents: PlatformDocumentRef[]; orderId: string; apiBasePath: string; audience?: 'vendor' | 'admin'; onRefresh?: () => void }) {
+  const [busy, setBusy] = useState<string | null>(null)
+  const [error, setError] = useState('')
+  const scope = useRef('')
+  const contextKey = `${audience}/${apiBasePath}/${orderId}`
+  scope.current = contextKey
+  const generation = useRef(0)
+  const actionLock = useRef(false)
+  const sessionOpen = useRef(true)
+  useEffect(() => {
+    generation.current++; actionLock.current = false; setBusy(null); setError('')
+    const clear = () => { generation.current++; sessionOpen.current = false; setBusy(null); setError('Sign in again to download this document.') }
+    window.addEventListener('materyalph:session-cleared', clear)
+    return () => { generation.current++; window.removeEventListener('materyalph:session-cleared', clear) }
+  }, [contextKey])
+  useEffect(() => {
+    if (!onRefresh || !documents.some(document => document.availability === 'QUEUED')) return
+    const timer = window.setTimeout(onRefresh, 5000)
+    return () => window.clearTimeout(timer)
+  }, [documents, onRefresh])
+  async function download(document: PlatformDocumentRef) {
+    if (actionLock.current || !sessionOpen.current) return
+    actionLock.current = true
+    const epoch = generation.current
+    const isCurrent = () => sessionOpen.current && epoch === generation.current && scope.current === contextKey
+    setBusy(document.kind); setError('')
+    try {
+      const blob = await new ReportingApi(createWebApiConfiguration(apiBasePath, { refreshSession: true })).downloadOrderDocument({ audience, orderId, kind: document.kind })
+      if (!isCurrent()) return
+      if (await blob.slice(0, 5).text() !== '%PDF-') { setError('The PDF could not be verified. Try downloading it again.'); return }
+      if (isCurrent()) saveDocumentBlob(new Blob([blob], { type: 'application/pdf' }), `materyalph-${document.kind.toLowerCase()}-${orderId}.pdf`)
+    } catch (cause) { const message = await notificationError(cause); if (isCurrent()) setError(message) }
+    finally { if (isCurrent()) { actionLock.current = false; setBusy(null) } }
+  }
+  return <><ul className="grid min-w-0 divide-y divide-border-default rounded-control border border-border-default bg-surface-canvas px-3" aria-label="MateryalPH documents">
     {documents.map(document => <li key={document.kind} className="flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 py-3 text-sm">
       <span className="flex min-w-0 items-start gap-2"><FileText size={16} className="mt-0.5 shrink-0" aria-hidden="true" /><span className="min-w-0 break-words">{document.title}</span></span>
-      <span className="shrink-0"><StatusBadge label={document.label} tone="neutral" icon={<Ban size={14} aria-hidden="true" />} /></span>
+      <span className="flex shrink-0 flex-wrap items-center gap-2">
+        {document.availability === 'READY' && document.downloadUrl ? <Button variant="secondary" disabled={busy !== null || !sessionOpen.current} onClick={() => void download(document)} aria-label={`Download ${document.title} PDF`}>{busy === document.kind ? 'Downloading…' : 'Download PDF'}</Button>
+          : <span role={document.availability === 'QUEUED' ? 'status' : undefined} className="text-xs text-text-secondary">{document.availability === 'QUEUED' ? 'Preparing PDF…' : document.availability === 'AFTER_PAYMENT' ? 'After payment' : document.availability === 'FAILED' ? 'Generation unavailable' : document.availability === 'READY' ? 'File access restricted' : 'After final acceptance'}</span>}
+      </span>
     </li>)}
-  </ul>
+  </ul>{error && <p role="alert" className="mt-2 text-sm text-status-error">{error}</p>}</>
 }

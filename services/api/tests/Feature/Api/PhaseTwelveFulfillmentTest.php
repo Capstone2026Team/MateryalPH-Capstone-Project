@@ -9,7 +9,9 @@ use App\Domain\Geography\PlacesProvider;
 use App\Domain\Geography\RouteProvider;
 use App\Domain\Identity\TokenSessionService;
 use App\Domain\Orders\CancellationService;
+use App\Domain\Orders\OrderDeliveryPlanner;
 use App\Domain\Payments\PaymentReconciliationService;
+use App\Domain\Payments\PhysicalPaymentService;
 use App\Domain\Vendors\AddressGeocoder;
 use App\Domain\Vendors\StoreOperatingSchedule;
 use App\Domain\Vendors\VendorFileScanner;
@@ -386,6 +388,33 @@ final class PhaseTwelveFulfillmentTest extends TestCase
         self::assertNotNull($store);
     }
 
+    public function test_cancelled_cod_balances_are_no_longer_due_in_order_summaries_and_finance_without_rewriting_records(): void
+    {
+        [, $owner, $buyer, $orderId] = $this->codDelivery('Cancelled COD balance');
+        $opening = DB::table('physical_payment_records')->where('order_id', $orderId)->where('record_kind', 'OBLIGATION_OPENED')->first();
+        $originalBalance = (int) $opening->remaining_obligation_centavos;
+        self::assertGreaterThan(0, $originalBalance);
+        $this->getJson('/api/v1/buyers/orders/'.$orderId)->assertOk()->assertJsonPath('data.payment.physical.remaining_centavos', $originalBalance);
+        $this->cancelConfirmed($buyer, $orderId);
+
+        $this->getJson('/api/v1/buyers/orders/'.$orderId)->assertOk()
+            ->assertJsonPath('data.payment.physical.state', 'CANCELLED_UNPAID')
+            ->assertJsonPath('data.payment.physical.remaining_centavos', 0);
+        self::assertSame(0, app(PhysicalPaymentService::class)->outstanding(DB::table('orders')->where('id', $orderId)->first()));
+        self::assertSame($originalBalance, (int) DB::table('physical_payment_records')->where('id', $opening->id)->value('remaining_obligation_centavos'));
+        self::assertSame($originalBalance, (int) DB::table('physical_payment_records')->where('order_id', $orderId)->where('record_kind', 'CANCELLATION_RELEASE')->value('remaining_obligation_centavos'), 'The release retains the historical amount released, not an amount still owed.');
+        self::assertSame(0, DB::table('refunds')->where('order_id', $orderId)->count(), 'Uncollected cash does not create a refund.');
+
+        $this->signInStoreMember($owner);
+        $this->getJson('/api/v1/vendor/orders/'.$orderId)->assertOk()
+            ->assertJsonPath('data.payment.physical.state', 'CANCELLED_UNPAID')
+            ->assertJsonPath('data.payment.physical.remaining_centavos', 0);
+        $this->getJson('/api/v1/vendor/finance/transactions?tab=PAYMENTS&status=PHYSICAL_RELEASED')->assertOk()
+            ->assertJsonPath('meta.total', 1)->assertJsonPath('data.0.status', 'PHYSICAL_RELEASED')
+            ->assertJsonPath('data.0.gross_centavos', $originalBalance)->assertJsonPath('data.0.remaining_centavos', 0)
+            ->assertJsonPath('data.0.collected_centavos', 0)->assertJsonPath('data.0.net_collected_centavos', 0);
+    }
+
     public function test_vendor_cancellation_of_a_mixed_paid_nrpc_order_refunds_the_online_payment_forfeits_nrpc_and_keeps_tax_review_separate(): void
     {
         [$store, $owner, $buyer, $orderId, $nrpcPayment] = $this->paidInStoreNrpc('Mixed Cancel');
@@ -411,11 +440,21 @@ final class PhaseTwelveFulfillmentTest extends TestCase
             'The original online NRPC payment, including its disclosed processing fee, is refunded; NRPC is forfeited.');
         $decision = DB::table('cancellation_decisions')->where('order_id', $orderId)->first();
         self::assertSame(['VENDOR', 0, 400000, 500000], [$decision->cause, (int) $decision->nrpc_retained_centavos, (int) $decision->cash_reimbursement_centavos, (int) $decision->released_unpaid_centavos]);
+        $this->getJson('/api/v1/vendor/orders/'.$orderId)->assertOk()
+            ->assertJsonPath('data.payment.physical.state', 'CANCELLED_UNPAID')
+            ->assertJsonPath('data.payment.physical.remaining_centavos', 0);
         self::assertSame(1, DB::table('nfr_events')->where('order_id', $orderId)->count());
         self::assertSame(['CANCELLED', 0], [(string) DB::table('fee_assessments')->where('order_id', $orderId)->value('state'), DB::table('fee_assessment_events')->where('order_id', $orderId)->where('event_type', 'EARNED')->count()]);
         $reimbursement = DB::table('physical_reimbursements')->where('order_id', $orderId)->first();
         self::assertSame(['VENDOR_REIMBURSEMENT_PENDING', 400000, null], [$reimbursement->state, (int) $reimbursement->amount_centavos, $reimbursement->refund_id], 'Cash is reimbursed by the Vendor, never through a Refund API.');
         self::assertSame(1, DB::table('refunds')->where('order_id', $orderId)->count(), 'No provider refund is invented for cash or an uncollected balance.');
+
+        $this->signInAdmin($this->admin('ADMIN_ORDER_DISPUTE'));
+        $this->getJson('/api/v1/admin/order-operations/reimbursements')->assertOk()
+            ->assertJsonPath('data.0.order_id', $orderId)->assertJsonPath('meta.total', 1)->assertJsonPath('meta.has_more', false);
+        $this->getJson('/api/v1/admin/order-operations/reimbursements?page=2')->assertOk()->assertJsonCount(0, 'data');
+        $this->getJson('/api/v1/admin/order-operations/reimbursements?page=0')->assertUnprocessable();
+        $this->getJson('/api/v1/admin/order-operations/reimbursements?from=2000-01-01&to=2000-01-02')->assertOk()->assertJsonCount(0, 'data');
 
         // FIN-07: posted CWT goes to ADJUSTMENT_REQUIRED; the FIN-04A counter and status never move back.
         $adjustment = DB::table('tax_adjustments')->where('remittance_assessment_id', $assessment->id)->first();
@@ -567,6 +606,48 @@ final class PhaseTwelveFulfillmentTest extends TestCase
         self::assertSame((int) $soloOwner->id, (int) $soloThread->handler_user_id);
         $this->signInBuyer($soloBuyer);
         $this->postJson('/api/v1/buyers/conversations/'.$soloThread->id.'/messages', ['body' => 'On my way.', 'client_message_id' => (string) Str::uuid7()])->assertCreated();
+    }
+
+    public function test_admin_order_audit_is_read_only_permissioned_searchable_and_records_access(): void
+    {
+        [, , $buyer, $orderId] = $this->paidPickup('Audit Paid Store');
+        $this->gateway->nextRefund = 'REJECT';
+        $this->cancelConfirmed($buyer, $orderId);
+        [$pendingStore, , $listing] = $this->pickupStore('Audit Pending Store');
+        [, $pending] = $this->pickupOrder($pendingStore, $listing);
+        DB::table('orders')->where('id', $pending)->update(['vendor_response_due_at' => now()->subDay()]);
+        $before = (array) DB::table('orders')->where('id', $pending)->first();
+        $counts = [DB::table('order_status_history')->count(), DB::table('payments')->count(), DB::table('refunds')->count()];
+
+        $this->signInAdmin($this->admin('ADMIN_SUPPORT'));
+        $base = '/api/v1/admin/order-operations/orders';
+        $this->getJson($base)->assertForbidden();
+        $this->getJson($base.'/'.$orderId)->assertForbidden();
+        $this->signInAdmin($this->admin('ADMIN_ORDER_DISPUTE'));
+        $this->getJson($base)->assertOk()->assertJsonCount(2, 'data')->assertJsonPath('meta.total', 2)->assertJsonPath('meta.has_more', false);
+        $this->getJson($base.'?q=Audit%20Pending')->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $pending);
+        $this->getJson($base.'?order_state=CANCELLED')->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $orderId);
+        $this->getJson($base.'?page=2')->assertOk()->assertJsonCount(0, 'data');
+        $this->getJson($base.'?order_state=INVALID')->assertUnprocessable();
+        $this->getJson($base.'?from=2000-01-01&to=2000-01-02')->assertOk()->assertJsonCount(0, 'data');
+        $this->getJson($base.'/'.$pending)->assertOk()->assertJsonPath('data.available_actions', [])->assertJsonPath('data.payment.available', false);
+        self::assertSame($before, (array) DB::table('orders')->where('id', $pending)->first(), 'Audit reads must not expire overdue orders.');
+        $detail = $this->getJson($base.'/'.$orderId)->assertOk()->assertJsonPath('data.available_actions', [])
+            ->assertJsonPath('data.refund_timeline.refunds.0.can_retry', false)->assertJsonPath('data.fulfillment.next_action', 'NONE')
+            ->assertJsonPath('data.payment.attempts.0.checkout_url', null)->assertJsonPath('data.payment.attempts.0.can_check_status', false)->json('data');
+        self::assertNotEmpty($detail['lines']);
+        self::assertNotEmpty($detail['timeline']);
+        foreach (['permissions', 'reservations', 'primary_action', 'auto_accept'] as $key) {
+            self::assertArrayNotHasKey($key, $detail);
+        }
+        $encoded = json_encode($detail, JSON_THROW_ON_ERROR);
+        foreach (['provider_reference', 'account_number', 'quantity_on_hand', 'hard_reserved_quantity', 'private_mobile'] as $key) {
+            self::assertStringNotContainsString('"'.$key.'"', $encoded);
+        }
+        self::assertSame($counts, [DB::table('order_status_history')->count(), DB::table('payments')->count(), DB::table('refunds')->count()]);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'ORDER_AUDIT_VIEWED', 'resource_id' => $orderId]);
+        $this->getJson($base.'/'.Str::uuid7())->assertNotFound();
+        $this->getJson($base.'/'.$orderId.'/files/'.Str::uuid7())->assertNotFound();
     }
 
     public function test_admin_order_operations_are_permissioned_and_a_paid_fee_credit_refunds_the_original_fee_capture(): void
@@ -957,6 +1038,7 @@ final class PhaseTwelveFulfillmentTest extends TestCase
             ->assertJsonPath('data.permissions.can_record_milestone', false)->assertJsonPath('data.permissions.can_report_vehicle_issue', true)
             ->assertJsonPath('data.fulfillment.next_action', 'NONE')->assertJsonPath('data.primary_action', 'NONE');
 
+        $orderFileCount = DB::table('files')->where('owner_type', 'ORDER')->where('owner_id', $orderId)->count();
         $this->milestone($owner, $orderId, 'DELIVERED')->assertForbidden()->assertJsonPath('errors.0.code', 'PERMISSION_DENIED');
         foreach ([$owner, $manager] as $member) {
             $this->milestone($member, $orderId, 'DELIVERED', ['receiver_name' => 'Site Receiver'], files: ['file' => UploadedFile::fake()->image('owner-proof.png')])
@@ -964,7 +1046,7 @@ final class PhaseTwelveFulfillmentTest extends TestCase
         }
         self::assertSame('OUT_FOR_DELIVERY', $this->orderState($orderId));
         self::assertSame(0, DB::table('fulfillment_proofs')->where('order_id', $orderId)->count());
-        self::assertSame(0, DB::table('files')->where('owner_type', 'ORDER')->where('owner_id', $orderId)->count(), 'Owner/Manager proof is rejected before upload storage.');
+        self::assertSame($orderFileCount, DB::table('files')->where('owner_type', 'ORDER')->where('owner_id', $orderId)->count(), 'Owner/Manager proof is rejected before upload storage.');
         $this->milestone($other, $orderId, 'DELIVERED', ['receiver_name' => 'Site Receiver'], files: ['file' => UploadedFile::fake()->image('other-proof.png')])->assertNotFound();
         $this->signInStoreMember($staff);
         $this->getJson('/api/v1/vendor/orders/'.$orderId)->assertOk()->assertJsonPath('data.permissions.can_record_milestone', true)
@@ -980,7 +1062,7 @@ final class PhaseTwelveFulfillmentTest extends TestCase
         $proof = DB::table('fulfillment_proofs')->where('order_id', $orderId)->first();
         self::assertSame((int) $staff->id, (int) $proof->actor_user_id);
         self::assertSame(1, DB::table('fulfillment_proofs')->where('order_id', $orderId)->count());
-        self::assertSame(1, DB::table('files')->where('owner_type', 'ORDER')->where('owner_id', $orderId)->count(), 'Replayed proof does not retain another upload.');
+        self::assertSame($orderFileCount + 1, DB::table('files')->where('owner_type', 'ORDER')->where('owner_id', $orderId)->count(), 'Replayed proof does not retain another upload.');
         foreach ([$owner, $manager] as $member) {
             $this->signInStoreMember($member);
             $this->getJson('/api/v1/vendor/orders/'.$orderId)->assertOk()->assertJsonPath('data.fulfillment.state', 'DELIVERED')
@@ -1006,10 +1088,11 @@ final class PhaseTwelveFulfillmentTest extends TestCase
         $this->assign($staff, $owner, $orderId)->assertOk();
         $this->milestone($owner, $orderId, 'PROCESSING')->assertOk();
         $this->milestone($owner, $orderId, 'OUT_FOR_DELIVERY', ['vehicle_index' => 0, 'trip_number' => 1])->assertOk();
+        $orderFileCount = DB::table('files')->where('owner_type', 'ORDER')->where('owner_id', $orderId)->count();
         $this->milestone($staff, $orderId, 'DELIVERED', ['receiver_name' => 'Site Receiver'], files: ['file' => UploadedFile::fake()->image('revoked-proof.png')])->assertNotFound();
         self::assertSame('OUT_FOR_DELIVERY', $this->orderState($orderId));
         self::assertSame(0, DB::table('fulfillment_proofs')->where('order_id', $orderId)->count());
-        self::assertSame(0, DB::table('files')->where('owner_type', 'ORDER')->where('owner_id', $orderId)->count());
+        self::assertSame($orderFileCount, DB::table('files')->where('owner_type', 'ORDER')->where('owner_id', $orderId)->count());
     }
 
     public function test_migration_backfills_the_accepted_vehicle_for_existing_dispatched_assignments(): void
@@ -1060,6 +1143,73 @@ final class PhaseTwelveFulfillmentTest extends TestCase
         });
         $this->signInStoreMember($staff);
         $this->getJson('/api/v1/vendor/orders/'.$orderId.'/fulfillment/route')->assertForbidden()->assertJsonPath('errors.0.code', 'ACCOUNT_NOT_ACTIVE');
+    }
+
+    public function test_order_identity_photo_is_private_and_available_for_pickup_and_closed_order_viewers(): void
+    {
+        [$store, $owner, $buyer, $orderId] = $this->paidPickup('Order profile identity');
+        $staff = $this->teamMember($store, 'STORE_STAFF');
+        $buyer->forceFill(['profile_photo_key' => 'private/profile-photos/order-identity.png', 'profile_photo_disk' => 'local'])->save();
+        $buyer->refresh();
+        Storage::disk('local')->put($buyer->profile_photo_key, 'synthetic sanitized photo');
+        $path = '/vendor/orders/'.$orderId.'/buyer-photo?version='.$buyer->lock_version;
+        foreach (['CONFIRMED', 'COMPLETED'] as $state) {
+            DB::table('orders')->where('id', $orderId)->update(['order_state' => $state]);
+            $this->signInStoreMember($staff);
+            $this->getJson('/api/v1/vendor/orders/'.$orderId)->assertOk()
+                ->assertJsonPath('data.buyer.profile_photo_path', $path)->assertJsonPath('data.buyer.mobile_e164', null)
+                ->assertJsonPath('data.buyer.avatar_path', null)->assertJsonPath('data.location_map.destination', null)
+                ->assertJsonMissingPath('data.buyer.profile_photo_key');
+            $this->get('/api/v1'.$path)->assertOk()->assertHeader('Content-Type', 'image/png')
+                ->assertHeader('Cache-Control', 'no-store, private')->assertStreamedContent('synthetic sanitized photo');
+        }
+        $this->get('/api/v1/vendor/orders/'.$orderId.'/buyer-photo?version=999999')->assertNotFound();
+        $this->getJson('/api/v1/vendor/orders/'.$orderId.'/buyer-photo')->assertUnprocessable();
+        [, $otherOwner] = $this->activeStore('Foreign identity viewer');
+        $this->signInStoreMember($otherOwner);
+        $this->get('/api/v1'.$path)->assertNotFound();
+    }
+
+    public function test_order_identity_photo_rechecks_assignment_after_storage_access(): void
+    {
+        [$store, $owner, $buyer, $orderId] = $this->paidPickup('Order photo revocation');
+        $staff = $this->teamMember($store, 'FULFILLMENT');
+        $buyer->forceFill(['profile_photo_key' => 'private/profile-photos/revoked-order.png', 'profile_photo_disk' => 'local'])->save();
+        $buyer->refresh();
+        $this->assign($staff, $owner, $orderId)->assertOk();
+        $disk = \Mockery::mock(FilesystemAdapter::class);
+        $disk->shouldReceive('get')->once()->with($buyer->profile_photo_key)->andReturnUsing(static function () use ($orderId): string {
+            DB::table('order_fulfillment_assignments')->where('order_id', $orderId)->whereNull('ended_at')->update(['ended_at' => now()]);
+
+            return 'synthetic bytes that must not leave the API';
+        });
+        Storage::shouldReceive('disk')->with('local')->once()->andReturn($disk);
+        $this->signInStoreMember($staff);
+        $this->get('/api/v1/vendor/orders/'.$orderId.'/buyer-photo?version='.$buyer->lock_version)->assertNotFound();
+    }
+
+    public function test_order_map_uses_the_saved_vehicle_drop_off_and_route_for_authorized_viewers(): void
+    {
+        [$store, , $buyer, $orderId] = $this->paidDelivery('Order location preview');
+        $staff = $this->teamMember($store, 'STORE_STAFF');
+        $order = DB::table('orders')->where('id', $orderId)->first();
+        $endpoint = OrderDeliveryPlanner::endpoint($order);
+        $this->signInStoreMember($staff);
+        $this->getJson('/api/v1/vendor/orders/'.$orderId)->assertOk()
+            ->assertJsonPath('data.location_map.destination.latitude', (float) $endpoint['latitude'])
+            ->assertJsonPath('data.location_map.destination.longitude', (float) $endpoint['longitude'])
+            ->assertJsonPath('data.location_map.destination.label', $endpoint['formatted_address'])
+            ->assertJsonPath('data.buyer.mobile_e164', null);
+        $this->getJson('/api/v1/vendor/orders/'.$orderId.'/route')->assertOk()
+            ->assertJsonPath('data.destination.latitude', (float) $endpoint['latitude'])
+            ->assertJsonPath('data.destination.longitude', (float) $endpoint['longitude']);
+        $this->getJson('/api/v1/vendor/orders/'.$orderId.'/fulfillment/route')->assertForbidden();
+        $this->getJson('/api/v1/vendor/orders')->assertOk()->assertJsonMissingPath('data.0.location_map');
+        $this->signInBuyer($buyer);
+        $this->getJson('/api/v1/buyers/orders/'.$orderId)->assertOk()->assertJsonMissingPath('data.location_map');
+        [, $otherOwner] = $this->activeStore('Foreign map viewer');
+        $this->signInStoreMember($otherOwner);
+        $this->getJson('/api/v1/vendor/orders/'.$orderId.'/route')->assertNotFound();
     }
 
     public function test_delivery_buyer_contact_and_photo_follow_current_role_assignment_and_closure(): void

@@ -8,16 +8,11 @@ part of 'platform_document_ref.dart';
 
 const PlatformDocumentRefKindEnum _$platformDocumentRefKindEnum_PURCHASE_ORDER =
     const PlatformDocumentRefKindEnum._('PURCHASE_ORDER');
-const PlatformDocumentRefKindEnum
-    _$platformDocumentRefKindEnum_PAYMENT_CONFIRMATION =
-    const PlatformDocumentRefKindEnum._('PAYMENT_CONFIRMATION');
 
 PlatformDocumentRefKindEnum _$platformDocumentRefKindEnumValueOf(String name) {
   switch (name) {
     case 'PURCHASE_ORDER':
       return _$platformDocumentRefKindEnum_PURCHASE_ORDER;
-    case 'PAYMENT_CONFIRMATION':
-      return _$platformDocumentRefKindEnum_PAYMENT_CONFIRMATION;
     default:
       throw ArgumentError(name);
   }
@@ -27,7 +22,6 @@ final BuiltSet<PlatformDocumentRefKindEnum>
     _$platformDocumentRefKindEnumValues =
     BuiltSet<PlatformDocumentRefKindEnum>(const <PlatformDocumentRefKindEnum>[
   _$platformDocumentRefKindEnum_PURCHASE_ORDER,
-  _$platformDocumentRefKindEnum_PAYMENT_CONFIRMATION,
 ]);
 
 const PlatformDocumentRefLabelEnum
@@ -61,11 +55,9 @@ class _$PlatformDocumentRefKindEnumSerializer
     implements PrimitiveSerializer<PlatformDocumentRefKindEnum> {
   static const Map<String, Object> _toWire = const <String, Object>{
     'PURCHASE_ORDER': 'PURCHASE_ORDER',
-    'PAYMENT_CONFIRMATION': 'PAYMENT_CONFIRMATION',
   };
   static const Map<Object, String> _fromWire = const <Object, String>{
     'PURCHASE_ORDER': 'PURCHASE_ORDER',
-    'PAYMENT_CONFIRMATION': 'PAYMENT_CONFIRMATION',
   };
 
   @override
@@ -124,6 +116,12 @@ class _$PlatformDocumentRef extends PlatformDocumentRef {
   final PlatformDocumentRefLabelEnum label;
   @override
   final String availability;
+  @override
+  final String? generatedAt;
+  @override
+  final String? checksum;
+  @override
+  final String? downloadUrl;
 
   factory _$PlatformDocumentRef(
           [void Function(PlatformDocumentRefBuilder)? updates]) =>
@@ -134,7 +132,10 @@ class _$PlatformDocumentRef extends PlatformDocumentRef {
       required this.title,
       required this.notTaxInvoice,
       required this.label,
-      required this.availability})
+      required this.availability,
+      this.generatedAt,
+      this.checksum,
+      this.downloadUrl})
       : super._();
   @override
   PlatformDocumentRef rebuild(
@@ -153,7 +154,10 @@ class _$PlatformDocumentRef extends PlatformDocumentRef {
         title == other.title &&
         notTaxInvoice == other.notTaxInvoice &&
         label == other.label &&
-        availability == other.availability;
+        availability == other.availability &&
+        generatedAt == other.generatedAt &&
+        checksum == other.checksum &&
+        downloadUrl == other.downloadUrl;
   }
 
   @override
@@ -164,6 +168,9 @@ class _$PlatformDocumentRef extends PlatformDocumentRef {
     _$hash = $jc(_$hash, notTaxInvoice.hashCode);
     _$hash = $jc(_$hash, label.hashCode);
     _$hash = $jc(_$hash, availability.hashCode);
+    _$hash = $jc(_$hash, generatedAt.hashCode);
+    _$hash = $jc(_$hash, checksum.hashCode);
+    _$hash = $jc(_$hash, downloadUrl.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -175,7 +182,10 @@ class _$PlatformDocumentRef extends PlatformDocumentRef {
           ..add('title', title)
           ..add('notTaxInvoice', notTaxInvoice)
           ..add('label', label)
-          ..add('availability', availability))
+          ..add('availability', availability)
+          ..add('generatedAt', generatedAt)
+          ..add('checksum', checksum)
+          ..add('downloadUrl', downloadUrl))
         .toString();
   }
 }
@@ -205,6 +215,18 @@ class PlatformDocumentRefBuilder
   String? get availability => _$this._availability;
   set availability(String? availability) => _$this._availability = availability;
 
+  String? _generatedAt;
+  String? get generatedAt => _$this._generatedAt;
+  set generatedAt(String? generatedAt) => _$this._generatedAt = generatedAt;
+
+  String? _checksum;
+  String? get checksum => _$this._checksum;
+  set checksum(String? checksum) => _$this._checksum = checksum;
+
+  String? _downloadUrl;
+  String? get downloadUrl => _$this._downloadUrl;
+  set downloadUrl(String? downloadUrl) => _$this._downloadUrl = downloadUrl;
+
   PlatformDocumentRefBuilder() {
     PlatformDocumentRef._defaults(this);
   }
@@ -217,6 +239,9 @@ class PlatformDocumentRefBuilder
       _notTaxInvoice = $v.notTaxInvoice;
       _label = $v.label;
       _availability = $v.availability;
+      _generatedAt = $v.generatedAt;
+      _checksum = $v.checksum;
+      _downloadUrl = $v.downloadUrl;
       _$v = null;
     }
     return this;
@@ -248,6 +273,9 @@ class PlatformDocumentRefBuilder
               label, r'PlatformDocumentRef', 'label'),
           availability: BuiltValueNullFieldError.checkNotNull(
               availability, r'PlatformDocumentRef', 'availability'),
+          generatedAt: generatedAt,
+          checksum: checksum,
+          downloadUrl: downloadUrl,
         );
     replace(_$result);
     return _$result;

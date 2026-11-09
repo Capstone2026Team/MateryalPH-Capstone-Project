@@ -7,6 +7,12 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(ChatQuotationVersion, () {
+    // Original inquiry for authorized quotation actions. The combined timeline never changes these commercial boundaries.
+    // String conversationId
+    test('to test the property `conversationId`', () async {
+      // TODO
+    });
+
     // Buyer's exact recorded counter-offer for this version, retained after revision. Omitted when no changes were requested. Only visible to authorized conversation participants.
     // String requestedChanges
     test('to test the property `requestedChanges`', () async {
@@ -94,6 +100,11 @@ void main() {
 
     // String acceptedOrderId
     test('to test the property `acceptedOrderId`', () async {
+      // TODO
+    });
+
+    // String replacesOrderId
+    test('to test the property `replacesOrderId`', () async {
       // TODO
     });
 

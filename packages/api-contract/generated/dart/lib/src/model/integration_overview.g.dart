@@ -16,6 +16,8 @@ class _$IntegrationOverview extends IntegrationOverview {
   @override
   final BuiltMap<String, JsonObject?> queues;
   @override
+  final AutomaticRecoveryHealth? automaticRecovery;
+  @override
   final BuiltList<ScheduledTaskHealth> scheduledTasks;
   @override
   final BuiltMap<String, JsonObject?> analytics;
@@ -31,6 +33,7 @@ class _$IntegrationOverview extends IntegrationOverview {
       required this.environment,
       required this.integrations,
       required this.queues,
+      this.automaticRecovery,
       required this.scheduledTasks,
       required this.analytics,
       required this.canRetry})
@@ -52,6 +55,7 @@ class _$IntegrationOverview extends IntegrationOverview {
         environment == other.environment &&
         integrations == other.integrations &&
         queues == other.queues &&
+        automaticRecovery == other.automaticRecovery &&
         scheduledTasks == other.scheduledTasks &&
         analytics == other.analytics &&
         canRetry == other.canRetry;
@@ -64,6 +68,7 @@ class _$IntegrationOverview extends IntegrationOverview {
     _$hash = $jc(_$hash, environment.hashCode);
     _$hash = $jc(_$hash, integrations.hashCode);
     _$hash = $jc(_$hash, queues.hashCode);
+    _$hash = $jc(_$hash, automaticRecovery.hashCode);
     _$hash = $jc(_$hash, scheduledTasks.hashCode);
     _$hash = $jc(_$hash, analytics.hashCode);
     _$hash = $jc(_$hash, canRetry.hashCode);
@@ -78,6 +83,7 @@ class _$IntegrationOverview extends IntegrationOverview {
           ..add('environment', environment)
           ..add('integrations', integrations)
           ..add('queues', queues)
+          ..add('automaticRecovery', automaticRecovery)
           ..add('scheduledTasks', scheduledTasks)
           ..add('analytics', analytics)
           ..add('canRetry', canRetry))
@@ -111,6 +117,12 @@ class IntegrationOverviewBuilder
   set queues(MapBuilder<String, JsonObject?>? queues) =>
       _$this._queues = queues;
 
+  AutomaticRecoveryHealthBuilder? _automaticRecovery;
+  AutomaticRecoveryHealthBuilder get automaticRecovery =>
+      _$this._automaticRecovery ??= AutomaticRecoveryHealthBuilder();
+  set automaticRecovery(AutomaticRecoveryHealthBuilder? automaticRecovery) =>
+      _$this._automaticRecovery = automaticRecovery;
+
   ListBuilder<ScheduledTaskHealth>? _scheduledTasks;
   ListBuilder<ScheduledTaskHealth> get scheduledTasks =>
       _$this._scheduledTasks ??= ListBuilder<ScheduledTaskHealth>();
@@ -138,6 +150,7 @@ class IntegrationOverviewBuilder
       _environment = $v.environment.toBuilder();
       _integrations = $v.integrations.toBuilder();
       _queues = $v.queues.toBuilder();
+      _automaticRecovery = $v.automaticRecovery?.toBuilder();
       _scheduledTasks = $v.scheduledTasks.toBuilder();
       _analytics = $v.analytics.toBuilder();
       _canRetry = $v.canRetry;
@@ -169,6 +182,7 @@ class IntegrationOverviewBuilder
             environment: environment.build(),
             integrations: integrations.build(),
             queues: queues.build(),
+            automaticRecovery: _automaticRecovery?.build(),
             scheduledTasks: scheduledTasks.build(),
             analytics: analytics.build(),
             canRetry: BuiltValueNullFieldError.checkNotNull(
@@ -183,6 +197,8 @@ class IntegrationOverviewBuilder
         integrations.build();
         _$failedField = 'queues';
         queues.build();
+        _$failedField = 'automaticRecovery';
+        _automaticRecovery?.build();
         _$failedField = 'scheduledTasks';
         scheduledTasks.build();
         _$failedField = 'analytics';

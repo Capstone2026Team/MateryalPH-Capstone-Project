@@ -47,7 +47,7 @@ export interface PhysicalPaymentSummary {
      */
     state: string;
     /**
-     *
+     * Current collectible physical balance. A CANCELLATION_RELEASE resolves to zero and state CANCELLED_UNPAID; historical records retain the amount released.
      */
     remainingCentavos?: number;
     /**

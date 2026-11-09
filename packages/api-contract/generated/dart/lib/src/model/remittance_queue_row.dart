@@ -27,6 +27,11 @@ part 'remittance_queue_row.g.dart';
 /// * [calculationState]
 /// * [deductionEvidenceState]
 /// * [reconciliationState]
+/// * [sourceVersion] - Version of the assessment source and current reconciliation state for backup approval.
+/// * [canApproveReconciliation] - Current caller has the restricted role and permission and this assessment can be submitted for fresh validation.
+/// * [reconciliationMethod]
+/// * [reconciliationActorRole]
+/// * [reconciledAt]
 /// * [reviewItemId]
 /// * [reason]
 /// * [createdAt]
@@ -73,6 +78,24 @@ abstract class RemittanceQueueRow implements Built<RemittanceQueueRow, Remittanc
 
   @BuiltValueField(wireName: r'reconciliation_state')
   String get reconciliationState;
+
+  /// Version of the assessment source and current reconciliation state for backup approval.
+  @BuiltValueField(wireName: r'source_version')
+  String get sourceVersion;
+
+  /// Current caller has the restricted role and permission and this assessment can be submitted for fresh validation.
+  @BuiltValueField(wireName: r'can_approve_reconciliation')
+  bool get canApproveReconciliation;
+
+  @BuiltValueField(wireName: r'reconciliation_method')
+  RemittanceQueueRowReconciliationMethodEnum? get reconciliationMethod;
+  // enum reconciliationMethodEnum {  AUTOMATIC,  BACKUP_APPROVAL,  ,  };
+
+  @BuiltValueField(wireName: r'reconciliation_actor_role')
+  String? get reconciliationActorRole;
+
+  @BuiltValueField(wireName: r'reconciled_at')
+  DateTime? get reconciledAt;
 
   @BuiltValueField(wireName: r'review_item_id')
   String? get reviewItemId;
@@ -186,6 +209,37 @@ class _$RemittanceQueueRowSerializer implements PrimitiveSerializer<RemittanceQu
       object.reconciliationState,
       specifiedType: const FullType(String),
     );
+    yield r'source_version';
+    yield serializers.serialize(
+      object.sourceVersion,
+      specifiedType: const FullType(String),
+    );
+    yield r'can_approve_reconciliation';
+    yield serializers.serialize(
+      object.canApproveReconciliation,
+      specifiedType: const FullType(bool),
+    );
+    if (object.reconciliationMethod != null) {
+      yield r'reconciliation_method';
+      yield serializers.serialize(
+        object.reconciliationMethod,
+        specifiedType: const FullType.nullable(RemittanceQueueRowReconciliationMethodEnum),
+      );
+    }
+    if (object.reconciliationActorRole != null) {
+      yield r'reconciliation_actor_role';
+      yield serializers.serialize(
+        object.reconciliationActorRole,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
+    if (object.reconciledAt != null) {
+      yield r'reconciled_at';
+      yield serializers.serialize(
+        object.reconciledAt,
+        specifiedType: const FullType.nullable(DateTime),
+      );
+    }
     if (object.reviewItemId != null) {
       yield r'review_item_id';
       yield serializers.serialize(
@@ -329,6 +383,44 @@ class _$RemittanceQueueRowSerializer implements PrimitiveSerializer<RemittanceQu
           ) as String;
           result.reconciliationState = valueDes;
           break;
+        case r'source_version':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.sourceVersion = valueDes;
+          break;
+        case r'can_approve_reconciliation':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(bool),
+          ) as bool;
+          result.canApproveReconciliation = valueDes;
+          break;
+        case r'reconciliation_method':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(RemittanceQueueRowReconciliationMethodEnum),
+          ) as RemittanceQueueRowReconciliationMethodEnum?;
+          if (valueDes == null) continue;
+          result.reconciliationMethod = valueDes;
+          break;
+        case r'reconciliation_actor_role':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.reconciliationActorRole = valueDes;
+          break;
+        case r'reconciled_at':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(DateTime),
+          ) as DateTime?;
+          if (valueDes == null) continue;
+          result.reconciledAt = valueDes;
+          break;
         case r'review_item_id':
           final valueDes = serializers.deserialize(
             value,
@@ -380,4 +472,19 @@ class _$RemittanceQueueRowSerializer implements PrimitiveSerializer<RemittanceQu
   }
 }
 
+
+class RemittanceQueueRowReconciliationMethodEnum extends EnumClass {
+
+  @BuiltValueEnumConst(wireName: r'AUTOMATIC')
+  static const RemittanceQueueRowReconciliationMethodEnum AUTOMATIC = _$remittanceQueueRowReconciliationMethodEnum_AUTOMATIC;
+  @BuiltValueEnumConst(wireName: r'BACKUP_APPROVAL')
+  static const RemittanceQueueRowReconciliationMethodEnum BACKUP_APPROVAL = _$remittanceQueueRowReconciliationMethodEnum_BACKUP_APPROVAL;
+
+  static Serializer<RemittanceQueueRowReconciliationMethodEnum> get serializer => _$remittanceQueueRowReconciliationMethodEnumSerializer;
+
+  const RemittanceQueueRowReconciliationMethodEnum._(String name): super(name);
+
+  static BuiltSet<RemittanceQueueRowReconciliationMethodEnum> get values => _$remittanceQueueRowReconciliationMethodEnumValues;
+  static RemittanceQueueRowReconciliationMethodEnum valueOf(String name) => _$remittanceQueueRowReconciliationMethodEnumValueOf(name);
+}
 

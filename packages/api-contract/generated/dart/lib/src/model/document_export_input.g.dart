@@ -9,9 +9,6 @@ part of 'document_export_input.dart';
 const DocumentExportInputTypeEnum _$documentExportInputTypeEnum_PURCHASE_ORDER =
     const DocumentExportInputTypeEnum._('PURCHASE_ORDER');
 const DocumentExportInputTypeEnum
-    _$documentExportInputTypeEnum_PAYMENT_CONFIRMATION =
-    const DocumentExportInputTypeEnum._('PAYMENT_CONFIRMATION');
-const DocumentExportInputTypeEnum
     _$documentExportInputTypeEnum_PROJECT_SUMMARY =
     const DocumentExportInputTypeEnum._('PROJECT_SUMMARY');
 const DocumentExportInputTypeEnum _$documentExportInputTypeEnum_BUDGET_REPORT =
@@ -40,8 +37,6 @@ DocumentExportInputTypeEnum _$documentExportInputTypeEnumValueOf(String name) {
   switch (name) {
     case 'PURCHASE_ORDER':
       return _$documentExportInputTypeEnum_PURCHASE_ORDER;
-    case 'PAYMENT_CONFIRMATION':
-      return _$documentExportInputTypeEnum_PAYMENT_CONFIRMATION;
     case 'PROJECT_SUMMARY':
       return _$documentExportInputTypeEnum_PROJECT_SUMMARY;
     case 'BUDGET_REPORT':
@@ -71,7 +66,6 @@ final BuiltSet<DocumentExportInputTypeEnum>
     _$documentExportInputTypeEnumValues =
     BuiltSet<DocumentExportInputTypeEnum>(const <DocumentExportInputTypeEnum>[
   _$documentExportInputTypeEnum_PURCHASE_ORDER,
-  _$documentExportInputTypeEnum_PAYMENT_CONFIRMATION,
   _$documentExportInputTypeEnum_PROJECT_SUMMARY,
   _$documentExportInputTypeEnum_BUDGET_REPORT,
   _$documentExportInputTypeEnum_OPERATIONAL_ORDER,
@@ -119,7 +113,6 @@ class _$DocumentExportInputTypeEnumSerializer
     implements PrimitiveSerializer<DocumentExportInputTypeEnum> {
   static const Map<String, Object> _toWire = const <String, Object>{
     'PURCHASE_ORDER': 'PURCHASE_ORDER',
-    'PAYMENT_CONFIRMATION': 'PAYMENT_CONFIRMATION',
     'PROJECT_SUMMARY': 'PROJECT_SUMMARY',
     'BUDGET_REPORT': 'BUDGET_REPORT',
     'OPERATIONAL_ORDER': 'OPERATIONAL_ORDER',
@@ -133,7 +126,6 @@ class _$DocumentExportInputTypeEnumSerializer
   };
   static const Map<Object, String> _fromWire = const <Object, String>{
     'PURCHASE_ORDER': 'PURCHASE_ORDER',
-    'PAYMENT_CONFIRMATION': 'PAYMENT_CONFIRMATION',
     'PROJECT_SUMMARY': 'PROJECT_SUMMARY',
     'BUDGET_REPORT': 'BUDGET_REPORT',
     'OPERATIONAL_ORDER': 'OPERATIONAL_ORDER',

@@ -22,6 +22,8 @@ part 'directory_vendor_row.g.dart';
 /// * [accountStatus]
 /// * [location]
 /// * [joinedAt]
+/// * [vps] - Published VPS from the latest immutable score snapshot. Null below eligibility gates.
+/// * [logoUrl] - Current clean store logo URL. Null when no clean logo is available.
 @BuiltValue()
 abstract class DirectoryVendorRow implements Built<DirectoryVendorRow, DirectoryVendorRowBuilder> {
   @BuiltValueField(wireName: r'id')
@@ -56,6 +58,14 @@ abstract class DirectoryVendorRow implements Built<DirectoryVendorRow, Directory
 
   @BuiltValueField(wireName: r'joined_at')
   DateTime get joinedAt;
+
+  /// Published VPS from the latest immutable score snapshot. Null below eligibility gates.
+  @BuiltValueField(wireName: r'vps')
+  String? get vps;
+
+  /// Current clean store logo URL. Null when no clean logo is available.
+  @BuiltValueField(wireName: r'logo_url')
+  String? get logoUrl;
 
   DirectoryVendorRow._();
 
@@ -129,6 +139,16 @@ class _$DirectoryVendorRowSerializer implements PrimitiveSerializer<DirectoryVen
     yield serializers.serialize(
       object.joinedAt,
       specifiedType: const FullType(DateTime),
+    );
+    yield r'vps';
+    yield object.vps == null ? null : serializers.serialize(
+      object.vps,
+      specifiedType: const FullType.nullable(String),
+    );
+    yield r'logo_url';
+    yield object.logoUrl == null ? null : serializers.serialize(
+      object.logoUrl,
+      specifiedType: const FullType.nullable(String),
     );
   }
 
@@ -225,6 +245,22 @@ class _$DirectoryVendorRowSerializer implements PrimitiveSerializer<DirectoryVen
             specifiedType: const FullType(DateTime),
           ) as DateTime;
           result.joinedAt = valueDes;
+          break;
+        case r'vps':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.vps = valueDes;
+          break;
+        case r'logo_url':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.logoUrl = valueDes;
           break;
         default:
           unhandled.add(key);

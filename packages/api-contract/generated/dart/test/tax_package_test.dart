@@ -7,6 +7,12 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(TaxPackage, () {
+    // Read-only current display names for retained snapshot payees. Snapshot IDs and monetary history stay unchanged.
+    // BuiltMap<String, String> vendorNames
+    test('to test the property `vendorNames`', () async {
+      // TODO
+    });
+
     // String id
     test('to test the property `id`', () async {
       // TODO

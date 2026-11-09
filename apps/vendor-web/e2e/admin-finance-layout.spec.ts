@@ -1,101 +1,228 @@
 import { expect, test, type Page } from '@playwright/test'
 import { mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { marketplacePaymentsFixture } from '../../admin-web/src/test/marketplace-payments-fixture'
+import { geoDashboardFixture } from '../../admin-web/src/test/geo-dashboard-fixture'
+import { FinanceKpisToJSON, GeoDashboardToJSON } from '@materyalph/api-client-ts'
 
-// Layout evidence for Admin Platform Finance: the overview (platform and marketplace money) and Channel fees.
-// Every API call is mocked with realistic values so the review needs no backend. The Admin portal is served on port 4174.
-const days = Array.from({ length: 30 }, (_, index) => new Date(Date.UTC(2026, 8, 17 + index)).toISOString().slice(0, 10))
-const spread = (scale: number, offset: number) => days.map((_, index) => ((index + offset) % 6 === 0 ? 0 : Math.round(scale * (1 + ((index * 5 + offset) % 7) / 4))))
-const earned = spread(1800, 1), credits = days.map((_, index) => (index % 11 === 4 ? 600 : 0)), collected = spread(1400, 3), refunded = days.map((_, index) => (index % 13 === 7 ? 500 : 0))
-const gmv = spread(90000, 2), buyerPayments = spread(85000, 4), buyerRefunds = days.map((_, index) => (index % 9 === 5 ? 12000 : 0))
-const sum = (values: number[]) => values.reduce((total, value) => total + value, 0)
-const point = (index: number) => ({ period: days[index], earned_centavos: earned[index], credits_centavos: credits[index], collected_centavos: collected[index], refunded_centavos: refunded[index],
-  net_earnings_centavos: Math.round((earned[index]! - credits[index]!) * 0.89) - (collected[index]! > 0 ? 35 : 0),
-  gmv_centavos: gmv[index], buyer_payments_centavos: buyerPayments[index], buyer_refunds_centavos: buyerRefunds[index] })
-const trend = days.map((_, index) => point(index))
-const netEarnings = sum(trend.map(item => item.net_earnings_centavos))
-const item = (key: string, label: string, value: number, definition: string) => ({ key, label, value_centavos: value, definition })
-const finance = [
-  item('assessed_cwt', 'Assessed CWT (simulated)', 381, 'Posted FIN-05 withholding W. Never platform revenue.'), item('reported_deductions', 'Provider-reported deductions', 0, 'Imported simulated deductions.'),
-  item('earned_commission', 'Total commission earned', sum(earned), 'Original 2% commission earned at completion in this period, before approved credits.'),
-  item('fee_credits', 'Approved commission credits', sum(credits), 'Commission reversals approved in this period.'),
-  item('net_commission', 'Net commission earned', sum(earned) - sum(credits), 'Earnings less approved credits.'),
-  item('platform_revenue', 'Commission revenue, excluding VAT', netEarnings + 1130, 'Posted fee revenue after approved credits.'),
-  item('processing_expense', 'Platform processing costs', 1130, 'Recorded charges on platform commission payments.'), item('net_platform_earnings', 'Net platform earnings', netEarnings, 'Revenue less processing costs.'),
-  item('fee_vat', 'Output VAT on fees', sum(earned) - sum(credits) - netEarnings - 1130, 'VAT portion of earned fees.'), item('billed', 'Issued commission bills', sum(earned) - sum(credits), 'Approved statement charges less credits.'),
-  item('collected', 'Collected commissions', sum(collected), 'Verified payments allocated once to commission bills.'), item('refunded_commissions', 'Refunded commissions', sum(refunded), 'Confirmed returns of collected commissions.'),
-  item('net_collected', 'Net collected commissions', sum(collected) - sum(refunded), 'Collected less confirmed refunds.'), item('pending_commissions', 'Pending commissions', 18400, 'Current unpaid earned fees.'),
-  item('receivables', 'Outstanding receivables', 12600, 'Issued, unpaid statement balances.'), item('overdue', 'Overdue receivables', 4100, 'Outstanding balances past their due date.'),
-]
-const online = { GCASH: 0.38, PAYMAYA: 0.17, CARD: 0.12, GRABPAY: 0.05 }, cod = 0.2, inStore = 0.08
-const received = sum(buyerPayments), refunds = sum(buyerRefunds), share = (part: number) => Math.round(received * part)
-const onlineTotal = Object.values(online).reduce((total, part) => total + share(part), 0)
-const commerce = [
-  item('gross_gmv', 'Gross merchandise value', sum(gmv), 'Commercial value of every order once confirmed.'), item('cancelled_gmv', 'Cancelled order value', 48000, 'Confirmed orders later cancelled.'),
-  item('refunded_gmv', 'Refunded order value', 21000, 'Dispute and other refunds.'), item('net_gmv', 'Net merchandise value', sum(gmv) - 69000, 'Gross less cancelled and refunded.'),
-  item('online_payments', 'Verified online payments', onlineTotal, 'Verified by Xendit.'), item('buyer_processing_fees', 'Buyer processing fees', Math.round(onlineTotal * 0.024), 'Channel fee.'),
-  item('cash_on_delivery', 'Cash on Delivery collected', share(cod), 'Recorded cash.'), item('in_store', 'In-Store payments collected', received - onlineTotal - share(cod), 'Recorded cash.'),
-  item('buyer_payments', 'Buyer payments received', received, 'Online and cash.'), item('cancellation_refunds', 'Cancellation refunds', refunds - 21000, 'After cancellation.'),
-  item('dispute_refunds', 'Dispute-conclusion refunds', 21000, 'Dispute decision.'), item('other_refunds', 'Other online refunds', 0, 'Other.'), item('cash_reimbursements', 'Cash reimbursements', 0, 'Cash back.'),
-  item('buyer_refunds', 'Refunds to Buyers', refunds, 'Confirmed refunds.'), item('pending_buyer_refunds', 'Refunds in progress', 9800, 'Pending.'), item('net_buyer_payments', 'Net Vendor collections', received - refunds, 'Kept.'),
-]
-const payment_methods = [...Object.entries(online).map(([method, part]) => ({ method, label: channelName(method), kind: 'ONLINE', payments: Math.round(part * 120), amount_centavos: share(part) })),
-  { method: 'CASH_ON_DELIVERY', label: 'Cash on Delivery', kind: 'PHYSICAL', payments: 24, amount_centavos: share(cod) },
-  { method: 'IN_STORE', label: 'In-Store Payment', kind: 'PHYSICAL', payments: 9, amount_centavos: received - onlineTotal - share(cod) }].sort((a, b) => b.amount_centavos - a.amount_centavos)
-function channelName(code: string) { return ({ GCASH: 'GCash', PAYMAYA: 'Maya', CARD: 'Credit or debit card', GRABPAY: 'GrabPay' } as Record<string, string>)[code] ?? code }
-const kpis = { label: 'Recorded transactions', scenario: 'Each figure uses its own event date; commission debt uses statement issue dates and current balances. Dates are Asia/Manila.', period: { from: null, to: null },
-  commerce, finance, counts: { unreconciled_remittances: 0, draft_statements: 1, pending_commission_credits: 0, open_work_items: 2, overdue_statements: 1, confirmed_orders: 142, pending_buyer_refunds: 2 },
-  payment_methods, trend, trend_granularity: 'DAY' }
-const channels = [['GCASH', 'GCash', 23000, 0, true, true], ['GRABPAY', 'GrabPay', 20000, 0, true, true], ['PAYMAYA', 'Maya', 18000, 0, true, true], ['SHOPEEPAY', 'ShopeePay', 20000, 0, true, true], ['CARD', 'Credit or debit card', 32000, 1000, true, true],
-  ['BANK', 'Bank transfer', 0, 0, false, false], ['DD', 'Online banking direct debit', 0, 0, false, false], ['OTC', 'Over-the-counter cash', 0, 0, false, false], ['QRPH', 'QR Ph', 0, 0, false, false]]
-  .map(([code, display_name, rate_ppm, fixed_centavos, refund_supported, enabled]) => ({ code, display_name, kind: 'ONLINE', version: 1, rate_ppm, fixed_centavos, fee_vat_basis_points: 1200, rate_includes_vat: false, refund_supported, enabled,
-    source_type: 'PUBLISHED_RATE', source_reference: 'Xendit published Philippine rates retrieved 2026-10-02 for the capstone TEST schedule; treated as VAT-exclusive with 12% VAT on the fee. DEMO rate — validate against the active Xendit agreement before production.' }))
+const adminUrl = process.env.ADMIN_FINANCE_PREVIEW_URL ?? 'http://127.0.0.1:4174'
 
-async function mock(page: Page) {
+async function mockFinance(page: Page, payments = false) {
+  const statement = { id: '019d0000-0000-7000-8000-000000000001', reference: 'SAMPLE-STMT-202610-ABCD1234', vendor_name: 'BuildSphere Construction Supply', state: 'ISSUED', overdue: false,
+    period_start: '2026-10-01', period_end: '2026-10-31', issued_on: '2026-11-01', due_on: '2026-11-15', charges_centavos: 52002, credits_centavos: 2000, paid_centavos: 0, outstanding_centavos: 50002, disputed_held_centavos: 0, lock_version: 1, sample_notice: 'SAMPLE / TEST', invoice_heading: 'Platform service invoice', invoice_message: '', email: { total: 1, sent: 1, failed: 0, queued: 0, blocked: 0 } }
+  const writes: { body: Record<string, unknown>; key: string | undefined }[] = []
   await page.route('**/api/v1/**', async route => {
-    const path = new URL(route.request().url()).pathname
-    let data: unknown = {}
-    if (path.endsWith('/profile')) data = { id: 'review', full_name: 'Platform Admin', account_type: 'ADMIN', account_status: 'ACTIVE', role: 'ADMIN_SUPERADMIN' }
-    else if (path.endsWith('/auth/csrf')) data = { csrf_token: 'review-csrf-token' }
-    else if (path.endsWith('/admin/finance/kpis')) data = kpis
-    else if (path.endsWith('/admin/finance/channel-fees')) data = channels
+    const url = new URL(route.request().url())
+    const path = url.pathname
+    let data: unknown = []
+    if (path.endsWith('/profile')) data = { id: 'finance-review', full_name: 'Finance Reviewer', account_type: 'ADMIN', account_status: 'ACTIVE', role: 'ADMIN_SUPERADMIN' }
+    else if (path.endsWith('/auth/csrf')) data = { csrf_token: 'synthetic-finance-review' }
     else if (path.endsWith('/notifications/unread-count')) data = { count: 0 }
-    await route.fulfill({ json: { data, meta: { last_page: 1 }, errors: [] } })
+    else if (path.endsWith('/geo-analytics')) data = GeoDashboardToJSON(geoDashboardFixture())
+    else if (path.endsWith('/geo-analytics/boundaries')) data = { type: 'FeatureCollection', features: [], missing_codes: [] }
+    else if (path.endsWith('/admin/finance/kpis') && payments) data = FinanceKpisToJSON(marketplacePaymentsFixture())
+    else if (path.endsWith('/admin/finance/kpis')) data = { label: 'Recorded transactions', scenario: 'SAMPLE / TEST commission records.', period: { from: url.searchParams.get('from'), to: url.searchParams.get('to') }, commerce: [], counts: { draft_statements: 1, pending_commission_credits: 2 },
+      finance: Object.entries({ earned_commission: 52002, fee_credits: 2000, refundable_credits: 4500, net_commission: 50002, fee_vat: 0, platform_revenue: 50002, processing_expense: 1050, net_platform_earnings: 48952, collected: 30000, refunded_commissions: 1000, net_collected: 29000, receivables: 21002, overdue: 5000, billed: 50002 }).map(([key, value]) => ({ key, label: key, value_centavos: value, definition: key })),
+      trend_granularity: 'DAY', trend: [{ period: '2026-10-20', earned_centavos: 52002, credits_centavos: 0, collected_centavos: 0, refunded_centavos: 0, net_earnings_centavos: 50952, gmv_centavos: 0, buyer_payments_centavos: 0, buyer_refunds_centavos: 0 }, { period: '2026-10-21', earned_centavos: 0, credits_centavos: 2000, collected_centavos: 30000, refunded_centavos: 1000, net_earnings_centavos: -2000, gmv_centavos: 0, buyer_payments_centavos: 0, buyer_refunds_centavos: 0 }] }
+    else if (path.endsWith('/commission-policies')) data = { current: { id: statement.id, version: 1, commission_basis_points: 200, rate_label: '2.00%', effective_from: '2026-10-01T00:00:00Z', status: 'CURRENT', terms_version: 2, terms_content: 'Versioned TEST commission terms.' }, latest_version: 1, can_manage: true, can_export: true, min_notice_days: 30, eligible_vendor_count: 128, versions: [] }
+    else if (path.endsWith('/statements')) data = [statement]
+    else if (path.endsWith('/statements/'+statement.id)) data = { ...statement, can_export: true, can_resend: true, issuance_origin: 'SYSTEM', issued_at: '2026-11-01T00:05:00+08:00', rate_breakdown: [{ rate_label: '2.00%', basis_centavos: 2600100, commission_centavos: 52002 }], lines: { items: [], meta: {} }, payments: { items: [], meta: {} }, emails: [{ id: 'email-1', type: 'STATEMENT_ISSUED', state: 'SENT', attempts: 1, created_at: '2026-11-01T00:05:00+08:00', sent_at: '2026-11-01T00:06:00+08:00' }] }
+    else if (path.endsWith('/invoice') && route.request().method() === 'PUT') {
+      const body = route.request().postDataJSON()
+      writes.push({ body, key: route.request().headers()['idempotency-key'] })
+      Object.assign(statement, body, { lock_version: 2 })
+      data = statement
+    }
+    else if (path.endsWith('/commission-transactions')) data = [{ id: 'payment-1', reference: statement.reference, vendor_name: statement.vendor_name, purpose: 'PLATFORM_FEE_PAYMENT', account_scope: 'PLATFORM_ACCOUNT', status: 'PAID', total_centavos: 30000, refunded_centavos: 1000, net_collected_centavos: 29000, paid_at: '2026-11-02T03:00:00Z', evidence_origin: 'XENDIT_TEST', gateway_mode: 'XENDIT_TEST', channel_name: 'GCash' }]
+    else if (path.endsWith('/channel-fees')) data = [
+      ['GCASH', 'GCash', true], ['GRABPAY', 'GrabPay', true], ['MAYA', 'Maya', true], ['SHOPEEPAY', 'ShopeePay', true], ['CARDS', 'Credit or debit card', true],
+      ['BANK_TRANSFER', 'Bank transfer', false], ['DIRECT_DEBIT', 'Online banking direct debit', false], ['OTC', 'Over-the-counter cash', false], ['QRPH', 'QR Ph', false],
+    ].map(([code, display_name, enabled]) => ({ code, display_name, kind: 'EWALLET', version: 1, rate_ppm: 23000, fixed_centavos: 0, fee_vat_basis_points: 1200, rate_includes_vat: false,
+      refund_supported: Boolean(enabled), enabled, disabled_reason: enabled ? null : 'REFUND_ROUTE_UNAVAILABLE', source_type: 'PUBLISHED', source_reference: 'Published TEST rates', effective_from: '2026-10-01T00:00:00Z' }))
+    if (path.endsWith('/admin/finance/kpis') && url.searchParams.get('from')?.endsWith('-01-01') && url.searchParams.get('to')?.endsWith('-12-31')) {
+      const annual = data as { finance: { key: string; value_centavos: number }[] }
+      annual.finance = annual.finance.map(figure => ({ ...figure, value_centavos: ({ collected: 125000, refunded_commissions: 25000, net_collected: 100000 } as Record<string, number>)[figure.key] ?? figure.value_centavos }))
+    }
+    await route.fulfill({ json: { data, meta: { page: 1, has_more: false, total: Array.isArray(data) ? data.length : 1, ...(path.endsWith('/statements') ? { totals: { charges_centavos: 52002, credits_centavos: 2000, after_credits_centavos: 50002, outstanding_centavos: 50002 } } : {}) }, errors: [] } })
   })
+  return writes
 }
 
 async function capture(page: Page, name: string) {
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'no horizontal page scroll').toBe(true)
-  const directory = resolve('../../docs/design/evidence/admin-finance')
+  await page.evaluate(() => { document.querySelectorAll('*').forEach(element => { if (element.scrollTop > 0) element.scrollTop = 0 }); window.scrollTo(0, 0) })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'No horizontal page overflow').toBe(true)
+  const directory = resolve('../../.tmp/admin-finance-review')
   mkdirSync(directory, { recursive: true })
-  // The portal scrolls inside its shell, so the evidence grows the viewport to the content height for one capture.
   const viewport = page.viewportSize()!
-  const height = await page.evaluate(() => Math.max(...[...document.querySelectorAll('*')].map(element => element.scrollHeight)))
+  const height = await page.getByRole('main').evaluate(element => element.scrollHeight + 100)
   await page.setViewportSize({ width: viewport.width, height: Math.min(9000, Math.max(viewport.height, height)) })
   await page.screenshot({ path: resolve(directory, `${viewport.width}-${name}.png`), fullPage: true })
   await page.setViewportSize(viewport)
 }
 
-test('Admin Platform Finance overview and Channel fees lay out cleanly', async ({ page }) => {
-  await mock(page)
-  await page.goto('http://127.0.0.1:4174/finance')
-  await expect(page.getByRole('heading', { name: 'Platform Finance', level: 1 })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Financial overview' })).toHaveCount(0)
-  await expect(page.getByRole('heading', { name: 'Platform earnings and funds', level: 2 })).toBeVisible()
-  await expect(page.getByRole('tab', { name: 'Overview', selected: true })).toBeVisible()
-  await capture(page, 'platform-finance')
-  // Calculations remain visible on the two-column cards.
-  await expect(page.locator('summary', { hasText: 'View breakdown' })).toHaveCount(0)
-  for (const name of ['Net platform earnings calculation', 'Net commission earned calculation', 'Platform-held funds calculation', 'Outstanding receivables calculation',
-    'Gross merchandise value calculation', 'Buyer payments received calculation', 'Refunds to Buyers calculation', 'Net Vendor collections calculation']) await expect(page.getByRole('table', { name })).toBeVisible()
-  await expect(page.locator('dl[aria-label="Platform earnings and funds"]')).toBeVisible()
-  await expect(page.locator('dl[aria-label="Marketplace payments"]')).toBeVisible()
-  await expect(page.getByRole('list', { name: 'Buyer payments per method' }).getByRole('listitem')).toHaveCount(6)
-  await capture(page, 'platform-finance-breakdowns')
-  // Channel fees is a Payments and refunds sub-view.
-  await page.goto('http://127.0.0.1:4174/finance?view=channels')
-  const link = page.getByRole('link', { name: /Open Xendit dashboard/ })
-  await expect(link).toHaveAttribute('href', 'https://dashboard.xendit.co/')
-  await expect(link).toHaveAttribute('target', '_blank')
-  await capture(page, 'channel-fees')
+test('Admin Finance shares Vendor layouts across overview, management, transactions and Xendit', async ({ page }) => {
+  const writes = await mockFinance(page)
+  await page.goto(`${adminUrl}/finance`)
+  const main = page.getByRole('main')
+  await expect(main.getByRole('heading', { name: 'Finance overview', level: 1 })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Financial calculations', exact: true })).toBeVisible()
+  await expect(main.getByRole('table', { name: 'Net platform earnings calculation' })).toContainText('₱489.52')
+  await expect(main.getByRole('tab', { name: 'Payments and refunds' })).toHaveCount(0)
+  await expect(main.getByText('Finance actions', { exact: true })).toHaveCount(0)
+  await expect(main.getByText('Draft commission statements', { exact: true })).toHaveCount(0)
+  await expect(main.getByText('Marketplace payment records', { exact: true })).toHaveCount(0)
+  await expect(main.getByRole('heading', { name: 'Marketplace payments', exact: true })).toHaveCount(0)
+  const rows = main.locator('.mp-finance-overview > .mp-finance-main > .mp-finance-report-row')
+  await expect(rows).toHaveCount(2)
+  for (const row of await rows.all()) {
+    const layout = await row.evaluate(element => {
+      const panels = [...element.children].map(panel => panel.getBoundingClientRect())
+      return { width: element.getBoundingClientRect().width, first: { top: panels[0]!.top, height: panels[0]!.height }, second: { top: panels[1]!.top, height: panels[1]!.height } }
+    })
+    if (layout.width >= 900) {
+      expect(Math.abs(layout.first.top - layout.second.top)).toBeLessThan(2)
+      expect(Math.abs(layout.first.height - layout.second.height)).toBeLessThan(2)
+    } else expect(layout.second.top).toBeGreaterThan(layout.first.top)
+  }
+  await expect(main.getByRole('heading', { name: 'Online payment channels', exact: true })).toBeVisible()
+  await expect(main.getByRole('list', { name: 'Commission payment channels' }).getByRole('listitem')).toHaveCount(9)
+  if (page.viewportSize()!.width >= 1024) {
+    expect(await main.locator('.mp-finance-overview > .mp-analytics-summary').evaluate(element => {
+      const last = element.querySelector('.mp-analytics-stat:last-child')!
+      return element.getBoundingClientRect().right - last.getBoundingClientRect().right
+    }), 'Summary metrics fill their row').toBeLessThan(24)
+  }
+  await capture(page, 'overview')
+  await main.getByRole('tab', { name: 'Commission management', exact: true }).click()
+  await expect(main.getByRole('heading', { name: 'Commission terms', exact: true })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Commission credits', exact: true })).toBeVisible()
+  await expect(main.getByText('TEST/DEMO billing', { exact: true })).toHaveCount(1)
+  await expect(main.getByRole('button', { name: 'Last 30 days', exact: true })).toHaveCount(1)
+  await main.getByRole('button', { name: 'How credits work: Commission credits', exact: true }).click()
+  await expect(page.getByRole('dialog', { name: 'Commission credits', exact: true })).toContainText('An unpaid bill is reduced.')
+  await page.keyboard.press('Escape')
+  const cards = main.locator('.mp-commission-policy-row > section')
+  const policyBounds = (await cards.nth(0).boundingBox())!
+  const creditBounds = (await cards.nth(1).boundingBox())!
+  if (page.viewportSize()!.width >= 1280) expect(Math.abs(policyBounds.y - creditBounds.y)).toBeLessThan(2)
+  else expect(creditBounds.y).toBeGreaterThanOrEqual(policyBounds.y + policyBounds.height)
+  await expect(main.getByRole('heading', { name: 'Commission credit approvals' })).toHaveCount(0)
+  await expect(main.getByRole('button', { name: 'Edit e-invoice' })).toHaveCount(0)
+  const bills = main.getByRole('table', { name: 'Commission statements' })
+  await expect(bills).toContainText('Commission before credits')
+  await expect(bills).toContainText('Commission after credits')
+  await expect(bills).toContainText('₱520.02')
+  await capture(page, 'management')
+  const detailTrigger = main.getByRole('button', { name: 'BuildSphere Construction Supply', exact: true })
+  await detailTrigger.click()
+  const detail = page.getByRole('dialog', { name: 'Commission statement', exact: true })
+  await expect(detail.getByRole('table', { name: 'Statement calculation' })).toContainText('₱500.02')
+  await detail.getByRole('tab', { name: 'Activity and emails', exact: true }).click()
+  await expect(detail.getByRole('button', { name: 'Resend email', exact: true })).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(detailTrigger).toBeFocused()
+  expect(writes).toHaveLength(0)
+  await main.getByRole('tab', { name: 'Payments', exact: true }).click()
+  const payments = main.getByRole('region', { name: 'Commission records' })
+  await expect(payments.getByText('₱290.00', { exact: true })).toBeVisible()
+  await expect(payments.getByRole('table', { name: 'Vendor commission payments' })).toContainText('BuildSphere Construction Supply')
+  await main.getByText('Export', { exact: true }).click()
+  await expect(main.getByRole('button', { name: 'Export PDF', exact: true })).toBeVisible()
+  await expect(main.getByRole('button', { name: 'Export CSV', exact: true })).toBeVisible()
+  await main.getByText('Export', { exact: true }).click()
+  const filtered = page.waitForRequest(request => new URL(request.url()).pathname.endsWith('/commission-transactions') && new URL(request.url()).searchParams.get('statuses') === 'PAID_PARTIALLY_REFUNDED')
+  await payments.locator('summary').filter({ hasText: 'Status' }).click()
+  await payments.getByLabel('Partially refunded', { exact: true }).check()
+  await filtered
+  await payments.locator('summary').filter({ hasText: 'Status' }).click()
+  await capture(page, 'commission-payments')
+  await main.getByRole('tab', { name: 'Xendit cash revenue & remittance', exact: true }).click()
+  await expect(main.getByRole('heading', { name: 'Platform Xendit account', exact: true })).toBeVisible()
+  await expect(main.getByRole('link', { name: /Open Xendit dashboard/ })).toHaveAttribute('rel', 'noopener noreferrer')
+  await expect(main.getByRole('button', { name: 'Last 30 days' })).toBeVisible()
+  await capture(page, 'xendit')
+})
+
+test('Platform earnings use the attached Xendit summary, payment breakdown and annual collection records', async ({ page }) => {
+  await mockFinance(page)
+  await page.goto(`${adminUrl}/finance?view=xendit`)
+  const main = page.getByRole('main')
+  const account = main.getByRole('region', { name: 'Platform Xendit account', exact: true })
+  await expect(account.getByRole('heading', { name: 'Platform earnings summary', exact: true })).toBeVisible()
+  await expect(account.getByRole('table', { name: 'Net platform earnings calculation' })).toContainText('₱489.52')
+  await expect(account.getByRole('table', { name: 'Net platform earnings calculation' })).toContainText('-₱10.50')
+  await expect(main.getByRole('heading', { name: 'Commission collections', exact: true })).toHaveCount(0)
+  await expect(main.getByRole('table', { name: 'Platform commission cash calculation' })).toHaveCount(0)
+  await expect(main.getByRole('link', { name: 'View commission transactions', exact: true })).toHaveCount(0)
+  await expect(main.getByRole('heading', { name: 'Remittance and withdrawals', exact: true })).toHaveCount(0)
+  await expect(main.getByRole('heading', { name: 'Commission payment channels', exact: true })).toHaveCount(0)
+  const threshold = main.getByRole('region', { name: 'Gross-remittance threshold', exact: true })
+  await expect(threshold.getByText(/₱500,000.00 per taxable year/)).toBeVisible()
+  await expect(threshold.locator('.mp-threshold-period')).toContainText(/Annual · \d{4}/)
+  await expect(threshold.getByText('Full taxable year. Not affected by the date filter.', { exact: true })).toBeVisible()
+  await expect(threshold.getByText('₱1,000.00', { exact: true }).first()).toBeVisible()
+  await expect(threshold.getByText('Annual gross remittances', { exact: true })).toBeVisible()
+  await expect(threshold.getByText('₱499,000.00', { exact: true })).toBeVisible()
+  await expect(threshold.getByText('Remaining to threshold', { exact: true })).toBeVisible()
+  await expect(threshold.getByText('0.2% of annual threshold · ₱500,000.00', { exact: true })).toBeVisible()
+  await expect(threshold.getByRole('table', { name: 'Platform annual threshold calculation' })).toContainText('-₱250.00')
+  const taxes = main.getByRole('table', { name: 'Platform tax amounts' })
+  await expect(taxes.getByRole('row', { name: /^Output VAT on fees/ })).toContainText('₱0.00')
+  await expect(taxes.getByRole('row', { name: /^Creditable withholding tax/ })).toContainText('Not available')
+  await main.getByRole('button', { name: 'How this is calculated: VAT and withholding', exact: true }).click()
+  const taxHelp = page.getByRole('dialog', { name: 'VAT and withholding', exact: true })
+  await expect(taxHelp).toContainText('do not supply a confirmed withholding amount')
+  await page.keyboard.press('Escape')
+  await expect(threshold.getByRole('combobox')).toHaveCount(0)
+  await expect(threshold.getByText(/Sworn Declaration|All stores with the same taxpayer identity/)).toHaveCount(0)
+  const sections = await account.evaluate(element => {
+    const summary = element.querySelector('.mp-finance-provider-summary')!.getBoundingClientRect()
+    const header = element.querySelector(':scope > header')!.getBoundingClientRect()
+    const breakdown = element.querySelector('.mp-finance-provider-content')!.getBoundingClientRect()
+    return { summaryBottom: summary.bottom, headerTop: header.top, breakdownTop: breakdown.top, width: element.getBoundingClientRect().width, breakdownWidth: breakdown.width }
+  })
+  expect(sections.headerTop).toBeGreaterThanOrEqual(sections.summaryBottom)
+  expect(sections.breakdownTop).toBeGreaterThan(sections.headerTop)
+  expect(Math.abs(sections.width - sections.breakdownWidth)).toBeLessThan(3)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(1)
+  await capture(page, 'platform-earnings-xendit')
+})
+
+test('Marketplace payments stay compact below the persistent geographic analytics workspace', async ({ page }) => {
+  await mockFinance(page, true)
+  const requests: URL[] = []
+  page.on('request', request => { if (request.url().includes('/admin/finance/kpis')) requests.push(new URL(request.url())) })
+  await page.goto(`${adminUrl}/analytics?view=payments&area=1300000000&categoryId=steel&from=2026-10-01&to=2026-10-31`)
+  const main = page.getByRole('main')
+  await expect(main.getByRole('heading', { name: 'Philippine geographic analytics', level: 1 })).toBeVisible()
+  await expect(main.getByRole('region', { name: 'Philippines overview', exact: true })).toBeVisible()
+  await expect(main.getByRole('tab', { name: 'Marketplace payments', selected: true })).toBeVisible()
+  await expect(main.getByText(/Philippines-wide/)).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Payment calculations', exact: true })).toBeVisible()
+  const payments = main.getByRole('region', { name: 'Marketplace payment analytics' })
+  await expect(payments.locator('.mp-metric-card')).toHaveCount(4)
+  const summary = await payments.locator('.mp-analytics-summary').evaluate(element => ({
+    width: element.getBoundingClientRect().width,
+    cells: [...element.querySelectorAll('.mp-metric-card')].map(cell => ({ top: cell.getBoundingClientRect().top, height: cell.getBoundingClientRect().height })),
+  }))
+  if (summary.width >= 740) {
+    expect(Math.max(...summary.cells.map(cell => cell.top)) - Math.min(...summary.cells.map(cell => cell.top))).toBeLessThan(2)
+    expect(Math.max(...summary.cells.map(cell => cell.height))).toBeLessThan(160)
+  } else if (summary.width >= 440) expect(summary.cells[0]!.top).toBe(summary.cells[1]!.top)
+  await expect(main.getByRole('list', { name: 'Buyer payments per method' }).getByRole('listitem')).toHaveCount(3)
+  await expect(main.getByRole('table', { name: 'Net Vendor collections calculation' })).toContainText('₱26,500.00')
+  expect(requests.at(-1)!.searchParams.get('from')).toBe('2026-10-01')
+  expect(requests.at(-1)!.searchParams.has('area')).toBe(false)
+  expect(requests.at(-1)!.searchParams.has('categoryId')).toBe(false)
+  await capture(page, 'marketplace-payments')
+  await payments.screenshot({ path: test.info().outputPath('compact-marketplace-payments.png') })
+  await main.getByRole('button', { name: /Oct 1.*Oct 31/ }).click()
+  await page.getByLabel('From', { exact: true }).fill('2026-10-04')
+  await page.getByLabel('To', { exact: true }).fill('2026-10-10')
+  await page.getByRole('button', { name: 'Apply', exact: true }).click()
+  await expect.poll(() => requests.at(-1)?.searchParams.get('from')).toBe('2026-10-04')
+  const selected = new URL(page.url())
+  expect(selected.searchParams.get('area')).toBe('1300000000')
+  expect(selected.searchParams.get('categoryId')).toBe('steel')
+  expect(selected.searchParams.get('view')).toBe('payments')
 })

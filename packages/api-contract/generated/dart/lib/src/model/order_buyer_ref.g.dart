@@ -10,6 +10,8 @@ class _$OrderBuyerRef extends OrderBuyerRef {
   @override
   final String displayName;
   @override
+  final String? profilePhotoPath;
+  @override
   final String? mobileE164;
   @override
   final String? avatarPath;
@@ -18,7 +20,10 @@ class _$OrderBuyerRef extends OrderBuyerRef {
       (OrderBuyerRefBuilder()..update(updates))._build();
 
   _$OrderBuyerRef._(
-      {required this.displayName, this.mobileE164, this.avatarPath})
+      {required this.displayName,
+      this.profilePhotoPath,
+      this.mobileE164,
+      this.avatarPath})
       : super._();
   @override
   OrderBuyerRef rebuild(void Function(OrderBuyerRefBuilder) updates) =>
@@ -32,6 +37,7 @@ class _$OrderBuyerRef extends OrderBuyerRef {
     if (identical(other, this)) return true;
     return other is OrderBuyerRef &&
         displayName == other.displayName &&
+        profilePhotoPath == other.profilePhotoPath &&
         mobileE164 == other.mobileE164 &&
         avatarPath == other.avatarPath;
   }
@@ -40,6 +46,7 @@ class _$OrderBuyerRef extends OrderBuyerRef {
   int get hashCode {
     var _$hash = 0;
     _$hash = $jc(_$hash, displayName.hashCode);
+    _$hash = $jc(_$hash, profilePhotoPath.hashCode);
     _$hash = $jc(_$hash, mobileE164.hashCode);
     _$hash = $jc(_$hash, avatarPath.hashCode);
     _$hash = $jf(_$hash);
@@ -50,6 +57,7 @@ class _$OrderBuyerRef extends OrderBuyerRef {
   String toString() {
     return (newBuiltValueToStringHelper(r'OrderBuyerRef')
           ..add('displayName', displayName)
+          ..add('profilePhotoPath', profilePhotoPath)
           ..add('mobileE164', mobileE164)
           ..add('avatarPath', avatarPath))
         .toString();
@@ -63,6 +71,11 @@ class OrderBuyerRefBuilder
   String? _displayName;
   String? get displayName => _$this._displayName;
   set displayName(String? displayName) => _$this._displayName = displayName;
+
+  String? _profilePhotoPath;
+  String? get profilePhotoPath => _$this._profilePhotoPath;
+  set profilePhotoPath(String? profilePhotoPath) =>
+      _$this._profilePhotoPath = profilePhotoPath;
 
   String? _mobileE164;
   String? get mobileE164 => _$this._mobileE164;
@@ -80,6 +93,7 @@ class OrderBuyerRefBuilder
     final $v = _$v;
     if ($v != null) {
       _displayName = $v.displayName;
+      _profilePhotoPath = $v.profilePhotoPath;
       _mobileE164 = $v.mobileE164;
       _avatarPath = $v.avatarPath;
       _$v = null;
@@ -105,6 +119,7 @@ class OrderBuyerRefBuilder
         _$OrderBuyerRef._(
           displayName: BuiltValueNullFieldError.checkNotNull(
               displayName, r'OrderBuyerRef', 'displayName'),
+          profilePhotoPath: profilePhotoPath,
           mobileE164: mobileE164,
           avatarPath: avatarPath,
         );

@@ -30,8 +30,8 @@ class ProjectSourcingLinks {
     this.openProduct,
   });
   final void Function(BuildContext context, String id) openConversation,
-      openOrder,
       openStore;
+  final FutureOr<void> Function(BuildContext context, String id) openOrder;
   final void Function(BuildContext context)? openCart;
   final VoidCallback? onCartChanged;
 
@@ -573,6 +573,7 @@ class _VendorSelectionScreenState extends State<VendorSelectionScreen> {
                               ? ScoreKind.newVendor
                               : ScoreKind.vps,
                           scoreText: projectText(vendor.scoreLabel),
+                          scoreValue: vendor.vps,
                         ),
                     ],
                     origin: origin,
@@ -672,7 +673,7 @@ class _VendorSelectionScreenState extends State<VendorSelectionScreen> {
       // Reserved height, so loading never shifts the list under the finger.
       SizedBox(
         height: 4,
-        child: busy || loading ? const LinearProgressIndicator() : null,
+        child: busy || loading ? const BuyerLoadingProgress() : null,
       ),
       // Package and site on the left, its budget on the right.
       Row(

@@ -257,6 +257,8 @@ class _$EnforcementRecordRequest extends EnforcementRecordRequest {
   final EnforcementRecordRequestContinuationPlanEnum? continuationPlan;
   @override
   final String? continuationNote;
+  @override
+  final BuiltSet<String>? evidenceFileIds;
 
   factory _$EnforcementRecordRequest(
           [void Function(EnforcementRecordRequestBuilder)? updates]) =>
@@ -271,7 +273,8 @@ class _$EnforcementRecordRequest extends EnforcementRecordRequest {
       this.durationDays,
       this.restorationCondition,
       this.continuationPlan,
-      this.continuationNote})
+      this.continuationNote,
+      this.evidenceFileIds})
       : super._();
   @override
   EnforcementRecordRequest rebuild(
@@ -294,7 +297,8 @@ class _$EnforcementRecordRequest extends EnforcementRecordRequest {
         durationDays == other.durationDays &&
         restorationCondition == other.restorationCondition &&
         continuationPlan == other.continuationPlan &&
-        continuationNote == other.continuationNote;
+        continuationNote == other.continuationNote &&
+        evidenceFileIds == other.evidenceFileIds;
   }
 
   @override
@@ -309,6 +313,7 @@ class _$EnforcementRecordRequest extends EnforcementRecordRequest {
     _$hash = $jc(_$hash, restorationCondition.hashCode);
     _$hash = $jc(_$hash, continuationPlan.hashCode);
     _$hash = $jc(_$hash, continuationNote.hashCode);
+    _$hash = $jc(_$hash, evidenceFileIds.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -324,7 +329,8 @@ class _$EnforcementRecordRequest extends EnforcementRecordRequest {
           ..add('durationDays', durationDays)
           ..add('restorationCondition', restorationCondition)
           ..add('continuationPlan', continuationPlan)
-          ..add('continuationNote', continuationNote))
+          ..add('continuationNote', continuationNote)
+          ..add('evidenceFileIds', evidenceFileIds))
         .toString();
   }
 }
@@ -378,6 +384,12 @@ class EnforcementRecordRequestBuilder
   set continuationNote(String? continuationNote) =>
       _$this._continuationNote = continuationNote;
 
+  SetBuilder<String>? _evidenceFileIds;
+  SetBuilder<String> get evidenceFileIds =>
+      _$this._evidenceFileIds ??= SetBuilder<String>();
+  set evidenceFileIds(SetBuilder<String>? evidenceFileIds) =>
+      _$this._evidenceFileIds = evidenceFileIds;
+
   EnforcementRecordRequestBuilder() {
     EnforcementRecordRequest._defaults(this);
   }
@@ -394,6 +406,7 @@ class EnforcementRecordRequestBuilder
       _restorationCondition = $v.restorationCondition;
       _continuationPlan = $v.continuationPlan;
       _continuationNote = $v.continuationNote;
+      _evidenceFileIds = $v.evidenceFileIds?.toBuilder();
       _$v = null;
     }
     return this;
@@ -413,22 +426,36 @@ class EnforcementRecordRequestBuilder
   EnforcementRecordRequest build() => _build();
 
   _$EnforcementRecordRequest _build() {
-    final _$result = _$v ??
-        _$EnforcementRecordRequest._(
-          subjectType: BuiltValueNullFieldError.checkNotNull(
-              subjectType, r'EnforcementRecordRequest', 'subjectType'),
-          subjectId: BuiltValueNullFieldError.checkNotNull(
-              subjectId, r'EnforcementRecordRequest', 'subjectId'),
-          action: BuiltValueNullFieldError.checkNotNull(
-              action, r'EnforcementRecordRequest', 'action'),
-          reason: BuiltValueNullFieldError.checkNotNull(
-              reason, r'EnforcementRecordRequest', 'reason'),
-          scope: scope,
-          durationDays: durationDays,
-          restorationCondition: restorationCondition,
-          continuationPlan: continuationPlan,
-          continuationNote: continuationNote,
-        );
+    _$EnforcementRecordRequest _$result;
+    try {
+      _$result = _$v ??
+          _$EnforcementRecordRequest._(
+            subjectType: BuiltValueNullFieldError.checkNotNull(
+                subjectType, r'EnforcementRecordRequest', 'subjectType'),
+            subjectId: BuiltValueNullFieldError.checkNotNull(
+                subjectId, r'EnforcementRecordRequest', 'subjectId'),
+            action: BuiltValueNullFieldError.checkNotNull(
+                action, r'EnforcementRecordRequest', 'action'),
+            reason: BuiltValueNullFieldError.checkNotNull(
+                reason, r'EnforcementRecordRequest', 'reason'),
+            scope: scope,
+            durationDays: durationDays,
+            restorationCondition: restorationCondition,
+            continuationPlan: continuationPlan,
+            continuationNote: continuationNote,
+            evidenceFileIds: _evidenceFileIds?.build(),
+          );
+    } catch (_) {
+      late String _$failedField;
+      try {
+        _$failedField = 'evidenceFileIds';
+        _evidenceFileIds?.build();
+      } catch (e) {
+        throw BuiltValueNestedFieldError(
+            r'EnforcementRecordRequest', _$failedField, e.toString());
+      }
+      rethrow;
+    }
     replace(_$result);
     return _$result;
   }

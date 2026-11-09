@@ -267,9 +267,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen>
         deviceLocation: widget.deviceLocation,
         mapBuilder: widget.mapBuilder,
         openConversation: _openConversation,
-        openOrder: (context, id) {
-          unawaited(_openNoticeTarget('/orders/$id'));
-        },
+        openOrder: (context, id) => _openNoticeTarget('/orders/$id'),
         openStore: _openStore,
         openCart: _navigation == null
             ? null
@@ -667,6 +665,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen>
     if (index == 4 && widget.repository != null) {
       return BuyerProfileScreen(
         active: _destination == index,
+        reviewsRepository: _orders?.reviews,
         repository: widget.repository!,
         discoveryRepository: _discovery,
         onRemoveFavorite: _discoveryController == null

@@ -32,5 +32,22 @@ void main() {
       // TODO
     });
 
+    // UTC generation time of the stored document.
+    // String generatedAt
+    test('to test the property `generatedAt`', () async {
+      // TODO
+    });
+
+    // String checksum
+    test('to test the property `checksum`', () async {
+      // TODO
+    });
+
+    // Authenticated API download route; null until ready or when files are not available to this role.
+    // String downloadUrl
+    test('to test the property `downloadUrl`', () async {
+      // TODO
+    });
+
   });
 }

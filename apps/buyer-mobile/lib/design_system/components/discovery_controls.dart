@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'vendor_performance.dart';
 
 import 'buyer_overlays.dart';
 import '../../features/map_discovery/discovery_models.dart';
@@ -530,16 +531,22 @@ class LocationSelector extends StatelessWidget {
 /// Score semantics are explicit: VPS, New Vendor and Directory never look interchangeable, and a
 /// Google rating is a separate [GoogleRatingBadge] shown only inside Place Details.
 class ScoreBadge extends StatelessWidget {
-  const ScoreBadge({super.key, required this.kind, required this.text});
+  const ScoreBadge({
+    super.key,
+    required this.kind,
+    required this.text,
+    this.value,
+  });
 
   final ScoreKind kind;
   final String text;
+  final String? value;
 
   @override
   Widget build(BuildContext context) {
     final (IconData icon, Color foreground, Color background) = switch (kind) {
       ScoreKind.vps => (
-        LucideIcons.gauge,
+        Icons.star_rounded,
         const Color(MateryalColorTokens.actionPrimaryPressed),
         const Color(MateryalColorTokens.brandOrange50),
       ),
@@ -554,30 +561,40 @@ class ScoreBadge extends StatelessWidget {
         const Color(MateryalColorTokens.surfaceCanvas),
       ),
     };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: BuyerTheme.border),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: foreground),
-          const SizedBox(width: 4),
-          Flexible(
-            child: Text(
-              text,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: foreground,
-              ),
-            ),
+    final score = kind == ScoreKind.vps
+        ? publishedVpsValue(text, value: value)
+        : null;
+    return Semantics(
+      label: score == null ? text : 'Vendor Performance Score $score out of 5',
+      excludeSemantics: true,
+      child: Tooltip(
+        message: score == null ? text : 'Vendor performance (VPS): $score / 5',
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: background,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: BuyerTheme.border),
           ),
-        ],
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 14, color: foreground),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  score ?? text,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: foreground,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

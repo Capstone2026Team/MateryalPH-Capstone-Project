@@ -214,6 +214,10 @@ class _$DirectoryVendorRow extends DirectoryVendorRow {
   final String? location;
   @override
   final DateTime joinedAt;
+  @override
+  final String? vps;
+  @override
+  final String? logoUrl;
 
   factory _$DirectoryVendorRow(
           [void Function(DirectoryVendorRowBuilder)? updates]) =>
@@ -229,7 +233,9 @@ class _$DirectoryVendorRow extends DirectoryVendorRow {
       required this.discoverabilityStatus,
       required this.accountStatus,
       this.location,
-      required this.joinedAt})
+      required this.joinedAt,
+      this.vps,
+      this.logoUrl})
       : super._();
   @override
   DirectoryVendorRow rebuild(
@@ -253,7 +259,9 @@ class _$DirectoryVendorRow extends DirectoryVendorRow {
         discoverabilityStatus == other.discoverabilityStatus &&
         accountStatus == other.accountStatus &&
         location == other.location &&
-        joinedAt == other.joinedAt;
+        joinedAt == other.joinedAt &&
+        vps == other.vps &&
+        logoUrl == other.logoUrl;
   }
 
   @override
@@ -269,6 +277,8 @@ class _$DirectoryVendorRow extends DirectoryVendorRow {
     _$hash = $jc(_$hash, accountStatus.hashCode);
     _$hash = $jc(_$hash, location.hashCode);
     _$hash = $jc(_$hash, joinedAt.hashCode);
+    _$hash = $jc(_$hash, vps.hashCode);
+    _$hash = $jc(_$hash, logoUrl.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -285,7 +295,9 @@ class _$DirectoryVendorRow extends DirectoryVendorRow {
           ..add('discoverabilityStatus', discoverabilityStatus)
           ..add('accountStatus', accountStatus)
           ..add('location', location)
-          ..add('joinedAt', joinedAt))
+          ..add('joinedAt', joinedAt)
+          ..add('vps', vps)
+          ..add('logoUrl', logoUrl))
         .toString();
   }
 }
@@ -339,6 +351,14 @@ class DirectoryVendorRowBuilder
   DateTime? get joinedAt => _$this._joinedAt;
   set joinedAt(DateTime? joinedAt) => _$this._joinedAt = joinedAt;
 
+  String? _vps;
+  String? get vps => _$this._vps;
+  set vps(String? vps) => _$this._vps = vps;
+
+  String? _logoUrl;
+  String? get logoUrl => _$this._logoUrl;
+  set logoUrl(String? logoUrl) => _$this._logoUrl = logoUrl;
+
   DirectoryVendorRowBuilder() {
     DirectoryVendorRow._defaults(this);
   }
@@ -356,6 +376,8 @@ class DirectoryVendorRowBuilder
       _accountStatus = $v.accountStatus;
       _location = $v.location;
       _joinedAt = $v.joinedAt;
+      _vps = $v.vps;
+      _logoUrl = $v.logoUrl;
       _$v = null;
     }
     return this;
@@ -396,6 +418,8 @@ class DirectoryVendorRowBuilder
           location: location,
           joinedAt: BuiltValueNullFieldError.checkNotNull(
               joinedAt, r'DirectoryVendorRow', 'joinedAt'),
+          vps: vps,
+          logoUrl: logoUrl,
         );
     replace(_$result);
     return _$result;

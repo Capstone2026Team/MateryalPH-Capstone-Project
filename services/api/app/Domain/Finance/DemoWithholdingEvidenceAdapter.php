@@ -6,7 +6,8 @@ namespace App\Domain\Finance;
 
 /**
  * DEMO_PLATFORM_WITHHOLDER (default teaching scenario) records the simulated platform deduction; reconciliation
- * stays PENDING because no platform remittance evidence exists. DEMO_PROVIDER_WITHHOLDER (explicit alternate
+ * starts PENDING until the independent recorded-flow checks reconcile the TEST collection and ledger. This is
+ * simulated evidence, never a real platform remittance. DEMO_PROVIDER_WITHHOLDER (explicit alternate
  * fixture) imports one simulated provider-reported deduction and compares it with the expected amount; the same
  * deduction is recorded once under the provider actor and never again as a platform deduction. Neither states
  * that Xendit actually withholds in TEST.

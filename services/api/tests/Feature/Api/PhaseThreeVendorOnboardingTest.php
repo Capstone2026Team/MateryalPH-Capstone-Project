@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Tests\Feature\Api;
 
 use App\Domain\Authorization\AccountAccess;
+use App\Domain\Finance\CommissionPolicyService;
+use App\Domain\Finance\CommissionTermsTemplate;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Identity\OtpCodeGenerator;
 use App\Domain\Identity\ProfilePhotoScanner;
@@ -1401,7 +1403,7 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
                     break;
                 case 8: DB::table('vendor_payment_accounts')->where('vendor_organization_id', $organization->id)->update(['connection_status' => 'NOT_CONNECTED']);
                     break;
-                case 9: DB::table('agreement_versions')->whereIn('agreement_document_id', DB::table('agreement_documents')->where('code', 'VENDOR_COMMISSION_TEST')->select('id'))->update(['effective_at' => now()->addDay()]);
+                case 9: $this->publishUnacceptedCommissionVersion();
                     break;
                 case 10: DB::table('vendor_organizations')->where('id', $organization->id)->update(['activation_hold_code' => 'PAYMENT_REVIEW']);
                     break;
@@ -1453,7 +1455,7 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
         foreach (DB::table('vendor_onboarding_requirements')->where('vendor_organization_id', $organization->id)->where('level', '!=', 'OPTIONAL')->where('status', '!=', 'NOT_APPLICABLE')->get() as $requirement) {
             DB::beginTransaction();
             if ($requirement->requirement_key === 'commission_terms') {
-                DB::table('agreement_versions')->whereIn('agreement_document_id', DB::table('agreement_documents')->where('code', 'VENDOR_COMMISSION_TEST')->select('id'))->update(['retired_at' => now()]);
+                $this->publishUnacceptedCommissionVersion();
             }
             if ($requirement->section === 'STORE_SETUP') {
                 match ($requirement->requirement_key) {
@@ -1582,6 +1584,25 @@ final class PhaseThreeVendorOnboardingTest extends TestCase
         self::assertSame('+639171234567', $payload['public_phone']);
         $this->patchJson('/api/v1/vendors/onboarding/setup', ['organization_lock_version' => $organization->refresh()->lock_version, 'draft_lock_version' => 1, 'description' => 'Stale change'])->assertConflict();
         $this->assertDatabaseHas('store_profiles', ['vendor_organization_id' => $organization->id, 'description' => 'First description']);
+    }
+
+    private function publishUnacceptedCommissionVersion(): void
+    {
+        $policy = CommissionPolicyService::current();
+        self::assertNotNull($policy);
+        $effective = CarbonImmutable::now();
+        $basisPoints = (int) $policy->commission_basis_points + 1;
+        $documentId = DB::table('agreement_documents')->where('code', 'VENDOR_COMMISSION_TEST')->value('id');
+        DB::table('fee_policy_versions')->insert(array_replace((array) $policy, [
+            'id' => (string) Str::uuid7(),
+            'version' => (int) CommissionPolicyService::policies()->max('version') + 1,
+            'commission_basis_points' => $basisPoints,
+            'agreement_version_id' => app(CommissionTermsTemplate::class)->create($documentId, $basisPoints, $effective),
+            'legacy_agreement_version_id' => null,
+            'effective_from' => $effective,
+            'reason' => 'New published terms awaiting Owner acceptance.',
+            'created_at' => now(), 'updated_at' => now(),
+        ]));
     }
 
     /** @return array{VendorOrganization, User} */

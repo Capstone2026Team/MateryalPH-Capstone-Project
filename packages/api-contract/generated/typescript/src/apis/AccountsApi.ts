@@ -164,6 +164,21 @@ import {
     ErrorEnvelopeToJSON,
 } from '../models/ErrorEnvelope';
 import {
+    type VendorAccountDeletionPreviewEnvelope,
+    VendorAccountDeletionPreviewEnvelopeFromJSON,
+    VendorAccountDeletionPreviewEnvelopeToJSON,
+} from '../models/VendorAccountDeletionPreviewEnvelope';
+import {
+    type VendorAccountDeletionRequest,
+    VendorAccountDeletionRequestFromJSON,
+    VendorAccountDeletionRequestToJSON,
+} from '../models/VendorAccountDeletionRequest';
+import {
+    type VendorAccountDeletionResultEnvelope,
+    VendorAccountDeletionResultEnvelopeFromJSON,
+    VendorAccountDeletionResultEnvelopeToJSON,
+} from '../models/VendorAccountDeletionResultEnvelope';
+import {
     type VendorInvitationAcceptance,
     VendorInvitationAcceptanceFromJSON,
     VendorInvitationAcceptanceToJSON,
@@ -287,6 +302,17 @@ export interface DeleteBuyerAccountRequest {
      *
      */
     buyerAccountDeletionRequest: BuyerAccountDeletionRequest;
+}
+
+export interface DeleteVendorAccountRequest {
+    /**
+     *
+     */
+    idempotencyKey: string;
+    /**
+     *
+     */
+    vendorAccountDeletionRequest: VendorAccountDeletionRequest;
 }
 
 export interface DeleteVendorTeamInvitationRequest {
@@ -1217,6 +1243,68 @@ export class AccountsApi extends runtime.BaseAPI {
     }
 
     /**
+     * Creates request options for deleteVendorAccount without sending the request
+     */
+    async deleteVendorAccountRequestOpts(requestParameters: DeleteVendorAccountRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['idempotencyKey'] == null) {
+            throw new runtime.RequiredError(
+                'idempotencyKey',
+                'Required parameter "idempotencyKey" was null or undefined when calling deleteVendorAccount().'
+            );
+        }
+
+        if (requestParameters['vendorAccountDeletionRequest'] == null) {
+            throw new runtime.RequiredError(
+                'vendorAccountDeletionRequest',
+                'Required parameter "vendorAccountDeletionRequest" was null or undefined when calling deleteVendorAccount().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (requestParameters['idempotencyKey'] != null) {
+            headerParameters['Idempotency-Key'] = String(requestParameters['idempotencyKey']);
+        }
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/vendors/account/deletion`;
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: VendorAccountDeletionRequestToJSON(requestParameters['vendorAccountDeletionRequest']),
+        };
+    }
+
+    /**
+     * Requires Vendor Owner authority, recent authenticator verification and typed DELETE confirmation. Rechecks eligibility under the organization lock. Returns ACCOUNT_DELETION_BLOCKED with details.blockers if orders, payments, refunds (including failed refunds), disputes or financial obligations remain unresolved. Atomically closes the organization with final DELETED status, anonymizes the Owner login and personal profile, removes external sign-in links and revokes all Owner and current team sessions and unused invitations. Personal avatar cleanup and a security notice use the post-commit outbox. Staff identities and immutable commercial, financial, compliance, dispute, agreement and audit records are retained for their stated purposes under the approved retention schedule. Clears access and refresh cookies. Revoked sessions cannot replay the deletion or restore the account; subsequent authenticated requests require sign-in.
+     */
+    async deleteVendorAccountRaw(requestParameters: DeleteVendorAccountRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorAccountDeletionResultEnvelope>> {
+        const requestOptions = await this.deleteVendorAccountRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => VendorAccountDeletionResultEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * Requires Vendor Owner authority, recent authenticator verification and typed DELETE confirmation. Rechecks eligibility under the organization lock. Returns ACCOUNT_DELETION_BLOCKED with details.blockers if orders, payments, refunds (including failed refunds), disputes or financial obligations remain unresolved. Atomically closes the organization with final DELETED status, anonymizes the Owner login and personal profile, removes external sign-in links and revokes all Owner and current team sessions and unused invitations. Personal avatar cleanup and a security notice use the post-commit outbox. Staff identities and immutable commercial, financial, compliance, dispute, agreement and audit records are retained for their stated purposes under the approved retention schedule. Clears access and refresh cookies. Revoked sessions cannot replay the deletion or restore the account; subsequent authenticated requests require sign-in.
+     */
+    async deleteVendorAccount(requestParameters: DeleteVendorAccountRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorAccountDeletionResultEnvelope> {
+        const response = await this.deleteVendorAccountRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Creates request options for deleteVendorTeamInvitation without sending the request
      */
     async deleteVendorTeamInvitationRequestOpts(requestParameters: DeleteVendorTeamInvitationRequest): Promise<runtime.RequestOpts> {
@@ -1715,6 +1803,47 @@ export class AccountsApi extends runtime.BaseAPI {
      */
     async getBuyerAccountPhoto(requestParameters: GetBuyerAccountPhotoRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Blob> {
         const response = await this.getBuyerAccountPhotoRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for getVendorAccountDeletionPreview without sending the request
+     */
+    async getVendorAccountDeletionPreviewRequestOpts(): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.apiKey) {
+            headerParameters["X-CSRF-Token"] = await this.configuration.apiKey("X-CSRF-Token"); // webCsrf authentication
+        }
+
+
+        let urlPath = `/vendors/account/deletion`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Owner-only eligibility review and retained-record disclosure for permanent store account deletion. Counts include all recorded environments and financial obligations, including earned unbilled commission.
+     */
+    async getVendorAccountDeletionPreviewRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorAccountDeletionPreviewEnvelope>> {
+        const requestOptions = await this.getVendorAccountDeletionPreviewRequestOpts();
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => VendorAccountDeletionPreviewEnvelopeFromJSON(jsonValue));
+    }
+
+    /**
+     * Owner-only eligibility review and retained-record disclosure for permanent store account deletion. Counts include all recorded environments and financial obligations, including earned unbilled commission.
+     */
+    async getVendorAccountDeletionPreview(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorAccountDeletionPreviewEnvelope> {
+        const response = await this.getVendorAccountDeletionPreviewRaw(initOverrides);
         return await response.value();
     }
 

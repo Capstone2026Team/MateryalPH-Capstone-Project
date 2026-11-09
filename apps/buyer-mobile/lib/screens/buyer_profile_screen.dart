@@ -18,6 +18,8 @@ import 'buyer_account_screen.dart';
 import 'buyer_delete_account_screen.dart';
 import 'buyer_help_center_screen.dart';
 import 'buyer_two_factor_screen.dart';
+import '../features/trust/reviews_repository.dart';
+import '../features/trust/buyer_ratings_section.dart';
 
 class BuyerProfileScreen extends StatefulWidget {
   const BuyerProfileScreen({
@@ -32,6 +34,7 @@ class BuyerProfileScreen extends StatefulWidget {
     this.onOpenCancellationsAndRefunds,
     this.onOpenDisputes,
     this.onOpenReviews,
+    this.reviewsRepository,
     this.onOpenCart,
     this.onOpenSearch,
     this.onOpenNotifications,
@@ -48,6 +51,7 @@ class BuyerProfileScreen extends StatefulWidget {
   final VoidCallback? onOpenCancellationsAndRefunds;
   final VoidCallback? onOpenDisputes;
   final VoidCallback? onOpenReviews;
+  final ReviewsRepository? reviewsRepository;
   final VoidCallback? onOpenCart;
   final VoidCallback? onOpenSearch;
   final VoidCallback? onOpenNotifications;
@@ -68,6 +72,7 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
   Uint8List? _photo;
   String? _error;
   bool _busy = false;
+  int _ratingsRevision = 0;
   @override
   void initState() {
     super.initState();
@@ -85,6 +90,7 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
     setState(() {
       _busy = true;
       _error = null;
+      _ratingsRevision++;
     });
     try {
       final response = await widget.repository.accountOperation(
@@ -245,7 +251,7 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
           children: [
-            if (_busy) const LinearProgressIndicator(),
+            if (_busy) const BuyerLoadingProgress(),
             if (_error != null) ...[
               AuthNotice(message: _error!, isError: true),
               TextButton(
@@ -264,6 +270,12 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
                     ),
                 onNotifications: _openNotifications,
               ),
+              if (widget.reviewsRepository != null)
+                BuyerRatingsSection(
+                  repository: widget.reviewsRepository!,
+                  active: widget.active,
+                  refreshRevision: _ratingsRevision,
+                ),
               const BuyerSectionLabel('My purchases'),
               BuyerMenuRow(
                 label: 'Orders',
@@ -469,10 +481,17 @@ class _BuyerSettingsScreenState extends State<BuyerSettingsScreen> {
         _profile = profile;
         _photo = null;
       });
-      final twoFactorOn = await _twoFactorStatus();
-      if (mounted) setState(() => _twoFactorOn = twoFactorOn);
-      final photo = await widget.repository.profilePhoto(profile);
-      if (mounted) setState(() => _photo = photo);
+      // Neither the security summary nor the signed photo depends on the other.
+      await Future.wait<void>([
+        () async {
+          final twoFactorOn = await _twoFactorStatus();
+          if (mounted) setState(() => _twoFactorOn = twoFactorOn);
+        }(),
+        () async {
+          final photo = await widget.repository.profilePhoto(profile);
+          if (mounted) setState(() => _photo = photo);
+        }(),
+      ]);
     } catch (error) {
       if (!mounted) return;
       setState(() => _photo = null);
@@ -571,9 +590,7 @@ class _BuyerSettingsScreenState extends State<BuyerSettingsScreen> {
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
           children: [
             if (_refreshing)
-              const LinearProgressIndicator(
-                semanticsLabel: 'Refreshing profile',
-              ),
+              const BuyerLoadingProgress(semanticsLabel: 'Refreshing profile'),
             BuyerIdentity(
               profile: _profile,
               photoBytes: _photo,

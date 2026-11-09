@@ -33,7 +33,7 @@ final class ReviewController extends Controller
     public function buyerSubmit(Request $request, string $orderId): JsonResponse
     {
         $input = $request->validate([
-            'display_name_choice' => ['required', Rule::in(ReviewRules::DISPLAY_CHOICES)],
+            'display_name_choice' => ['sometimes', Rule::in([...ReviewRules::DISPLAY_CHOICES, ...ReviewRules::LEGACY_DISPLAY_CHOICES])],
             'vendor_rating' => ['sometimes', 'nullable', 'array'],
             'vendor_rating.service_quality' => ['required_with:vendor_rating', 'integer', 'between:1,5'],
             'vendor_rating.speed_rating' => ['required_with:vendor_rating', 'integer', 'between:1,5'],
@@ -101,6 +101,19 @@ final class ReviewController extends Controller
     public function vendorDetail(Request $request, string $reviewId): JsonResponse
     {
         return ApiResponse::success($this->queries->vendorDetail($request, $reviewId));
+    }
+
+    public function buyerRatings(Request $request): JsonResponse
+    {
+        $input = $request->validate(['page' => ['sometimes', 'integer', 'between:1,500']]);
+        $result = $this->queries->buyerRatings($request, (int) ($input['page'] ?? 1));
+
+        return ApiResponse::success($result['items'], $result['meta']);
+    }
+
+    public function buyerPhoto(Request $request, string $reviewId): StreamedResponse
+    {
+        return $this->queries->buyerPhoto($request, $reviewId);
     }
 
     public function vendorOrder(Request $request, string $orderId): JsonResponse

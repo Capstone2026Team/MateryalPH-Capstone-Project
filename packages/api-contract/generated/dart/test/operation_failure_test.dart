@@ -52,5 +52,21 @@ void main() {
       // TODO
     });
 
+    // Automatic recovery eligibility; SCHEDULED is a lower-bound eligibility time, subject to the scheduler and worker being available.
+    // String recoveryStatus
+    test('to test the property `recoveryStatus`', () async {
+      // TODO
+    });
+
+    // int recoveryAttempts
+    test('to test the property `recoveryAttempts`', () async {
+      // TODO
+    });
+
+    // DateTime nextRetryAt
+    test('to test the property `nextRetryAt`', () async {
+      // TODO
+    });
+
   });
 }

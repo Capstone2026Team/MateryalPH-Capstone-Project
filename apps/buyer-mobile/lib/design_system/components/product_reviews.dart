@@ -1,3 +1,4 @@
+import 'async_state.dart';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -350,7 +351,7 @@ class ReviewMediaTile extends StatelessWidget {
                       ? const SizedBox(
                           width: 24,
                           height: 24,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                          child: BuyerLoadingIndicator(strokeWidth: 2),
                         )
                       : Column(
                           mainAxisSize: MainAxisSize.min,

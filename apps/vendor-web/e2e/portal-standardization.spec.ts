@@ -35,6 +35,32 @@ async function capture(page: Page, name: string) {
 }
 
 for (const portal of ['vendor', 'admin'] as const) {
+  test(`${portal} shares applied dates across pages and keeps them after reload`, async ({ page }) => {
+    const queries = await prepare(page, portal)
+    const origin = `http://127.0.0.1:${portal === 'vendor' ? 4173 : 4174}`
+    await page.goto(`${origin}/notifications`)
+    await page.getByRole('button', { name: 'Last 30 days', exact: true }).click()
+    const dialog = page.getByRole('dialog', { name: 'Notification dates' })
+    await dialog.getByRole('button', { name: 'Last 7 days', exact: true }).click()
+    await dialog.getByRole('button', { name: 'Apply', exact: true }).click()
+    const path = portal === 'vendor' ? '/orders?group=CLOSED&closed_state=COMPLETED&q=cement&page=2' : '/vendor-verification?status=PENDING_VERIFICATION&page=2'
+    const dateKey = portal === 'vendor' ? 'from' : 'submitted_from'
+    const endpoint = portal === 'vendor' ? '/vendor/orders' : '/vendor-verification'
+    await page.goto(`${origin}${path}`)
+    await expect(page.getByRole('button', { name: 'Last 7 days', exact: true }).first()).toBeVisible()
+    await expect.poll(() => queries.some(url => url.pathname.includes(endpoint) && url.searchParams.get(dateKey) === '2026-10-03')).toBe(true)
+    const beforeReload = queries.length
+    await page.reload()
+    await expect(page.getByRole('button', { name: 'Last 7 days', exact: true }).first()).toBeVisible()
+    await expect.poll(() => queries.slice(beforeReload).some(url => url.pathname.includes(endpoint) && url.searchParams.get(dateKey) === '2026-10-03')).toBe(true)
+    await page.goto(`${origin}/notifications`)
+    await page.getByRole('button', { name: 'Last 7 days', exact: true }).click()
+    await dialog.getByRole('button', { name: 'Today', exact: true }).click()
+    await dialog.getByRole('button', { name: 'Cancel', exact: true }).click()
+    await page.reload()
+    await expect(page.getByRole('button', { name: 'Last 7 days', exact: true }).first()).toBeVisible()
+  })
+
   test(`${portal} notification bulk read retains the selected inclusive calendar boundaries`, async ({ page }) => {
     await prepare(page, portal)
     const currentId = '019a0000-0000-7000-8000-000000000002'

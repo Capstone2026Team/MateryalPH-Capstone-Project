@@ -33,6 +33,26 @@ final class ProjectsRepository {
   final api.MateryalphApiClient _client;
   final ApiGuard _guard;
   api.BuyerProjectsApi get _api => _client.getBuyerProjectsApi();
+  Future<String> messageInquiry(String inquiryId, String key) => _guard(
+    () async => _guard
+        .required(
+          (await _client.getMessagingApi().shareChatWorkPackage(
+            conversationId: inquiryId,
+            idempotencyKey: key,
+          )).data?.data,
+        )
+        .id,
+  );
+  Future<String> messageOrder(String orderId, String key) => _guard(
+    () async => _guard
+        .required(
+          (await _client.getMessagingApi().messageWorkPackageOrder(
+            orderId: orderId,
+            idempotencyKey: key,
+          )).data?.data,
+        )
+        .id,
+  );
   Future<api.ProjectPage> list({int page = 1}) => _guard(
     () async =>
         _guard.required((await _api.listProjects(page: page)).data?.data),
@@ -405,26 +425,25 @@ final class ProjectsRepository {
         input,
       ),
     );
-    return _guard
-        .required(
-          select
-              ? (await _api.selectProjectVendor(
-                  packageId: id,
-                  idempotencyKey: key,
-                  projectVendorSelectionRequest: _guard.required(
-                    _client.serializers.deserializeWith(
-                      api.ProjectVendorSelectionRequest.serializer,
-                      input,
-                    ),
-                  ),
-                )).data?.data
-              : (await _api.inquireProjectVendor(
-                  packageId: id,
-                  idempotencyKey: key,
-                  projectCandidateRequest: body,
-                )).data?.data,
-        )
-        .id;
+    final result = _guard.required(
+      select
+          ? (await _api.selectProjectVendor(
+              packageId: id,
+              idempotencyKey: key,
+              projectVendorSelectionRequest: _guard.required(
+                _client.serializers.deserializeWith(
+                  api.ProjectVendorSelectionRequest.serializer,
+                  input,
+                ),
+              ),
+            )).data?.data
+          : (await _api.inquireProjectVendor(
+              packageId: id,
+              idempotencyKey: key,
+              projectCandidateRequest: body,
+            )).data?.data,
+    );
+    return select ? result.id : result.storeConversationId ?? result.id;
   });
 
   /// The candidate re-priced with the Buyer's specification choices

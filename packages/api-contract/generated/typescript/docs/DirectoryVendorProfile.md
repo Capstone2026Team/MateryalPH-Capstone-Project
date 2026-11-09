@@ -17,6 +17,7 @@ Name | Type
 `sanctions` | [Array&lt;DirectorySanction&gt;](DirectorySanction.md)
 `canViewEnforcement` | boolean
 `canViewVerification` | boolean
+`canViewScores` | boolean
 
 ## Example
 
@@ -36,6 +37,7 @@ const example = {
   "sanctions": null,
   "canViewEnforcement": null,
   "canViewVerification": null,
+  "canViewScores": null,
 } satisfies DirectoryVendorProfile
 
 console.log(example)

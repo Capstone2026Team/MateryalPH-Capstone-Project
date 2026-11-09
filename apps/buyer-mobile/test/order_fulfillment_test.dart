@@ -158,6 +158,56 @@ RefundItemView _refund(String displayState) => RefundItemView(
 
 void main() {
   testWidgets(
+    'Site Delivery displays the accepted vehicle and loads its private photo',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(390, 2400));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final repository = FakeOrdersRepository(
+        detail: orderDetail(
+          state: 'OUT_FOR_DELIVERY',
+          payment: 'PAID',
+          fulfillment: 'DELIVERY',
+          confirmedDelivery: const ConfirmedDeliveryView(
+            vehicles: [
+              ConfirmedVehicleView(
+                name: 'Accepted mixer',
+                brand: 'Isuzu',
+                vehicleType: 'CONCRETE_MIXER',
+                imageFileId: 'accepted-photo',
+                capacityKg: '14400',
+                mixerCapacityM3: '6',
+                heavyClassification: 'HEAVY',
+                vehicles: 1,
+                trips: 2,
+                perTripCentavos: 25000,
+              ),
+            ],
+            distanceMeters: 4200,
+            endpoint: 'INTENDED_LOCATION',
+            finalFeeCentavos: 50000,
+          ),
+        ),
+      );
+      repository.files['accepted-photo'] = base64Decode(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=',
+      );
+      await tester.pumpWidget(
+        _app(OrderDetailsScreen(orderId: 'order-1', repository: repository)),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Accepted mixer'), findsOneWidget);
+      expect(find.textContaining('14400 kg payload'), findsOneWidget);
+      expect(find.textContaining('6 m³ mixer'), findsOneWidget);
+      expect(
+        find.text('Out for Delivery · Vendor-confirmed vehicle'),
+        findsOneWidget,
+      );
+      expect(repository.calls, contains('orderFile:accepted-photo'));
+      expect(find.byType(Image), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+  testWidgets(
     'a delivered order shows proof on its step, a receipt countdown and confirms after asking',
     (tester) async {
       await tester.binding.setSurfaceSize(const Size(390, 2400));
@@ -240,7 +290,7 @@ void main() {
         blindRevealText:
             'Ratings stay hidden until both parties submit or the 14-day window ends.',
         speedLabel: 'Delivery Speed',
-        displayOptions: [(choice: 'VERIFIED_BUYER', preview: 'Verified Buyer')],
+        displayOptions: [(choice: 'FULL_NAME', preview: 'Sample Buyer')],
         vendorRating: null,
         canSubmitVendorRating: true,
         lines: [],

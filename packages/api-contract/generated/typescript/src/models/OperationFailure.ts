@@ -55,6 +55,18 @@ export interface OperationFailure {
      *
      */
     retryNote?: string | null;
+    /**
+     * Automatic recovery eligibility; SCHEDULED is a lower-bound eligibility time, subject to the scheduler and worker being available.
+     */
+    recoveryStatus?: OperationFailureRecoveryStatusEnum;
+    /**
+     *
+     */
+    recoveryAttempts?: number;
+    /**
+     *
+     */
+    nextRetryAt?: Date | null;
 }
 
 
@@ -66,6 +78,17 @@ export const OperationFailureKindEnum = {
     OutboxEvent: 'OUTBOX_EVENT',
 } as const;
 export type OperationFailureKindEnum = typeof OperationFailureKindEnum[keyof typeof OperationFailureKindEnum];
+
+/**
+ * @export
+ */
+export const OperationFailureRecoveryStatusEnum = {
+    Scheduled: 'SCHEDULED',
+    LimitReached: 'LIMIT_REACHED',
+    OwningProcess: 'OWNING_PROCESS',
+    Resolved: 'RESOLVED',
+} as const;
+export type OperationFailureRecoveryStatusEnum = typeof OperationFailureRecoveryStatusEnum[keyof typeof OperationFailureRecoveryStatusEnum];
 
 
 /**
@@ -101,6 +124,9 @@ export function OperationFailureFromJSONTyped(json: any, ignoreDiscriminator: bo
         'failedAt': (json['failed_at'] == null ? json['failed_at'] : parseDateTime(json['failed_at'])),
         'retryable': json['retryable'],
         'retryNote': json['retry_note'] === undefined ? undefined : json['retry_note'] === null ? null : json['retry_note'],
+        'recoveryStatus': json['recovery_status'] == null ? undefined : json['recovery_status'],
+        'recoveryAttempts': json['recovery_attempts'] == null ? undefined : json['recovery_attempts'],
+        'nextRetryAt': json['next_retry_at'] === undefined ? undefined : json['next_retry_at'] === null ? null : (parseDateTime(json['next_retry_at'])),
     };
 }
 
@@ -124,6 +150,9 @@ export function OperationFailureToJSONTyped(value?: OperationFailure | null, ign
         'failed_at': value['failedAt'] == null ? value['failedAt'] : serializeDateTime(value['failedAt']),
         'retryable': value['retryable'],
         'retry_note': value['retryNote'],
+        'recovery_status': value['recoveryStatus'],
+        'recovery_attempts': value['recoveryAttempts'],
+        'next_retry_at': value['nextRetryAt'] == null ? value['nextRetryAt'] : serializeDateTime(value['nextRetryAt']),
     };
 }
 

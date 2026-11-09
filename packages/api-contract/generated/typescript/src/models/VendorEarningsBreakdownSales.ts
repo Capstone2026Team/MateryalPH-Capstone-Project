@@ -39,6 +39,10 @@ export interface VendorEarningsBreakdownSales {
      *
      */
     deliveryCentavos: number;
+    /**
+     * Completed principal refunds and confirmed cash reimbursements for the remaining noncancelled, not fully refunded sales in this confirmation-date range. Subtract once from materials plus delivery to reconcile the product report and Net sales.
+     */
+    refundsCentavos: number;
 }
 
 /**
@@ -50,6 +54,7 @@ export function instanceOfVendorEarningsBreakdownSales(value: object): value is 
     if ((!('vendorDiscountsCentavos' in (value as Record<string, any>)) && !('vendor_discounts_centavos' in (value as Record<string, any>))) || ((value as Record<string, any>)['vendorDiscountsCentavos'] === undefined && (value as Record<string, any>)['vendor_discounts_centavos'] === undefined)) return false;
     if ((!('materialsAfterDiscountCentavos' in (value as Record<string, any>)) && !('materials_after_discount_centavos' in (value as Record<string, any>))) || ((value as Record<string, any>)['materialsAfterDiscountCentavos'] === undefined && (value as Record<string, any>)['materials_after_discount_centavos'] === undefined)) return false;
     if ((!('deliveryCentavos' in (value as Record<string, any>)) && !('delivery_centavos' in (value as Record<string, any>))) || ((value as Record<string, any>)['deliveryCentavos'] === undefined && (value as Record<string, any>)['delivery_centavos'] === undefined)) return false;
+    if ((!('refundsCentavos' in (value as Record<string, any>)) && !('refunds_centavos' in (value as Record<string, any>))) || ((value as Record<string, any>)['refundsCentavos'] === undefined && (value as Record<string, any>)['refunds_centavos'] === undefined)) return false;
     return true;
 }
 
@@ -68,6 +73,7 @@ export function VendorEarningsBreakdownSalesFromJSONTyped(json: any, ignoreDiscr
         'vendorDiscountsCentavos': json['vendor_discounts_centavos'],
         'materialsAfterDiscountCentavos': json['materials_after_discount_centavos'],
         'deliveryCentavos': json['delivery_centavos'],
+        'refundsCentavos': json['refunds_centavos'],
     };
 }
 
@@ -87,6 +93,7 @@ export function VendorEarningsBreakdownSalesToJSONTyped(value?: VendorEarningsBr
         'vendor_discounts_centavos': value['vendorDiscountsCentavos'],
         'materials_after_discount_centavos': value['materialsAfterDiscountCentavos'],
         'delivery_centavos': value['deliveryCentavos'],
+        'refunds_centavos': value['refundsCentavos'],
     };
 }
 

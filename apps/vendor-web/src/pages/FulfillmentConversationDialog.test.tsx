@@ -8,7 +8,7 @@ import { MessagingWorkspace } from './MessagingPage'
 
 vi.mock('../lib/messaging-api', async original => ({
   ...await original<typeof import('../lib/messaging-api')>(),
-  chatApi: { get: vi.fn(), list: vi.fn(), projectInquiries: vi.fn(), fulfillmentConversations: vi.fn(), send: vi.fn(), read: vi.fn(), typing: vi.fn(), upload: vi.fn(), download: vi.fn(), handlers: vi.fn(), transfer: vi.fn() },
+  chatApi: { get: vi.fn(), buyerThread: vi.fn(), buyerThreadContexts: vi.fn(), list: vi.fn(), fulfillmentConversations: vi.fn(), send: vi.fn(), read: vi.fn(), typing: vi.fn(), upload: vi.fn(), download: vi.fn(), handlers: vi.fn(), transfer: vi.fn() },
   watchConversation: vi.fn(),
 }))
 
@@ -32,6 +32,8 @@ beforeEach(() => {
   vi.resetAllMocks()
   vi.mocked(watchConversation).mockResolvedValue(stop)
   vi.mocked(chatApi.get).mockImplementation(async id => detail(id))
+  vi.mocked(chatApi.buyerThread).mockImplementation((...args) => chatApi.get(...args))
+  vi.mocked(chatApi.buyerThreadContexts).mockResolvedValue({ items: [detail('sales-1').conversation], page: 1, hasMore: false })
   vi.mocked(chatApi.list).mockResolvedValue({ items: [detail('sales-1').conversation], page: 1, hasMore: false })
   vi.mocked(chatApi.fulfillmentConversations).mockResolvedValue({ items: [row], page: 1, hasMore: false })
   vi.mocked(chatApi.read).mockResolvedValue({ data: {}, meta: {}, errors: [] })
@@ -182,7 +184,7 @@ test('thread reuses retry keys, read receipts, history paging, image uploads and
   vi.mocked(chatApi.get).mockResolvedValue({ ...detail(), messages: { items: [{ ...message, id: 'm-1', body: 'Earlier pickup instructions' }], hasMore: false } })
   fireEvent.click(screen.getByRole('button', { name: 'Earlier messages' }))
   await screen.findByText('Earlier pickup instructions')
-  expect(chatApi.get).toHaveBeenCalledWith('fulfillment-1', 'm-2')
+  expect(chatApi.get).toHaveBeenCalledWith('fulfillment-1', 'm-2', 1)
   fireEvent.change(screen.getByRole('textbox', { name: 'Message' }), { target: { value: 'I am coming' } })
   fireEvent.click(screen.getByRole('button', { name: 'Send message' }))
   fireEvent.click(await screen.findByRole('button', { name: 'Failed to send · Retry' }))
@@ -342,37 +344,62 @@ test('inbox clears private badges on session end and ignores late responses', as
 })
 
 
-test('project inquiry opens inside the main item thread and preserves its draft and unread project count', async () => {
+test('one Buyer chat uses Work Package message attachments without choosing a reply subject', async () => {
   const main = detail('sales-1')
-  main.conversation.projectUnreadCount = 2
-  main.conversation.projectInquiryCount = 1
-  main.conversation.mainConversationId = 'sales-1'
-  const project: ConversationDetail = { ...detail('sales-1'),
-    conversation: { ...detail('sales-1').conversation, id: 'project-1', contextType: 'PROJECT_BASED', inquiryLabel: 'Foundation', canListFulfillmentConversations: false, lockedReference: { work_package: { name: 'Foundation', lines: [] } } },
-    messages: { items: [{ ...message, id: 'project-message', body: 'Foundation inquiry text' }], hasMore: false },
-  }
-  vi.mocked(chatApi.get).mockImplementation(async id => id === 'sales-1' ? main : project)
-  vi.mocked(chatApi.list).mockResolvedValue({ items: [{ ...main.conversation, unreadCount: 2 }], page: 1, hasMore: false })
-  vi.mocked(chatApi.projectInquiries).mockResolvedValue({ items: [project.conversation], page: 1, hasMore: false })
-  render(<MemoryRouter initialEntries={['/messages?conversation=sales-1']}><Location /><MessagingWorkspace role="PUBLISHER" /></MemoryRouter>)
+  main.conversation = { ...main.conversation, buyerThreadId: 'buyer-one', conversationCount: 2 }
+  main.messages.items = [
+    { ...message, conversationId: 'sales-1', body: 'General inquiry text' },
+    { ...message, id: 'package-message', conversationId: 'sales-1', kind: 'WORK_PACKAGE', body: 'Work Package: Foundation',
+      workPackageAttachment: { inquiryId: 'project-1', reference: { work_package: { name: 'Foundation', lines: [] } }, canPrepareQuotation: true } },
+  ]
+  vi.mocked(chatApi.buyerThread).mockResolvedValue(main)
+  vi.mocked(chatApi.list).mockResolvedValue({ items: [main.conversation], page: 1, hasMore: false })
+  vi.mocked(chatApi.send).mockResolvedValue({ data: { id: 'saved' }, meta: {}, errors: [] })
+  render(<MemoryRouter initialEntries={['/messages?conversation=old-package-link']}><Location /><MessagingWorkspace role="PUBLISHER" /></MemoryRouter>)
   const composer = await screen.findByRole('textbox', { name: 'Message' })
-  fireEvent.change(composer, { target: { value: 'Keep my item draft' } })
-  fireEvent.click(screen.getByRole('button', { name: /Project inquiries/ }))
-  const dialog = await screen.findByRole('dialog', { name: 'Project inquiries' })
-  fireEvent.click(await within(dialog).findByRole('button', { name: /Foundation/ }))
-  await within(dialog).findByText('Foundation inquiry text')
-  expect(within(dialog).getByRole('button', { name: 'Quotation history' })).toBeInTheDocument()
-  fireEvent.click(within(dialog).getByRole('button', { name: 'Quotation history' }))
-  const history = await screen.findByRole('dialog', { name: 'Quotation history' })
-  fireEvent.click(within(history).getByRole('button', { name: 'Close quotation history' }))
-  expect(within(dialog).getByText('Foundation inquiry text')).toBeInTheDocument()
-  expect(screen.getByLabelText('Location')).toHaveTextContent('?conversation=sales-1')
-  expect(composer).toHaveValue('Keep my item draft')
-  fireEvent.click(within(dialog).getByRole('button', { name: 'Back to project inquiries' }))
-  await within(dialog).findByRole('button', { name: /Foundation/ })
-  fireEvent.click(within(dialog).getByRole('button', { name: 'Close project inquiries' }))
-  expect(composer).toHaveValue('Keep my item draft')
   const inbox = within(screen.getByRole('complementary', { name: 'Conversation inbox' }))
-  expect((await inbox.findAllByRole('button', { name: /Buyer One/ })).length).toBe(1)
-  expect(within(await inbox.findByRole('button', { name: /Buyer One/ })).getByText('2')).toBeInTheDocument()
+  expect(await inbox.findAllByRole('button', { name: /Buyer One/ })).toHaveLength(1)
+  expect(screen.queryByRole('button', { name: /Reply about/ })).not.toBeInTheDocument()
+  expect(screen.queryByRole('dialog', { name: 'Choose reply subject' })).not.toBeInTheDocument()
+  expect(chatApi.buyerThreadContexts).not.toHaveBeenCalled()
+  fireEvent.change(composer, { target: { value: 'We can help with this package' } })
+  fireEvent.click(within(screen.getByRole('complementary', { name: 'Attached Work Package' })).getByRole('button'))
+  const attachment = await screen.findByRole('dialog', { name: 'Work Package' })
+  expect(attachment).toHaveTextContent('Foundation')
+  fireEvent.click(screen.getByRole('button', { name: /Close work package/i }))
+  expect(composer).toHaveValue('We can help with this package')
+  fireEvent.click(screen.getByRole('button', { name: 'Send message' }))
+  await waitFor(() => expect(chatApi.send).toHaveBeenCalledWith('sales-1', 'We can help with this package', expect.any(String), undefined))
+  expect(screen.getByText('General inquiry text')).toBeInTheDocument()
+})
+
+test('combined refresh removes retained messages when a staff transfer changes the authorized contexts', async () => {
+  const sales = detail('sales-1')
+  const project = { ...sales.conversation, id: 'project-1', contextType: 'PROJECT_BASED' as const, inquiryLabel: 'Foundation' }
+  const older = { ...message, id: 'm-1', conversationId: 'project-1', body: 'Previously authorized package history' }
+  vi.mocked(chatApi.buyerThread).mockImplementation(async (_id, before) => ({ ...sales, threadAuthority: 'before-transfer', threadContexts: [sales.conversation, project],
+    messages: { items: before ? [older] : [{ ...message, conversationId: 'sales-1' }], hasMore: !before, ...(before ? {} : { nextBefore: 'm-2' }) } }))
+  render(<MemoryRouter initialEntries={['/messages?conversation=sales-1']}><MessagingWorkspace role="PUBLISHER" /></MemoryRouter>)
+  fireEvent.click(await screen.findByRole('button', { name: 'Earlier messages' }))
+  await screen.findByText('Previously authorized package history')
+  vi.mocked(chatApi.buyerThread).mockResolvedValue({ ...sales, threadAuthority: 'after-transfer', threadContexts: [sales.conversation] })
+  await act(async () => { vi.mocked(watchConversation).mock.calls.at(-1)![1]() })
+  await waitFor(() => expect(screen.queryByText('Previously authorized package history')).not.toBeInTheDocument())
+  expect(screen.getByText('Inquiry text')).toBeInTheDocument()
+})
+
+test('a combined timeline downloads an attachment from its original Work Package context', async () => {
+  const sales = detail('sales-1')
+  sales.messages.items = [{ ...message, conversationId: 'project-1', attachments: [{ id: 'package-pdf', displayName: 'Foundation plan.pdf', mediaType: 'application/pdf', sizeBytes: 1024, scanState: 'CLEAN' }] }]
+  vi.mocked(chatApi.buyerThread).mockResolvedValue(sales)
+  vi.mocked(chatApi.download).mockResolvedValue(new Blob(['sample'], { type: 'application/pdf' }))
+  const create = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:package-fixture')
+  const revoke = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
+  const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+  try {
+    render(<MemoryRouter initialEntries={['/messages?conversation=sales-1']}><MessagingWorkspace role="PUBLISHER" /></MemoryRouter>)
+    fireEvent.click(await screen.findByRole('button', { name: /Foundation plan.pdf/ }))
+    await waitFor(() => expect(chatApi.download).toHaveBeenCalledWith('project-1', 'package-pdf'))
+    expect(chatApi.download).not.toHaveBeenCalledWith('sales-1', 'package-pdf')
+  } finally { create.mockRestore(); revoke.mockRestore(); click.mockRestore() }
 })

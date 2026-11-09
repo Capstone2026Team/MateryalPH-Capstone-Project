@@ -1,3 +1,4 @@
+import { expectPortalCardDesign } from './fixtures/card-design'
 import { expect, test } from '@playwright/test'
 
 test('order cards reflow and retain search, filters and review navigation', async ({ page }) => {
@@ -43,6 +44,7 @@ test('order cards reflow and retain search, filters and review navigation', asyn
   await page.goto('/orders')
   const card = page.getByRole('article', { name: 'ORD-2026-LAYOUT' })
   await expect(card).toBeVisible()
+  await expectPortalCardDesign(page)
   await expect(card.getByText('Site Delivery', { exact: true })).toBeVisible()
   await expect(card.getByText('Online payment', { exact: true })).toBeVisible()
   await expect(card.getByRole('link', { name: 'Review request' })).toHaveAttribute('href', '/orders/order-layout')
@@ -87,4 +89,13 @@ test('order cards reflow and retain search, filters and review navigation', asyn
   await expect(page).toHaveURL(/group=CLOSED/)
   await expect.poll(() => new URL(page.url()).searchParams.has('q')).toBe(false)
   await expect(card).toBeVisible()
+  await page.goto('/orders/order-layout')
+  const breakdown = page.getByRole('region', { name: 'Buyer payment breakdown' })
+  await expect(breakdown).toBeVisible()
+  await expect(breakdown.getByRole('term').filter({ hasText: /^Materials/ })).toHaveCount(1)
+  await expect(breakdown.getByRole('term').filter({ hasText: /^Materials subtotal/ })).toHaveCount(0)
+  await expect(breakdown.getByText('Excludes e-wallet transaction fee', { exact: true })).toBeVisible()
+  await expect(breakdown.getByText('Self-Pickup', { exact: true })).toBeVisible()
+  expect(await breakdown.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
+  await breakdown.locator('..').screenshot({ path: `test-results/order-payment-breakdown-${page.viewportSize()!.width}.png` })
 })

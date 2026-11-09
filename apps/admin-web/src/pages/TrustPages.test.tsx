@@ -1,4 +1,5 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { dateFilterPreset, PortalResourceProvider } from '@materyalph/web-ui'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { beforeEach, expect, test, vi } from 'vitest'
 import { parseDate } from '@materyalph/api-client-ts'
@@ -96,13 +97,22 @@ test('moderation offers only server-allowed actions (never delete) and requires 
 const queueRow: ModerationQueueRow = { id: 'r1', type: 'PRODUCT', storeName: 'Demo Store', displayName: 'Juan C.', moderationState: 'NONE', orderReference: 'ORD-2026-TEST', openFlags: 0, ratings: { productQuality: 4 }, submittedAt: new Date('2026-10-04T02:00:00Z') }
 
 function moderationRoutes(path = '/reviews') {
-  return <MemoryRouter initialEntries={[path]}><Routes><Route path="/reviews" element={<AdminReviewModerationPage />} /><Route path="/reviews/:reviewId" element={<AdminReviewModerationDetailPage />} /></Routes></MemoryRouter>
+  return <PortalResourceProvider><MemoryRouter initialEntries={[path]}><Routes><Route path="/reviews" element={<AdminReviewModerationPage />} /><Route path="/reviews/:reviewId" element={<AdminReviewModerationDetailPage />} /></Routes></MemoryRouter></PortalResourceProvider>
 }
+
+test('moderation tab badges use full review totals rather than reports or the loaded page', async () => {
+  vi.mocked(api.listModeration).mockResolvedValue({ items: [queueRow], total: 27, perPage: 20, counts: { NEEDS_ACTION: 27, CORRECTION_REQUESTED: 0, REMOVED: 3, ALL: 31 } })
+  render(moderationRoutes('/reviews?page=2'))
+  expect(await screen.findByRole('tab', { name: 'Needs action 27' })).toHaveAttribute('aria-selected', 'true')
+  expect(screen.getByRole('tab', { name: 'Correction requested 0' })).toBeInTheDocument()
+  expect(screen.getByRole('tab', { name: 'Removed 3' })).toBeInTheDocument()
+  expect(screen.getByRole('tab', { name: 'All reviews 31' })).toBeInTheDocument()
+})
 
 test('empty moderation queues explain the scope and offer all reviews without zero-record pagination', async () => {
   vi.mocked(api.listModeration).mockImplementation(async state => ({ items: state === 'ALL' ? [queueRow] : [], total: state === 'ALL' ? 1 : 0, perPage: 20 }))
   render(moderationRoutes())
-  expect(await screen.findByText('No reviews need action')).toBeInTheDocument()
+  expect(await screen.findByText('No reviews in this date range')).toBeInTheDocument()
   expect(screen.queryByRole('navigation', { name: 'Pagination' })).not.toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: 'Browse all reviews' }))
   expect(await screen.findByText('No moderation action')).toBeInTheDocument()
@@ -126,13 +136,75 @@ test('opening and returning from a review preserves the queue, submission dates 
   expect(await screen.findByText('Page 2 of 2 · 21 records')).toBeInTheDocument()
 })
 
-test('a filtered empty queue resets dates and page while retaining the selected queue', async () => {
+test('a filtered empty queue changes dates through the picker and retains the selected queue', async () => {
   vi.mocked(api.listModeration).mockResolvedValue({ items: [], total: 0, perPage: 20 })
   render(moderationRoutes('/reviews?state=REMOVED&from=2026-10-01&page=2'))
+  expect(await screen.findByText('No reviews on this page')).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Return to first page' })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'View all dates' })).not.toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: 'From Oct 1, 2026' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Last 30 days' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Apply' }))
+  const { from, to } = dateFilterPreset(30)
+  await waitFor(() => expect(api.listModeration).toHaveBeenLastCalledWith('REMOVED', 1, { from, to }))
+})
+
+test('moderation shows the selected queue total without overview charts', async () => {
+  vi.mocked(api.listModeration).mockResolvedValue({ items: [queueRow, { ...queueRow, id: 'r2', type: 'VENDOR', moderationState: 'HIDDEN_PENDING_REVIEW', openFlags: 2 }, { ...queueRow, id: 'r3', type: 'BUYER', moderationState: 'REMOVED', openFlags: 1 }], total: 43, perPage: 20 })
+  render(moderationRoutes('/reviews?state=ALL&page=2'))
+  expect(await screen.findByText('43 reviews')).toBeVisible()
+  expect(screen.getByRole('tab', { name: 'All reviews' })).toHaveAttribute('aria-selected', 'true')
+  expect(screen.queryByRole('region', { name: 'Queue snapshot' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('list', { name: 'Review types on this page' })).not.toBeInTheDocument()
+})
+
+test('refreshing moderation retains visible reviews and prevents repeated refresh requests', async () => {
+  let finish!: (value: Awaited<ReturnType<typeof api.listModeration>>) => void
+  vi.mocked(api.listModeration).mockResolvedValueOnce({ items: [queueRow], total: 1, perPage: 20 }).mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
+  render(moderationRoutes('/reviews?state=ALL'))
+  await screen.findByRole('link', { name: /View product review by Juan C/ })
+  fireEvent.click(screen.getByRole('button', { name: 'Refresh queue' }))
+  expect(screen.getByRole('link', { name: /View product review by Juan C/ })).toBeVisible()
+  expect(screen.getByRole('button', { name: 'Refreshing…' })).toBeDisabled()
+  expect(screen.queryByText('Loading reviews…')).not.toBeInTheDocument()
+  await waitFor(() => expect(finish).toBeTypeOf('function'))
+  await act(async () => { finish({ items: [], total: 0, perPage: 20 }) })
   expect(await screen.findByText('No reviews in this date range')).toBeInTheDocument()
-  fireEvent.click(screen.getByRole('button', { name: 'View all dates' }))
-  expect(await screen.findByText('No removed reviews')).toBeInTheDocument()
-  expect(api.listModeration).toHaveBeenLastCalledWith('REMOVED', 1, expect.objectContaining({ from: '', to: '' }))
+  expect(api.listModeration).toHaveBeenCalledTimes(2)
+})
+
+test('switching queues reuses the matching snapshot and ignores late results from another tab', async () => {
+  let finish!: (value: Awaited<ReturnType<typeof api.listModeration>>) => void
+  vi.mocked(api.listModeration).mockImplementation(state => state === 'REMOVED' ? new Promise(resolve => { finish = resolve }) : Promise.resolve({ items: [queueRow], total: 1, perPage: 20, counts: { ALL: 15, REMOVED: 2 } }))
+  render(moderationRoutes('/reviews?state=ALL'))
+  await screen.findByRole('link', { name: /View product review by Juan C/ })
+  const header = screen.getByRole('heading', { level: 1 })
+  const dateFilter = screen.getByRole('button', { name: 'Last 30 days' })
+  fireEvent.click(screen.getByRole('tab', { name: 'Removed 2' }))
+  expect(screen.queryByRole('link', { name: /View product review by Juan C/ })).not.toBeInTheDocument()
+  expect(screen.getByText('Loading reviews…')).toBeInTheDocument()
+  expect(screen.getByRole('heading', { level: 1 })).toBe(header)
+  expect(screen.getByRole('button', { name: 'Last 30 days' })).toBe(dateFilter)
+  expect(screen.getByRole('tab', { name: 'Removed 2' })).toHaveAttribute('aria-selected', 'true')
+  await waitFor(() => expect(finish).toBeTypeOf('function'))
+  fireEvent.click(screen.getByRole('tab', { name: 'All reviews 15' }))
+  expect(screen.getByRole('link', { name: /View product review by Juan C/ })).toBeVisible()
+  await act(async () => { finish({ items: [{ ...queueRow, id: 'removed', storeName: 'Late removed store', moderationState: 'REMOVED' }], total: 1, perPage: 20 }) })
+  expect(screen.getByRole('tab', { name: 'All reviews 15' })).toHaveAttribute('aria-selected', 'true')
+  expect(screen.queryByText('Late removed store')).not.toBeInTheDocument()
+})
+
+test('moderation failures clear stale content, keep filters usable and recover on retry', async () => {
+  vi.mocked(api.listModeration).mockResolvedValueOnce({ items: [queueRow], total: 1, perPage: 20 }).mockRejectedValueOnce(new Error('Review queue is temporarily unavailable.')).mockResolvedValueOnce({ items: [], total: 0, perPage: 20 })
+  render(moderationRoutes('/reviews?state=ALL'))
+  await screen.findByRole('link', { name: /View product review by Juan C/ })
+  fireEvent.click(screen.getByRole('button', { name: 'Refresh queue' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent('Review queue is temporarily unavailable.')
+  expect(screen.queryByRole('link', { name: /View product review by Juan C/ })).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Last 30 days' })).toBeEnabled()
+  fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+  expect(await screen.findByText('No reviews in this date range')).toBeInTheDocument()
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
 })
 
 test('moderation details show report evidence, private video controls, order context and original revision ratings', async () => {
@@ -223,46 +295,29 @@ function scoreRoutes(entry = '/scores/v1') {
   return <MemoryRouter initialEntries={[entry]}><Routes><Route path="/scores" element={<AdminScoresPage />} /><Route path="/scores/:vendorId" element={<AdminScoreDetailPage />} /></Routes></MemoryRouter>
 }
 
-test('score directory preserves search and page through detail navigation and distinguishes zero rates from missing data', async () => {
-  vi.mocked(api.listScores).mockResolvedValue({ items: [{ vendorId: 'v1', storeName: 'Demo Store', scores: { label: 'New Vendor — Building Track Record', vps: null, vcs: null, mqs: null, ohs: null, badges: [] }, crr: '0.00', frr: null, sampleCounts: {}, activeSuppressions: 0, activeExclusions: 0 }], total: 21, perPage: 20 } as unknown as Awaited<ReturnType<typeof api.listScores>>)
-  vi.mocked(api.getScore).mockResolvedValue(scoreDetail())
-  render(scoreRoutes('/scores?q=Demo&page=2'))
-  const open = await screen.findByRole('link', { name: 'View performance for Demo Store' })
-  expect(api.listScores).toHaveBeenCalledWith('Demo', 2)
-  expect(screen.getByText('0.00%')).toBeInTheDocument()
-  fireEvent.click(open)
-  const back = await screen.findByRole('link', { name: 'Score & Badge Monitoring' })
-  expect(back).toHaveAttribute('href', '/scores?q=Demo&page=2')
-  fireEvent.click(back)
-  expect(await screen.findByRole('searchbox', { name: 'Search stores' })).toHaveValue('Demo')
-})
-
-test('score search empty state can reset to all stores without empty pagination', async () => {
-  vi.mocked(api.listScores).mockResolvedValue({ items: [], total: 0, perPage: 20 })
-  render(scoreRoutes('/scores?q=Unknown'))
-  expect(await screen.findByText('No matching stores')).toBeInTheDocument()
-  expect(screen.queryByRole('navigation', { name: 'Pagination' })).not.toBeInTheDocument()
-  fireEvent.click(screen.getByRole('button', { name: 'View all stores' }))
-  expect(await screen.findByText('No active stores yet')).toBeInTheDocument()
-  expect(api.listScores).toHaveBeenLastCalledWith('', 1)
+test('the removed score directory redirects old bookmarks to Vendor Users', async () => {
+  render(<MemoryRouter initialEntries={['/scores']}><Routes><Route path="/scores" element={<AdminScoresPage />} /><Route path="/vendor-users" element={<h1>Vendor Users</h1>} /></Routes></MemoryRouter>)
+  expect(await screen.findByRole('heading', { name: 'Vendor Users' })).toBeInTheDocument()
+  expect(api.listScores).not.toHaveBeenCalled()
 })
 
 test('score details expose eligibility and supporting metrics and request subsequent source pages', async () => {
   vi.mocked(api.getScore).mockResolvedValue(scoreDetail({ sourceEvents: { items: [{ id: 'e1', metric: 'PRODUCT_QUALITY', value: '4', order_reference: 'ORD-TEST', occurred_at: '2026-10-04T02:00:00Z', excluded: true }], meta: { total: 21, per_page: 20 } } }))
   render(scoreRoutes('/scores/v1?q=Demo&page=2'))
   expect(await screen.findByText('Needs 5 eligible product ratings')).toBeInTheDocument()
-  expect(screen.getByText('Responds to eligible inquiries within 12 hours.')).toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: 'Badge metrics' })).toBeInTheDocument()
   expect(screen.getByText('0.00%')).toBeInTheDocument()
   expect(screen.getByText('Excluded', { exact: true })).toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: 'Next' }))
   await waitFor(() => expect(api.getScore).toHaveBeenLastCalledWith('v1', 2))
-  expect(await screen.findByRole('link', { name: 'Score & Badge Monitoring' })).toHaveAttribute('href', '/scores?q=Demo&page=2')
+  expect(await screen.findByRole('link', { name: 'Dashboard' })).toHaveAttribute('href', '/dashboard')
 })
 
 test('source exclusions validate identifiers, retain failed findings, block repeats and preserve success across refresh', async () => {
   vi.mocked(api.getScore).mockResolvedValue(scoreDetail())
   vi.mocked(api.excludeSource).mockRejectedValueOnce(new Error('Source service unavailable.'))
   render(scoreRoutes())
+  fireEvent.click(await screen.findByRole('tab', { name: 'Investigations' }))
   const form = await screen.findByRole('form', { name: 'Exclude a score source order' })
   fireEvent.change(within(form).getByRole('textbox', { name: /Reason/ }), { target: { value: 'Confirmed duplicate order evidence.' } })
   fireEvent.change(within(form).getByRole('textbox', { name: 'Order ID' }), { target: { value: 'ORD-reference' } })
@@ -290,6 +345,7 @@ test('badge suppression requires a case reference and submits the selected docum
   vi.mocked(api.getScore).mockResolvedValue(scoreDetail())
   vi.mocked(api.suppressBadge).mockResolvedValue(scoreDetail())
   render(scoreRoutes())
+  fireEvent.click(await screen.findByRole('tab', { name: 'Investigations' }))
   fireEvent.click(await screen.findByRole('tab', { name: 'Suppress badge' }))
   const form = screen.getByRole('form', { name: 'Suppress a badge' })
   fireEvent.change(within(form).getByRole('textbox', { name: /Reason/ }), { target: { value: 'Documented compliance investigation.' } })
@@ -310,6 +366,7 @@ test('failed reversals keep the audited reason visible and lifted restrictions r
   }))
   vi.mocked(api.revokeExclusion).mockRejectedValue(new Error('Please retry the reversal.'))
   render(scoreRoutes())
+  fireEvent.click(await screen.findByRole('tab', { name: 'Investigations' }))
   const restrictions = await screen.findByRole('region', { name: 'Badge suppressions' })
   expect(within(restrictions).getByText('The investigation was resolved.')).toBeInTheDocument()
   expect(within(restrictions).queryByRole('button', { name: 'Lift suppression' })).not.toBeInTheDocument()

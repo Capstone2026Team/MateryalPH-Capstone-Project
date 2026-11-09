@@ -1,9 +1,10 @@
+import { AsyncLoading } from '@materyalph/web-ui'
 import { openPendingWindow, shouldRotateIdempotencyKey } from '@materyalph/web-ui'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { AlertTriangle, Camera, ClipboardCheck, ImagePlus, PauseCircle, ShieldAlert, Truck, UserRoundCheck } from 'lucide-react'
+import { AlertTriangle, CalendarDays, Camera, ClipboardCheck, History, ImagePlus, PackageCheck, PauseCircle, ShieldAlert, Truck, UserRoundCheck } from 'lucide-react'
 import {
-  Button, CancellationAvailability, ConfirmDialog, DeadlineCountdown, Field, FileSelectionField, MilestoneStepper, RefundTimeline, StatusBadge, StatusMessage,
-  formatManilaDateTime, formatPesoCentavos, readOrderEvidenceFile, roleLabel,
+  Button, CancellationAvailability, ConfirmDialog, DeadlineCountdown, Field, FileSelectionField, MilestoneStepper, PrivateEvidenceGallery, RefundTimeline, StatusBadge, StatusMessage,
+  formatManilaDateTime, formatPesoCentavos, fulfillmentScheduledDate, readOrderEvidenceFile, roleLabel, type PrivateEvidenceItem,
 } from '@materyalph/web-ui'
 import type { FulfillmentProof, FulfillmentStep } from '@materyalph/api-client-ts'
 import type { DeliveryVehicleOption } from '@materyalph/api-client-ts'
@@ -52,15 +53,25 @@ export function EvidenceLink({ path, label }: { path: string; label: string }) {
 }
 
 function ProofSummary({ proof }: { proof: FulfillmentProof }) {
-  return <dl className="mt-1 grid gap-1 rounded-control border border-border-default bg-surface-canvas p-3 text-sm">
-    <div className="flex flex-wrap justify-between gap-x-3"><dt className="text-text-secondary">Received by</dt><dd className="font-semibold">{proof.receiverName ?? '—'}{proof.receiverKind ? ` · ${proof.receiverKind === 'BUYER' ? 'Buyer' : 'Authorized receiver'}` : ''}</dd></div>
-    {proof.milestone === 'PICKED_UP' && <div className="flex flex-wrap justify-between gap-x-3"><dt className="text-text-secondary">Handover</dt><dd className="font-semibold">{proof.handoverConfirmed ? 'Confirmed' : 'Not confirmed'}</dd></div>}
-    {proof.vehicle && <div className="flex flex-wrap justify-between gap-x-3"><dt className="text-text-secondary">Vehicle and trip</dt><dd className="font-semibold">{String(proof.vehicle.name ?? 'Accepted vehicle')} · trip {String(proof.vehicle.trip_number ?? '1')}</dd></div>}
-    <div className="flex flex-wrap gap-x-4">{proof.photoPath && <EvidenceLink path={proof.photoPath} label="View proof photo" />}{proof.signaturePath && <EvidenceLink path={proof.signaturePath} label="View signature" />}</div>
-    {proof.recordedBy && <div><dt className="text-text-secondary">Recorded by</dt><dd>{proof.recordedBy}</dd></div>}
-    {proof.note && <div><dt className="text-text-secondary">Delivery notes</dt><dd className="break-words">{proof.note}</dd></div>}
-    {proof.additionalPhotoPaths?.map((path, index) => <EvidenceLink key={path} path={path} label={`Additional photo ${index + 1}`} />)}
-  </dl>
+  const { photoPath, signaturePath } = proof
+  const files: PrivateEvidenceItem[] = [
+    ...(photoPath ? [{ id: photoPath, label: 'Proof photo', loadFile: () => readOrderEvidenceFile(apiBasePath, photoPath) }] : []),
+    ...(proof.additionalPhotoPaths ?? []).map((path, index) => ({ id: path, label: `Additional photo ${index + 1}`, loadFile: () => readOrderEvidenceFile(apiBasePath, path) })),
+    ...(signaturePath ? [{ id: signaturePath, label: 'Signature', loadFile: () => readOrderEvidenceFile(apiBasePath, signaturePath) }] : []),
+  ]
+  return <section aria-label={proof.milestone === 'PICKED_UP' ? 'Handover proof' : 'Delivery proof'} className="mt-2 grid min-w-0 gap-3 rounded-control border border-border-default bg-surface-primary p-3 sm:p-4">
+    <h3 className="flex items-center gap-2 text-sm font-semibold"><Camera size={16} className="shrink-0 text-text-secondary" aria-hidden="true" />{proof.milestone === 'PICKED_UP' ? 'Handover proof' : 'Delivery proof'}</h3>
+    <div className={`grid min-w-0 items-start gap-4 ${files.length === 1 ? 'sm:grid-cols-[minmax(0,1fr)_minmax(0,12rem)]' : files.length > 1 ? 'sm:grid-cols-[minmax(0,1fr)_minmax(0,20rem)]' : ''}`}>
+      <dl className="grid min-w-0 content-start gap-3 text-sm sm:grid-cols-2 [&_dd]:mt-1 [&_dd]:break-words [&_dt]:text-xs [&_dt]:text-text-secondary">
+        <div className="min-w-0"><dt>Received by</dt><dd className="font-semibold">{proof.receiverName ?? '—'}{proof.receiverKind && <span className="mt-0.5 block text-xs font-normal text-text-secondary">{proof.receiverKind === 'BUYER' ? 'Buyer' : 'Authorized receiver'}</span>}</dd></div>
+        {proof.milestone === 'PICKED_UP' && <div className="min-w-0"><dt>Handover</dt><dd className="font-semibold">{proof.handoverConfirmed ? 'Confirmed' : 'Not confirmed'}</dd></div>}
+        {proof.vehicle && <div className="min-w-0"><dt>Vehicle and trip</dt><dd className="font-semibold">{String(proof.vehicle.name ?? 'Accepted vehicle')} · trip {String(proof.vehicle.trip_number ?? '1')}</dd></div>}
+        {proof.recordedBy && <div className="min-w-0"><dt>Recorded by</dt><dd>{proof.recordedBy}</dd></div>}
+        {proof.note && <div className="min-w-0 sm:col-span-2"><dt>{proof.milestone === 'PICKED_UP' ? 'Handover notes' : 'Delivery notes'}</dt><dd className="whitespace-pre-wrap">{proof.note}</dd></div>}
+      </dl>
+      {files.length > 0 && <PrivateEvidenceGallery items={files} apiBasePath={apiBasePath} layout="thumbnails" />}
+    </div>
+  </section>
 }
 
 /**
@@ -76,14 +87,17 @@ export function FulfillmentWorkspace({ order, onChanged, onReload, staffWorkspac
   const delivery = fulfillment.method === 'DELIVERY'
   const awaitingDeliveryProof = delivery && (fulfillment.state === 'OUT_FOR_DELIVERY' || fulfillment.nextAction === 'RECORD_DELIVERY')
   const orderState = order.states.find(row => row.family === 'ORDER')?.state ?? ''
-  return <section aria-labelledby="fulfillment-heading" className="grid min-w-0 gap-5 rounded-surface border border-border-default bg-surface-primary p-4 sm:p-5">
-    <div className="flex flex-wrap items-start justify-between gap-3">
-      <div className="min-w-0">
-        <h2 id="fulfillment-heading" className="flex items-center gap-2 text-lg font-semibold"><ClipboardCheck size={18} aria-hidden="true" />Fulfillment</h2>
-        <p className="mt-1 text-sm text-text-secondary">{fulfillment.method === 'DELIVERY' ? 'Site Delivery' : 'Self-Pickup'}{fulfillment.expectedDate ? ` · expected ${fulfillment.expectedDate}` : ''}. {fulfillment.trackingNotice}</p>
+  return <section aria-labelledby="fulfillment-heading" className="grid min-w-0 gap-5 mp-card mp-card-padded">
+    <header className="grid min-w-0 gap-3 border-b border-border-default pb-4">
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
+        <h2 id="fulfillment-heading" className="flex items-center gap-2 text-lg font-semibold"><ClipboardCheck size={18} className="shrink-0" aria-hidden="true" />Fulfillment</h2>
+        <div className="flex flex-wrap items-center gap-2"><StatusBadge label={delivery ? 'Site Delivery' : 'Self-Pickup'} tone="neutral" icon={delivery ? <Truck size={14} aria-hidden="true" /> : <PackageCheck size={14} aria-hidden="true" />} />
+          {fulfillment.late && <StatusBadge label="Past the expected date" tone="warning" icon={<AlertTriangle size={14} aria-hidden="true" />} />}
+        </div>
       </div>
-      {fulfillment.late && <StatusBadge label="Past the expected date" tone="warning" icon={<AlertTriangle size={14} aria-hidden="true" />} />}
-    </div>
+      {fulfillment.expectedDate && <p className="flex min-w-0 items-start gap-2 text-sm"><CalendarDays size={16} className="mt-0.5 shrink-0 text-text-secondary" aria-hidden="true" /><span><span className="text-text-secondary">Expected {delivery ? 'delivery' : 'pickup'} </span><time dateTime={fulfillment.expectedDate} className="font-semibold">{fulfillmentScheduledDate(fulfillment.expectedDate)}</time></span></p>}
+      <p className="text-xs leading-5 text-text-secondary">{fulfillment.trackingNotice}</p>
+    </header>
     {orderState === 'CANCELLATION_REQUESTED' && <StatusMessage tone="error">The Buyer asked to cancel. Milestones are paused until you finalize the request below or the Buyer withdraws it.</StatusMessage>}
     <MilestoneStepper steps={fulfillment.steps} showProofRequirements={!delivery || staffWorkspace} renderProof={(step: FulfillmentStep) => step.proof ? <ProofSummary proof={step.proof} /> : null}
       renderStepContent={step => delivery && step.key === 'OUT_FOR_DELIVERY' && (fulfillment.assignment || fulfillment.nextAction === 'DISPATCH' || (awaitingDeliveryProof && permissions?.canAssignFulfillment))
@@ -99,14 +113,21 @@ export function FulfillmentWorkspace({ order, onChanged, onReload, staffWorkspac
     {!delivery && !permissions?.canAssignFulfillment && fulfillment.assignment && <AssignmentSummary order={order} />}
     {permissions?.canReportVehicleIssue && order.fulfillmentMethod === 'DELIVERY' && <VehicleIssueForm order={order} onChanged={onChanged} />}
     {(fulfillment.vehicleIssues?.length ?? 0) > 0 && <section className="grid gap-3 border-t border-border-default pt-4" aria-label="Reported delivery issues"><h3 className="font-semibold">Delivery issues</h3>{fulfillment.vehicleIssues.map((issue, index) => <div key={index} className="text-sm"><p className="font-semibold">{VEHICLE_ISSUE_LABELS[issue.category] ?? issue.category}{issue.reportedAt ? ` · ${formatManilaDateTime(issue.reportedAt)}` : ''}</p><p className="break-words">{issue.description}</p></div>)}</section>}
-    {(fulfillment.assignmentHistory?.length ?? 0) > 0 && <section className="grid gap-3 border-t border-border-default pt-4" aria-label="Staff assignment history"><h3 className="font-semibold">Assignment history</h3><ol className="grid gap-3 text-sm">{fulfillment.assignmentHistory?.map((entry, index) => <li key={index}><p className="font-semibold">{entry.event === 'ASSIGNMENT_ACKNOWLEDGED' ? 'Assignment acknowledged' : entry.displayName ?? 'Staff assigned'}{entry.vehicleName ? ` · ${entry.vehicleName}` : ''}</p><p className="text-text-secondary">{entry.at ? formatManilaDateTime(entry.at) : ''} · {roleLabel(entry.actorRole ?? 'VENDOR')}</p>{entry.reason && <p className="break-words">{entry.reason}</p>}</li>)}</ol></section>}
+    {(fulfillment.assignmentHistory?.length ?? 0) > 0 && <section className="grid min-w-0 gap-3 border-t border-border-default pt-4" aria-label="Staff assignment history"><h3 className="flex items-center gap-2 text-sm font-semibold"><History size={16} className="shrink-0 text-text-secondary" aria-hidden="true" />Assignment history</h3><ol className="grid min-w-0 divide-y divide-border-default text-sm">{fulfillment.assignmentHistory?.map((entry, index) => <li key={index} className="grid min-w-0 gap-1 py-3 first:pt-0 last:pb-0"><p className="break-words font-semibold">{entry.event === 'ASSIGNMENT_ACKNOWLEDGED' ? 'Assignment acknowledged' : entry.displayName ?? 'Staff assigned'}{entry.vehicleName ? ` · ${entry.vehicleName}` : ''}</p><p className="text-xs leading-5 text-text-secondary">{entry.at ? `${formatManilaDateTime(entry.at)} · ` : ''}{roleLabel(entry.actorRole ?? 'VENDOR')}</p>{entry.reason && <p className="break-words text-text-secondary">{entry.reason}</p>}</li>)}</ol></section>}
   </section>
 }
 
 function AssignmentSummary({ order }: { order: OrderDetail }) {
   const assignment = order.fulfillment!.assignment
   if (!assignment) return null
-  return <div className="grid gap-2 text-sm"><p className="flex flex-wrap items-center gap-2"><UserRoundCheck size={16} aria-hidden="true" />Assigned to <strong>{assignment.displayName}</strong> (Fulfillment Staff)</p>{assignment.vehicle && <p>Vehicle: <strong>{assignment.vehicle.name}</strong></p>}{assignment.assignedAt && <p className="text-text-secondary">Assigned {formatManilaDateTime(assignment.assignedAt)}</p>}{assignment.acknowledgedAt && <p className="text-text-secondary">Acknowledged {formatManilaDateTime(assignment.acknowledgedAt)}</p>}</div>
+  return <div className="grid min-w-0 gap-3 border-l-2 border-border-default pl-3 text-sm">
+    <p className="flex min-w-0 items-start gap-2"><UserRoundCheck size={16} className="mt-0.5 shrink-0 text-text-secondary" aria-hidden="true" /><span className="min-w-0 break-words">Assigned to <strong>{assignment.displayName}</strong><span className="mt-0.5 block text-xs text-text-secondary">Fulfillment Staff</span></span></p>
+    <dl className="grid min-w-0 gap-x-5 gap-y-3 sm:grid-cols-2 [&_dd]:mt-1 [&_dd]:break-words [&_dt]:text-xs [&_dt]:text-text-secondary">
+      {assignment.vehicle && <div className="min-w-0"><dt>Vehicle</dt><dd className="font-semibold">{assignment.vehicle.name}</dd></div>}
+      {assignment.assignedAt && <div className="min-w-0"><dt>Assigned</dt><dd className="text-xs leading-5">{formatManilaDateTime(assignment.assignedAt)}</dd></div>}
+      {assignment.acknowledgedAt && <div className="min-w-0"><dt>Acknowledged</dt><dd className="text-xs leading-5">{formatManilaDateTime(assignment.acknowledgedAt)}</dd></div>}
+    </dl>
+  </div>
 }
 
 function DeliveryAssignmentStep({ order, onChanged, onReload }: { order: OrderDetail; onChanged: Notify; onReload: () => void }) {
@@ -244,14 +265,14 @@ function AcceptedArrangement({ order, onChanged }: { order: OrderDetail; onChang
   const [error, setError] = useState<string | null>(null)
   return <section aria-labelledby="arrangement-heading" className="grid gap-3 border-t border-border-default pt-4">
     <h3 id="arrangement-heading" className="flex items-center gap-2 font-semibold"><Truck size={16} aria-hidden="true" />Accepted delivery arrangement</h3>
-    <dl className="grid gap-2 text-sm sm:grid-cols-2">
-      {arrangement.vehicles.map(vehicle => <div key={vehicle.vehicleIndex}><dt className="text-text-secondary">Vehicle</dt><dd className="font-semibold">{vehicle.name ?? 'Accepted vehicle'} · {vehicle.numberOfVehicles} vehicle{vehicle.numberOfVehicles === 1 ? '' : 's'}, {vehicle.totalVehicleTrips} trip{vehicle.totalVehicleTrips === 1 ? '' : 's'}</dd></div>)}
-      <div><dt className="text-text-secondary">Final delivery fee</dt><dd className="font-semibold tabular-nums">{formatPesoCentavos(arrangement.finalFeeCentavos)}</dd></div>
-      <div><dt className="text-text-secondary">Drop-off</dt><dd className="font-semibold">{arrangement.endpoint === 'ALTERNATE_DROP_OFF' ? 'Alternate drop-off (heavy-vehicle restriction)' : 'Intended destination'}</dd></div>
-      {arrangement.arrangement && <div className="sm:col-span-2"><dt className="text-text-secondary">Arrangement</dt><dd>{arrangement.arrangement}</dd></div>}
+    <dl className="grid min-w-0 gap-x-6 gap-y-4 text-sm sm:grid-cols-2 [&_dd]:mt-1 [&_dd]:break-words [&_dt]:text-xs [&_dt]:text-text-secondary">
+      {arrangement.vehicles.map(vehicle => <div key={vehicle.vehicleIndex} className="min-w-0"><dt>Vehicle</dt><dd className="font-semibold">{vehicle.name ?? 'Accepted vehicle'}<span className="mt-0.5 block text-xs font-normal text-text-secondary">{vehicle.numberOfVehicles} vehicle{vehicle.numberOfVehicles === 1 ? '' : 's'} · {vehicle.totalVehicleTrips} trip{vehicle.totalVehicleTrips === 1 ? '' : 's'}</span></dd></div>)}
+      <div className="min-w-0"><dt>Final delivery fee</dt><dd className="font-semibold tabular-nums">{formatPesoCentavos(arrangement.finalFeeCentavos)}</dd></div>
+      <div className="min-w-0 sm:col-span-2"><dt>Drop-off</dt><dd className="font-semibold">{arrangement.endpoint === 'ALTERNATE_DROP_OFF' ? 'Alternate drop-off (heavy-vehicle restriction)' : 'Intended destination'}</dd></div>
+      {arrangement.arrangement && <div className="min-w-0 sm:col-span-2"><dt>Arrangement</dt><dd className="whitespace-pre-wrap">{arrangement.arrangement}</dd></div>}
     </dl>
     <p className="text-xs text-text-secondary">{arrangement.notice}</p>
-    {trips.length > 0 && <ul className="grid gap-1 text-sm" aria-label="Dispatched trips">{trips.map(trip => <li key={`${trip.vehicleIndex}-${trip.tripNumber}`}>Trip {trip.tripNumber} of {trip.totalVehicleTrips} · {trip.name ?? 'Accepted vehicle'}{trip.dispatchedAt ? ` · ${formatManilaDateTime(trip.dispatchedAt)}` : ''}</li>)}</ul>}
+    {trips.length > 0 && <ul className="grid min-w-0 divide-y divide-border-default text-sm" aria-label="Dispatched trips">{trips.map(trip => <li key={`${trip.vehicleIndex}-${trip.tripNumber}`} className="grid min-w-0 gap-1 py-2 first:pt-0 last:pb-0"><span className="break-words font-medium">Trip {trip.tripNumber} of {trip.totalVehicleTrips} · {trip.name ?? 'Accepted vehicle'}</span>{trip.dispatchedAt && <time dateTime={trip.dispatchedAt.toISOString()} className="text-xs leading-5 text-text-secondary">{formatManilaDateTime(trip.dispatchedAt)}</time>}</li>)}</ul>}
     {order.fulfillment!.state === 'OUT_FOR_DELIVERY' && order.permissions?.canReportVehicleIssue && remaining.length > 0 && <div className="flex flex-wrap items-center gap-3">
       <Button variant="secondary" disabled={busy} onClick={() => void (async () => {
         setBusy(true); setError(null)
@@ -317,7 +338,7 @@ function AssignmentPanel({ order, onChanged, onReload, dispatch = false }: { ord
   return <section aria-labelledby="assignment-heading" className="grid gap-3 border-t border-border-default pt-4">
     <h3 id="assignment-heading" className="flex items-center gap-2 font-semibold"><UserRoundCheck size={16} aria-hidden="true" />{dispatch ? 'Confirm delivery assignment' : 'Fulfillment assignment'}</h3>
     <p className="text-sm">{current ? <>Assigned to <strong>{current.displayName}</strong>{current.vehicle?.name ? ` · ${current.vehicle.name}` : ''}{current.assignedAt ? ` since ${formatManilaDateTime(current.assignedAt)}` : ''}.</> : delivery ? 'Assign a Fulfillment Staff member and choose an available accepted vehicle before proceeding to Out for Delivery.' : 'No Fulfillment Staff assigned. The Owner or Store Manager can record pickup milestones directly.'}</p>
-    {options === null && !error && <p className="text-sm text-text-secondary">Loading Fulfillment Staff…</p>}
+    {options === null && !error && <AsyncLoading compact label="Loading Fulfillment Staff…" />}
     {options && options.length === 0 && <StatusMessage>No active Fulfillment Staff are available. <Link to="/team" className="inline-flex min-h-11 items-center underline">Open Team Accounts</Link></StatusMessage>}
     {delivery && vehicles && !vehicles.some(row => row.available) && <StatusMessage>No accepted vehicles are available. Restore availability in <Link to="/vehicles" className="inline-flex min-h-11 items-center underline">Vehicles</Link>; a different arrangement requires Buyer approval.</StatusMessage>}
     {options && options.length > 0 && <form className="grid min-w-0 gap-4" onSubmit={event => { event.preventDefault(); void (async () => {
@@ -399,7 +420,7 @@ export function CancellationPanel({ order, onChanged }: { order: OrderDetail; on
     } catch (cause) { if (shouldRotateIdempotencyKey(cause)) key.current = newIdempotencyKey(); setError(await readableOrderError(cause)) } finally { setBusy(false) }
   }
   const plan = dialog === 'cancel' ? preview?.vendorCancellation : retain ? preview?.withNrpcRetained ?? preview?.fullRefund : preview?.fullRefund
-  return <section aria-labelledby="cancellation-heading" className="grid gap-3 rounded-surface border border-border-default bg-surface-primary p-4">
+  return <section aria-labelledby="cancellation-heading" className="grid gap-3 mp-card mp-card-padded">
     <h2 id="cancellation-heading" className="text-base font-semibold">Cancellation</h2>
     {open && <div className="grid gap-2 rounded-control border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
       <p className="font-semibold">The Buyer asked to cancel ({open.reasonCode.toLowerCase().replaceAll('_', ' ')}).</p>
@@ -445,7 +466,7 @@ export function RefundsPanel({ order, onChanged }: { order: OrderDetail; onChang
   const [error, setError] = useState<string | null>(null)
   if (!timeline || (timeline.refunds.length === 0 && timeline.reimbursements.length === 0 && timeline.noLongerDueCentavos === 0 && !timeline.decision)) return null
   const pending = timeline.reimbursements.find(row => row.state === 'VENDOR_REIMBURSEMENT_PENDING' && !row.hasEvidence)
-  return <section aria-labelledby="refunds-heading" className="grid gap-3 rounded-surface border border-border-default bg-surface-primary p-4">
+  return <section aria-labelledby="refunds-heading" className="grid gap-3 mp-card mp-card-padded">
     <h2 id="refunds-heading" className="text-base font-semibold">Refunds and reimbursements</h2>
     {error && <StatusMessage tone="error">{error}</StatusMessage>}
     <RefundTimeline timeline={timeline} audience="VENDOR" retryingId={retrying} renderEvidence={(path, label) => <EvidenceLink path={path} label={label} />}

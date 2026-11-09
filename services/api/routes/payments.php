@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Route;
 Route::post('/webhooks/xendit', PaymentWebhookController::class)->middleware('throttle:payment-webhook');
 // Browser return from the hosted payment page. Always Pending; never reads or changes payment state.
 Route::get('/payments/return', PaymentReturnController::class);
+Route::get('/commission-policy', [AdminFinanceController::class, 'publicCommissionPolicy']);
 
 Route::prefix('buyers')->middleware(['auth.transport:MOBILE', 'auth:api', 'account.access:BUYER'])->group(function (): void {
     Route::get('/orders/{orderId}/payment-options', [BuyerPaymentController::class, 'options'])->whereUuid('orderId');
@@ -25,6 +26,7 @@ Route::prefix('vendor')->middleware([
     'auth.transport:WEB', 'auth.cookie', VerifyAccountCsrf::class, 'auth:api', 'account.access:VENDOR',
 ])->group(function (): void {
     Route::get('/finance', [VendorFinanceController::class, 'overview']);
+    Route::get('/finance/threshold-payments', [VendorFinanceController::class, 'thresholdPayments']);
     Route::get('/finance/commissions', [VendorFinanceController::class, 'commissions']);
     Route::post('/tax-profile/tin/reveal', [VendorFinanceController::class, 'revealTin']);
     Route::put('/finance/physical-payments', [VendorFinanceController::class, 'updatePhysicalPayments']);
@@ -45,7 +47,11 @@ Route::prefix('admin/finance')->middleware([
 ])->group(function (): void {
     Route::get('/commission-policies', [AdminFinanceController::class, 'commissionPolicies']);
     Route::post('/commission-policies', [AdminFinanceController::class, 'publishCommissionPolicy']);
+    Route::post('/commission-policies/preview', [AdminFinanceController::class, 'previewCommissionPolicy']);
+    Route::post('/commission-policies/{policyId}/resend-failed', [AdminFinanceController::class, 'resendFailedCommissionEmails'])->whereUuid('policyId');
+    Route::post('/commission-emails/{eventId}/resend', [AdminFinanceController::class, 'resendCommissionEmail'])->whereUuid('eventId');
     Route::get('/payments', [AdminFinanceController::class, 'payments']);
+    Route::get('/commission-transactions', [AdminFinanceController::class, 'commissionTransactions']);
     Route::get('/review-items', [AdminFinanceController::class, 'reviewItems']);
     Route::post('/review-items/{itemId}/resolve', [AdminFinanceController::class, 'resolveItem'])->whereUuid('itemId');
     Route::get('/withholding-accumulators', [AdminFinanceController::class, 'accumulators']);
@@ -53,6 +59,8 @@ Route::prefix('admin/finance')->middleware([
     Route::post('/withholding-accumulators/{accumulatorId}/overlap', [AdminFinanceController::class, 'resolveOverlap'])->whereUuid('accumulatorId');
     Route::get('/statements', [AdminFinanceController::class, 'statements']);
     Route::post('/statements/draft', [AdminFinanceController::class, 'draftStatements']);
+    Route::get('/statements/{statementId}', [AdminFinanceController::class, 'statement'])->whereUuid('statementId');
+    Route::put('/statements/{statementId}/invoice', [AdminFinanceController::class, 'updateStatementInvoice'])->whereUuid('statementId');
     Route::post('/statements/{statementId}/approve', [AdminFinanceController::class, 'approveStatement'])->whereUuid('statementId');
     Route::post('/fee-credits', [AdminFinanceController::class, 'proposeFeeCredit']);
     Route::post('/fee-credits/{proposalId}/approve', [AdminFinanceController::class, 'approveFeeCredit'])->whereUuid('proposalId');

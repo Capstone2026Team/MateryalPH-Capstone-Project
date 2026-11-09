@@ -121,6 +121,18 @@ class FakeAnalyticsRepository implements AnalyticsRepository {
 }
 
 class FakeReviewsRepository implements ReviewsRepository {
+  BuyerReceivedRatingsView received = const BuyerReceivedRatingsView(
+    summary: BuyerRatingSummaryView(count: 0),
+    items: [],
+    total: 0,
+  );
+
+  @override
+  Future<BuyerReceivedRatingsView> receivedRatings({int page = 1}) async {
+    if (failure != null) throw failure!;
+    return received;
+  }
+
   OrderReviewsView? order;
   ListingReviewsView listing = const ListingReviewsView(
     average: null,

@@ -35,6 +35,7 @@ Name | Type
 `availableActions` | Array&lt;string&gt;
 `payment` | [OrderPaymentAvailability](OrderPaymentAvailability.md)
 `buyer` | [OrderBuyerRef](OrderBuyerRef.md)
+`locationMap` | [OrderLocationMap](OrderLocationMap.md)
 `autoAccept` | [AutoAcceptOutcome](AutoAcceptOutcome.md)
 `reservations` | [Array&lt;OrderReservation&gt;](OrderReservation.md)
 `permissions` | [VendorOrderPermissions](VendorOrderPermissions.md)
@@ -82,6 +83,7 @@ const example = {
   "availableActions": null,
   "payment": null,
   "buyer": null,
+  "locationMap": null,
   "autoAccept": null,
   "reservations": null,
   "permissions": null,

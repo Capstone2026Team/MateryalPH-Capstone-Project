@@ -7,6 +7,7 @@
 Name | Type
 ------------ | -------------
 `id` | string
+`storeConversationId` | string
 
 ## Example
 
@@ -16,6 +17,7 @@ import type { ChatId } from '@materyalph/api-client-ts'
 // TODO: Update the object below with actual values
 const example = {
   "id": null,
+  "storeConversationId": null,
 } satisfies ChatId
 
 console.log(example)

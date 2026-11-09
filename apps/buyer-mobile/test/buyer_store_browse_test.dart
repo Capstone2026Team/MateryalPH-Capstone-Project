@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:materyalph/screens/buyer_store_browse_screen.dart';
 import 'package:materyalph/features/item_procurement/procurement_models.dart';
 import 'package:materyalph/features/trust/trust_models.dart';
+import 'package:materyalph/design_system/components/vendor_performance.dart';
 import 'package:materyalph_api_client/materyalph_api_client.dart';
 
 import 'item_procurement_fakes.dart';
@@ -274,6 +275,10 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('Highly Rated'), findsOneWidget);
+      expect(find.text('Earned badges'), findsOneWidget);
+      expect(find.byType(VendorBadgeEmblem), findsOneWidget);
+      expect(find.byIcon(Icons.star_rounded), findsOneWidget);
+      expect(find.text('4.40'), findsOneWidget);
     },
   );
 

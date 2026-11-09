@@ -25,7 +25,7 @@ export function SiteInspectionPanel({ inspections, busy, onDecide, onPrepareQuot
   const [dialog, setDialog] = useState<{ inspection: SiteInspection; action: Action } | null>(null)
   if (inspections.length === 0) return null
   const [latest, ...older] = inspections
-  return <section aria-labelledby="site-inspections-heading" className="mx-5 my-4 grid gap-3 rounded-surface border border-border-default bg-surface-primary p-4">
+  return <section aria-labelledby="site-inspections-heading" className="mx-5 my-4 grid gap-3 mp-card mp-card-padded">
     <div className="flex flex-wrap items-center justify-between gap-2">
       <h3 id="site-inspections-heading" className="font-semibold">Free site inspection</h3>
       <span className="text-xs text-text-secondary">No charge to the Buyer · creates no order</span>

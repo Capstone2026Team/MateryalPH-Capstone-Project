@@ -2,16 +2,17 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { beforeEach, expect, test, vi } from 'vitest'
 import { ResponseError, parseDate } from '@materyalph/api-client-ts'
+import { dateFilterPreset } from '@materyalph/web-ui'
 import * as operations from '../lib/operations-api'
 import * as geo from '../lib/geo-analytics-api'
 import { AdminPlatformSettingsPage } from './PlatformSettingsPage'
-import { AdminEnforcementDetailPage } from './EnforcementPages'
+import { AdminEnforcementDetailPage, AdminEnforcementQueuePage } from './EnforcementPages'
 import { AdminAuditSearchPage } from './AuditSearchPage'
 import { AdminIntegrationHealthPage } from './IntegrationHealthPages'
 import { AdminGeoAnalyticsPage } from './GeoAnalyticsPage'
 
 vi.mock('../lib/operations-api', async original => ({ ...await original<typeof import('../lib/operations-api')>(), listSettings: vi.fn(), settingHistory: vi.fn(), updateSetting: vi.fn(),
-  getEnforcement: vi.fn(), applyEnforcement: vi.fn(), declineEnforcement: vi.fn(), liftEnforcement: vi.fn(), searchAudit: vi.fn(), getAudit: vi.fn(), auditActions: vi.fn(),
+  listEnforcement: vi.fn(), getEnforcement: vi.fn(), applyEnforcement: vi.fn(), declineEnforcement: vi.fn(), liftEnforcement: vi.fn(), searchAudit: vi.fn(), getAudit: vi.fn(), auditActions: vi.fn(),
   integrationOverview: vi.fn(), operationFailures: vi.fn(), operationRetries: vi.fn(), retryOperation: vi.fn(), requestExport: vi.fn() }))
 vi.mock('../lib/geo-analytics-api', async original => ({ ...await original<typeof import('../lib/geo-analytics-api')>(), getGeoDashboard: vi.fn(), getGeoDemand: vi.fn(), getGeoBoundaries: vi.fn() }))
 vi.mock('../lib/finance-api', async original => ({ ...await original<typeof import('../lib/finance-api')>(), financeKpis: vi.fn() }))
@@ -59,6 +60,15 @@ const enforcement = { id: 'act-1', subjectType: 'VENDOR_ORGANIZATION', subjectId
   subjectReview: { subjectType: 'VENDOR_ORGANIZATION', subjectId: 'org-1', displayName: 'Test Supply', maskedEmail: null, accountStatus: 'ACTIVE', storeActivationStatus: 'ACTIVE', openOrders: 2, ordersTotal: 9, disputesTotal: 3, disputesOpen: 1, commerceRestrictedUntil: null },
   events: [{ event: 'REFERRED', fromState: null, toState: 'REFERRED', before: null, after: null, reason: 'Recommended by the dispute decision.', actor: 'Order Admin', actorRole: 'ORDER_DISPUTE_ADMIN', correlationId: 'corr-ref', occurredAt: new Date('2026-10-08T00:00:00Z') }] }
 
+test('enforcement tab badges use full server totals and show zeroes', async () => {
+  vi.mocked(operations.listEnforcement).mockResolvedValue({ items: [], total: 27, lastPage: 2, counts: { REFERRED: 27, APPLIED: 4, EFFECTIVE: 3, LIFTED: 0, DECLINED: 2 } })
+  at('/enforcement?page=2', <AdminEnforcementQueuePage />)
+  expect(await screen.findByRole('tab', { name: 'Awaiting decision 27' })).toHaveAttribute('aria-selected', 'true')
+  expect(screen.getByRole('tab', { name: 'Applied 4' })).toBeInTheDocument()
+  expect(screen.getByRole('tab', { name: 'Warnings 3' })).toBeInTheDocument()
+  expect(screen.getByRole('tab', { name: 'Lifted 0' })).toBeInTheDocument()
+})
+
 test('applying a referred sanction targets the exact case and version, needs an order plan and reports a stale conflict', async () => {
   vi.mocked(operations.getEnforcement).mockResolvedValue(enforcement as never)
   vi.mocked(operations.applyEnforcement).mockRejectedValue(problem(409, 'ENFORCEMENT_VERSION_CONFLICT', 'This case changed after you opened it.'))
@@ -89,27 +99,30 @@ test('audit search is read-only: no edit or delete control and no detail link wi
 })
 
 test('audit date Apply preserves the applied actor and supports an open-ended Manila range; Cancel and Reset are safe', async () => {
+  const range = dateFilterPreset(30)
+  const dates = { from: parseDate(range.from), to: parseDate(range.to) }
   vi.mocked(operations.auditActions).mockResolvedValue([])
   vi.mocked(operations.searchAudit).mockResolvedValue({ items: [], nextCursor: null, canViewDetail: false, canExport: false })
   at('/audit', <AdminAuditSearchPage />)
   await screen.findByText('No audit entries match these filters.')
   fireEvent.change(screen.getByLabelText('Actor name or email'), { target: { value: 'Finance reviewer' } })
   fireEvent.click(screen.getByRole('button', { name: 'Search' }))
-  await waitFor(() => expect(operations.searchAudit).toHaveBeenLastCalledWith({ actor: 'Finance reviewer' }))
+  await waitFor(() => expect(operations.searchAudit).toHaveBeenLastCalledWith({ actor: 'Finance reviewer', ...dates }))
   const calls = vi.mocked(operations.searchAudit).mock.calls.length
-  fireEvent.click(screen.getByRole('button', { name: 'All dates' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Last 30 days' }))
   fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-10-01' } })
   fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
   expect(operations.searchAudit).toHaveBeenCalledTimes(calls)
-  fireEvent.click(screen.getByRole('button', { name: 'All dates' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Last 30 days' }))
   fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-10-01' } })
+  fireEvent.change(screen.getByLabelText('To'), { target: { value: '' } })
   fireEvent.click(screen.getByRole('button', { name: 'Apply' }))
   await waitFor(() => expect(operations.searchAudit).toHaveBeenLastCalledWith({ actor: 'Finance reviewer', from: parseDate('2026-10-01') }))
   fireEvent.click(screen.getByRole('button', { name: 'Reset filters' }))
-  await waitFor(() => expect(operations.searchAudit).toHaveBeenLastCalledWith({}))
+  await waitFor(() => expect(operations.searchAudit).toHaveBeenLastCalledWith(dates))
 })
 
-test('integration health shows masked statuses and a retry needs a reason; no secret value is rendered', async () => {
+test('platform monitoring shows masked statuses without manual queue retry controls', async () => {
   vi.mocked(operations.integrationOverview).mockResolvedValue({ generatedAt: new Date(), environment: { app: 'Local', commerce: 'TEST — LIVE commerce disabled' }, canRetry: true,
     integrations: [{ key: 'google_maps', label: 'Google Maps, Places and Routes', status: 'NOT_CONFIGURED', detail: 'No server key configured; geocoding and routes use manual fallbacks.', environment: null, lastEventAt: null }],
     queues: { connection: 'Redis', outbox_backlog: 0, dead_letters: 1, failed_jobs: 0, status: 'DEGRADED' }, scheduledTasks: [], analytics: { geo_aggregation: { status: 'NO_RUN_RECORDED' }, materials_snapshot: { status: 'STALE' }, psgc: { status: 'HEALTHY', boundaries: {} } } } as never)
@@ -117,15 +130,12 @@ test('integration health shows masked statuses and a retry needs a reason; no se
   vi.mocked(operations.operationRetries).mockResolvedValue([])
   vi.mocked(operations.retryOperation).mockResolvedValue({ targetType: 'OUTBOX_EVENT', reference: 'evt-1', label: 'NotificationRequested', outcome: 'QUEUED', correlationId: 'corr-r1' })
   at('/integrations', <AdminIntegrationHealthPage />)
-  expect((await screen.findAllByText('Not Configured')).length).toBeGreaterThan(0)
+  expect((await screen.findAllByText('VPS reference')).length).toBeGreaterThan(0)
   expect(screen.getAllByText('Degraded').length).toBeGreaterThan(0)
-  fireEvent.click(screen.getByRole('tab', { name: 'Failures & retries' }))
-  fireEvent.click(await screen.findByRole('button', { name: 'Retry' }))
-  fireEvent.click(screen.getByRole('button', { name: 'Queue retry' }))
+  fireEvent.click(screen.getByRole('tab', { name: 'Recovery activity' }))
+  await screen.findByRole('table', { name: 'Failures' })
+  expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument()
   expect(operations.retryOperation).not.toHaveBeenCalled()
-  fireEvent.change(screen.getByLabelText(/^Reason/), { target: { value: 'Mail provider recovered; resend the notice.' } })
-  fireEvent.click(screen.getByRole('button', { name: 'Queue retry' }))
-  await waitFor(() => expect(operations.retryOperation).toHaveBeenCalledWith({ targetType: 'OUTBOX_EVENT', reference: 'evt-1', reason: 'Mail provider recovered; resend the notice.' }, expect.any(String)))
   expect(document.body.textContent).not.toMatch(/sk_|secret_key|xnd_/i)
 })
 
@@ -150,14 +160,14 @@ const dashboard = {
   unresolved: { orders: 1, vendors: 0, registeredBuyers: 0, responses: 0, activity: 0 }, definitions: { gross_gmv: 'Confirmed order value before cancellations and refunds.' },
 }
 
-test('the geographic dashboard separates gross and net GMV, shows suppression with its reason, unresolved geography and drills by keyboard', async () => {
+test('the geographic dashboard separates gross and net sales, shows suppression with its reason, unresolved geography and drills by keyboard', async () => {
   vi.mocked(geo.getGeoDashboard).mockResolvedValue(dashboard as never)
   vi.mocked(geo.getGeoDemand).mockResolvedValue({ columns: [{ id: 'cat-1', name: 'Cement' }], rows: [], scope: dashboard.scope, dimension: 'CATEGORY', measure: 'ORDER_COUNT', unit: null, notComparableLines: 0, definition: '' } as never)
   vi.mocked(geo.getGeoBoundaries).mockResolvedValue({ type: 'FeatureCollection', features: [], missingCodes: ['1300000000', '0300000000'], psgcVersion: { id: 'v', label: '2026' } } as never)
   at('/analytics', <AdminGeoAnalyticsPage />)
   const kpis = await screen.findByRole('list', { name: 'Key metrics for Philippines' }).catch(() => screen.findByLabelText('Key metrics for Philippines'))
-  expect(within(kpis).getByText('Gross GMV')).toBeInTheDocument()
-  expect(within(kpis).getByText('Net GMV')).toBeInTheDocument()
+  expect(within(kpis).getByText('Gross sales')).toBeInTheDocument()
+  expect(within(kpis).getByText('Net sales')).toBeInTheDocument()
   expect(within(kpis).getByText('13 of 14')).toBeInTheDocument()
   expect(within(kpis).getAllByText('Suppressed').length).toBeGreaterThan(0)
   expect(screen.getByText(/Unresolved geography/)).toBeInTheDocument()

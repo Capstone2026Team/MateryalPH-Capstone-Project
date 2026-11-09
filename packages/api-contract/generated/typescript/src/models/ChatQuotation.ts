@@ -55,6 +55,10 @@ export interface ChatQuotation {
      *
      */
     canPublish: boolean;
+    /**
+     *
+     */
+    replacesOrderId?: string;
 }
 
 /**
@@ -88,6 +92,7 @@ export function ChatQuotationFromJSONTyped(json: any, ignoreDiscriminator: boole
         'draft': json['draft'] == null ? undefined : json['draft'],
         'canDraft': json['can_draft'],
         'canPublish': json['can_publish'],
+        'replacesOrderId': json['replaces_order_id'] == null ? undefined : json['replaces_order_id'],
     };
 }
 
@@ -111,6 +116,7 @@ export function ChatQuotationToJSONTyped(value?: ChatQuotation | null, ignoreDis
         'draft': value['draft'],
         'can_draft': value['canDraft'],
         'can_publish': value['canPublish'],
+        'replaces_order_id': value['replacesOrderId'],
     };
 }
 

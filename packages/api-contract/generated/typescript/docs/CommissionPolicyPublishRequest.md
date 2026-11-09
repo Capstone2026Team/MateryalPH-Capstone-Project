@@ -10,6 +10,11 @@ Name | Type
 `expectedVersion` | number
 `effectiveFrom` | Date
 `reason` | string
+`vendorMessage` | string
+`noticeOverride` | boolean
+`noticeOverrideReason` | string
+`supersedesPolicyId` | string
+`cancelScheduled` | boolean
 
 ## Example
 
@@ -22,6 +27,11 @@ const example = {
   "expectedVersion": null,
   "effectiveFrom": null,
   "reason": null,
+  "vendorMessage": null,
+  "noticeOverride": null,
+  "noticeOverrideReason": null,
+  "supersedesPolicyId": null,
+  "cancelScheduled": null,
 } satisfies CommissionPolicyPublishRequest
 
 console.log(example)

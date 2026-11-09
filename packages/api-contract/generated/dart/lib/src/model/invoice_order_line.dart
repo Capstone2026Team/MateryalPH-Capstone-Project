@@ -13,6 +13,11 @@ part 'invoice_order_line.g.dart';
 /// Properties:
 /// * [orderLineId]
 /// * [displayName]
+/// * [category]
+/// * [quantity]
+/// * [unitName]
+/// * [unitPriceCentavos]
+/// * [lineTotalCentavos]
 @BuiltValue()
 abstract class InvoiceOrderLine implements Built<InvoiceOrderLine, InvoiceOrderLineBuilder> {
   @BuiltValueField(wireName: r'order_line_id')
@@ -20,6 +25,21 @@ abstract class InvoiceOrderLine implements Built<InvoiceOrderLine, InvoiceOrderL
 
   @BuiltValueField(wireName: r'display_name')
   String get displayName;
+
+  @BuiltValueField(wireName: r'category')
+  String? get category;
+
+  @BuiltValueField(wireName: r'quantity')
+  String? get quantity;
+
+  @BuiltValueField(wireName: r'unit_name')
+  String? get unitName;
+
+  @BuiltValueField(wireName: r'unit_price_centavos')
+  int? get unitPriceCentavos;
+
+  @BuiltValueField(wireName: r'line_total_centavos')
+  int? get lineTotalCentavos;
 
   InvoiceOrderLine._();
 
@@ -54,6 +74,41 @@ class _$InvoiceOrderLineSerializer implements PrimitiveSerializer<InvoiceOrderLi
       object.displayName,
       specifiedType: const FullType(String),
     );
+    if (object.category != null) {
+      yield r'category';
+      yield serializers.serialize(
+        object.category,
+        specifiedType: const FullType.nullable(String),
+      );
+    }
+    if (object.quantity != null) {
+      yield r'quantity';
+      yield serializers.serialize(
+        object.quantity,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.unitName != null) {
+      yield r'unit_name';
+      yield serializers.serialize(
+        object.unitName,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.unitPriceCentavos != null) {
+      yield r'unit_price_centavos';
+      yield serializers.serialize(
+        object.unitPriceCentavos,
+        specifiedType: const FullType(int),
+      );
+    }
+    if (object.lineTotalCentavos != null) {
+      yield r'line_total_centavos';
+      yield serializers.serialize(
+        object.lineTotalCentavos,
+        specifiedType: const FullType.nullable(int),
+      );
+    }
   }
 
   @override
@@ -90,6 +145,46 @@ class _$InvoiceOrderLineSerializer implements PrimitiveSerializer<InvoiceOrderLi
             specifiedType: const FullType(String),
           ) as String;
           result.displayName = valueDes;
+          break;
+        case r'category':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.category = valueDes;
+          break;
+        case r'quantity':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.quantity = valueDes;
+          break;
+        case r'unit_name':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.unitName = valueDes;
+          break;
+        case r'unit_price_centavos':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.unitPriceCentavos = valueDes;
+          break;
+        case r'line_total_centavos':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(int),
+          ) as int?;
+          if (valueDes == null) continue;
+          result.lineTotalCentavos = valueDes;
           break;
         default:
           unhandled.add(key);

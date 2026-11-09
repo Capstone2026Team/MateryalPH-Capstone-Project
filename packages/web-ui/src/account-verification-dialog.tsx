@@ -1,3 +1,4 @@
+import { AsyncLoading } from './async-state'
 import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import type { AccountsApi } from '@materyalph/api-client-ts'
 import { Button } from './button'
@@ -74,7 +75,7 @@ export function AccountVerificationDialog({ api, portal, title, onClose, onVerif
   }
   return <FormDialog open size="small" title={title} description="Verify your identity to continue with this protected action." busy={busy} onClose={onClose} footer={<div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end"><Button className="w-full sm:w-auto" variant="secondary" disabled={busy} onClick={onClose}>Cancel</Button><Button className="w-full sm:w-auto" type="submit" form={formId} disabled={busy || totp === null}>{busy ? 'Verifying…' : 'Verify and continue'}</Button></div>}>
     {error && <StatusMessage tone="error">{error}</StatusMessage>}
-    {totp === null ? <div className="py-4">{error ? <Button variant="secondary" onClick={() => setRetry(value => value + 1)}>Retry security check</Button> : <p role="status">Loading verification options…</p>}</div> : <form id={formId} onSubmit={event => void verify(event)} className="space-y-4">
+    {totp === null ? <div className="py-4">{error ? <Button variant="secondary" onClick={() => setRetry(value => value + 1)}>Retry security check</Button> : <AsyncLoading compact label="Loading verification options…" />}</div> : <form id={formId} onSubmit={event => void verify(event)} className="space-y-4">
       {totp ? <AuthenticatorCodeField label="Authenticator code" name="code" disabled={busy} required /> : email ? <Field label="Current-email verification code" name="email_code" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} autoComplete="one-time-code" required /> : <Field label="Current password" name="password" type="password" autoComplete="current-password" required />}
       {!totp && !email && <Button variant="quiet" disabled={busy} onClick={async () => { if (lock.current) return; lock.current = true; setBusy(true); setError(null); try { await api().sendAccountReauthenticationEmail({ accountPortal: portal }); setEmail(true) } catch (cause) { setError(await explainError(cause)) } finally { lock.current = false; setBusy(false) } }}>Send email verification instead</Button>}
     </form>}

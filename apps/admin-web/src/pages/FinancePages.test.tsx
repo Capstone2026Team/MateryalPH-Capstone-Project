@@ -1,53 +1,66 @@
+import { dateFilterPreset, manilaToday, PlatformCollectionsThreshold } from '@materyalph/web-ui'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, expect, test, vi } from 'vitest'
 import { ResponseError } from '@materyalph/api-client-ts'
 import { Sparkline } from '@materyalph/web-ui'
 import * as finance from '../lib/finance-api'
-import type { FinanceReviewItem, WithholdingAccumulatorDetail } from '../lib/finance-api'
-import { AdminAccumulatorPage, AdminFinancePage } from './FinancePages'
+import { AdminFinancePage } from './FinancePages'
+import { marketplacePaymentsFixture } from '../test/marketplace-payments-fixture'
 
-vi.mock('../lib/finance-api', async original => ({ ...await original<typeof import('../lib/finance-api')>(), listReviewItems: vi.fn(), resolveReviewItem: vi.fn(), approveFeeCredit: vi.fn(),
-  financeKpis: vi.fn(), listPayments: vi.fn(), getAccumulator: vi.fn(), resolveOverlap: vi.fn(), listAccumulators: vi.fn(), listStatements: vi.fn(), approveStatement: vi.fn(), draftStatements: vi.fn(), listChannelFees: vi.fn(), runReconciliation: vi.fn(),
-  listCommissionPolicies: vi.fn(), publishCommissionPolicy: vi.fn() }))
+vi.mock('../lib/finance-api', async original => ({ ...await original<typeof import('../lib/finance-api')>(), listTaxIssues: vi.fn(), resolveReviewItem: vi.fn(), approveFeeCredit: vi.fn(),
+  financeKpis: vi.fn(), listPayments: vi.fn(), listCommissionTransactions: vi.fn(), updateStatementInvoice: vi.fn(), getAccumulator: vi.fn(), resolveOverlap: vi.fn(), listAccumulators: vi.fn(), listStatements: vi.fn(), approveStatement: vi.fn(), draftStatements: vi.fn(), listChannelFees: vi.fn(), runReconciliation: vi.fn(), remittanceQueue: vi.fn(),
+  listCommissionPolicies: vi.fn(), publishCommissionPolicy: vi.fn(), previewCommissionPolicy: vi.fn(), getCommissionStatement: vi.fn(), approveRemittanceReconciliation: vi.fn() }))
 vi.mock('./PhaseThreeAdminPages', async original => ({ ...await original<typeof import('./PhaseThreeAdminPages')>(), AdminShell: ({ children }: { children: React.ReactNode }) => <main>{children}</main> }))
-vi.mock('../lib/finance-tax-api', async original => ({ ...await original<typeof import('../lib/finance-tax-api')>(), listTaxAdjustments: vi.fn().mockResolvedValue({ items: [], hasMore: false, total: 0 }) }))
-
-const item = (overrides: Partial<FinanceReviewItem> = {}): FinanceReviewItem => ({ id: 'item-1', kind: 'PAYMENT_MISMATCH', state: 'OPEN', reasonCode: 'AMOUNT_MISMATCH', summary: 'A provider webhook did not match the stored payment attempt; nothing was marked paid.',
-  vendor: { id: 'v1', name: 'Test Supply' }, sourceType: 'PAYMENT', sourceId: 'pay-1', expected: { total_centavos: 1026441 }, reported: { amount_centavos: 100 }, createdAt: new Date(), ...overrides })
 
 const page = <T,>(items: T[]) => ({ items, hasMore: false, total: items.length })
-const at = (path: string, element: React.ReactNode, pattern = path) => render(<MemoryRouter initialEntries={[path]}><Routes><Route path={pattern} element={element} /></Routes></MemoryRouter>)
+const at = (path: string, element: React.ReactNode, pattern = path) => render(<MemoryRouter initialEntries={[path]}><Routes><Route path={pattern} element={element} /><Route path="/finance" element={<AdminFinancePage />} /></Routes></MemoryRouter>)
 
 beforeEach(() => {
   vi.clearAllMocks()
-  vi.mocked(finance.listCommissionPolicies).mockResolvedValue({ policies: { current: { id: 'policy-1', version: 1, commissionBasisPoints: 200, rateLabel: '2.00%', effectiveFrom: new Date('2026-10-01T00:00:00Z'), status: 'CURRENT' }, latestVersion: 1, canManage: true, versions: [] }, hasMore: false })
+  vi.mocked(finance.listTaxIssues).mockResolvedValue(page([]))
+  vi.mocked(finance.remittanceQueue).mockResolvedValue(page([]))
+  vi.mocked(finance.approveRemittanceReconciliation).mockReset().mockResolvedValue(undefined)
+  vi.mocked(finance.listAccumulators).mockResolvedValue(page([]))
+  vi.mocked(finance.listChannelFees).mockResolvedValue([])
+  vi.mocked(finance.listCommissionTransactions).mockResolvedValue(page([]))
+  vi.mocked(finance.listStatements).mockResolvedValue(page([]))
+  vi.mocked(finance.getCommissionStatement).mockImplementation(async () => { const result = await finance.listStatements(1); return { ...result.items[0], can_export: true, can_resend: false, emails: [], lines: { items: [], meta: {} }, payments: { items: [], meta: {} } } })
+  vi.mocked(finance.listCommissionPolicies).mockResolvedValue({ policies: { current: { id: 'policy-1', version: 1, commissionBasisPoints: 200, rateLabel: '2.00%', effectiveFrom: new Date('2026-10-01T00:00:00Z'), status: 'CURRENT' }, latestVersion: 1, canManage: true, canExport: true, versions: [] }, hasMore: false })
   vi.mocked(finance.financeKpis).mockResolvedValue({ label: 'Recorded transactions', scenario: 'Earnings and cash use event dates; debt uses issue dates.', period: { from: null, to: null }, commerce: [], finance: [
-    { key: 'earned_commission', label: 'Total commission earned', valueCentavos: 20000, definition: 'Earned at completion.' },
+    { key: 'earned_commission', label: 'Platform commission charges before credits', valueCentavos: 20000, definition: 'Earned at completion.' },
     { key: 'refunded_commissions', label: 'Refunded commissions', valueCentavos: 4000, definition: 'Confirmed refunds.' },
     { key: 'net_platform_earnings', label: 'Net platform earnings', valueCentavos: 15000, definition: 'Revenue after credits and processing costs.' },
   ], counts: { draft_statements: 1 }, trendGranularity: 'MONTH', trend: [{ period: new Date(2026, 9, 1), earnedCentavos: 20000, creditsCentavos: 4000, collectedCentavos: 20000, refundedCentavos: 4000, netEarningsCentavos: 15000, gmvCentavos: 1000000, buyerPaymentsCentavos: 1023000, buyerRefundsCentavos: 0 }] })
 })
 
-test('the overview separates platform money from marketplace money with cards, charts and tables', async () => {
+test('the overview shows platform finance without the removed action strip or marketplace payments', async () => {
   at('/finance', <AdminFinancePage />)
-  expect(await screen.findByRole('heading', { name: 'Platform Finance' })).toBeInTheDocument()
+  expect(await screen.findByRole('heading', { name: 'Finance overview', level: 1 })).toBeInTheDocument()
   expect(screen.queryByRole('heading', { name: 'Financial overview' })).not.toBeInTheDocument()
-  expect(screen.getByRole('heading', { name: 'Platform earnings and funds', level: 2 })).toBeInTheDocument()
-  expect(screen.getByRole('tab', { name: 'Overview', selected: true })).toBeInTheDocument()
-  expect(await screen.findByRole('heading', { name: 'Marketplace payments' })).toBeInTheDocument()
+  expect(screen.queryByRole('heading', { name: 'Finance overview', level: 2 })).not.toBeInTheDocument()
+  expect(screen.getByRole('tab', { name: 'Finance overview', selected: true })).toBeInTheDocument()
+  expect(screen.getAllByRole('tab')).toHaveLength(3)
+  expect(screen.queryByRole('tab', { name: /Tax|Reconciliation/ })).not.toBeInTheDocument()
+  await screen.findByRole('heading', { name: 'Financial calculations' })
+  expect(screen.getByRole('heading', { name: 'Commission adjustments' })).toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: 'Deductions and tax records' })).toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: 'Commission billing' })).toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: 'Online payment channels' })).toBeInTheDocument()
+  expect(screen.queryByText('Marketplace payment records')).not.toBeInTheDocument()
+  expect(screen.queryByRole('heading', { name: 'Marketplace payments' })).not.toBeInTheDocument()
+  expect(screen.queryByText('Finance actions')).not.toBeInTheDocument()
+  expect(screen.queryByText('Draft commission statements')).not.toBeInTheDocument()
   expect(screen.queryByText('View breakdown')).not.toBeInTheDocument()
   expect(await screen.findByRole('table', { name: 'Net platform earnings calculation' })).toBeInTheDocument()
-  expect(screen.getByRole('table', { name: 'Platform-held funds calculation' })).toBeInTheDocument()
+  expect(screen.getByRole('table', { name: 'Net commission collections calculation' })).toBeInTheDocument()
   expect(screen.queryByText(/DEMO — SIMULATED FIGURES/i)).not.toBeInTheDocument()
   expect(screen.queryByText('Platform earnings analytics')).not.toBeInTheDocument()
   expect(screen.getByRole('table', { name: 'Monthly commission activity' })).toBeInTheDocument()
   expect(within(screen.getByRole('table', { name: 'Monthly commission activity' })).getByText('Oct 2026')).toBeInTheDocument()
-  expect(within(screen.getByRole('table', { name: 'Monthly marketplace volume' })).getByRole('row', { name: /^Oct 2026/ })).toHaveTextContent('₱10,000.00₱10,230.00₱0.00')
-  expect(screen.getByRole('link', { name: /1\s*Draft commission statements/ })).toHaveAttribute('href', '/finance?view=statements')
   expect(screen.queryByText(/Nothing is waiting/)).not.toBeInTheDocument()
-  expect(screen.getByText('No Buyer payments in this period.')).toBeInTheDocument()
-  fireEvent.click(screen.getByRole('button', { name: 'All dates' }))
+  expect(screen.queryByRole('table', { name: 'Monthly marketplace volume' })).not.toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: 'Last 30 days' }))
   fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-10-01' } })
   fireEvent.change(screen.getByLabelText('To'), { target: { value: '2026-10-31' } })
   fireEvent.click(screen.getByRole('button', { name: 'Apply' }))
@@ -64,62 +77,28 @@ test('refund-period sparklines keep negative amounts visible inside the chart', 
   expect(heights[1]).toBeGreaterThan(heights[2]!)
 })
 
-test('each card prints the lines that add up to it, payment methods are broken down and short ranges chart by day', async () => {
-  vi.mocked(finance.financeKpis).mockResolvedValue({ label: 'Recorded transactions', scenario: 'Earnings and cash use event dates.', period: { from: null, to: null }, commerce: [
-    { key: 'gross_gmv', label: 'Gross merchandise value', valueCentavos: 3000000, definition: 'Confirmed order value.' }, { key: 'cancelled_gmv', label: 'Cancelled order value', valueCentavos: 500000, definition: 'Cancelled.' },
-    { key: 'refunded_gmv', label: 'Refunded order value', valueCentavos: 100000, definition: 'Refunded.' }, { key: 'net_gmv', label: 'Net merchandise value', valueCentavos: 2400000, definition: 'Net.' },
-    { key: 'online_payments', label: 'Verified online payments', valueCentavos: 2050000, definition: 'Online.' }, { key: 'buyer_processing_fees', label: 'Buyer processing fees', valueCentavos: 50000, definition: 'Fees.' },
-    { key: 'cash_on_delivery', label: 'Cash on Delivery collected', valueCentavos: 600000, definition: 'COD.' }, { key: 'in_store', label: 'In-Store payments collected', valueCentavos: 350000, definition: 'Store.' },
-    { key: 'buyer_payments', label: 'Buyer payments received', valueCentavos: 3000000, definition: 'All received.' }, { key: 'cancellation_refunds', label: 'Cancellation refunds', valueCentavos: 200000, definition: 'Cancel.' },
-    { key: 'dispute_refunds', label: 'Dispute-conclusion refunds', valueCentavos: 100000, definition: 'Dispute.' }, { key: 'other_refunds', label: 'Other online refunds', valueCentavos: 0, definition: 'Other.' },
-    { key: 'cash_reimbursements', label: 'Cash reimbursements', valueCentavos: 50000, definition: 'Cash back.' }, { key: 'buyer_refunds', label: 'Refunds to Buyers', valueCentavos: 350000, definition: 'All refunds.' },
-    { key: 'pending_buyer_refunds', label: 'Refunds in progress', valueCentavos: 25000, definition: 'Pending.' }, { key: 'net_buyer_payments', label: 'Net Vendor collections', valueCentavos: 2650000, definition: 'Kept.' },
-  ], finance: [
-    { key: 'earned_commission', label: 'Total commission earned', valueCentavos: 20000, definition: 'Earned at completion.' }, { key: 'fee_credits', label: 'Approved commission credits', valueCentavos: 3000, definition: 'Credits.' },
-    { key: 'net_commission', label: 'Net commission earned', valueCentavos: 17000, definition: 'Earnings less credits.' }, { key: 'platform_revenue', label: 'Commission revenue, excluding VAT', valueCentavos: 15179, definition: 'Posted revenue.' },
-    { key: 'fee_vat', label: 'Output VAT on fees', valueCentavos: 1821, definition: 'VAT.' },
-    { key: 'processing_expense', label: 'Platform processing costs', valueCentavos: 700, definition: 'Costs.' }, { key: 'net_platform_earnings', label: 'Net platform earnings', valueCentavos: 14479, definition: 'Revenue less costs.' },
-    { key: 'collected', label: 'Collected commissions', valueCentavos: 9000, definition: 'Collected.' }, { key: 'refunded_commissions', label: 'Refunded commissions', valueCentavos: 1000, definition: 'Refunded.' },
-    { key: 'net_collected', label: 'Net collected commissions', valueCentavos: 8000, definition: 'Collected less refunds.' }, { key: 'receivables', label: 'Outstanding receivables', valueCentavos: 6000, definition: 'Owed.' },
-    { key: 'overdue', label: 'Overdue receivables', valueCentavos: 2500, definition: 'Past due.' }, { key: 'pending_commissions', label: 'Pending commissions', valueCentavos: 7000, definition: 'Pending.' },
-  ], counts: { confirmed_orders: 3, pending_buyer_refunds: 1 }, paymentMethods: [
-    { method: 'GCASH', label: 'GCash', kind: 'ONLINE', payments: 2, amountCentavos: 2050000 },
-    { method: 'CASH_ON_DELIVERY', label: 'Cash on Delivery', kind: 'PHYSICAL', payments: 1, amountCentavos: 600000 },
-    { method: 'IN_STORE', label: 'In-Store Payment', kind: 'PHYSICAL', payments: 1, amountCentavos: 350000 },
-  ], trendGranularity: 'DAY', trend: [
-    { period: new Date(2026, 9, 1), earnedCentavos: 20000, creditsCentavos: 3000, collectedCentavos: 0, refundedCentavos: 0, netEarningsCentavos: 14479, gmvCentavos: 3000000, buyerPaymentsCentavos: 2000000, buyerRefundsCentavos: 0 },
-    { period: new Date(2026, 9, 2), earnedCentavos: 0, creditsCentavos: 0, collectedCentavos: 9000, refundedCentavos: 1000, netEarningsCentavos: 0, gmvCentavos: 0, buyerPaymentsCentavos: 1000000, buyerRefundsCentavos: 350000 }] })
+test('platform calculations retain their exact components and short ranges chart by day', async () => {
+  vi.mocked(finance.financeKpis).mockResolvedValue(marketplacePaymentsFixture())
   at('/finance', <AdminFinancePage />)
-  const earned = within(await screen.findByRole('table', { name: 'Net commission earned calculation' }))
-  expect(earned.getByRole('row', { name: /^Commission earned at completion/ })).toHaveTextContent('₱200.00')
+  const earned = within(await screen.findByRole('table', { name: 'Platform commission charges calculation' }))
+  expect(earned.getByRole('row', { name: /^Platform commission charges before credits/ })).toHaveTextContent('₱200.00')
   expect(earned.getByRole('row', { name: /^Approved commission credits/ })).toHaveTextContent('-₱30.00')
-  expect(earned.getByRole('row', { name: /^Net commission earned/ })).toHaveTextContent('₱170.00')
+  expect(earned.getByRole('row', { name: /^Platform commission charges(?! before)/ })).toHaveTextContent('₱170.00')
   const net = within(screen.getByRole('table', { name: 'Net platform earnings calculation' }))
-  expect(net.getByRole('row', { name: /^Net commission earned/ })).toHaveTextContent('₱170.00')
+  expect(net.getByRole('row', { name: /^Platform commission charges(?! before)/ })).toHaveTextContent('₱170.00')
   expect(net.getByRole('row', { name: /^Output VAT on fees/ })).toHaveTextContent('-₱18.21')
   expect(net.getByRole('row', { name: /^Commission revenue, excluding VAT/ })).toHaveTextContent('₱151.79')
   expect(net.getByRole('row', { name: /^Platform processing costs/ })).toHaveTextContent('-₱7.00')
   expect(net.getByRole('row', { name: /^Net platform earnings/ })).toHaveTextContent('₱144.79')
-  const held = within(screen.getByRole('table', { name: 'Platform-held funds calculation' }))
+  fireEvent.click(earned.getByRole('button', { name: 'How this is calculated: Approved commission credits' }))
+  const creditsHelp = screen.getByRole('dialog', { name: 'Approved commission credits' })
+  expect(creditsHelp).toHaveTextContent('An unpaid bill is reduced.')
+  expect(creditsHelp).toHaveTextContent('the cash refund is recorded separately when confirmed')
+  expect(creditsHelp).toHaveTextContent('₱500.00 commission − ₱50.00 approved credit = ₱450.00')
+  fireEvent.keyDown(document, { key: 'Escape' })
+  const held = within(screen.getByRole('table', { name: 'Net commission collections calculation' }))
   expect(held.getByRole('row', { name: /^Commission refunds to Vendors/ })).toHaveTextContent('-₱10.00')
-  expect(held.getByRole('row', { name: /^Platform-held funds/ })).toHaveTextContent('₱80.00')
-  const gmv = within(screen.getByRole('table', { name: 'Gross merchandise value calculation' }))
-  expect(gmv.getByRole('row', { name: /^Cancelled order value/ })).toHaveTextContent('-₱5,000.00')
-  expect(gmv.getByRole('row', { name: /^Net merchandise value/ })).toHaveTextContent('₱24,000.00')
-  const received = within(screen.getByRole('table', { name: 'Buyer payments received calculation' }))
-  expect(received.getByRole('row', { name: /^Cash on Delivery collected/ })).toHaveTextContent('₱6,000.00')
-  expect(received.getByRole('row', { name: /^Buyer payments received/ })).toHaveTextContent('₱30,000.00')
-  const refunds = within(screen.getByRole('table', { name: 'Refunds to Buyers calculation' }))
-  expect(refunds.queryByRole('row', { name: /^Other online refunds/ })).not.toBeInTheDocument()
-  expect(refunds.getByRole('row', { name: /^Refunds to Buyers/ })).toHaveTextContent('₱3,500.00')
-  expect(within(screen.getByRole('table', { name: 'Net Vendor collections calculation' })).getByRole('row', { name: /^Net Vendor collections/ })).toHaveTextContent('₱26,500.00')
-  expect(screen.getByText(/₱250.00 more in 1 refund still in progress/)).toBeInTheDocument()
-  expect(screen.getByText(/3 confirmed orders, by confirmation date/)).toBeInTheDocument()
-  const methods = within(screen.getByRole('list', { name: 'Buyer payments per method' }))
-  expect(methods.getAllByRole('listitem').map(row => row.textContent)).toEqual([
-    'GCash₱20,500.002 payments · 68.3%', 'Cash on Delivery₱6,000.001 cash record · 20.0%', 'In-Store Payment₱3,500.001 cash record · 11.7%'])
-  expect(screen.getByRole('table', { name: 'Daily marketplace volume' })).toBeInTheDocument()
-  expect(screen.getByRole('img', { name: /Gross merchandise value, Buyer payments and refunds per day/ })).toBeInTheDocument()
+  expect(held.getByRole('row', { name: /^Net commission collections/ })).toHaveTextContent('₱80.00')
   const owed = within(screen.getByRole('table', { name: 'Outstanding receivables calculation' }))
   expect(owed.getByRole('row', { name: /^Issued, not yet due/ })).toHaveTextContent('₱35.00')
   expect(owed.getByRole('row', { name: /^Overdue/ })).toHaveTextContent('₱25.00')
@@ -127,10 +106,10 @@ test('each card prints the lines that add up to it, payment methods are broken d
   fireEvent.click(screen.getByText('What every figure means'))
   expect(screen.getByText(/Charted by day · Oct 1 – Oct 2/)).toBeInTheDocument()
   expect(screen.getByRole('table', { name: 'Daily commission activity' })).toBeInTheDocument()
-  expect(screen.getByRole('img', { name: /Commission earned, collected, credited and refunded per day/ })).toBeInTheDocument()
+  expect(screen.getByRole('img', { name: /Platform commission charges, payments, credits and refunds per day/ })).toBeInTheDocument()
 })
 
-test('channel fees offer a safe link to the Xendit dashboard in a new tab', async () => {
+test('legacy channel links open Xendit without loading the removed payment-channel table', async () => {
   vi.mocked(finance.listChannelFees).mockResolvedValue([{ code: 'GCASH', displayName: 'GCash', version: 1, ratePpm: 23000, fixedCentavos: 0, rateIncludesVat: false, feeVatBasisPoints: 1200, refundSupported: true, enabled: true, sourceReference: 'Xendit published rates.' }] as Awaited<ReturnType<typeof finance.listChannelFees>>)
   at('/finance?view=channels', <AdminFinancePage />, '/finance')
   const link = await screen.findByRole('link', { name: /Open Xendit dashboard/ })
@@ -139,135 +118,266 @@ test('channel fees offer a safe link to the Xendit dashboard in a new tab', asyn
   expect(link.getAttribute('rel')).toContain('noopener')
   expect(link.getAttribute('rel')).toContain('noreferrer')
   expect(screen.getByText(/never stores or shows its Xendit credentials/)).toBeInTheDocument()
+  expect(screen.queryByRole('heading', { name: 'Commission payment channels' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('table', { name: 'Channel fee versions' })).not.toBeInTheDocument()
+  expect(finance.listChannelFees).not.toHaveBeenCalled()
+})
+
+test('the Xendit view shows platform earnings and its deductions separately from commission collections', async () => {
+  vi.mocked(finance.financeKpis).mockResolvedValue(marketplacePaymentsFixture())
+  at('/finance?view=xendit', <AdminFinancePage />, '/finance')
+  const account = within(screen.getByRole('region', { name: 'Platform Xendit account' }))
+  expect(await account.findByRole('heading', { name: 'Platform earnings summary' })).toBeInTheDocument()
+  const earnings = within(await account.findByRole('table', { name: 'Net platform earnings calculation' }))
+  await waitFor(() => expect(earnings.getByRole('row', { name: /^Net platform earnings/ })).toHaveTextContent('₱144.79'))
+  expect(earnings.getByRole('row', { name: /^Platform commission charges/ })).toHaveTextContent('₱170.00')
+  expect(earnings.getByRole('row', { name: /^Output VAT on fees/ })).toHaveTextContent('-₱18.21')
+  expect(earnings.getByRole('row', { name: /^Commission revenue, excluding VAT/ })).toHaveTextContent('₱151.79')
+  expect(earnings.getByRole('row', { name: /^Platform processing costs/ })).toHaveTextContent('-₱7.00')
+  expect(account.getAllByText('₱144.79')).toHaveLength(2)
+  expect(screen.queryByRole('heading', { name: 'Commission collections' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('table', { name: 'Platform commission cash calculation' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('link', { name: 'View commission transactions' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('heading', { name: 'Remittance and withdrawals' })).not.toBeInTheDocument()
+  expect(earnings.queryByText(/refund|withholding|Buyer/i)).not.toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: 'Last 30 days' }))
+  fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-10-01' } })
+  fireEvent.change(screen.getByLabelText('To'), { target: { value: '2026-10-31' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Apply' }))
+  await waitFor(() => expect(finance.financeKpis).toHaveBeenLastCalledWith('2026-10-01', '2026-10-31'))
+})
+
+test.each([0, -700])('platform earnings preserve a recorded zero or loss (%i centavos)', async net => {
+  const data = marketplacePaymentsFixture()
+  data.finance = data.finance.map(figure => ({ ...figure, valueCentavos: figure.key === 'processing_expense' ? -net : figure.key === 'net_platform_earnings' ? net : 0 }))
+  vi.mocked(finance.financeKpis).mockResolvedValue(data)
+  at('/finance?view=xendit', <AdminFinancePage />, '/finance')
+  const account = within(screen.getByRole('region', { name: 'Platform Xendit account' }))
+  await waitFor(() => expect(account.getAllByText(net === 0 ? '₱0.00' : '-₱7.00').length).toBeGreaterThanOrEqual(2))
+})
+
+test('platform gross-remittance threshold stays visible and independent of earnings dates', async () => {
+  const year = manilaToday().slice(0, 4)
+  const annual = marketplacePaymentsFixture()
+  annual.finance = annual.finance.map(figure => ({ ...figure, valueCentavos: ({ collected: 11000000, refunded_commissions: 1000000, net_collected: 10000000 } as Record<string, number>)[figure.key] ?? figure.valueCentavos }))
+  vi.mocked(finance.financeKpis).mockImplementation(async (from, to) => from === `${year}-01-01` && to === `${year}-12-31` ? annual : marketplacePaymentsFixture())
+  at('/finance?view=xendit', <AdminFinancePage />, '/finance')
+  const threshold = within(screen.getByRole('region', { name: 'Gross-remittance threshold' }))
+  expect(await threshold.findByText('₱100,000.00', { selector: 'dd' })).toBeInTheDocument()
+  expect(threshold.getByText(`Annual · ${year}`)).toBeInTheDocument()
+  expect(threshold.getByText('Full taxable year. Not affected by the date filter.')).toBeInTheDocument()
+  expect(threshold.getByText('Annual gross remittances')).toBeInTheDocument()
+  expect(threshold.getByText('Remaining to threshold').parentElement).toHaveTextContent('₱400,000.00')
+  expect(threshold.getByText(/₱500,000.00 per taxable year/)).toBeInTheDocument()
+  expect(threshold.getByText('20% of annual threshold · ₱500,000.00')).toBeInTheDocument()
+  const calculation = within(threshold.getByRole('table', { name: 'Platform annual threshold calculation' }))
+  expect(calculation.getByRole('row', { name: /^Successful commission payments/ })).toHaveTextContent('₱110,000.00')
+  expect(calculation.getByRole('row', { name: /^Confirmed commission refunds/ })).toHaveTextContent('-₱10,000.00')
+  expect(calculation.getByRole('row', { name: /^Gross remittances counted/ })).toHaveTextContent('₱100,000.00')
+  expect(threshold.queryByRole('combobox')).not.toBeInTheDocument()
+  expect(finance.listAccumulators).not.toHaveBeenCalled()
+  fireEvent.click(screen.getByRole('button', { name: 'Last 30 days' }))
+  fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-10-01' } })
+  fireEvent.change(screen.getByLabelText('To'), { target: { value: '2026-10-31' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Apply' }))
+  await waitFor(() => expect(finance.financeKpis).toHaveBeenLastCalledWith('2026-10-01', '2026-10-31'))
+  expect(vi.mocked(finance.financeKpis).mock.calls.filter(([from, to]) => from === `${year}-01-01` && to === `${year}-12-31`)).toHaveLength(1)
+  expect(threshold.getByText('₱100,000.00', { selector: 'dd' })).toBeInTheDocument()
+  expect(threshold.getByText(`Annual · ${year}`)).toBeInTheDocument()
+  expect(threshold.getByText('Full taxable year. Not affected by the date filter.')).toBeInTheDocument()
+})
+
+test.each([
+  [0, '₱500,000.00', 'Threshold not crossed.'],
+  [50000000, '₱0.00', 'Threshold reached.'],
+  [50000001, '₱0.00', 'Threshold crossed.'],
+  [-10000, '₱500,100.00', 'Threshold not crossed.'],
+])('platform collection threshold preserves recorded amounts at %i centavos', (counted, remaining, status) => {
+  render(<PlatformCollectionsThreshold figures={[{ key: 'net_collected', label: 'Net collected commissions', valueCentavos: counted, definition: 'Confirmed collections less refunds.' }]} thresholdCentavos={50000000} taxableYear={2026} />)
+  expect(screen.getByText('Remaining to threshold').parentElement).toHaveTextContent(remaining)
+  expect(screen.getByText(status)).toBeInTheDocument()
+  expect(screen.queryByText(/Subject to withholding|Sworn Declaration/)).not.toBeInTheDocument()
+})
+
+test.each([50000000, 50000001])('platform tax display uses posted VAT and does not invent withholding at %i collected centavos', async (collected) => {
+  const data = marketplacePaymentsFixture()
+  data.finance = data.finance.map(figure => ({ ...figure, valueCentavos: ({ collected: collected + 1000, refunded_commissions: 1000, net_collected: collected } as Record<string, number>)[figure.key] ?? figure.valueCentavos }))
+  vi.mocked(finance.financeKpis).mockResolvedValue(data)
+  at('/finance?view=xendit', <AdminFinancePage />, '/finance')
+  const taxes = within(await screen.findByRole('table', { name: 'Platform tax amounts' }))
+  expect(taxes.getByRole('row', { name: /^Output VAT on fees/ })).toHaveTextContent('₱18.21')
+  expect(taxes.getByRole('row', { name: /^Creditable withholding tax/ })).toHaveTextContent('Not available')
+  expect(taxes.queryByText('₱5.08')).not.toBeInTheDocument()
+  expect(screen.getByText('Remaining to threshold').parentElement).toHaveTextContent('₱0.00')
+  expect(screen.getByText(collected > 50000000 ? 'Threshold crossed.' : 'Threshold reached.')).toBeInTheDocument()
+  expect(screen.queryByText('Tax is withheld')).not.toBeInTheDocument()
+  expect(within(screen.getByRole('table', { name: 'Net platform earnings calculation' })).getByRole('row', { name: /^Net platform earnings/ })).toHaveTextContent('₱144.79')
+})
+
+test('missing platform VAT is unavailable rather than a recorded zero', async () => {
+  const data = marketplacePaymentsFixture()
+  data.finance = data.finance.filter(figure => figure.key !== 'fee_vat')
+  vi.mocked(finance.financeKpis).mockResolvedValue(data)
+  at('/finance?view=xendit', <AdminFinancePage />, '/finance')
+  const taxes = within(await screen.findByRole('table', { name: 'Platform tax amounts' }))
+  expect(taxes.getByRole('row', { name: /^Output VAT on fees/ })).toHaveTextContent('—')
+  expect(taxes.getByRole('row', { name: /^Output VAT on fees/ })).not.toHaveTextContent('₱0.00')
+})
+
+test('platform annual collections have their own loading, failure and retry state', async () => {
+  const year = manilaToday().slice(0, 4)
+  vi.mocked(finance.financeKpis).mockImplementation(async from => {
+    if (from === `${year}-01-01`) throw new ResponseError(new Response(JSON.stringify({ errors: [{ code: 'UNAVAILABLE', message: 'Annual collections unavailable' }] }), { status: 503 }), 'unavailable')
+    return marketplacePaymentsFixture()
+  })
+  at('/finance?view=xendit', <AdminFinancePage />, '/finance')
+  const threshold = within(screen.getByRole('region', { name: 'Gross-remittance threshold' }))
+  expect(threshold.getByText(/₱500,000.00 per taxable year/)).toBeInTheDocument()
+  expect(threshold.queryByText('₱0.00')).not.toBeInTheDocument()
+  expect(await threshold.findByText(/Annual collections unavailable/)).toBeInTheDocument()
+  const account = within(screen.getByRole('region', { name: 'Platform Xendit account' }))
+  await waitFor(() => expect(account.getAllByText('₱144.79')).toHaveLength(2))
+  vi.mocked(finance.financeKpis).mockResolvedValue(marketplacePaymentsFixture())
+  fireEvent.click(threshold.getByRole('button', { name: 'Try again' }))
+  expect(await threshold.findByText('₱80.00', { selector: 'dd' })).toBeInTheDocument()
 })
 
 test('publishing a commission percentage sends basis points, the reviewed version and one request key', async () => {
-  vi.mocked(finance.listStatements).mockResolvedValue(page([]))
-  vi.mocked(finance.listReviewItems).mockResolvedValue(page([]))
+  vi.mocked(finance.previewCommissionPolicy).mockResolvedValue({ vendorCount: 1, noticeHours: 0, noticeRequired: true, exampleCommissionCentavos: 32500, monthlyBasisCentavos: 1000000, estimatedMonthlyChangeCentavos: 12500, volumePeriod: 'Last three complete months', currentTerms: 'Current terms', newTerms: 'Updated terms', emailSubject: 'Commission rate update', emailHtml: '<p>TEST rate preview</p>' })
   vi.mocked(finance.publishCommissionPolicy).mockResolvedValue({ id: 'policy-2', version: 2, commissionBasisPoints: 325, rateLabel: '3.25%', effectiveFrom: new Date(), status: 'CURRENT' })
   at('/finance?view=statements', <AdminFinancePage />, '/finance')
   fireEvent.click(await screen.findByRole('button', { name: 'Edit rate' }))
-  fireEvent.change(screen.getByLabelText('Commission percentage (%)'), { target: { value: '3.25' } })
-  expect(screen.getByText('₱325.00')).toBeInTheDocument()
-  fireEvent.change(screen.getByLabelText(/^Reason/), { target: { value: 'Approved commercial rate review' } })
-  fireEvent.click(screen.getByRole('button', { name: 'Publish new rate' }))
-  await waitFor(() => expect(finance.publishCommissionPolicy).toHaveBeenCalledWith({ commissionBasisPoints: 325, expectedVersion: 1, effectiveFrom: null, reason: 'Approved commercial rate review' }, expect.stringMatching(/^[0-9a-f-]{36}$/)))
-  expect(await screen.findByText(/Commission policy published/)).toBeInTheDocument()
+  const editor = within(screen.getByRole('dialog', { name: 'Edit commission rate' }))
+  fireEvent.change(editor.getByLabelText('New commission rate (%)'), { target: { value: '3.25' } })
+  fireEvent.click(editor.getByLabelText('Explicitly override the minimum notice period'))
+  fireEvent.change(editor.getByLabelText('Notice override reason'), { target: { value: 'Approved exceptional short notice' } })
+  fireEvent.click(editor.getByRole('button', { name: 'Continue' }))
+  fireEvent.change(editor.getByLabelText('Internal reason'), { target: { value: 'Approved commercial rate review' } })
+  fireEvent.click(editor.getByRole('button', { name: 'Continue' }))
+  expect(await editor.findByText(/₱325.00 commission/)).toBeInTheDocument()
+  fireEvent.click(editor.getByRole('button', { name: 'Continue' }))
+  fireEvent.click(editor.getByLabelText(/I reviewed the rate/))
+  fireEvent.click(editor.getByRole('button', { name: 'Publish new rate' }))
+  await waitFor(() => expect(finance.publishCommissionPolicy).toHaveBeenCalledWith(expect.objectContaining({ commissionBasisPoints: 325, expectedVersion: 1, effectiveFrom: null, reason: 'Approved commercial rate review', noticeOverride: true, noticeOverrideReason: 'Approved exceptional short notice' }), expect.stringMatching(/^[0-9a-f-]{36}$/)))
+  expect(await editor.findByText(/Commission policy published/)).toBeInTheDocument()
 })
 
 test('read-only commission access shows the rate without publishing controls', async () => {
   const policies = await finance.listCommissionPolicies()
   vi.mocked(finance.listCommissionPolicies).mockResolvedValue({ ...policies, policies: { ...policies.policies, canManage: false } })
   vi.mocked(finance.listStatements).mockResolvedValue(page([]))
-  vi.mocked(finance.listReviewItems).mockResolvedValue(page([]))
+  vi.mocked(finance.listTaxIssues).mockResolvedValue(page([]))
   at('/finance?view=statements', <AdminFinancePage />, '/finance')
   expect(await screen.findByText('2.00%')).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Edit rate' })).not.toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'View history' })).toBeInTheDocument()
 })
 
-test('overdue debt offers only collectible states and switching to management resets its query', async () => {
+test('overdue debt offers collectible states and clear all resets its server query', async () => {
   vi.mocked(finance.listStatements).mockResolvedValue(page([]))
-  vi.mocked(finance.listReviewItems).mockResolvedValue(page([]))
   at('/finance?view=overdue', <AdminFinancePage />, '/finance')
-  await waitFor(() => expect(finance.listStatements).toHaveBeenLastCalledWith(1, undefined, true, { label: 'All dates', from: '', to: '' }))
+  await waitFor(() => expect(finance.listStatements).toHaveBeenLastCalledWith(1, undefined, true, dateFilterPreset(30), undefined, undefined))
   expect(await screen.findByText('No overdue commission balances match these filters.')).toBeInTheDocument()
-  expect(screen.queryByText('Billing schedule and due dates')).not.toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: 'Draft' })).not.toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: 'Settled' })).not.toBeInTheDocument()
+  expect(screen.getByText('Automatic issuance')).toBeInTheDocument()
+  expect(screen.queryByLabelText('Settled')).not.toBeInTheDocument()
+  fireEvent.click(screen.getByLabelText('Partially paid'))
+  await waitFor(() => expect(finance.listStatements).toHaveBeenLastCalledWith(1, undefined, true, dateFilterPreset(30), undefined, 'PARTIALLY_PAID'))
+  fireEvent.click(screen.getByRole('button', { name: 'Clear all' }))
+  await waitFor(() => expect(finance.listStatements).toHaveBeenLastCalledWith(1, undefined, false, dateFilterPreset(30), undefined, undefined))
+  expect(screen.getByLabelText('Settled')).toBeInTheDocument()
+  expect(finance.listTaxIssues).not.toHaveBeenCalled()
   expect(screen.queryByRole('button', { name: 'Draft last month' })).not.toBeInTheDocument()
-  fireEvent.click(screen.getByRole('button', { name: 'Partially paid' }))
-  await waitFor(() => expect(finance.listStatements).toHaveBeenLastCalledWith(1, 'PARTIALLY_PAID', true, { label: 'All dates', from: '', to: '' }))
-  fireEvent.click(screen.getByRole('tab', { name: 'Commission management' }))
-  await waitFor(() => expect(finance.listStatements).toHaveBeenLastCalledWith(1, undefined, false, { label: 'All dates', from: '', to: '' }))
-  expect(screen.getByRole('button', { name: 'Settled' })).toBeInTheDocument()
-  expect(screen.getByText('Billing schedule and due dates')).toBeInTheDocument()
-  expect(await screen.findByRole('heading', { name: 'Commission credit approvals' })).toBeInTheDocument()
 })
 
-test('the work queue shows the mismatch and requires a reasoned resolution', async () => {
-  vi.mocked(finance.listReviewItems).mockResolvedValue(page([item()]))
-  vi.mocked(finance.resolveReviewItem).mockResolvedValue()
-  at('/finance?view=queue', <AdminFinancePage />, '/finance')
-  expect(await screen.findByText('Payment mismatch')).toBeInTheDocument()
-  expect(screen.getByText(/nothing was marked paid/)).toBeInTheDocument()
-  fireEvent.click(screen.getByRole('button', { name: 'Resolve' }))
-  expect(await screen.findByText(/at least 10 characters/)).toBeInTheDocument()
-  fireEvent.change(screen.getByLabelText('Resolution'), { target: { value: 'Provider confirmed the forged amount; no capture exists.' } })
-  fireEvent.click(screen.getByRole('button', { name: 'Resolve' }))
-  await waitFor(() => expect(finance.resolveReviewItem).toHaveBeenCalledWith('item-1', 'Provider confirmed the forged amount; no capture exists.'))
+test.each(['tax-remittance', 'tax', 'adjustments', 'queue', 'remittances', 'withholding'])('removed tax view %s falls back to Finance overview', async view => {
+  at(`/finance?view=${view}`, <AdminFinancePage />, '/finance')
+  expect(await screen.findByRole('heading', { name: 'Finance overview', level: 1 })).toBeInTheDocument()
+  expect(screen.queryByRole('tab', { name: /Tax|Withholding|Issues/ })).not.toBeInTheDocument()
+  expect(finance.listTaxIssues).not.toHaveBeenCalled()
+  expect(finance.remittanceQueue).not.toHaveBeenCalled()
 })
 
-test('restored tax tools stay under Reconciliation and old adjustment links open tax records', async () => {
-  at('/finance?view=adjustments', <AdminFinancePage />, '/finance')
-  expect(await screen.findByRole('heading', { name: 'Platform Finance' })).toBeInTheDocument()
-  expect(screen.getByRole('tab', { name: 'Reconciliation' })).toHaveAttribute('aria-selected', 'true')
-  expect(screen.getAllByRole('tab')).toHaveLength(4)
-  expect(await screen.findByRole('heading', { name: 'Tax records' })).toBeInTheDocument()
-  expect(screen.getByRole('combobox', { name: 'Tax records view' })).toHaveValue('adjustments')
-  expect(await screen.findByText('No tax adjustments match these filters.')).toBeInTheDocument()
-})
-
-test('a role without finance.view sees the server explanation instead of data', async () => {
-  vi.mocked(finance.listReviewItems).mockRejectedValue(new ResponseError(new Response(JSON.stringify({ data: null, meta: {}, errors: [{ code: 'PERMISSION_DENIED', message: 'This finance action is not available to your Admin role.', details: {} }] }), { status: 403, headers: { 'Content-Type': 'application/json' } }), 'denied'))
-  at('/finance?view=queue', <AdminFinancePage />, '/finance')
-  expect(await screen.findByText('This finance action is not available to your Admin role.')).toBeInTheDocument()
-})
-
-test('applying payment dates resets pagination while retaining status and cancellation leaves the current query intact', async () => {
-  vi.mocked(finance.listPayments).mockResolvedValue({ items: [{ id: 'p1', reference: 'PAY-TEST', vendor_name: 'Test Supply', purpose: 'FULL_ORDER_PAYMENT', account_scope: 'VENDOR_SUB_ACCOUNT', channel_name: 'GCash', status: 'PAID', total_centavos: 25000, evidence_origin: 'SIMULATED', reconciliation_state: 'RECONCILED', created_at: '2026-10-02T01:00:00Z' },
-    { id: 'p2', reference: 'FS-2026-10', vendor_name: 'Test Supply', purpose: 'PLATFORM_FEE_PAYMENT', account_scope: 'PLATFORM_ACCOUNT', channel_name: 'Maya', status: 'PAID', total_centavos: 2000, evidence_origin: 'XENDIT_TEST', reconciliation_state: 'NOT_REQUIRED', created_at: '2026-10-03T01:00:00Z' }], hasMore: true, total: 70 })
+test('commission transactions retain refund amounts and reset pagination when payment dates change', async () => {
+  vi.mocked(finance.listCommissionTransactions).mockResolvedValue({ items: [{ id: 'p2', reference: 'FS-2026-10', vendor_name: 'Test Supply', purpose: 'PLATFORM_FEE_PAYMENT', account_scope: 'PLATFORM_ACCOUNT', channel_name: 'Maya', status: 'PAID', total_centavos: 2000, refunded_centavos: 500, net_collected_centavos: 1500, evidence_origin: 'XENDIT_TEST', paid_at: '2026-10-03T01:00:00Z' }], hasMore: true, total: 70 })
   at('/finance?view=payments', <AdminFinancePage />, '/finance')
-  await screen.findByText('PAY-TEST')
-  const rows = screen.getAllByRole('row')
-  expect(rows[1]).toHaveTextContent(/Order payment\s*To Vendor account/)
-  expect(rows[1]).toHaveTextContent('GCash')
-  expect(rows[1]).toHaveTextContent('Simulated')
-  expect(rows[2]).toHaveTextContent(/Commission payment\s*To platform account/)
-  expect(rows[2]).toHaveTextContent('Xendit TEST')
-  fireEvent.change(screen.getByRole('combobox', { name: 'Payment purpose' }), { target: { value: 'PLATFORM_FEE_PAYMENT' } })
-  await waitFor(() => expect(finance.listPayments).toHaveBeenLastCalledWith(1, undefined, { label: 'All dates', from: '', to: '' }, 'PLATFORM_FEE_PAYMENT'))
-  fireEvent.change(screen.getByRole('combobox', { name: 'Payment purpose' }), { target: { value: '' } })
-  fireEvent.change(screen.getByRole('combobox', { name: 'Payment status' }), { target: { value: 'PAID' } })
-  await waitFor(() => expect(finance.listPayments).toHaveBeenLastCalledWith(1, 'PAID', { label: 'All dates', from: '', to: '' }, undefined))
-  fireEvent.click(screen.getByRole('button', { name: 'Next' }))
-  await waitFor(() => expect(finance.listPayments).toHaveBeenLastCalledWith(2, 'PAID', { label: 'All dates', from: '', to: '' }, undefined))
-  const calls = vi.mocked(finance.listPayments).mock.calls.length
-  fireEvent.click(screen.getByRole('button', { name: 'All dates' }))
+  expect(await screen.findByText('FS-2026-10')).toBeInTheDocument()
+  expect(screen.getByRole('tab', { name: 'Commission management' })).toHaveAttribute('aria-selected', 'true')
+  expect(screen.queryByRole('tab', { name: 'Payments and refunds' })).not.toBeInTheDocument()
+  expect(screen.getByText('₱20.00')).toBeInTheDocument()
+  expect(screen.getByText('₱5.00')).toBeInTheDocument()
+  expect(screen.getByText('₱15.00')).toBeInTheDocument()
+  expect(finance.listPayments).not.toHaveBeenCalled()
+  const payments = within(screen.getByRole('region', { name: 'Commission records' }))
+  fireEvent.click(payments.getByRole('button', { name: 'Next' }))
+  await waitFor(() => expect(finance.listCommissionTransactions).toHaveBeenLastCalledWith(2, dateFilterPreset(30), undefined, undefined, undefined))
+  const calls = vi.mocked(finance.listCommissionTransactions).mock.calls.length
+  fireEvent.click(screen.getByRole('button', { name: 'Last 30 days' }))
   fireEvent.click(screen.getByRole('button', { name: 'Last 7 days' }))
   fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
-  expect(finance.listPayments).toHaveBeenCalledTimes(calls)
-  fireEvent.click(screen.getByRole('button', { name: 'All dates' }))
+  expect(finance.listCommissionTransactions).toHaveBeenCalledTimes(calls)
+  fireEvent.click(screen.getByRole('button', { name: 'Last 30 days' }))
   fireEvent.change(screen.getByLabelText('From'), { target: { value: '2026-10-01' } })
   fireEvent.change(screen.getByLabelText('To'), { target: { value: '2026-10-09' } })
   fireEvent.click(screen.getByRole('button', { name: 'Apply' }))
-  await waitFor(() => expect(finance.listPayments).toHaveBeenLastCalledWith(1, 'PAID', { label: 'Custom range', from: '2026-10-01', to: '2026-10-09' }, undefined))
+  await waitFor(() => expect(finance.listCommissionTransactions).toHaveBeenLastCalledWith(1, { label: 'Custom range', from: '2026-10-01', to: '2026-10-09' }, undefined, undefined, undefined))
   expect(screen.getByText('Page 1 · 70 records')).toBeInTheDocument()
-  fireEvent.click(screen.getByRole('button', { name: 'Reset filters' }))
-  await waitFor(() => expect(finance.listPayments).toHaveBeenLastCalledWith(1, undefined, { label: 'All dates', from: '', to: '' }, undefined))
-  expect(screen.getByRole('combobox', { name: 'Payment status' })).toHaveValue('')
-  expect(screen.getByRole('combobox', { name: 'Payment purpose' })).toHaveValue('')
 })
 
-const accumulator: WithholdingAccumulatorDetail = {
-  id: 'acc-1', vendor: { id: 'v1', name: 'Test Supply' }, environment: 'TEST', taxpayerKeySuffix: 'abc123', taxableYear: 2026, thresholdCentavos: 50000000, gAccumulatedCentavos: 100000,
-  gExternalDeclaredCentavos: 30000000, gExternalOverlapCentavos: 0, gEffectiveCentavos: 30100000, remainingAllowanceCentavos: 19900000, externalOverlapState: 'UNRESOLVED', status: 'UNDER_REVIEW',
-  statusLabel: 'Under review', reasonCode: 'OVERLAP_UNRESOLVED', breached: false, lockVersion: 2, demo: true,
-  taxProfile: { tin_masked: '•••-•••-123', declaration_year: 2026 }, events: [{ from_status: null, to_status: 'UNDER_REVIEW', reason_code: 'OVERLAP_UNRESOLVED', g_before_centavos: 0, g_after_centavos: 30000000, actor_type: 'SYSTEM', occurred_at: '2026-10-02T00:00:00Z' }],
-  assessments: [],
-} as WithholdingAccumulatorDetail
+const draftStatement = { id: 'stmt-1', reference: 'SAMPLE-STMT-202610', vendor_name: 'Test Supply', period_start: '2026-10-01', period_end: '2026-10-31', state: 'DRAFT', charges_centavos: 20000, credits_centavos: 3000, paid_centavos: 0, outstanding_centavos: 17000, lock_version: 4 }
 
-test('the overlap form validates against the declared total and sends the lock version', async () => {
-  vi.mocked(finance.getAccumulator).mockResolvedValue(accumulator)
-  vi.mocked(finance.resolveOverlap).mockResolvedValue({ ...accumulator, status: 'RELIEF_ACTIVE', externalOverlapState: 'RESOLVED' })
-  at('/finance/accumulators/acc-1', <AdminAccumulatorPage />, '/finance/accumulators/:accumulatorId')
-  expect(await screen.findByRole('heading', { name: /Test Supply — taxable year 2026/ })).toBeInTheDocument()
-  expect(screen.getAllByText('Under review — standard rate applies').length).toBeGreaterThan(0)
-  fireEvent.change(screen.getByLabelText(/Overlap already counted/), { target: { value: '400000' } })
-  fireEvent.change(screen.getByLabelText('Evidence basis'), { target: { value: 'Declared total includes MateryalPH remittances.' } })
-  fireEvent.click(screen.getByRole('button', { name: 'Record overlap' }))
-  expect(await screen.findByText(/cannot exceed the declared/)).toBeInTheDocument()
-  fireEvent.change(screen.getByLabelText(/Overlap already counted/), { target: { value: '1,000.00' } })
-  fireEvent.click(screen.getByRole('button', { name: 'Record overlap' }))
-  await waitFor(() => expect(finance.resolveOverlap).toHaveBeenCalledWith('acc-1', 100000, 2, 'Declared total includes MateryalPH remittances.'))
+test('monthly bills are read-only with automatic issuance and no approval work', async () => {
+  vi.mocked(finance.listStatements).mockResolvedValue(page([draftStatement]))
+  at('/finance?view=statements', <AdminFinancePage />, '/finance')
+  expect(await screen.findByText('Preparing')).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /Approve and issue|Edit e-invoice|Draft last month/ })).not.toBeInTheDocument()
+  expect(finance.listTaxIssues).not.toHaveBeenCalled()
+  fireEvent.click(screen.getByRole('button', { name: 'Test Supply' }))
+  const dialog = within(screen.getByRole('dialog', { name: 'Commission statement' }))
+  expect(await dialog.findByRole('table', { name: 'Statement calculation' })).toHaveTextContent('₱170.00')
+  expect(dialog.queryByRole('button', { name: /Approve|Edit/ })).not.toBeInTheDocument()
+  expect(finance.approveStatement).not.toHaveBeenCalled()
+  expect(finance.draftStatements).not.toHaveBeenCalled()
+})
+
+test('issued statements have no invoice editing control', async () => {
+  vi.mocked(finance.listStatements).mockResolvedValue(page([{ ...draftStatement, state: 'ISSUED', due_on: '2026-11-15' }]))
+  vi.mocked(finance.listTaxIssues).mockResolvedValue(page([]))
+  at('/finance?view=statements', <AdminFinancePage />, '/finance')
+  fireEvent.click(await screen.findByRole('button', { name: 'Test Supply' }))
+  expect(await screen.findByRole('table', { name: 'Statement calculation' })).toHaveTextContent('₱170.00')
+  expect(within(screen.getByRole('dialog', { name: 'Commission statement' })).getByRole('button', { name: 'Export PDF' })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Edit e-invoice' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Approve and issue' })).not.toBeInTheDocument()
+})
+
+test('commission transaction failures expose retry and Xendit dates stay available during a failure', async () => {
+  vi.mocked(finance.listCommissionTransactions).mockRejectedValue(new ResponseError(new Response(JSON.stringify({ errors: [{ code: 'UNAVAILABLE', message: 'Commission records unavailable' }] }), { status: 503 }), 'unavailable'))
+  const mounted = at('/finance?view=transactions', <AdminFinancePage />, '/finance')
+  expect(await screen.findByText(/Commission records unavailable/)).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
+  mounted.unmount()
+  vi.mocked(finance.financeKpis).mockRejectedValue(new ResponseError(new Response(JSON.stringify({ errors: [{ code: 'UNAVAILABLE', message: 'Collections unavailable' }] }), { status: 503 }), 'unavailable'))
+  at('/finance?view=xendit', <AdminFinancePage />, '/finance')
+  const account = within(screen.getByRole('region', { name: 'Platform Xendit account' }))
+  expect(await account.findByText(/Collections unavailable/)).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Last 30 days' })).toBeInTheDocument()
+  expect(screen.getByRole('link', { name: /Open Xendit dashboard/ })).toHaveAttribute('rel', 'noopener noreferrer')
+  expect(screen.getByRole('table', { name: 'Net platform earnings calculation' })).not.toHaveTextContent('₱')
+  vi.mocked(finance.financeKpis).mockResolvedValue(marketplacePaymentsFixture())
+  fireEvent.click(account.getByRole('button', { name: 'Try again' }))
+  await waitFor(() => expect(screen.getByRole('table', { name: 'Net platform earnings calculation' })).toHaveTextContent('₱144.79'))
+})
+
+test('commission payment outcome changes reset pagination and expose matching exports', async () => {
+  vi.mocked(finance.listCommissionTransactions).mockResolvedValue({ items: [], hasMore: true, total: 30 })
+  at('/finance?view=statements', <AdminFinancePage />, '/finance')
+  fireEvent.click(screen.getByRole('tab', { name: 'Payments' }))
+  const payments = within(screen.getByRole('region', { name: 'Commission records' }))
+  fireEvent.click(await payments.findByRole('button', { name: 'Next' }))
+  await waitFor(() => expect(finance.listCommissionTransactions).toHaveBeenLastCalledWith(2, dateFilterPreset(30), undefined, undefined, undefined))
+  fireEvent.click(payments.getByLabelText('Refunded'))
+  await waitFor(() => expect(finance.listCommissionTransactions).toHaveBeenLastCalledWith(1, dateFilterPreset(30), undefined, undefined, 'PAID_REFUNDED'))
+  fireEvent.click(screen.getByText('Export'))
+  expect(screen.getByRole('button', { name: 'Export PDF' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Export CSV' })).toBeInTheDocument()
 })

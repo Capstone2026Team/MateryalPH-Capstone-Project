@@ -12,7 +12,7 @@ void main() {
       // TODO
     });
 
-    // BuiltMap<String, JsonObject> meta
+    // ProductComplianceQueueEnvelopeMeta meta
     test('to test the property `meta`', () async {
       // TODO
     });

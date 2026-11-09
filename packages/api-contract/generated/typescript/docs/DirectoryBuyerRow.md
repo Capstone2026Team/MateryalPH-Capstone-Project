@@ -14,6 +14,8 @@ Name | Type
 `companyName` | string
 `joinedAt` | Date
 `lastActiveAt` | Date
+`rating` | [BuyerRatingSummary](BuyerRatingSummary.md)
+`avatarUrl` | string
 
 ## Example
 
@@ -30,6 +32,8 @@ const example = {
   "companyName": null,
   "joinedAt": null,
   "lastActiveAt": null,
+  "rating": null,
+  "avatarUrl": null,
 } satisfies DirectoryBuyerRow
 
 console.log(example)

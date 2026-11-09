@@ -8,6 +8,7 @@ All URIs are relative to */api/v1*
 | [**editBuyerReview**](BuyerReviewsApi.md#editbuyerreview) | **PATCH** /buyers/reviews/{reviewId} |  |
 | [**getBuyerOrderReviews**](BuyerReviewsApi.md#getbuyerorderreviews) | **GET** /buyers/orders/{orderId}/reviews |  |
 | [**getBuyerReviewPhoto**](BuyerReviewsApi.md#getbuyerreviewphoto) | **GET** /buyers/reviews/{reviewId}/media/{mediaId}/content |  |
+| [**listBuyerReceivedRatings**](BuyerReviewsApi.md#listbuyerreceivedratings) | **GET** /buyers/ratings |  |
 | [**listListingReviews**](BuyerReviewsApi.md#listlistingreviews) | **GET** /buyers/listings/{listingId}/reviews |  |
 | [**listStoreReviews**](BuyerReviewsApi.md#liststorereviews) | **GET** /buyers/stores/{vendorId}/reviews |  |
 | [**removeBuyerReviewMedia**](BuyerReviewsApi.md#removebuyerreviewmedia) | **DELETE** /buyers/reviews/{reviewId}/media/{mediaId} |  |
@@ -331,6 +332,81 @@ example().catch(console.error);
 | **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 | **404** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 | **503** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+
+## listBuyerReceivedRatings
+
+> BuyerReceivedRatingsEnvelope listBuyerReceivedRatings(page)
+
+
+
+The signed-in Buyer\&#39;s received store ratings, newest first, with a server-calculated Contractor Community Score (CCS). Only that Buyer\&#39;s completed orders and revealed, non-moderated, non-disputed, non-excluded ratings appear. CCS and criterion averages use all eligible ratings in the last 90 days before pagination; numeric scores remain null below five eligible completed transactions. This read does not alter history.
+
+### Example
+
+```ts
+import {
+  Configuration,
+  BuyerReviewsApi,
+} from '@materyalph/api-client-ts';
+import type { ListBuyerReceivedRatingsRequest } from '@materyalph/api-client-ts';
+
+async function example() {
+  console.log("🚀 Testing @materyalph/api-client-ts SDK...");
+  const config = new Configuration({
+    // Configure HTTP bearer authorization: passportBearer
+    accessToken: "YOUR BEARER TOKEN",
+  });
+  const api = new BuyerReviewsApi(config);
+
+  const body = {
+    // number (optional)
+    page: 56,
+  } satisfies ListBuyerReceivedRatingsRequest;
+
+  try {
+    const data = await api.listBuyerReceivedRatings(body);
+    console.log(data);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// Run the test
+example().catch(console.error);
+```
+
+### Parameters
+
+
+| Name | Type | Description  | Notes |
+|------------- | ------------- | ------------- | -------------|
+| **page** | `number` |  | [Optional] [Defaults to `1`] |
+
+### Return type
+
+[**BuyerReceivedRatingsEnvelope**](BuyerReceivedRatingsEnvelope.md)
+
+### Authorization
+
+[passportBearer](../README.md#passportBearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: `application/json`
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+| **200** | The Buyer\&#39;s own ratings and eligibility-aware summary. |  -  |
+| **401** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **403** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **409** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
+| **422** | Safe structured error with X-Correlation-ID response header. |  * Retry-After - For authentication, credential, verification and provider-webhook rate limits (429), seconds until retry is allowed. Clients must not automatically retry mutations. Everyday Buyer, Vendor and Admin requests, including uploads, have no application request-rate limit. <br>  * X-RateLimit-Limit - Maximum requests in the applicable rate-limit window. <br>  * X-RateLimit-Remaining - Requests remaining in the applicable rate-limit window. <br>  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
 

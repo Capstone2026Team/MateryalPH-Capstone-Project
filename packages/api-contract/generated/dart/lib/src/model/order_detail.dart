@@ -20,6 +20,7 @@ import 'package:materyalph_api_client/src/model/order_timeline_event.dart';
 import 'package:materyalph_api_client/src/model/order_reservation.dart';
 import 'package:materyalph_api_client/src/model/auto_accept_outcome.dart';
 import 'package:materyalph_api_client/src/model/order_destination.dart';
+import 'package:materyalph_api_client/src/model/order_location_map.dart';
 import 'package:materyalph_api_client/src/model/order_fulfillment.dart';
 import 'package:materyalph_api_client/src/model/order_invoice_ref.dart';
 import 'package:materyalph_api_client/src/model/order_cancellation.dart';
@@ -67,6 +68,7 @@ part 'order_detail.g.dart';
 /// * [availableActions]
 /// * [payment]
 /// * [buyer]
+/// * [locationMap]
 /// * [autoAccept]
 /// * [reservations]
 /// * [permissions]
@@ -168,6 +170,9 @@ abstract class OrderDetail implements Built<OrderDetail, OrderDetailBuilder> {
 
   @BuiltValueField(wireName: r'buyer')
   OrderBuyerRef? get buyer;
+
+  @BuiltValueField(wireName: r'location_map')
+  OrderLocationMap? get locationMap;
 
   @BuiltValueField(wireName: r'auto_accept')
   AutoAcceptOutcome? get autoAccept;
@@ -372,6 +377,13 @@ class _$OrderDetailSerializer implements PrimitiveSerializer<OrderDetail> {
       yield serializers.serialize(
         object.buyer,
         specifiedType: const FullType(OrderBuyerRef),
+      );
+    }
+    if (object.locationMap != null) {
+      yield r'location_map';
+      yield serializers.serialize(
+        object.locationMap,
+        specifiedType: const FullType(OrderLocationMap),
       );
     }
     if (object.autoAccept != null) {
@@ -682,6 +694,14 @@ class _$OrderDetailSerializer implements PrimitiveSerializer<OrderDetail> {
           ) as OrderBuyerRef?;
           if (valueDes == null) continue;
           result.buyer.replace(valueDes);
+          break;
+        case r'location_map':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(OrderLocationMap),
+          ) as OrderLocationMap?;
+          if (valueDes == null) continue;
+          result.locationMap.replace(valueDes);
           break;
         case r'auto_accept':
           final valueDes = serializers.deserialize(

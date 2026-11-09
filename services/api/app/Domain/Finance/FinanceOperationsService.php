@@ -61,12 +61,12 @@ final class FinanceOperationsService
             'period' => ['from' => $from, 'to' => $to],
             // Marketplace money belongs to Vendors and Buyers. It is shown beside platform figures and never added to them.
             'commerce' => [
-                $item('gross_gmv', 'Gross merchandise value', $flow['gross_gmv'], 'Commercial value of every order once confirmed, by confirmation date, before cancellations and refunds. Materials after discounts, delivery and NRPC counted once; excludes the Buyer processing fee.'),
+                $item('gross_gmv', 'Gross sales', $flow['gross_gmv'], 'Commercial value of every order once confirmed, by confirmation date, before cancellations and refunds. Materials after discounts, delivery and NRPC counted once; excludes the E-wallet transaction fee.'),
                 $item('cancelled_gmv', 'Cancelled order value', $flow['cancelled_gmv'], 'Commercial value of confirmed orders that were later cancelled.'),
-                $item('refunded_gmv', 'Refunded order value', $flow['refunded_gmv'], 'Confirmed dispute and other non-cancellation refunds of commercial value on orders that were not cancelled, excluding refunded Buyer processing fees.'),
-                $item('net_gmv', 'Net merchandise value', $flow['gross_gmv'] - $flow['cancelled_gmv'] - $flow['refunded_gmv'], 'Gross merchandise value less cancelled and refunded order value.'),
-                $item('online_payments', 'Verified online payments', $flow['online_payments'], 'Buyer payments verified by Xendit, by payment date, including the Buyer processing fee. They settle to each Vendor’s own Xendit account. Late captures are excluded.'),
-                $item('buyer_processing_fees', 'Buyer processing fees', $flow['buyer_processing_fees'], 'Part of verified online payments: the channel fee charged to the Buyer to cover the payment provider. Not platform revenue.'),
+                $item('refunded_gmv', 'Refunded order value', $flow['refunded_gmv'], 'Confirmed dispute and other non-cancellation refunds of commercial value on orders that were not cancelled, excluding refunded E-wallet transaction fees.'),
+                $item('net_gmv', 'Net sales', $flow['gross_gmv'] - $flow['cancelled_gmv'] - $flow['refunded_gmv'], 'Gross merchandise value less cancelled and refunded order value.'),
+                $item('online_payments', 'Verified online payments', $flow['online_payments'], 'Buyer payments verified by Xendit, by payment date, including the E-wallet transaction fee. They settle to each Vendor’s own Xendit account. Late captures are excluded.'),
+                $item('buyer_processing_fees', 'E-wallet transaction fees', $flow['buyer_processing_fees'], 'Part of verified online payments: the channel fee charged to the Buyer to cover the payment provider. Not platform revenue.'),
                 $item('cash_on_delivery', 'Cash on Delivery collected', $flow['cash_on_delivery'], 'Cash the Vendor recorded as received at delivery, by record date.'),
                 $item('in_store', 'In-Store payments collected', $flow['in_store'], 'Cash the Vendor recorded as received at the store, by record date.'),
                 $item('buyer_payments', 'Buyer payments received', $buyerPayments, 'Verified online payments plus recorded Cash on Delivery and In-Store cash. Received by Vendors, never held by the platform.'),
@@ -80,13 +80,14 @@ final class FinanceOperationsService
             ],
             'payment_methods' => PlatformMoneyFlow::paymentMethods($filters),
             'finance' => [
-                $item('assessed_cwt', 'Assessed CWT (simulated)', (int) $cwt->assessed, 'Posted FIN-05 withholding W. Never platform revenue and never subtracted from GMV.'),
+                $item('assessed_cwt', 'Creditable withholding tax', (int) $cwt->assessed, 'Posted FIN-05 withholding W. Never platform revenue and never subtracted from GMV.'),
                 $item('reported_deductions', 'Provider-reported deductions', (int) $cwt->reported, 'Imported simulated deductions reconciled against assessments; never a second deduction.'),
-                $item('earned_commission', 'Total commission earned', (int) $earned->earned, 'Commission at each order’s saved rate, earned at completion in this period before approved credits. Materials after discounts, excluding materials VAT.'),
+                $item('earned_commission', 'Platform commission charges before credits', (int) $earned->earned, 'Commission at each order’s saved rate, earned at completion in this period before approved credits. Materials after discounts, excluding materials VAT.'),
                 $item('fee_credits', 'Approved commission credits', (int) $earned->credited, 'Commission reversals approved in this period. Reduce earnings once, whether unpaid or owed back to the Vendor.'),
-                $item('net_commission', 'Net commission earned', (int) $earned->earned - (int) $earned->credited, 'Earnings less approved credits, using the same signed commission movements as Vendor Earnings.'),
+                $item('refundable_credits', 'Refundable credits on paid bills', max(0, (int) DB::table('financial_ledger_entries')->where('ledger', FinancialLedgerService::PLATFORM_FEE)->where('account_code', 'FEE_REFUND_PAYABLE')->selectRaw("COALESCE(SUM(CASE WHEN direction = 'CREDIT' THEN amount_centavos ELSE -amount_centavos END), 0) AS amount")->value('amount')), 'Current outstanding recorded fee-refund payable across all periods, after confirmed refund settlement. Not a cash refund already received.'),
+                $item('net_commission', 'Platform commission charges', (int) $earned->earned - (int) $earned->credited, 'Earnings less approved credits, using the same signed commission movements as Vendor Earnings.'),
                 $item('platform_revenue', 'Commission revenue, excluding VAT', (int) $revenue, 'Posted fee revenue after approved credits. Payment collection and refund settlement never recognize revenue again.'),
-                $item('processing_expense', 'Platform processing costs', $processing, 'Recorded charges on platform commission payments; Buyer processing fees are separate.'),
+                $item('processing_expense', 'Platform processing costs', $processing, 'Recorded charges on platform commission payments; E-wallet transaction fees are separate.'),
                 $item('net_platform_earnings', 'Net platform earnings', (int) $revenue - $processing, 'Posted commission revenue after credits and fee VAT, less recorded platform commission payment processing costs.'),
                 $item('fee_vat', 'Output VAT on fees', (int) $feeVat, 'VAT portion of earned fees, separate from revenue.'),
                 $item('billed', 'Issued commission bills', (int) $statements->billed, 'Approved statement charges less credits.'),
@@ -193,6 +194,7 @@ final class FinanceOperationsService
     public function remittances(Request $request, array $filters): array
     {
         $this->access->admin($request, 'finance.view');
+        $canApprove = app(RemittanceReconciliationService::class)->canApprove($request);
         $query = DB::table('remittance_assessments as r')->join('orders as o', 'o.id', '=', 'r.order_id')->join('vendor_organizations as v', 'v.id', '=', 'o.vendor_organization_id')
             ->when($filters['reconciliation_state'] ?? null, fn (Builder $q, string $state) => $q->where('r.reconciliation_state', $state))
             ->when($filters['calculation_state'] ?? null, fn (Builder $q, string $state) => $q->where('r.calculation_state', $state))
@@ -202,6 +204,7 @@ final class FinanceOperationsService
         $page = max(1, min(1000, (int) ($filters['page'] ?? 1)));
         $rows = $query->orderByRaw("CASE r.reconciliation_state WHEN 'RECONCILIATION_EXCEPTION' THEN 0 WHEN 'PENDING' THEN 1 ELSE 2 END")->orderByDesc('r.created_at')
             ->offset(($page - 1) * self::PER_PAGE)->limit(self::PER_PAGE)->get(['r.*', 'o.reference', 'v.store_name']);
+        $decisions = DB::table('remittance_reconciliation_decisions')->whereIn('remittance_assessment_id', $rows->pluck('id'))->get()->keyBy('remittance_assessment_id');
 
         return ['items' => $rows->map(static fn (object $row): array => ['id' => (string) $row->id, 'order_reference' => (string) $row->reference, 'vendor_name' => (string) $row->store_name,
             'environment' => (string) $row->environment, 'taxpayer_key_suffix' => substr((string) $row->taxpayer_key_hash, -6), 'scenario' => $row->withholding_scenario,
@@ -212,6 +215,11 @@ final class FinanceOperationsService
             'g_effective_before_centavos' => $row->g_effective_before_centavos === null ? null : (int) $row->g_effective_before_centavos,
             'g_effective_after_centavos' => $row->g_effective_after_centavos === null ? null : (int) $row->g_effective_after_centavos,
             'calculation_state' => (string) $row->calculation_state, 'deduction_evidence_state' => (string) $row->deduction_evidence_state, 'reconciliation_state' => (string) $row->reconciliation_state,
+            'source_version' => RemittanceReconciliationService::version($row),
+            'can_approve_reconciliation' => $canApprove && RemittanceReconciliationService::candidate($row) && in_array($row->reconciliation_state, ['PENDING', 'RECONCILIATION_EXCEPTION'], true),
+            'reconciliation_method' => $decisions->get($row->id)?->method,
+            'reconciliation_actor_role' => $decisions->get($row->id)?->actor_role,
+            'reconciled_at' => $decisions->has($row->id) ? CarbonImmutable::parse((string) $decisions->get($row->id)->created_at)->toIso8601String() : null,
             'review_item_id' => DB::table('finance_review_items')->where('source_id', $row->id)->where('state', 'OPEN')->value('id'), 'reason' => (string) $row->assessment_reason,
             'created_at' => CarbonImmutable::parse((string) $row->created_at)->toIso8601String()])->all(),
             'meta' => ['page' => $page, 'per_page' => self::PER_PAGE, 'total' => $total, 'has_more' => $page * self::PER_PAGE < $total, 'label' => 'DEMO — No real funds or BIR filing']];

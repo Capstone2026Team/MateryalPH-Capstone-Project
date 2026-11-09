@@ -1,3 +1,4 @@
+import '../design_system/components/async_state.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:materyalph_api_client/materyalph_api_client.dart';
@@ -172,7 +173,7 @@ class _BuyerDeleteAccountScreenState extends State<BuyerDeleteAccountScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (_busy)
-                  const LinearProgressIndicator(semanticsLabel: 'Loading'),
+                  const BuyerLoadingProgress(semanticsLabel: 'Loading'),
                 const SizedBox(height: 16),
                 Center(
                   child: Container(

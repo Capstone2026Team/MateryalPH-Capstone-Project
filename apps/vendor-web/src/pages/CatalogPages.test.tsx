@@ -6,6 +6,7 @@ import type { CatalogImportJob, CatalogListing, CatalogListingSummary, CatalogTa
 import * as catalog from '../lib/catalog-api'
 import * as onboarding from '../lib/onboarding-api'
 import * as productAnalytics from '../lib/product-analytics-api'
+import * as inventory from '../lib/inventory-api'
 import { autosaveTiming } from '../lib/listing-autosave'
 import { decodeQrFromImage } from '../lib/qr-decode'
 import { VendorCatalogImportPage, VendorCatalogPage, VendorListingEditorPage } from './CatalogPages'
@@ -13,6 +14,7 @@ import { VendorCatalogImportPage, VendorCatalogPage, VendorListingEditorPage } f
 vi.mock('../lib/qr-decode', () => ({ decodeQrFromImage: vi.fn() }))
 vi.mock('../lib/onboarding-api', async original => ({ ...await original<typeof import('../lib/onboarding-api')>(), getVendorOnboarding: vi.fn(), getVendorPrivateFileUrl: vi.fn() }))
 vi.mock('../lib/product-analytics-api', async original => ({ ...await original<typeof import('../lib/product-analytics-api')>(), getProductSummaries: vi.fn() }))
+vi.mock('../lib/inventory-api', async original => ({ ...await original<typeof import('../lib/inventory-api')>(), listFleet: vi.fn() }))
 vi.mock('../lib/catalog-api', async original => ({
   ...await original<typeof import('../lib/catalog-api')>(),
   getCatalogTaxonomy: vi.fn(), listListings: vi.fn(), getListing: vi.fn(), getMaterial: vi.fn(), saveVariants: vi.fn(), uploadComplianceEvidence: vi.fn(), lookupCompliance: vi.fn(),
@@ -59,12 +61,33 @@ function open(path: string) {
   return render(<MemoryRouter initialEntries={[path]}><Routes><Route path="/products" element={<VendorCatalogPage />} /><Route path="/products/import" element={<VendorCatalogImportPage />} /><Route path="/products/new" element={<VendorListingEditorPage />} /><Route path="/products/:listingId" element={<VendorListingEditorPage />} /><Route path="/dashboard" element={<h1>Dashboard</h1>} /></Routes></MemoryRouter>)
 }
 
+test('ready-mix variants require a mixer and link to listing-based vehicle setup', async () => {
+  const base = listing()
+  const mix = { id: 'rmc', code: 'READY_MIXED_CONCRETE', name: 'Ready-mixed concrete', regulated: false }
+  const cum = { ...unit, id: 'cum', code: 'CUM', name: 'Cubic meter', dimension: 'VOLUME' }
+  vi.mocked(catalog.getCatalogTaxonomy).mockResolvedValue({ ...taxonomy, categories: [{ id: 'rmc-category', code: 'READY_MIXED_CONCRETE', name: 'Ready-mixed concrete' }], units: [cum] })
+  vi.mocked(catalog.getListing).mockResolvedValue(listing({ material: mix, materialCategoryId: 'rmc-category', variants: [{ ...base.variants[0]!, unitId: cum.id, unitCode: 'CUM', weightKg: '2400', label: '3000 PSI', attributes: { compressive_strength_psi: '3000' } }] }))
+  vi.mocked(catalog.getMaterial).mockResolvedValue({ ...mix, categoryId: 'rmc-category', categoryName: mix.name, canonicalUnitId: cum.id, compatibleUnitIds: [cum.id], suggestedTagIds: [], regulatedRule: null })
+  const owner = await onboarding.getVendorOnboarding()
+  vi.mocked(onboarding.getVendorOnboarding).mockResolvedValue({ ...owner, permissions: [...owner.permissions, 'vehicles.manage'] })
+  vi.mocked(inventory.listFleet).mockResolvedValue({ items: [], meta: { scope: 'ORGANIZATION', permissions: { canManage: true } } })
+  open('/products/listing-1?step=1')
+  const setup = await screen.findByRole('link', { name: 'Configure mixer truck from this listing' })
+  expect(setup).toHaveAttribute('href', '/vehicles?listing=listing-1')
+  expect(setup).toHaveAttribute('target', '_blank')
+  expect(await screen.findByText(/A complete, available Concrete Mixer Truck/)).toBeVisible()
+  await waitFor(() => expect(inventory.listFleet).toHaveBeenCalledTimes(1))
+  window.dispatchEvent(new Event('focus'))
+  await waitFor(() => expect(inventory.listFleet).toHaveBeenCalledTimes(2))
+})
+
 test('catalog shows summary tiles, status chips and product cards, with a table view from the same data', async () => {
   const summary: CatalogListingSummary = { id: 'listing-1', displayName: 'Portland cement 40 kg', vendorSku: 'CEM-40', status: 'PENDING_COMPLIANCE', complianceStatus: 'NOT_SUBMITTED', regulated: true, lockVersion: 3, variantCount: 1, minPriceCentavos: 28550, maxPriceCentavos: 28550, publicAvailability: 'IN_STOCK', materialName: 'Portland cement', categoryName: 'Cement and Concrete', unitCode: 'BAG', availableQuantity: '480.0000', primaryImageUrl: null }
   vi.mocked(catalog.listListings).mockResolvedValue({ items: [summary], meta: { total: 1, lastPage: 1, statusCounts: { PENDING_COMPLIANCE: 1, ACTIVE: 4 }, activeOutOfStock: 2 } })
   open('/products')
   const cards = await screen.findByRole('list', { name: 'Store products' })
-  expect(within(cards).getByRole('link', { name: 'Portland cement 40 kg' })).toHaveAttribute('href', '/products/listing-1')
+  expect(within(cards).getByRole('link', { name: 'Portland cement 40 kg' })).toHaveAttribute('href', '/analytics/products/listing-1')
+  expect(within(cards).getByRole('link', { name: 'Edit Portland cement 40 kg' })).toHaveAttribute('href', '/products/listing-1')
   expect(within(cards).getByText('₱285.50')).toBeInTheDocument()
   expect(within(cards).getByText('/ bag', { exact: false })).toBeInTheDocument()
   expect(within(cards).getByText('Pending Compliance')).toBeInTheDocument()
@@ -79,7 +102,7 @@ test('catalog shows summary tiles, status chips and product cards, with a table 
   expect(within(table).getByText('₱285.50 / bag')).toBeInTheDocument()
 })
 
-test('My Products shows 30-day analytics for each published listing with shortcuts to Product analytics', async () => {
+test('My Products retains 30-day measures while the card opens Product analytics and Edit stays separate', async () => {
   const summary: CatalogListingSummary = { id: 'listing-1', displayName: 'Portland cement 40 kg', vendorSku: 'CEM-40', status: 'ACTIVE', complianceStatus: 'VERIFIED', regulated: true, lockVersion: 3, variantCount: 1, minPriceCentavos: 28550, maxPriceCentavos: 28550, publicAvailability: 'IN_STOCK', materialName: 'Portland cement', categoryName: 'Cement and Concrete', unitCode: 'BAG', availableQuantity: '480.0000', primaryImageUrl: null, deletable: false }
   const draft: CatalogListingSummary = { ...summary, id: 'listing-2', displayName: 'Unpublished draft', vendorSku: 'DRAFT-1', status: 'DRAFT', deletable: true }
   vi.mocked(catalog.listListings).mockResolvedValue({ items: [summary, draft], meta: { total: 2, lastPage: 1, statusCounts: { ACTIVE: 1, DRAFT: 1 }, activeOutOfStock: 0 } })
@@ -90,9 +113,10 @@ test('My Products shows 30-day analytics for each published listing with shortcu
   expect(await within(cards).findByText('42')).toBeInTheDocument()
   expect(productAnalytics.getProductSummaries).toHaveBeenCalledWith(['listing-1'], 30)
   expect(within(cards).getByText('20.00%')).toBeInTheDocument()
-  expect(within(cards).getAllByRole('link', { name: 'View product analytics' })).toHaveLength(1)
-  expect(within(cards).getByRole('link', { name: 'View product analytics' })).toHaveAttribute('href', '/performance/products/listing-1')
-  expect(screen.getByRole('link', { name: 'Product analytics' })).toHaveAttribute('href', '/performance?tab=products')
+  expect(within(cards).queryByRole('link', { name: 'View product analytics' })).not.toBeInTheDocument()
+  expect(within(cards).getByRole('link', { name: 'Portland cement 40 kg' })).toHaveAttribute('href', '/analytics/products/listing-1')
+  expect(within(cards).getByRole('link', { name: 'Edit Portland cement 40 kg' })).toHaveAttribute('href', '/products/listing-1')
+  expect(screen.getByRole('link', { name: 'Product analytics' })).toHaveAttribute('href', '/analytics/products')
   fireEvent.click(screen.getByRole('button', { name: 'Table' }))
   const table = await screen.findByRole('table', { name: 'Store products' })
   expect(within(table).getByText('Not published yet')).toBeInTheDocument()

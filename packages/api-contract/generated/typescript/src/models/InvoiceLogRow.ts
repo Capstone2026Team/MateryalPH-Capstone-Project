@@ -28,6 +28,10 @@ import {
  */
 export interface InvoiceLogRow {
     /**
+     * The order Buyer's display name on Vendor DUE rows, including orders without a Buyer invoice request.
+     */
+    buyerName?: string;
+    /**
      *
      */
     id?: string;
@@ -158,6 +162,7 @@ export function InvoiceLogRowFromJSONTyped(json: any, ignoreDiscriminator: boole
     }
     return {
 
+        'buyerName': json['buyer_name'] == null ? undefined : json['buyer_name'],
         'id': json['id'] == null ? undefined : json['id'],
         'orderId': json['order_id'] == null ? undefined : json['order_id'],
         'orderReference': json['order_reference'] == null ? undefined : json['order_reference'],
@@ -200,6 +205,7 @@ export function InvoiceLogRowToJSONTyped(value?: InvoiceLogRow | null, ignoreDis
 
     return {
 
+        'buyer_name': value['buyerName'],
         'id': value['id'],
         'order_id': value['orderId'],
         'order_reference': value['orderReference'],

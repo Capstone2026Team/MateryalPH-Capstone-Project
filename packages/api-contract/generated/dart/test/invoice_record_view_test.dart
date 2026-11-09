@@ -147,5 +147,30 @@ void main() {
       // TODO
     });
 
+    // String fileName
+    test('to test the property `fileName`', () async {
+      // TODO
+    });
+
+    // String contentType
+    test('to test the property `contentType`', () async {
+      // TODO
+    });
+
+    // int fileSizeBytes
+    test('to test the property `fileSizeBytes`', () async {
+      // TODO
+    });
+
+    // DateTime sentAt
+    test('to test the property `sentAt`', () async {
+      // TODO
+    });
+
+    // InvoiceOrderSummary orderSummary
+    test('to test the property `orderSummary`', () async {
+      // TODO
+    });
+
   });
 }

@@ -1,3 +1,4 @@
+import { AsyncLoading } from './async-state'
 import { useCallback, useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { ChevronRight, History, MessageSquareText, RefreshCw, Search, Send, ShieldCheck, UserRound } from 'lucide-react'
 import { SupportApi, ResponseError, parseDate, type SupportPortal, type SupportTicket, type SupportEntry, type SupportReceipt, type SupportCategory, type SupportUserType, type SupportStatus, type SupportReferenceType, type SupportUpdate, type SupportHandler } from '@materyalph/api-client-ts'
@@ -7,9 +8,10 @@ import { FilterPanel } from './filter-controls'
 import { StatusMessage } from './status-message'
 import { StatusBadge } from './portal-shell'
 import { EmptyState, FilterTabs } from './page-patterns'
-import { ALL_DATES, DateFilter, type DateFilterRange } from './date-filter'
+import { dateFilterPreset, DateFilter, type DateFilterRange } from './date-filter'
 import { PrivateEvidenceButton } from './private-evidence-button'
 import { createWebApiConfiguration, webRequestErrorMessage } from './web-api-session'
+import { QueueLoadingState } from './queue-workspace'
 
 export const SUPPORT_CATEGORIES: readonly SupportCategory[] = ['GENERAL_INQUIRY', 'TECHNICAL_ISSUE', 'ACCOUNT_CONCERN', 'VERIFICATION_ISSUE', 'PAYMENT_CONCERN', 'ORDER_CONCERN', 'COMPLAINT', 'FEEDBACK_SUGGESTION', 'OTHER']
 export const SUPPORT_STATUSES: readonly SupportStatus[] = ['OPEN', 'IN_PROGRESS', 'WAITING_FOR_USER', 'RESOLVED', 'CLOSED']
@@ -112,10 +114,11 @@ export function SupportRequestForm({ client, identity, onCreated }: { client: Su
 }
 
 export function SupportRequestList({ client, onOpen, admin = false, renderHeader }: { client: SupportClient; onOpen: (id: string) => void; admin?: boolean; renderHeader?: (refreshAction: ReactNode) => ReactNode }) {
-  const [filters, setFilters] = useState<SupportFilters>({})
+  const [range, setRange] = useState(() => dateFilterPreset(30))
+  const [filters, setFilters] = useState<SupportFilters>(() => ({ ...(admin ? { status: 'OPEN' } : {}), from: parseDate(range.from), to: parseDate(range.to) }))
   const [search, setSearch] = useState('')
-  const [range, setRange] = useState(ALL_DATES)
   const [tickets, setTickets] = useState<SupportTicket[]>([])
+  const [counts, setCounts] = useState<Record<string, number>>()
   const [cursor, setCursor] = useState<string | null>(null)
   const [busy, setBusy] = useState(true)
   const [error, setError] = useState('')
@@ -123,13 +126,14 @@ export function SupportRequestList({ client, onOpen, admin = false, renderHeader
   const load = useCallback(async (next?: string) => {
     const current = ++revision.current
     setBusy(true); setError('')
-    try { const response = await client.list(filters, next); if (current === revision.current) { setTickets(old => next ? [...old, ...response.data] : response.data); setCursor(response.meta.nextCursor) } }
-    catch (error) { if (current === revision.current) { if (accessLost(error)) setTickets([]); setError((await supportFailure(error)).message) } }
+    try { const response = await client.list(filters, next); if (current === revision.current) { setTickets(old => next ? [...old, ...response.data] : response.data); setCursor(response.meta.nextCursor); setCounts(response.meta.counts) } }
+    catch (error) { if (current === revision.current) { if (accessLost(error)) setTickets([]); setCounts(undefined); setError((await supportFailure(error)).message) } }
     finally { if (current === revision.current) setBusy(false) }
   }, [client, filters])
   useEffect(() => { void load(); return () => { revision.current++ } }, [load])
   const changeFilters = useCallback((changes: Partial<SupportFilters>) => {
     setFilters(current => ({ ...current, ...changes }))
+    setBusy(true)
     setTickets([])
     setCursor(null)
   }, [])
@@ -139,7 +143,7 @@ export function SupportRequestList({ client, onOpen, admin = false, renderHeader
     return () => clearTimeout(timer)
   }, [search, filters.q, changeFilters])
   function changeStatus(value: string) {
-    const status = value === 'ALL' ? undefined : value as SupportStatus
+    const status = value as SupportStatus
     if (status === filters.status) return
     changeFilters({ status })
   }
@@ -150,7 +154,7 @@ export function SupportRequestList({ client, onOpen, admin = false, renderHeader
   }
   const refreshAction = <Button variant="secondary" disabled={busy} onClick={() => void load()}><RefreshCw size={16} aria-hidden="true" />Refresh requests</Button>
   return <>{renderHeader?.(refreshAction)}<div className="grid min-w-0 gap-5">
-    {admin && <FilterTabs appearance="tabs" label="Support request status" value={filters.status ?? 'ALL'} onChange={changeStatus} chips={[{ value: 'ALL', label: 'All requests' }, ...SUPPORT_STATUSES.map(value => ({ value, label: supportLabel(value) }))]} />}
+    {admin && <FilterTabs appearance="chips" label="Support request status" value={filters.status ?? 'OPEN'} onChange={changeStatus} chips={SUPPORT_STATUSES.map(value => ({ value, label: supportLabel(value), ...(!error && typeof counts?.[value] === 'number' ? { count: counts[value] } : {}) }))} />}
     {admin && <FilterPanel label="Support request filters"><div className="col-span-full grid gap-4">
       <div className="grid items-end gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)]">
         <Field label="Search requests" name="support-search" startAdornment={<Search size={16} />} placeholder="Ticket, name, email or subject" value={search} maxLength={160} onChange={event => setSearch(event.target.value)} />
@@ -160,10 +164,11 @@ export function SupportRequestList({ client, onOpen, admin = false, renderHeader
       <div className="flex flex-wrap items-center gap-3 border-t border-border-default pt-4"><span className="text-sm text-text-secondary">Received</span><DateFilter title="Request received dates" value={range} onChange={changeDates} /></div>
     </div></FilterPanel>}
     {!renderHeader && <div>{refreshAction}</div>}
-    {error && <StatusMessage tone="error">{error}<Button variant="secondary" onClick={() => void load()}>Retry</Button></StatusMessage>}
-    {busy && <StatusMessage>Loading support requests…</StatusMessage>}
-    {!busy && !error && tickets.length === 0 && <EmptyState icon={false} message="No support requests found." />}
-    {tickets.length > 0 && <section aria-label="Support requests" className={admin ? 'min-w-0 overflow-hidden rounded-surface border border-border-default bg-surface-primary' : 'min-w-0'}>
+    <div aria-label="Support request results" aria-busy={busy} className="min-w-0 min-h-[220px]">
+    {error ? <StatusMessage tone="error">{error}<Button variant="secondary" onClick={() => void load()}>Retry</Button></StatusMessage>
+      : busy && tickets.length === 0 ? <QueueLoadingState label="Loading support requests…" />
+      : tickets.length === 0 ? <EmptyState icon={false} message="No support requests found." />
+      : <section aria-label="Support requests" className={admin ? 'min-w-0 overflow-hidden mp-card' : 'min-w-0'}>
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-default px-5 py-4">
         <h2 className="flex items-center gap-2 text-base font-semibold"><MessageSquareText size={18} aria-hidden="true" />Requests <span className="font-normal text-text-secondary">({tickets.length}{cursor ? '+' : ''})</span></h2>
         <p className="text-xs text-text-secondary">Newest first</p>
@@ -179,7 +184,8 @@ export function SupportRequestList({ client, onOpen, admin = false, renderHeader
         </button>
       </li>)}</ul>
     </section>}
-    {cursor && <Button variant="secondary" disabled={busy} onClick={() => void load(cursor)}>Load more requests</Button>}
+    {cursor && !error && <Button variant="secondary" disabled={busy} onClick={() => void load(cursor)}>Load more requests</Button>}
+    </div>
   </div></>
 }
 
@@ -224,10 +230,10 @@ export function SupportConversation({ client, ticketId, admin = false, navigatio
   const Heading = admin ? 'h1' : 'h2'
   return <div className="grid min-w-0 gap-5">
     <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">{navigation}<Button className="ml-auto" variant="secondary" disabled={busy || sending} onClick={() => void load()}><RefreshCw size={16} aria-hidden="true" />Refresh conversation</Button></div>
-    {busy && <StatusMessage>Loading support conversation…</StatusMessage>}
+    {busy && <AsyncLoading compact label="Loading support conversation…" />}
     {error && <StatusMessage tone="error">{error}</StatusMessage>}{success && <StatusMessage tone="success">{success}</StatusMessage>}
     {ticket && <>
-      <header className={`grid min-w-0 gap-5 ${admin ? 'rounded-surface border border-border-default bg-surface-primary p-5 sm:p-6' : 'border-b border-border-default pb-5'}`}>
+      <header className={`grid min-w-0 gap-5 ${admin ? 'mp-card mp-card-padded' : 'border-b border-border-default pb-5'}`}>
         <div className="flex min-w-0 flex-wrap items-start justify-between gap-4">
           <div className="grid min-w-0 flex-1 gap-2"><p className="break-all font-mono text-xs font-semibold text-action-primary">{ticket.ticketNumber}</p><Heading className="break-words text-h1 tracking-tight text-text-strong">{ticket.subject}</Heading></div>
           <SupportStatusBadge status={ticket.status} />
@@ -240,7 +246,7 @@ export function SupportConversation({ client, ticketId, admin = false, navigatio
         </dl>
       </header>
       <div className={`grid min-w-0 items-start gap-5 ${admin ? 'xl:grid-cols-[minmax(0,1fr)_22rem]' : ''}`}>
-        <section aria-label="Support conversation" className={`min-w-0 ${admin ? 'overflow-hidden rounded-surface border border-border-default bg-surface-primary' : ''}`}>
+        <section aria-label="Support conversation" className={`min-w-0 ${admin ? 'overflow-hidden mp-card' : ''}`}>
           <div className="flex items-start gap-3 border-b border-border-default p-5">
             <MessageSquareText size={20} aria-hidden="true" className="mt-1 shrink-0 text-text-secondary" />
             <div><h2 className="text-lg font-semibold">Conversation</h2><p className="mt-1 text-sm text-text-secondary">Messages and request history, in chronological order.</p></div>
@@ -266,7 +272,7 @@ export function SupportConversation({ client, ticketId, admin = false, navigatio
             </form>}
           </div>
         </section>
-        {admin && <aside aria-label="Request details and management" className="grid min-w-0 rounded-surface border border-border-default bg-surface-primary">
+        {admin && <aside aria-label="Request details and management" className="grid min-w-0 mp-card">
           <section aria-label="Requester details" className="grid min-w-0 gap-4 border-b border-border-default p-5">
             <h2 className="flex items-center gap-2 text-base font-semibold"><UserRound size={18} aria-hidden="true" />Requester</h2>
             <dl className="grid min-w-0 gap-3 text-sm"><div><dt className="text-xs text-text-secondary">Name</dt><dd className="mt-1 break-words font-medium">{ticket.fullName}</dd></div><div><dt className="text-xs text-text-secondary">Email address</dt><dd className="mt-1 break-all">{ticket.email}</dd></div><div><dt className="text-xs text-text-secondary">User type</dt><dd className="mt-1">{supportLabel(ticket.userType)}</dd></div></dl>

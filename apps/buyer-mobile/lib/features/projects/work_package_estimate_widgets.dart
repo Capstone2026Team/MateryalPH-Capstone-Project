@@ -1,3 +1,4 @@
+import '../../design_system/components/async_state.dart';
 import 'package:materyalph_api_client/materyalph_api_client.dart' as api;
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -90,7 +91,7 @@ class WorkPackageEstimateSection extends StatelessWidget {
               else if (estimate == null)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 12),
-                  child: LinearProgressIndicator(),
+                  child: BuyerLoadingProgress(),
                 )
               else ...[
                 Semantics(
@@ -123,7 +124,7 @@ class WorkPackageEstimateSection extends StatelessWidget {
                 if (loading)
                   const Padding(
                     padding: EdgeInsets.only(top: 8),
-                    child: LinearProgressIndicator(),
+                    child: BuyerLoadingProgress(),
                   ),
                 const SizedBox(height: 12),
                 Text(

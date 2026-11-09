@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { type NotificationItem } from '@materyalph/api-client-ts'
+import { dateFilterPreset } from '@materyalph/web-ui'
 import { loadNotificationInbox, notificationFilters, notificationFilterSearch, notificationView, sameNotifications, withNotificationReads } from '../../../../packages/web-ui/src/notification-inbox-state'
 
 const item = (id: string, title = 'Account security update', readAt: string | null = null, category = 'SECURITY'): NotificationItem => ({ id, title, readAt, category, body: 'Synthetic retained notice.', mandatory: true, createdAt: '2026-10-09T00:00:00Z' })
@@ -17,16 +18,19 @@ describe('notification inbox state', () => {
     expect(notificationView(rows, { ...filters, from: '' }).visible.map(row => row.id)).toEqual(['3', '2', '1'])
     expect(notificationView(rows, { ...filters, to: '' }).visible.map(row => row.id)).toEqual(['4', '3', '2'])
     expect(notificationFilters(notificationFilterSearch('?tab=inbox&notice=fixture', filters))).toEqual(filters)
-    expect(notificationFilterSearch('?from=2026-10-09&to=2026-10-09&date_label=Today&tab=inbox', { type: '' })).toBe('tab=inbox')
+    const reset = notificationFilterSearch('?from=2026-10-09&to=2026-10-09&date_label=Today&tab=inbox', { type: '' })
+    expect(notificationFilters(reset)).toEqual({ type: '', from: dateFilterPreset(30).from, to: dateFilterPreset(30).to, dateLabel: 'Last 30 days' })
+    expect(new URLSearchParams(reset).get('tab')).toBe('inbox')
   })
   it('persists filters without dropping unrelated deep-link or tab parameters', () => {
     const search = notificationFilterSearch('?tab=inbox&notice=fixture', { type: 'TEAM' })
-    expect(notificationFilters(search)).toEqual({ type: 'TEAM' })
+    const dates = { from: dateFilterPreset(30).from, to: dateFilterPreset(30).to, dateLabel: 'Last 30 days' }
+    expect(notificationFilters(search)).toEqual({ type: 'TEAM', ...dates })
     expect(new URLSearchParams(search).get('notice')).toBe('fixture')
-    expect(notificationFilterSearch(search, { type: '' })).toBe('tab=inbox&notice=fixture')
+    expect(new URLSearchParams(notificationFilterSearch(search, { type: '' })).get('notice')).toBe('fixture')
     // Saved links from the removed Status filter are ignored and dropped.
-    for (const query of ['', '?status=unknown', '?status=all', '?status=unread', '?status=archived']) expect(notificationFilters(query)).toEqual({ type: '' })
-    expect(notificationFilterSearch('?tab=inbox&status=archived', { type: '' })).toBe('tab=inbox')
+    for (const query of ['', '?status=unknown', '?status=all', '?status=unread', '?status=archived']) expect(notificationFilters(query)).toEqual({ type: '', ...dates })
+    expect(new URLSearchParams(notificationFilterSearch('?tab=inbox&status=archived', { type: '' })).has('status')).toBe(false)
   })
   it('builds types dynamically from every notice and lists only unread notices', () => {
     const items = [item('4'), item('3', 'Team access changed', null, 'TEAM'), item('2', 'Team access changed', '2026-10-09T01:00:00Z', 'TEAM'), item('1', 'Finance notice', '2026-10-09T01:00:00Z', 'FINANCE_MANDATORY'), item('0', 'New notice type', null, 'NEW_NOTICE_TYPE')]
@@ -63,10 +67,11 @@ describe('notification inbox state', () => {
   })
   it('never lists already-read notices, so nothing unreadable-to-mark is shown', () => {
     const items = [item('2'), item('1', 'Account security update', '2026-10-08T01:00:00Z')]
-    expect(notificationView(items, notificationFilters('')).visible.map(value => value.id)).toEqual(['2'])
+    const filters = { type: '' } // This check concerns read state independently of today's default date range.
+    expect(notificationView(items, filters).visible.map(value => value.id)).toEqual(['2'])
     const read = withNotificationReads(items, new Set(['2']), '2026-10-09T01:00:00Z')
-    expect(notificationView(read, notificationFilters('')).visible).toEqual([])
-    expect(notificationView(read, notificationFilters('')).unread).toEqual([])
+    expect(notificationView(read, filters).visible).toEqual([])
+    expect(notificationView(read, filters).unread).toEqual([])
   })
   it('loads all cursor pages including empty revoked pages before replacing the inbox', async () => {
     const listNotifications = vi.fn().mockResolvedValueOnce({ data: [item('4')], meta: { next_cursor: '3' }, errors: [] })

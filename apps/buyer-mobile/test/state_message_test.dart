@@ -43,41 +43,46 @@ void main() {
     }
   });
 
-  testWidgets('each state kind shows its illustration from the set', (
-    tester,
-  ) async {
-    const expected = {
-      StateKind.empty: 'assets/states/no-results.png',
-      StateKind.offline: 'assets/states/no-connection.png',
-      StateKind.needsLocation: 'assets/states/location.png',
-      StateKind.error: null,
-      StateKind.forbidden: null,
-    };
-    for (final entry in expected.entries) {
+  testWidgets(
+    'empty states use artwork and request failures use compact icons',
+    (tester) async {
+      const expected = {
+        StateKind.empty: 'assets/states/no-results.png',
+        StateKind.offline: null,
+        StateKind.needsLocation: 'assets/states/location.png',
+        StateKind.error: null,
+        StateKind.forbidden: null,
+      };
+      for (final entry in expected.entries) {
+        await tester.pumpWidget(
+          _host(
+            Scaffold(
+              body: StateMessage(
+                kind: entry.key,
+                title: 'Title',
+                message: 'Why',
+              ),
+            ),
+          ),
+        );
+        expect(_artwork(tester), entry.value, reason: entry.key.name);
+      }
+
       await tester.pumpWidget(
         _host(
-          Scaffold(
-            body: StateMessage(kind: entry.key, title: 'Title', message: 'Why'),
+          const Scaffold(
+            body: StateMessage(
+              kind: StateKind.empty,
+              artwork: StateArtwork.cart,
+              title: 'Your cart is empty',
+              message: 'Add materials.',
+            ),
           ),
         ),
       );
-      expect(_artwork(tester), entry.value, reason: entry.key.name);
-    }
-
-    await tester.pumpWidget(
-      _host(
-        const Scaffold(
-          body: StateMessage(
-            kind: StateKind.empty,
-            artwork: StateArtwork.cart,
-            title: 'Your cart is empty',
-            message: 'Add materials.',
-          ),
-        ),
-      ),
-    );
-    expect(_artwork(tester), 'assets/states/cart.png');
-  });
+      expect(_artwork(tester), 'assets/states/cart.png');
+    },
+  );
 
   for (final scale in [1.0, 2.0]) {
     testWidgets(
