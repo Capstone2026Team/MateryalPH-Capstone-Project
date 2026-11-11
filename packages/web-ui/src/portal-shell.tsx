@@ -32,7 +32,11 @@ export function PortalShell({
   onNavigate,
   apiBasePath,
   onSignOut,
+  tutorialNavigationOpen = false,
+  tutorialAction,
 }: {
+  tutorialAction?: ReactNode
+  tutorialNavigationOpen?: boolean
   apiBasePath?: string
   onSignOut?: () => Promise<void>
   portalLabel: string
@@ -55,6 +59,11 @@ export function PortalShell({
   const isAdmin = portalLabel.startsWith('ADMIN')
   const sidebarPreferenceKey = `materyalph:${isAdmin ? 'admin' : 'vendor'}:sidebar-collapsed`
   const [navigationOpen, setNavigationOpen] = useState(false)
+  useEffect(() => {
+    if (!tutorialNavigationOpen) return
+    setNavigationOpen(!window.matchMedia?.('(min-width: 1024px)').matches)
+    return () => setNavigationOpen(false)
+  }, [tutorialNavigationOpen])
   const [collapsed, setCollapsed] = useState(() => {
     try { return window.sessionStorage.getItem(sidebarPreferenceKey) === 'true' } catch { return false }
   })
@@ -84,10 +93,10 @@ export function PortalShell({
   useEffect(() => {
     const desktop = window.matchMedia?.('(min-width: 1024px)')
     if (!desktop) return
-    const closeDrawer = () => { setNavigationOpen(false); setTooltip(null) }
+    const closeDrawer = () => { setNavigationOpen(tutorialNavigationOpen && !desktop.matches); setTooltip(null) }
     desktop.addEventListener('change', closeDrawer)
     return () => desktop.removeEventListener('change', closeDrawer)
-  }, [])
+  }, [tutorialNavigationOpen])
 
   function follow(event: MouseEvent<HTMLAnchorElement>, href: string) {
     setNavigationOpen(false)
@@ -127,7 +136,7 @@ export function PortalShell({
                   const count = !item.disabled && typeof item.updateCount === 'number' && Number.isSafeInteger(item.updateCount) && item.updateCount > 0 ? item.updateCount : 0
                   const label = count > 0 ? `${item.label}, ${count} ${item.updateCountLabel ?? 'unread update'}${count === 1 ? '' : 's'}` : item.label
                   const content = <><span className="portal-nav-icon" aria-hidden="true">{item.icon ?? <Circle />}</span><span className="portal-nav-text">{item.label}</span><CountBadge count={count} className="portal-nav-badge" /></>
-                  const hints = { onMouseEnter: (event: MouseEvent<HTMLElement>) => showTooltip(event.currentTarget, label), onMouseLeave: () => setTooltip(null), onBlur: () => setTooltip(null) }
+                  const hints = { 'data-tour': `nav:${item.href}`, onMouseEnter: (event: MouseEvent<HTMLElement>) => showTooltip(event.currentTarget, label), onMouseLeave: () => setTooltip(null), onBlur: () => setTooltip(null) }
                   const rowClass = item.child ? 'portal-nav-row is-child' : 'portal-nav-row'
                   return item.disabled
                     ? <span key={item.href} role="link" tabIndex={0} aria-label={`${item.label}, unavailable`} aria-disabled="true" className={rowClass} {...hints}>{content}</span>
@@ -160,6 +169,7 @@ export function PortalShell({
             {dateLabel && <p className="text-xs text-text-secondary" aria-label="System date">{dateLabel}</p>}
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            {tutorialAction}
             <a className="relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-control text-text-secondary hover:bg-surface-canvas hover:text-text-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring" href="/notifications" aria-label={notificationLabel} title={notificationLabel} aria-current={activeHref === '/notifications' ? 'page' : undefined} onClick={event => follow(event, '/notifications')}>
               <Bell size={20} aria-hidden="true" />
               <CountBadge count={unreadNotifications} className="absolute right-0 top-0" />

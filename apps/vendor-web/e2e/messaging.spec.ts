@@ -29,7 +29,8 @@ test('quotation history and public handler identity remain readable across scree
     else if (path.includes('/conversations/conversation-1')) data = detail
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data, meta: {}, errors: [] }) })
   })
-  await page.goto('/messages?conversation=conversation-1')
+  await page.goto('/messages')
+  await expect(page).toHaveURL(/conversation=conversation-1/)
   await expect(page.getByText('Handled by', { exact: true })).toBeVisible()
   await expect(page.getByText('Alex Cruz', { exact: true })).toBeVisible()
   const inbox = page.getByRole('complementary', { name: 'Conversation inbox' })

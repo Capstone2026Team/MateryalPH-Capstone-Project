@@ -20,6 +20,7 @@ import { storeName } from '../lib/catalog-access'
 import { useOnboardingSnapshot } from '../lib/vendor-status'
 import { ErrorState, LoadingState, PageHeader, VendorShell } from './PhaseThreeVendorPages'
 import { dateRangeFromParams, dateRangePatch } from '../lib/date-filters'
+import { CommissionPaymentSummary } from '@materyalph/web-ui'
 
 type Snapshot = NonNullable<ReturnType<typeof useOnboardingSnapshot>['snapshot']>
 
@@ -185,19 +186,21 @@ export function VendorCommissionPage() {
 const COMMISSION_BILLING_HELP = [
   { title: 'Not yet billed', description: 'Commission from completed orders that has not yet been added to a monthly bill. Approved fee reductions are already deducted. Estimates from unfinished orders are excluded.' },
   { title: 'Draft bills awaiting issue', description: 'Commission bills that have been prepared but have not yet been issued. They appear in Unpaid statements after issue while an amount remains due.' },
-  { title: 'Approved commission credits', description: 'Approved reductions to commission already charged, such as adjustments for returned materials. A credit reduces your commission fee. Any refund of a commission payment is recorded separately under Confirmed fee refunds.' },
-  { title: 'Payments collected', description: 'Confirmed payments from your store applied to commission statements, before fee refunds. Buyer payments for orders are excluded.' },
-  { title: 'Confirmed fee refunds', description: 'Completed refunds of commission payments made by your store. Pending or failed refunds are excluded. This amount is shown as a deduction from Payments collected.' },
-  { title: 'Net collected payments', description: 'Payments collected − confirmed fee refunds = net collected payments. The amount of your commission payments that remains collected after completed fee refunds.' },
+  { title: 'Approved commission credits', description: 'Approved reductions to commission already charged, such as adjustments for returned materials. A credit reduces your commission fee. Any cash refund is recorded separately under Completed refunds in the payment panels.' },
+  { title: 'Unpaid statements', description: 'All issued bills still due, including earlier months and years. These balances carry forward when the payment totals reset.' },
+  { title: 'Overdue', description: 'The part of unpaid statements past its due date. It is already included in Unpaid statements, not an extra charge.' },
+  { title: 'Estimated commission', description: 'Accepted orders awaiting completion. These are estimates, not paid commission, and do not enter the annual or monthly payment totals.' },
 ]
 
 function CommissionMonitoring({ onSnapshotSaved }: { onSnapshotSaved: (snapshot: Snapshot) => void }) {
   const [page, setPage] = useState(1)
   const [statementRefresh, setStatementRefresh] = useState(0)
   const [termsOpen, setTermsOpen] = useState(false)
+  const [paymentHistoryOpen, setPaymentHistoryOpen] = useState(false)
   const result = useLoader(() => getCommissionMonitoring(page), String(page))
   const data = result.data?.monitoring
-  useCommissionPolicyClock(data?.nextPolicy?.effectiveFrom, result.reload)
+  const refreshAt = [data?.nextPolicy?.effectiveFrom, data?.monthlyPayments.resetsAt].filter((date): date is Date => date != null).sort((a, b) => a.valueOf() - b.valueOf())[0]
+  useCommissionPolicyClock(refreshAt, result.reload)
   const total = data?.summary
   return <div className="mp-commission-monitoring grid min-w-0 gap-4">
     <PageHeader compact eyebrow="Finance" title="Commission monitoring" description="Review commission charges, monthly bills and payments." actions={<Button variant="outline" onClick={() => { result.reload(); setStatementRefresh(value => value + 1) }}><RefreshCw size={16} aria-hidden="true" />Refresh</Button>} />
@@ -207,12 +210,12 @@ function CommissionMonitoring({ onSnapshotSaved }: { onSnapshotSaved: (snapshot:
       <CommissionRateSummary rateLabel={data.currentPolicy?.rateLabel} effectiveFrom={data.currentPolicy?.effectiveFrom} nextRateLabel={data.nextPolicy?.rateLabel} nextEffectiveFrom={data.nextPolicy?.effectiveFrom}
         actions={<Button variant="outline" aria-haspopup="dialog" onClick={() => setTermsOpen(true)}>Review Commission Terms</Button>} />
       <div className="mp-commission-panels">
-      <div className="mp-commission-summary"><AnalyticsSummary density="compact" title="Commission overview" context="All-time recorded fees" featured={{ label: 'Platform commission charges', value: formatPesoCentavos(total.netEarnedCentavos), hint: 'Completed orders less approved credits' }} metrics={[
-        { label: 'Estimated commission', value: formatPesoCentavos(total.estimatedCentavos), hint: 'Accepted orders awaiting completion' },
-        { label: 'Unpaid statements', value: formatPesoCentavos(total.outstandingCentavos), hint: 'Issued bills still due' },
-        { label: 'Overdue', value: <span className={total.overdueCentavos > 0 ? 'text-action-primary' : undefined}>{formatPesoCentavos(total.overdueCentavos)}</span>, hint: 'Included in unpaid statements' },
-      ]} /></div>
-      <DashboardPanel density="compact" title="Billing and payments" description="Commission is billed monthly. Estimates become charges when orders complete."
+      <CommissionPaymentSummary title="Annual total commission payment" annual period={data.annualPayments}
+        action={<Button variant="outline" aria-haspopup="dialog" onClick={() => setPaymentHistoryOpen(true)}><History size={16} aria-hidden="true" />Annual history</Button>} />
+      <CommissionPaymentSummary title="Monthly commission payment" period={data.monthlyPayments} />
+      <CommissionStatementsPanel refreshToken={statementRefresh} />
+      </div>
+      <DashboardPanel density="compact" title="Current commission balances" description="All billing periods · unpaid amounts carry forward. Payment totals above reset; outstanding bills do not."
         calculation={<>{COMMISSION_BILLING_HELP.map(item => <section key={item.title}><h4 className="font-semibold text-text-strong">{item.title}</h4><p className="mt-1">{item.description}</p></section>)}</>}
         footer={<a className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-action-primary underline underline-offset-4" href="#commission-statements"><ReceiptText size={16} aria-hidden="true" />View and pay commission statements</a>}>
         <FinanceSummaryColumns>
@@ -221,22 +224,39 @@ function CommissionMonitoring({ onSnapshotSaved }: { onSnapshotSaved: (snapshot:
             { key: 'draft', label: 'Draft bills awaiting issue', amount: formatPesoCentavos(total.draftCentavos) },
             { key: 'credits', label: 'Approved commission credits', amount: formatPesoCentavos(total.creditedCentavos) },
           ]} />
-          <FinanceBreakdownPanel title="Payments" caption="Commission payments" rows={[
-            { key: 'collected', label: 'Payments collected', amount: formatPesoCentavos(total.collectedCentavos) },
-            { key: 'refunds', label: 'Confirmed fee refunds', amount: formatPesoCentavos(total.refundedCentavos === 0 ? 0 : -total.refundedCentavos) },
-            { key: 'net', label: 'Net collected payments', amount: formatPesoCentavos(total.netCollectedCentavos), total: true },
+          <FinanceBreakdownPanel title="Due amounts and estimates" caption="Current commission obligations" rows={[
+            { key: 'outstanding', label: 'Unpaid statements', amount: formatPesoCentavos(total.outstandingCentavos), total: true },
+            { key: 'overdue', label: 'Overdue (included above)', amount: formatPesoCentavos(total.overdueCentavos) },
+            { key: 'estimated', label: 'Estimated commission', amount: formatPesoCentavos(total.estimatedCentavos) },
           ]} />
         </FinanceSummaryColumns>
       </DashboardPanel>
-      <CommissionStatementsPanel refreshToken={statementRefresh} />
-      </div>
       <DashboardPanel density="compact" title="Commission by order" description="Materials value is after discounts, excluding VAT and delivery. Final commission = commission charged − approved fee reductions. Each order keeps its original rate."
         footer={(page > 1 || result.data?.hasMore) ? <Pagination page={page} hasMore={result.data?.hasMore ?? false} onChange={setPage} /> : undefined}>
         {data.assessments.length === 0 ? <p className="py-3 text-sm text-text-secondary">No commission assessments yet. An estimate appears when an order is accepted; the fee is charged at completion.</p> : <CommissionOrderTable rows={data.assessments} />}
       </DashboardPanel>
     </>}
     {termsOpen && <CommissionTermsDialog onClose={() => setTermsOpen(false)} onSaved={snapshot => { onSnapshotSaved(snapshot); result.reload() }} />}
+    {paymentHistoryOpen && <AnnualCommissionPaymentHistory onClose={() => setPaymentHistoryOpen(false)} />}
   </div>
+}
+
+function AnnualCommissionPaymentHistory({ onClose }: { onClose: () => void }) {
+  const [page, setPage] = useState(1)
+  const result = useLoader(() => getCommissionMonitoring(1, page), String(page))
+  const history = result.data?.monitoring.paymentHistory
+  return <FormDialog open size="compact" title="Annual total commission payment history" description="Completed calendar years, using Philippine time. Original payments and completed refunds are retained when a new year starts." onClose={onClose}
+    bodyClassName="mp-commission-history min-h-0 overflow-y-auto overscroll-contain px-5 py-4 sm:px-6"
+    footer={history && (page > 1 || history.hasMore) ? <Pagination page={page} hasMore={history.hasMore} onChange={setPage} /> : null}>
+    {result.error ? <ErrorState message={result.error} onRetry={result.reload} /> : !history ? <LoadingState label="Loading annual commission payment history…" /> : history.items.length === 0 ? <p className="py-3 text-sm text-text-secondary">No completed years with commission payments or refunds yet. This year will appear here when the new year starts.</p> :
+      <DenseLedgerTable compact responsive caption="Annual commission payment history" rows={history.items} rowKey={row => row.label} columns={[
+        { key: 'year', header: 'Year', cell: row => row.label },
+        { key: 'collected', header: 'Payments', className: 'tabular-nums', cell: row => formatPesoCentavos(row.collectedCentavos) },
+        { key: 'refunded', header: 'Refunds', className: 'tabular-nums', cell: row => formatPesoCentavos(-row.refundedCentavos || 0) },
+        { key: 'net', header: 'Net paid', className: 'tabular-nums font-semibold', cell: row => formatPesoCentavos(row.netCollectedCentavos) },
+      ]} />}
+    <p className="mt-3 text-xs leading-5 text-text-secondary">Payments − completed refunds = net paid commission. Refunds belong to the year they complete; they do not rewrite the original payment year.</p>
+  </FormDialog>
 }
 
 function StatementState({ state, overdue = false }: { state: string; overdue?: boolean }) {

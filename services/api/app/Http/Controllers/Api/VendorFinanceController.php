@@ -40,10 +40,10 @@ final class VendorFinanceController extends Controller
 
     public function commissions(Request $request, VendorCommissionService $commissions): JsonResponse
     {
-        $input = $request->validate(['page' => ['sometimes', 'integer', 'between:1,1000']]);
-        $result = $commissions->monitor($request, (int) ($input['page'] ?? 1));
+        $input = $request->validate(['page' => ['sometimes', 'integer', 'between:1,1000'], 'history_page' => ['sometimes', 'integer', 'between:1,1000']]);
+        $result = $commissions->monitor($request, (int) ($input['page'] ?? 1), (int) ($input['history_page'] ?? 1));
 
-        return ApiResponse::success($result['data'], $result['meta']);
+        return ApiResponse::success($result['data'], $result['meta'])->header('Cache-Control', 'private, no-store');
     }
 
     public function thresholdPayments(Request $request): JsonResponse

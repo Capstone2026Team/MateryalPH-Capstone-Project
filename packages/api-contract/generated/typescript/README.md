@@ -469,6 +469,8 @@ All URIs are relative to */api/v1*
 *SupportApi* | [**requestSupportAccessEmail**](docs/SupportApi.md#requestsupportaccessemail) | **POST** /support/guest/access-email |
 *SupportApi* | [**updateSupportTicket**](docs/SupportApi.md#updatesupportticket) | **PATCH** /support/{supportPortal}/tickets/{ticketId} |
 *SystemApi* | [**getApiHealth**](docs/SystemApi.md#getapihealth) | **GET** /health |
+*TutorialsApi* | [**acknowledgeTutorial**](docs/TutorialsApi.md#acknowledgetutorial) | **PUT** /{tutorialPortal}/account/tutorials/{tutorialKey} | Save completion or dismissal for the signed-in user
+*TutorialsApi* | [**getTutorialProgress**](docs/TutorialsApi.md#gettutorialprogress) | **GET** /{tutorialPortal}/account/tutorials | Read the signed-in user\&#39;s tutorial acknowledgments
 *VendorAutoAcceptApi* | [**configureAutoAcceptPolicy**](docs/VendorAutoAcceptApi.md#configureautoacceptpolicy) | **PUT** /vendor/auto-accept/policies/{variantId} |
 *VendorAutoAcceptApi* | [**getAutoAcceptPolicy**](docs/VendorAutoAcceptApi.md#getautoacceptpolicy) | **GET** /vendor/auto-accept/policies/{variantId} |
 *VendorAutoAcceptApi* | [**pauseAutoAcceptPolicy**](docs/VendorAutoAcceptApi.md#pauseautoacceptpolicy) | **POST** /vendor/auto-accept/policies/{variantId}/pause |
@@ -966,6 +968,8 @@ All URIs are relative to */api/v1*
 - [CheckoutSubmitRequest](docs/CheckoutSubmitRequest.md)
 - [CheckoutVendorRef](docs/CheckoutVendorRef.md)
 - [CommissionEmailSummary](docs/CommissionEmailSummary.md)
+- [CommissionPaymentHistory](docs/CommissionPaymentHistory.md)
+- [CommissionPaymentPeriod](docs/CommissionPaymentPeriod.md)
 - [CommissionPolicies](docs/CommissionPolicies.md)
 - [CommissionPoliciesEnvelope](docs/CommissionPoliciesEnvelope.md)
 - [CommissionPolicy](docs/CommissionPolicy.md)
@@ -1679,6 +1683,9 @@ All URIs are relative to */api/v1*
 - [TaxPackageInput](docs/TaxPackageInput.md)
 - [TaxPackageReview](docs/TaxPackageReview.md)
 - [ThresholdStatusEvent](docs/ThresholdStatusEvent.md)
+- [TutorialAcknowledgment](docs/TutorialAcknowledgment.md)
+- [TutorialProgress](docs/TutorialProgress.md)
+- [TutorialProgressEnvelope](docs/TutorialProgressEnvelope.md)
 - [UserIdentity](docs/UserIdentity.md)
 - [VehicleIssueRequest](docs/VehicleIssueRequest.md)
 - [VendorAccountDeletionBlockers](docs/VendorAccountDeletionBlockers.md)

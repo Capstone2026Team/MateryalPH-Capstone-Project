@@ -490,6 +490,9 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(CheckoutSubmitRequestPaymentMethodsEnum.serializer)
       ..add(CheckoutVendorRef.serializer)
       ..add(CommissionEmailSummary.serializer)
+      ..add(CommissionPaymentHistory.serializer)
+      ..add(CommissionPaymentHistoryPerPageEnum.serializer)
+      ..add(CommissionPaymentPeriod.serializer)
       ..add(CommissionPolicies.serializer)
       ..add(CommissionPoliciesEnvelope.serializer)
       ..add(CommissionPolicy.serializer)
@@ -1592,6 +1595,11 @@ Serializers _$serializers = (Serializers().toBuilder()
       ..add(ThresholdStatusEventActorTypeEnum.serializer)
       ..add(ThresholdStatusEventFromStatusEnum.serializer)
       ..add(ThresholdStatusEventToStatusEnum.serializer)
+      ..add(TutorialAcknowledgment.serializer)
+      ..add(TutorialAcknowledgmentStatusEnum.serializer)
+      ..add(TutorialProgress.serializer)
+      ..add(TutorialProgressEnvelope.serializer)
+      ..add(TutorialProgressStatusEnum.serializer)
       ..add(UserIdentity.serializer)
       ..add(VehicleIssueRequest.serializer)
       ..add(VehicleIssueRequestCategoryEnum.serializer)
@@ -2614,6 +2622,10 @@ Serializers _$serializers = (Serializers().toBuilder()
           const FullType(
               BuiltList, const [const FullType(PaymentMethodEligibility)]),
           () => ListBuilder<PaymentMethodEligibility>())
+      ..addBuilderFactory(
+          const FullType(
+              BuiltList, const [const FullType(CommissionPaymentPeriod)]),
+          () => ListBuilder<CommissionPaymentPeriod>())
       ..addBuilderFactory(
           const FullType(BuiltList, const [const FullType(CommissionPolicy)]),
           () => ListBuilder<CommissionPolicy>())
@@ -4069,6 +4081,18 @@ Serializers _$serializers = (Serializers().toBuilder()
           const FullType(
               BuiltList, const [const FullType(ThresholdStatusEvent)]),
           () => ListBuilder<ThresholdStatusEvent>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(TutorialProgress)]),
+          () => ListBuilder<TutorialProgress>())
+      ..addBuilderFactory(
+          const FullType(BuiltMap, const [
+            const FullType(String),
+            const FullType.nullable(JsonObject)
+          ]),
+          () => MapBuilder<String, JsonObject?>())
+      ..addBuilderFactory(
+          const FullType(BuiltList, const [const FullType(ApiError)]),
+          () => ListBuilder<ApiError>())
       ..addBuilderFactory(
           const FullType(
               BuiltList, const [const FullType(VendorAccountRetainedRecord)]),

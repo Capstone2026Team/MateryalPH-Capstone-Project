@@ -336,10 +336,11 @@ class VendorFinanceApi {
   }
 
   /// getVendorCommissionMonitoring
-  /// Owner-only all-time commission monitoring with current and next policy, estimated and earned fees, approved credits, unbilled fees, draft bills, issued outstanding and overdue debt, verified allocations and successful fee refunds. Assessments are paginated and retain their original basis and percentage. Cash and earnings are separate; no wallet balance is represented.
+  /// Owner-only commission monitoring with current calendar-year and calendar-month payment totals in Asia/Manila and independently paginated closed-year payment history. Verified statement allocations count at allocated_at; confirmed fee refunds count at completed_at in their own period, including refunds of earlier-year payments. Periods roll over at midnight without deleting financial records. All-time summary balances, current and next policies and paginated original-rate assessments remain separate. Unpaid debt carries forward; no wallet balance is represented.
   ///
   /// Parameters:
   /// * [page]
+  /// * [historyPage] - Independent page of completed calendar years with recorded commission-payment or refund activity.
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -351,6 +352,7 @@ class VendorFinanceApi {
   /// Throws [DioException] if API call or serialization fails
   Future<Response<VendorCommissionMonitoringEnvelope>> getVendorCommissionMonitoring({
     int? page = 1,
+    int? historyPage = 1,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -385,6 +387,7 @@ class VendorFinanceApi {
 
     final _queryParameters = <String, dynamic>{
       if (page != null) r'page': encodeQueryParameter(_serializers, page, const FullType(int)),
+      if (historyPage != null) r'history_page': encodeQueryParameter(_serializers, historyPage, const FullType(int)),
     };
 
     final _response = await _dio.request<Object>(

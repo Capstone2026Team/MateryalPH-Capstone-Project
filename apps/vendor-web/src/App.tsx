@@ -1,3 +1,4 @@
+import { VendorTutorialProvider } from './components/VendorTutorial'
 import { VendorContactPage, VendorSupportRequestsPage, VendorSupportTicketPage, GuestSupportAccessPage, GuestSupportTicketPage } from './pages/SupportPages'
 import { AcceptStaffInvitation } from './pages/AcceptStaffInvitation'
 import { BackNavigation, BotProtectionFields, Button, Field, GoogleButton, GoogleMark, googleButtonClassName, PasswordField, PhoneField, StatusMessage, PortalIdentityProvider, PortalResourceProvider, lazyPortalPage, PortalPageLoading, useCommissionPolicy } from '@materyalph/web-ui'
@@ -29,7 +30,6 @@ import { CommissionTermsPage } from './pages/CommissionTermsPage'
 
 const VendorNotificationsPage = lazyPortalPage(() => import('./pages/NotificationPages').then(module => ({ default: module.VendorNotificationsPage })))
 const VendorPlaceholderPage = lazyPortalPage(() => import('./pages/PhaseThreeVendorPages').then(module => ({ default: module.VendorPlaceholderPage })))
-const VendorCatalogImportPage = lazyPortalPage(() => import('./pages/CatalogPages').then(module => ({ default: module.VendorCatalogImportPage })))
 const VendorCatalogPage = lazyPortalPage(() => import('./pages/CatalogPages').then(module => ({ default: module.VendorCatalogPage })))
 const VendorListingEditorPage = lazyPortalPage(() => import('./pages/CatalogPages').then(module => ({ default: module.VendorListingEditorPage })))
 const VendorInventoryPage = lazyPortalPage(() => import('./pages/InventoryPages').then(module => ({ default: module.VendorInventoryPage })))
@@ -73,7 +73,7 @@ function App() {
         <Route path="/auth/mfa" element={<VendorMfaPage />} />
         <Route path="/auth/callback" element={<VendorAuthCallbackPage />} />
         <Route path="/entry" element={<VendorEntryPage />} />
-        <Route element={<PortalResourceProvider><PortalIdentityProvider portal="vendors" basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'}><Outlet /></PortalIdentityProvider></PortalResourceProvider>}>
+        <Route element={<PortalResourceProvider><PortalIdentityProvider portal="vendors" basePath={import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api/v1'}><VendorTutorialProvider><Outlet /></VendorTutorialProvider></PortalIdentityProvider></PortalResourceProvider>}>
           <Route path="/welcome" element={<VendorWelcomePage />} />
           <Route path="/preview/:module" element={<VendorPlaceholderPage />} />
           <Route path="/dashboard" element={<VendorDashboardPage />} />
@@ -81,6 +81,8 @@ function App() {
           <Route path="/onboarding/setup" element={<VendorSetupPage />} />
           <Route path="/team" element={<VendorTeamPage />} />
           <Route path="/settings" element={<VendorAccountPage />} />
+          <Route path="/support/requests" element={<VendorSupportRequestsPage />} />
+          <Route path="/support/:ticketId" element={<VendorSupportTicketPage />} />
           <Route path="/store-profile" element={<VendorStoreProfilePage />} />
           <Route path="/products" element={<VendorCatalogPage />} />
           <Route path="/products/new" element={<VendorListingEditorPage />} />
@@ -108,7 +110,7 @@ function App() {
           <Route path="/finance/transactions" element={<VendorTransactionHistoryPage />} />
           <Route path="/finance/statements/:statementId" element={<VendorStatementPage />} />
           <Route path="/finance/earnings" element={<VendorEarningsPage />} />
-          <Route path="/products/import" element={<VendorCatalogImportPage />} />
+          <Route path="/products/import" element={<Navigate to="/products" replace />} />
           <Route path="/products/:listingId" element={<VendorListingEditorPage />} />
         </Route>
         <Route path="/fees" element={<InfoPage title="Payments and fees"><FeesContent /></InfoPage>} />
@@ -116,8 +118,6 @@ function App() {
         <Route path="/opportunities" element={<InfoPage title="Marketplace opportunities"><OpportunitiesContent /></InfoPage>} />
         <Route path="/support" element={<VendorContactPage />} />
         <Route path="/contact" element={<VendorContactPage />} />
-        <Route path="/support/requests" element={<VendorSupportRequestsPage />} />
-        <Route path="/support/:ticketId" element={<VendorSupportTicketPage />} />
         <Route path="/contact/access" element={<GuestSupportAccessPage />} />
         <Route path="/contact/tickets/:ticketId" element={<GuestSupportTicketPage />} />
         <Route path="/legal/:document" element={<VendorLegalPage />} />

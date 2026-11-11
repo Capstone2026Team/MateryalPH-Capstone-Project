@@ -50,6 +50,7 @@ import 'package:materyalph_api_client/src/api/reporting_api.dart';
 import 'package:materyalph_api_client/src/api/stores_api.dart';
 import 'package:materyalph_api_client/src/api/support_api.dart';
 import 'package:materyalph_api_client/src/api/system_api.dart';
+import 'package:materyalph_api_client/src/api/tutorials_api.dart';
 import 'package:materyalph_api_client/src/api/vendor_auto_accept_api.dart';
 import 'package:materyalph_api_client/src/api/vendor_catalog_api.dart';
 import 'package:materyalph_api_client/src/api/vendor_dashboard_api.dart';
@@ -405,6 +406,12 @@ class MateryalphApiClient {
   /// by doing that all interceptors will not be executed
   SystemApi getSystemApi() {
     return SystemApi(dio, serializers);
+  }
+
+  /// Get TutorialsApi instance, base route and serializer can be overridden by a given but be careful,
+  /// by doing that all interceptors will not be executed
+  TutorialsApi getTutorialsApi() {
+    return TutorialsApi(dio, serializers);
   }
 
   /// Get VendorAutoAcceptApi instance, base route and serializer can be overridden by a given but be careful,

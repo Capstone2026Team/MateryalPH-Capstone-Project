@@ -1,0 +1,24 @@
+.vendor-tutorial-library { display: grid; gap: 14px; }
+[data-vendor-guide-target], [data-vendor-guide-target] > header, [data-vendor-guide-target] > h2, [data-vendor-guide-target] > h3 { scroll-margin-top: 88px; }
+.vendor-tutorial-search { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 12px; border: 1px solid var(--mp-color-border-default); border-radius: 8px; color: var(--mp-color-text-secondary); }
+.vendor-tutorial-search:focus-within { outline: 2px solid var(--mp-color-focus-ring); outline-offset: 2px; }
+.vendor-tutorial-search input { min-width: 0; width: 100%; min-height: 44px; background: transparent; color: var(--mp-color-text-strong); font-size: 14px; outline: none; }
+.vendor-tutorial-group h2 { margin: 16px 0 4px; color: var(--mp-color-text-secondary); font-size: 11px; line-height: 1.5; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
+.vendor-tutorial-topic { border-bottom: 1px solid var(--mp-color-border-default); }
+.vendor-tutorial-topic summary { display: flex; align-items: center; gap: 14px; min-height: 76px; padding: 12px 0; list-style: none; cursor: pointer; }
+.vendor-tutorial-topic summary::-webkit-details-marker { display: none; }
+.vendor-tutorial-topic summary:focus-visible, .vendor-tutorial-chapters button:focus-visible { outline: 2px solid var(--mp-color-focus-ring); outline-offset: 2px; border-radius: 4px; }
+.vendor-tutorial-topic-icon { display: inline-flex; flex: 0 0 auto; color: var(--mp-color-action-primary); }
+.vendor-tutorial-topic strong { display: block; font-size: 14px; font-weight: 600; color: var(--mp-color-text-strong); }
+.vendor-tutorial-topic small { display: block; margin-top: 4px; font-size: 12px; line-height: 1.5; color: var(--mp-color-text-secondary); }
+.vendor-tutorial-topic summary > svg { flex-shrink: 0; transition: transform 160ms ease-out; }
+.vendor-tutorial-topic[open] summary > svg { transform: rotate(180deg); }
+.vendor-tutorial-topic-body { display: grid; gap: 12px; padding: 0 0 18px 36px; animation: vendor-guide-reveal 160ms ease-out; }
+.vendor-tutorial-topic-body > p { font-size: 13px; line-height: 1.65; color: var(--mp-color-text-secondary); }
+.vendor-tutorial-topic-body > button { justify-self: start; }
+.vendor-tutorial-chapters { display: grid; border-left: 2px solid var(--mp-color-border-default); padding-left: 12px; }
+.vendor-tutorial-chapters button { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px; text-align: left; font-size: 13px; color: var(--mp-color-text-strong); }
+.vendor-tutorial-chapters button:hover { background: var(--mp-color-surface-canvas); }
+.vendor-tutorial-chapters button svg { flex-shrink: 0; color: var(--mp-color-action-primary); }
+@keyframes vendor-guide-reveal { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .vendor-tutorial-topic-body { animation: none; } .vendor-tutorial-topic summary > svg { transition: none; } }

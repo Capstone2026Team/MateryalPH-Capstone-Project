@@ -26,6 +26,18 @@ with tempfile.TemporaryDirectory(prefix='vps-compose-', dir=root / '.tmp') as te
     assert not parsed['services']['postgres'].get('ports')
     assert not parsed['services']['redis'].get('ports')
     assert parsed['services']['api']['environment']['RUN_QUEUE'] == 'false'
+    assert parsed['services']['api']['environment']['SCANNER_DRIVER'] == 'clamd'
+    assert parsed['services']['api']['environment']['CLAMAV_ADDRESS'] == 'tcp://scanner:3310'
+    assert parsed['services']['api']['depends_on']['scanner']['condition'] == 'service_healthy'
+    assert parsed['networks']['scanning']['internal'] is True
+    assert set(parsed['services']['scanner']['networks']) == {'scanning'}
+    assert not parsed['services']['scanner'].get('ports')
+    assert not parsed['services']['scanner'].get('env_file')
+    assert parsed['services']['scanner']['environment'] == {'TZ': 'UTC'}
+    assert parsed['services']['scanner-signatures']['environment'] == {'TZ': 'UTC'}
+    assert parsed['services']['scanner']['volumes'][0]['read_only'] is True
+    assert not parsed['services']['scanner-signatures']['volumes'][0].get('read_only', False)
+    assert parsed['services']['scanner']['healthcheck']['test'] == ['CMD', 'php', '/app/infrastructure/clamav-health.php']
     # `compose config` escapes dollars so its output can be re-used as Compose input.
     for role in ['api', 'reverb', 'backup']:
         actual = parsed['services'][role]['environment']['SYNTHETIC_SECRET']

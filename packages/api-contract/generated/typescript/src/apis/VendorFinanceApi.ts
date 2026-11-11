@@ -138,6 +138,10 @@ export interface GetVendorCommissionMonitoringRequest {
      *
      */
     page?: number;
+    /**
+     * Independent page of completed calendar years with recorded commission-payment or refund activity.
+     */
+    historyPage?: number;
 }
 
 export interface GetVendorEarningsRequest {
@@ -483,6 +487,10 @@ export class VendorFinanceApi extends runtime.BaseAPI {
             queryParameters['page'] = requestParameters['page'];
         }
 
+        if (requestParameters['historyPage'] != null) {
+            queryParameters['history_page'] = requestParameters['historyPage'];
+        }
+
         const headerParameters: runtime.HTTPHeaders = {};
 
         if (this.configuration && this.configuration.apiKey) {
@@ -501,7 +509,7 @@ export class VendorFinanceApi extends runtime.BaseAPI {
     }
 
     /**
-     * Owner-only all-time commission monitoring with current and next policy, estimated and earned fees, approved credits, unbilled fees, draft bills, issued outstanding and overdue debt, verified allocations and successful fee refunds. Assessments are paginated and retain their original basis and percentage. Cash and earnings are separate; no wallet balance is represented.
+     * Owner-only commission monitoring with current calendar-year and calendar-month payment totals in Asia/Manila and independently paginated closed-year payment history. Verified statement allocations count at allocated_at; confirmed fee refunds count at completed_at in their own period, including refunds of earlier-year payments. Periods roll over at midnight without deleting financial records. All-time summary balances, current and next policies and paginated original-rate assessments remain separate. Unpaid debt carries forward; no wallet balance is represented.
      */
     async getVendorCommissionMonitoringRaw(requestParameters: GetVendorCommissionMonitoringRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<VendorCommissionMonitoringEnvelope>> {
         const requestOptions = await this.getVendorCommissionMonitoringRequestOpts(requestParameters);
@@ -511,7 +519,7 @@ export class VendorFinanceApi extends runtime.BaseAPI {
     }
 
     /**
-     * Owner-only all-time commission monitoring with current and next policy, estimated and earned fees, approved credits, unbilled fees, draft bills, issued outstanding and overdue debt, verified allocations and successful fee refunds. Assessments are paginated and retain their original basis and percentage. Cash and earnings are separate; no wallet balance is represented.
+     * Owner-only commission monitoring with current calendar-year and calendar-month payment totals in Asia/Manila and independently paginated closed-year payment history. Verified statement allocations count at allocated_at; confirmed fee refunds count at completed_at in their own period, including refunds of earlier-year payments. Periods roll over at midnight without deleting financial records. All-time summary balances, current and next policies and paginated original-rate assessments remain separate. Unpaid debt carries forward; no wallet balance is represented.
      */
     async getVendorCommissionMonitoring(requestParameters: GetVendorCommissionMonitoringRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<VendorCommissionMonitoringEnvelope> {
         const response = await this.getVendorCommissionMonitoringRaw(requestParameters, initOverrides);

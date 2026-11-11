@@ -147,8 +147,8 @@ Sign in with a Buyer account from the staging database.
 Sign-in details were written to /workspace/services/api/storage/app/demo-vendor-credentials.json (git-ignored). Passwords and authenticator secrets are never printed.
 
 ```powershell
-#docker compose exec api php artisan migrate, 
-docker compose exec api php artisan migrate, 
+# Apply pending local schema changes before opening the portals.
+docker compose exec api php artisan migrate
 
 # which downloads photos for the new stores. Files that already exist are skipped.
 py tools/demo-assets/fetch_demo_photos.py

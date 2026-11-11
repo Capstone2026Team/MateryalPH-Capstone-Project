@@ -1,6 +1,11 @@
 import { createContext, useContext, forwardRef, useId, useState, type InputHTMLAttributes, type TextareaHTMLAttributes, type ReactNode } from 'react'
 
 export const FormErrors = createContext<Record<string, string>>({})
+const ControlScope = createContext('')
+export function FormControlScope({ prefix, children }: { prefix: string; children: ReactNode }) {
+  return <ControlScope.Provider value={prefix}>{children}</ControlScope.Provider>
+}
+export function useFormControlScope() { return useContext(ControlScope) }
 
 export interface FieldProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string
@@ -14,8 +19,9 @@ export const Field = forwardRef<HTMLInputElement, FieldProps>(
     const errors = useContext(FormErrors)
     error = error || errors[props.name ?? '']
     const generatedId = useId()
+    const scope = useFormControlScope()
     const [visible, setVisible] = useState(false)
-    const fieldId = id ?? props.name ?? generatedId
+    const fieldId = scope + (id ?? props.name ?? generatedId)
     const descriptionId = error ? `${fieldId}-error` : hint ? `${fieldId}-hint` : undefined
 
     return (

@@ -1,3 +1,4 @@
+import '../tutorial/tutorial_scope.dart';
 import '../../design_system/components/buyer_cart_button.dart';
 import 'dart:async';
 
@@ -324,6 +325,7 @@ class _MapHomeScreenState extends State<MapHomeScreen>
             children: [
               Expanded(
                 child: LocationSelector(
+                  key: BuyerTutorialScope.keyOf(context, 'map-origin'),
                   label: origin?.label ?? 'Choose a location',
                   detail: origin == null
                       ? null

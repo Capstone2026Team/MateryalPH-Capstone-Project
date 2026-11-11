@@ -31,13 +31,14 @@ function dateBounds(range: DateFilterRange) {
   return { ...(range.from ? { from: parseDate(range.from) } : {}), ...(range.to ? { to: parseDate(range.to) } : {}) }
 }
 
-export function VendorTeamActivity({ list, performance, listMembers, canManageManagers, explainError, watchUpdates }: {
+export function VendorTeamActivity({ list, performance, listMembers, canManageManagers, explainError, watchUpdates, persistDateSelection = true }: {
   list: (query: ActivityQuery) => Promise<VendorTeamActivityEnvelope>
   performance: (query: GetVendorTeamPerformanceRequest) => Promise<VendorTeamPerformanceEnvelope>
   listMembers: TeamMemberList
   canManageManagers: boolean
   explainError: (error: unknown) => Promise<string>
   watchUpdates: (refresh: () => void, onLive: (live: boolean) => void) => Promise<() => void>
+  persistDateSelection?: boolean
 }) {
   const members = useTeamMembers(listMembers, explainError)
   const [selection, setSelected] = useState<AccountMembership | null>(null)
@@ -61,6 +62,10 @@ export function VendorTeamActivity({ list, performance, listMembers, canManageMa
   const memberPage = members.query.page ?? 1
   const lastMemberPage = Number(visibleMembers?.meta.last_page ?? 1)
   const selected = blocked || members.blocked ? null : visibleMembers?.data.find(member => member.id === selection?.id) ?? selection
+  useEffect(() => {
+    // Use the authorized list's order once; refreshes and filters must not replace a user's choice.
+    if (!selection && visibleMembers?.data[0]) setSelected(visibleMembers.data[0])
+  }, [selection, visibleMembers])
   const [live, setLive] = useState(false)
   const updatesEnabled = !blocked && !members.blocked
   const refreshMembers = members.refresh
@@ -111,7 +116,7 @@ export function VendorTeamActivity({ list, performance, listMembers, canManageMa
   const profile = teamRoles.find(role => role.value === selected?.role)
   const title = selected?.name ?? 'Team member activity'
   const roleLabel = selected ? teamRoleLabel(selected.role) : ''
-  return <div className="team-tracking-workspace min-w-0 w-full">
+  return <div className="team-tracking-workspace min-w-0 w-full" data-tutorial-members-empty={!selected && !members.loading && !members.error && visibleMembers?.data.length === 0 && !blocked && !members.blocked} data-tutorial-member-selected={Boolean(selected)} data-tutorial-member-loading={members.loading || (!selection && Boolean(visibleMembers?.data.length))}>
     <h1 className="sr-only">Team Tracking</h1>
     <div className="team-tracking-layout grid min-w-0 grid-cols-1 bg-surface-primary lg:grid-cols-[256px_minmax(0,1fr)]">
       <aside aria-label="Select a team member" className="team-tracking-sidebar min-w-0 border-b border-border-default bg-surface-primary p-4 lg:border-b-0 lg:border-r">
@@ -136,7 +141,7 @@ export function VendorTeamActivity({ list, performance, listMembers, canManageMa
           {selected && view !== 'scope' && <div className="flex flex-wrap items-end justify-between gap-3">
             <div className="min-w-0"><h3 className="text-base font-semibold text-text-strong">{view === 'overview' ? `${roleLabel} statistics` : 'Activity history'}</h3>
               <p className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-text-secondary"><Clock3 size={14} aria-hidden="true" />{active.updatedAt ? `Updated ${teamDate(active.updatedAt)}` : 'Loading'} · Asia/Manila time</p></div>
-            <DateFilter title="Tracking period" value={range} disabled={active.loading} onChange={next => { setRange(next); setPage(1) }} />
+            <DateFilter persistSelection={persistDateSelection} title="Tracking period" value={range} disabled={active.loading} onChange={next => { setRange(next); setPage(1) }} />
           </div>}
           {selected && view !== 'scope' && active.error && <div className="space-y-3"><StatusMessage tone="error">{active.error}</StatusMessage><Button variant="secondary" onClick={() => void active.retry()}>Try again</Button></div>}
           {selected && view === 'overview' && (statistics.loading && !statistics.result ? <AsyncLoading compact label="Loading statistics…" />

@@ -4,6 +4,11 @@ import '../features/support/support_screens.dart';
 import '../design_system/components/count_badge.dart';
 import '../features/messaging/messaging_repository.dart';
 import 'dart:async';
+import '../features/tutorial/tutorial_repository.dart';
+import '../features/tutorial/tutorial_scope.dart';
+import '../features/tutorial/buyer_tutorial.dart';
+import '../design_system/components/guided_walkthrough.dart';
+import '../features/map_discovery/discovery_models.dart' show DiscoveryFailure;
 import '../features/notifications/notifications_repository.dart';
 import '../features/notifications/notification_settings_screen.dart';
 import '../features/notifications/notifications_screen.dart';
@@ -62,10 +67,12 @@ class BuyerHomeScreen extends StatefulWidget {
     this.deviceLocation = const GeolocatorDeviceLocationService(),
     this.mapBuilder = defaultSupplierMapBuilder,
     this.resultStore,
+    this.tutorialRepository,
   });
 
   /// Where completed map searches are kept between launches; the on-disk store when omitted.
   final DiscoveryResultStore? resultStore;
+  final TutorialRepository? tutorialRepository;
   final Future<void> Function() onSignOut;
   final AuthRepository? repository;
   final VoidCallback? onSessionEnded;
@@ -93,6 +100,245 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen>
     ChatDrafts.activate();
     _detachAuthExpiry = widget.repository?.attachSessionExpiry(_expireSession);
     WidgetsBinding.instance.addObserver(this);
+    if (_tutorialRepository != null) unawaited(_loadTutorial());
+  }
+
+  final Map<String, GlobalKey> _tutorialAnchors = {};
+  Map<String, String>? _tutorialProgress;
+  final Map<String, bool> _tutorialPending = {};
+  String? _tutorialError;
+  String? _tutorialHint;
+  bool _tutorialOffered = false;
+  bool _tutorialActive = false;
+  late final TutorialRepository? _tutorialRepository =
+      widget.tutorialRepository ??
+      (widget.repository == null
+          ? null
+          : ApiTutorialRepository(
+              widget.repository!.apiClient,
+              _expireSession,
+            ));
+  GlobalKey _tutorialAnchor(String key) => _tutorialAnchors.putIfAbsent(
+    key,
+    () => GlobalKey(debugLabel: 'tutorial-$key'),
+  );
+
+  Future<void> _loadTutorial() async {
+    try {
+      final progress = await _tutorialRepository!.load();
+      if (!mounted) return;
+      setState(() {
+        _tutorialProgress = {...progress, ...?_tutorialProgress};
+        _tutorialError = null;
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted ||
+            _tutorialOffered ||
+            progress.containsKey('overview') ||
+            ModalRoute.of(context)?.isCurrent != true) {
+          return;
+        }
+        _tutorialOffered = true;
+        unawaited(_startTutorial('overview'));
+      });
+    } catch (failure) {
+      if (mounted) {
+        setState(
+          () => _tutorialError = failure is DiscoveryFailure
+              ? failure.message
+              : 'Tutorial progress could not load. Retry in Help / tutorial.',
+        );
+      }
+    }
+  }
+
+  Future<void> _saveTutorial(String key, bool completed) async {
+    if (!mounted || _tutorialRepository == null) return;
+    setState(() {
+      _tutorialProgress = {
+        ...?_tutorialProgress,
+        key: completed ? 'COMPLETED' : _tutorialProgress?[key] ?? 'SKIPPED',
+      };
+      _tutorialHint = null;
+    });
+    try {
+      await _tutorialRepository.acknowledge(key, completed);
+      if (mounted) {
+        setState(() {
+          _tutorialPending.remove(key);
+          _tutorialError = _tutorialPending.isEmpty
+              ? null
+              : 'Some tutorial progress is still not saved. Retry below.';
+        });
+      }
+    } catch (failure) {
+      if (mounted) {
+        setState(() {
+          _tutorialPending[key] = completed;
+          _tutorialError =
+              'Tutorial progress could not be saved. ${failure is DiscoveryFailure ? failure.message : 'Check your connection and retry.'}';
+        });
+      }
+    }
+  }
+
+  Future<void> _startTutorial(String key) async {
+    if (_tutorialActive || !mounted) return;
+    _tutorialOffered = true;
+    final previous = _destination;
+    setState(() {
+      _tutorialActive = true;
+      _tutorialHint = null;
+    });
+    final completed = await showGuidedWalkthrough(
+      context,
+      steps: buyerTutorialSteps(key, _tutorialAnchor),
+      selectDestination: _select,
+    );
+    if (!mounted) return;
+    _select(previous);
+    setState(() => _tutorialActive = false);
+    await _saveTutorial(key, completed);
+  }
+
+  void _openTutorialHelp() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (sheetContext) => SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'Help / tutorial',
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Close help',
+                  onPressed: () => Navigator.pop(sheetContext),
+                  icon: const Icon(Icons.close),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Follow the highlights for a quick look around. Choose a feature or take the complete tour.',
+            ),
+            if (_tutorialError != null) ...[
+              const SizedBox(height: 16),
+              Text(_tutorialError!),
+              TextButton(
+                onPressed: () async {
+                  Navigator.pop(sheetContext);
+                  if (_tutorialPending.isEmpty) {
+                    await _loadTutorial();
+                  } else {
+                    for (final entry in Map.of(_tutorialPending).entries) {
+                      await _saveTutorial(entry.key, entry.value);
+                    }
+                  }
+                  if (mounted && !_tutorialActive) _openTutorialHelp();
+                },
+                child: const Text('Retry saving / loading progress'),
+              ),
+            ],
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                icon: const Icon(Icons.explore_outlined),
+                label: const Text('Take the complete tour'),
+                onPressed: () {
+                  Navigator.pop(sheetContext);
+                  unawaited(_startTutorial('overview'));
+                },
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Explore a feature',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            for (final topic in buyerTutorialTopics)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(topic.icon, color: BuyerTheme.action),
+                title: Text(topic.label),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  unawaited(_startTutorial(topic.key));
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _tutorialPrompt() {
+    final topic = buyerTutorialTopics
+        .where((topic) => topic.key == _tutorialHint)
+        .firstOrNull;
+    final show =
+        !_tutorialActive &&
+        topic != null &&
+        _tutorialProgress != null &&
+        !_tutorialProgress!.containsKey(topic.key);
+    if (!show && (_tutorialPending.isEmpty || _tutorialActive)) {
+      return const SizedBox.shrink();
+    }
+    return SafeArea(
+      bottom: false,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+        decoration: const BoxDecoration(
+          color: BuyerTheme.canvas,
+          border: Border(bottom: BorderSide(color: BuyerTheme.border)),
+        ),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.menu_book_outlined,
+              color: BuyerTheme.action,
+              size: 20,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                _tutorialPending.isNotEmpty
+                    ? 'Tutorial progress is not saved.'
+                    : topic!.label,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: _tutorialPending.isNotEmpty
+                  ? _openTutorialHelp
+                  : () => unawaited(_startTutorial(topic!.key)),
+              child: Text(_tutorialPending.isNotEmpty ? 'Retry' : 'Show me'),
+            ),
+            if (_tutorialPending.isEmpty)
+              IconButton(
+                tooltip: 'Dismiss guidance',
+                onPressed: () => unawaited(_saveTutorial(topic!.key, false)),
+                icon: const Icon(Icons.close, size: 18),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -527,72 +773,95 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen>
       _cartLoaded = true;
       _cart?.load();
     }
-    setState(() => _destination = index);
+    setState(() {
+      _destination = index;
+      if (!_tutorialActive &&
+          _tutorialProgress?.containsKey('overview') == true) {
+        _tutorialHint = const [
+          'discovery',
+          'procurement',
+          'projects',
+          'messages',
+          'orders',
+        ][index];
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final discovery = _discovery;
     final navigation = _navigation;
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Stack(
-        // Expand so a destination still fills the body while the Map stays mounted offstage.
-        fit: StackFit.expand,
-        children: [
-          Offstage(
-            offstage: _destination != 0,
-            child: TickerMode(
-              enabled: _destination == 0,
-              child: discovery == null
-                  ? const SafeArea(child: BuyerUnavailableContent())
-                  : MapHomeScreen(
-                      repository: discovery,
-                      controller: _discoveryController,
-                      deviceLocation: widget.deviceLocation,
-                      mapBuilder: widget.mapBuilder,
-                      onUnavailable: (title) => title == 'Notifications'
-                          ? _openNotifications()
-                          : _unavailable(title),
-                      onOpenSearch: navigation == null
-                          ? null
-                          : () => navigation.openSearch(context),
-                      onOpenCart: navigation == null
-                          ? null
-                          : () => navigation.openCart(context),
-                      onMessageStore: navigation == null
-                          ? null
-                          : (context, supplier) => navigation.openMessage(
-                              context,
-                              supplier.resultId,
-                              null,
+    return BuyerTutorialScope(
+      anchors: _tutorialAnchors,
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: Column(
+          children: [
+            _tutorialPrompt(),
+            Expanded(
+              child: Stack(
+                // Expand so a destination still fills the body while the Map stays mounted offstage.
+                fit: StackFit.expand,
+                children: [
+                  Offstage(
+                    offstage: _destination != 0,
+                    child: TickerMode(
+                      enabled: _destination == 0,
+                      child: discovery == null
+                          ? const SafeArea(child: BuyerUnavailableContent())
+                          : MapHomeScreen(
+                              repository: discovery,
+                              controller: _discoveryController,
+                              deviceLocation: widget.deviceLocation,
+                              mapBuilder: widget.mapBuilder,
+                              onUnavailable: (title) => title == 'Notifications'
+                                  ? _openNotifications()
+                                  : _unavailable(title),
+                              onOpenSearch: navigation == null
+                                  ? null
+                                  : () => navigation.openSearch(context),
+                              onOpenCart: navigation == null
+                                  ? null
+                                  : () => navigation.openCart(context),
+                              onMessageStore: navigation == null
+                                  ? null
+                                  : (context, supplier) =>
+                                        navigation.openMessage(
+                                          context,
+                                          supplier.resultId,
+                                          null,
+                                        ),
+                              onOpenStore: (context, supplier) =>
+                                  _openStore(context, supplier.resultId),
                             ),
-                      onOpenStore: (context, supplier) =>
-                          _openStore(context, supplier.resultId),
                     ),
-            ),
-          ),
-          if (_projectsVisited)
-            Offstage(
-              offstage: _destination != 2,
-              child: TickerMode(
-                enabled: _destination == 2,
-                child: _projectsPage(),
+                  ),
+                  if (_projectsVisited)
+                    Offstage(
+                      offstage: _destination != 2,
+                      child: TickerMode(
+                        enabled: _destination == 2,
+                        child: _projectsPage(),
+                      ),
+                    ),
+                  for (final index in [1, 3, 4])
+                    if (_visitedDestinations.contains(index))
+                      Offstage(
+                        key: ValueKey('buyer-destination-$index'),
+                        offstage: _destination != index,
+                        child: TickerMode(
+                          enabled: _destination == index,
+                          child: _destinationPage(index),
+                        ),
+                      ),
+                ],
               ),
             ),
-          for (final index in [1, 3, 4])
-            if (_visitedDestinations.contains(index))
-              Offstage(
-                key: ValueKey('buyer-destination-$index'),
-                offstage: _destination != index,
-                child: TickerMode(
-                  enabled: _destination == index,
-                  child: _destinationPage(index),
-                ),
-              ),
-        ],
+          ],
+        ),
+        bottomNavigationBar: _navigationBar(),
       ),
-      bottomNavigationBar: _navigationBar(),
     );
   }
 
@@ -735,6 +1004,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen>
     }
     if (index == 4 && widget.repository != null) {
       return BuyerProfileScreen(
+        onTutorial: _openTutorialHelp,
         active: _destination == index,
         reviewsRepository: _orders?.reviews,
         repository: widget.repository!,
@@ -874,6 +1144,7 @@ class _BuyerHomeScreenState extends State<BuyerHomeScreen>
             for (var index = 0; index < _labels.length; index++)
               Expanded(
                 child: Semantics(
+                  key: _tutorialAnchor('nav-$index'),
                   selected: index == _destination,
                   onTap: () => _select(index),
                   button: true,

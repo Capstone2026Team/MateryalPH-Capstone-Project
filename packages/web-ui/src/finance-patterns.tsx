@@ -6,9 +6,26 @@ import { ProgressBar, StatusBadge } from './portal-shell'
 import { DenseLedgerTable, formatManilaDateTime, type DateLike, type LedgerColumn } from './stock-ledger'
 import { KpiBreakdown, KpiCard, type KpiBreakdownData } from './chart-patterns'
 import { CalculationHelp } from './calculation-help'
+import { DashboardPanel } from './dashboard-patterns'
 import './finance-overview.css'
 
 type Tone = 'success' | 'warning' | 'error' | 'info' | 'neutral'
+
+/** One consistent payment definition and visual hierarchy for calendar-month and calendar-year totals. */
+export function CommissionPaymentSummary({ title, period, annual = false, action }: {
+  title: string; annual?: boolean; action?: ReactNode;
+  period: { label: string; resetsAt: Date; collectedCentavos: number; refundedCentavos: number; netCollectedCentavos: number };
+}) {
+  return <DashboardPanel density="compact" title={title} description={`${annual ? 'Calendar year' : 'Calendar month'} · ${period.label}`}
+    calculation={<><p>Confirmed payments from your store applied to commission statements, less completed commission refunds in this {annual ? 'year' : 'month'}.</p><p>Payments use their allocation date; refunds use their completion date, even if the original payment was in an earlier period. Pending or failed payments and refunds are excluded.</p><p>Buyer payments, unpaid bills, estimates and approved credits without a cash refund are excluded. Totals use Philippine time (Asia/Manila).</p></>}
+    footer={<div className="grid gap-2"><p className="text-xs leading-5 text-text-secondary">Resets {formatManilaDateTime(period.resetsAt)}.<br />{annual ? 'Completed years remain in annual payment history.' : 'Starts again each month; included in the annual total.'}</p>{action && <div>{action}</div>}</div>}>
+    <div className="mp-commission-payment-total"><span>Net paid commission</span><strong>{formatPesoCentavos(period.netCollectedCentavos)}</strong><span>Confirmed payments − completed refunds</span></div>
+    <FinanceBreakdownPanel title="Payment breakdown" caption={`${annual ? 'Annual' : 'Monthly'} commission payments`} rows={[
+      { key: 'collected', label: 'Payments collected', amount: formatPesoCentavos(period.collectedCentavos) },
+      { key: 'refunds', label: 'Completed refunds', amount: formatPesoCentavos(-period.refundedCentavos || 0) },
+    ]} />
+  </DashboardPanel>
+}
 
 /** Compact, always-visible calculation using the same rows as dashboard metrics. */
 export function FinanceBreakdownPanel({ title, hint, caption, rows, calculation, children }: KpiBreakdownData & { title: string; hint?: ReactNode; calculation?: ReactNode; children?: ReactNode }) {

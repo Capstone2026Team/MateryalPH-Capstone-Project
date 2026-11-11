@@ -2,14 +2,14 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, expect, test, vi } from 'vitest'
 import { ResponseError } from '@materyalph/api-client-ts'
-import type { CatalogImportJob, CatalogListing, CatalogListingSummary, CatalogTaxonomy, ComplianceLookup } from '../lib/catalog-api'
+import type { CatalogListing, CatalogListingSummary, CatalogTaxonomy, ComplianceLookup } from '../lib/catalog-api'
 import * as catalog from '../lib/catalog-api'
 import * as onboarding from '../lib/onboarding-api'
 import * as productAnalytics from '../lib/product-analytics-api'
 import * as inventory from '../lib/inventory-api'
 import { autosaveTiming } from '../lib/listing-autosave'
 import { decodeQrFromImage } from '../lib/qr-decode'
-import { VendorCatalogImportPage, VendorCatalogPage, VendorListingEditorPage } from './CatalogPages'
+import { VendorCatalogPage, VendorListingEditorPage } from './CatalogPages'
 
 vi.mock('../lib/qr-decode', () => ({ decodeQrFromImage: vi.fn() }))
 vi.mock('../lib/onboarding-api', async original => ({ ...await original<typeof import('../lib/onboarding-api')>(), getVendorOnboarding: vi.fn(), getVendorPrivateFileUrl: vi.fn() }))
@@ -58,7 +58,7 @@ beforeEach(() => {
 })
 
 function open(path: string) {
-  return render(<MemoryRouter initialEntries={[path]}><Routes><Route path="/products" element={<VendorCatalogPage />} /><Route path="/products/import" element={<VendorCatalogImportPage />} /><Route path="/products/new" element={<VendorListingEditorPage />} /><Route path="/products/:listingId" element={<VendorListingEditorPage />} /><Route path="/dashboard" element={<h1>Dashboard</h1>} /></Routes></MemoryRouter>)
+  return render(<MemoryRouter initialEntries={[path]}><Routes><Route path="/products" element={<VendorCatalogPage />} /><Route path="/products/new" element={<VendorListingEditorPage />} /><Route path="/products/:listingId" element={<VendorListingEditorPage />} /><Route path="/dashboard" element={<h1>Dashboard</h1>} /></Routes></MemoryRouter>)
 }
 
 test('ready-mix variants require a mixer and link to listing-based vehicle setup', async () => {
@@ -350,20 +350,6 @@ test('review step lists server blockers with a jump to the owning step', async (
   expect(screen.getByText(/Accepted: JPG, PNG or WebP/)).toBeVisible()
 })
 
-test('bulk import never reports partial validation as success and links to each rejected row', async () => {
-  vi.mocked(catalog.getImportTemplate).mockResolvedValue({ templateVersion: 'catalog-import.v1', columns: ['vendor_sku', 'display_name'], requiredColumns: ['vendor_sku'], maxRows: 500 })
-  const job: CatalogImportJob = { id: 'job-1', status: 'HAS_ERRORS', templateVersion: 'catalog-import.v1', totalRows: 3, validRows: 2, errorRows: 1, appliedRows: 0, rowErrors: [{ rowNumber: 4, vendorSku: 'IMP-BAD', variantSku: 'IMP-BAD-1', errors: { price_php: ['Enter a peso amount greater than zero.'] } }], rowErrorsMeta: { last_page: 1 } }
-  vi.mocked(catalog.uploadImport).mockResolvedValue(job)
-  vi.mocked(catalog.applyImport).mockResolvedValue({ ...job, status: 'APPLIED_WITH_REJECTIONS', appliedRows: 2 })
-  open('/products/import')
-  fireEvent.change(await screen.findByLabelText(/CSV file/), { target: { files: [new File(['a,b'], 'catalog.csv', { type: 'text/csv' })] } })
-  expect(await screen.findByText(/1 of 3 rows have problems. Nothing is saved yet./)).toBeVisible()
-  expect(screen.getByRole('link', { name: 'Row 4' })).toHaveAttribute('href', '#import-row-4')
-  expect(screen.getByRole('rowheader', { name: 'Row 4' }).closest('tr')).toHaveAttribute('id', 'import-row-4')
-  fireEvent.click(screen.getByRole('button', { name: 'Apply 2 valid rows' }))
-  expect(await screen.findByText(/Partially imported: 2 rows became draft listings and 1 rows were not imported/)).toBeVisible()
-  expect(screen.getByText(/Partially imported/).closest('[role]')).toHaveAttribute('role', 'alert')
-})
 
 test('volume tiers are checked against the ordinary price before they are saved', async () => {
   vi.mocked(catalog.saveVariants).mockResolvedValue(listing({ lockVersion: 4 }))

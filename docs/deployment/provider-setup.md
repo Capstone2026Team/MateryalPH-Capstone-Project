@@ -89,6 +89,8 @@ The saved local Gmail app password is for SMTP on port 587. [Render Free blocks 
 
 ## Upload scanning: Bouncer Free selected on 2026-10-20
 
+For the Hostinger upload repair prepared on 10 November 2026, follow the [resident ClamAV setup](hostinger-vps.md#2-private-configuration-and-providers). The Bouncer settings below remain the Render Free fallback configuration; they are not the new VPS default.
+
 The owner selected an ongoing free scanner and explicitly approved lowering new review-video uploads to **25 MiB (26,214,400 bytes)**. This supersedes the former 100 MB ceiling; the [Buyer](../workflows/MateryalPH_Final_Buyer_Workflow.md) and [System](../workflows/MateryalPH_Final_System_Workflow.md) workflows record the decision. Existing photos/documents keep their lower purpose-specific limits, and historical media remains available under existing permissions.
 
 [Bouncer Free](https://usebouncer.dev/docs/) provides 500 scans per account per month and 25 MiB files. Its v1 upload path stops around 4.5 MB, so the backend adapter uses v2's authenticated upload-target request, server-only HTTPS multipart upload and bounded result polling for every file. No client receives scanner credentials or signed upload fields. A result must be completed, clean, fresh, and match the complete file's SHA256 and size before existing storage/audit actions proceed. Provider errors, pending/failed scans, inconsistent results, quota exhaustion and unknown driver names fail closed.

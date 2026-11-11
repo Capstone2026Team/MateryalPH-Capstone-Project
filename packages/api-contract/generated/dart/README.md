@@ -475,6 +475,8 @@ Class | Method | HTTP request | Description
 [*SupportApi*](doc/SupportApi.md) | [**requestSupportAccessEmail**](doc/SupportApi.md#requestsupportaccessemail) | **POST** /support/guest/access-email |
 [*SupportApi*](doc/SupportApi.md) | [**updateSupportTicket**](doc/SupportApi.md#updatesupportticket) | **PATCH** /support/{supportPortal}/tickets/{ticketId} |
 [*SystemApi*](doc/SystemApi.md) | [**getApiHealth**](doc/SystemApi.md#getapihealth) | **GET** /health |
+[*TutorialsApi*](doc/TutorialsApi.md) | [**acknowledgeTutorial**](doc/TutorialsApi.md#acknowledgetutorial) | **PUT** /{tutorialPortal}/account/tutorials/{tutorialKey} | Save completion or dismissal for the signed-in user
+[*TutorialsApi*](doc/TutorialsApi.md) | [**getTutorialProgress**](doc/TutorialsApi.md#gettutorialprogress) | **GET** /{tutorialPortal}/account/tutorials | Read the signed-in user&#39;s tutorial acknowledgments
 [*VendorAutoAcceptApi*](doc/VendorAutoAcceptApi.md) | [**configureAutoAcceptPolicy**](doc/VendorAutoAcceptApi.md#configureautoacceptpolicy) | **PUT** /vendor/auto-accept/policies/{variantId} |
 [*VendorAutoAcceptApi*](doc/VendorAutoAcceptApi.md) | [**getAutoAcceptPolicy**](doc/VendorAutoAcceptApi.md#getautoacceptpolicy) | **GET** /vendor/auto-accept/policies/{variantId} |
 [*VendorAutoAcceptApi*](doc/VendorAutoAcceptApi.md) | [**pauseAutoAcceptPolicy**](doc/VendorAutoAcceptApi.md#pauseautoacceptpolicy) | **POST** /vendor/auto-accept/policies/{variantId}/pause |
@@ -972,6 +974,8 @@ Class | Method | HTTP request | Description
  - [CheckoutSubmitRequest](doc/CheckoutSubmitRequest.md)
  - [CheckoutVendorRef](doc/CheckoutVendorRef.md)
  - [CommissionEmailSummary](doc/CommissionEmailSummary.md)
+ - [CommissionPaymentHistory](doc/CommissionPaymentHistory.md)
+ - [CommissionPaymentPeriod](doc/CommissionPaymentPeriod.md)
  - [CommissionPolicies](doc/CommissionPolicies.md)
  - [CommissionPoliciesEnvelope](doc/CommissionPoliciesEnvelope.md)
  - [CommissionPolicy](doc/CommissionPolicy.md)
@@ -1685,6 +1689,9 @@ Class | Method | HTTP request | Description
  - [TaxPackageInput](doc/TaxPackageInput.md)
  - [TaxPackageReview](doc/TaxPackageReview.md)
  - [ThresholdStatusEvent](doc/ThresholdStatusEvent.md)
+ - [TutorialAcknowledgment](doc/TutorialAcknowledgment.md)
+ - [TutorialProgress](doc/TutorialProgress.md)
+ - [TutorialProgressEnvelope](doc/TutorialProgressEnvelope.md)
  - [UserIdentity](doc/UserIdentity.md)
  - [VehicleIssueRequest](doc/VehicleIssueRequest.md)
  - [VendorAccountDeletionBlockers](doc/VendorAccountDeletionBlockers.md)

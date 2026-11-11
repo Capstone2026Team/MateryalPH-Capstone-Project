@@ -32,6 +32,7 @@ export function MessagingWorkspace({ role, canConfigureBot = false }: { role: st
   const [inboxLoading, setInboxLoading] = useState(true)
   const [inboxError, setInboxError] = useState<string | null>(null)
   const [inboxRefresh, setInboxRefresh] = useState(0)
+  const autoSelected = useRef(false)
   const refreshInbox = useRef<() => void>(() => {})
   useNavigationRefresh(() => refreshInbox.current())
   useEffect(() => {
@@ -66,6 +67,20 @@ export function MessagingWorkspace({ role, canConfigureBot = false }: { role: st
     window.addEventListener('materyalph:session-cleared', clearSession)
     return () => { active = false; refreshInbox.current = () => {}; stop?.(); window.clearInterval(timer); window.removeEventListener('materyalph:session-cleared', clearSession) }
   }, [page, inboxRefresh])
+
+  useEffect(() => {
+    if (selected) { autoSelected.current = true; return }
+    if (autoSelected.current || inboxLoading || inboxError || !rows[0]) return
+    autoSelected.current = true
+    const first = rows[0]
+    setSelectedBuyerThreadId(first.buyerThreadId)
+    setParams(current => {
+      if (current.has('conversation')) return current
+      const next = new URLSearchParams(current)
+      next.set('conversation', first.id)
+      return next
+    }, { replace: true })
+  }, [selected, rows, inboxLoading, inboxError, setParams])
 
   return <div className="chat-workspace">
     <h1 className="sr-only">Messages</h1>

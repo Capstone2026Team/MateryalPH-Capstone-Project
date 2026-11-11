@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { AlertCircle, Camera, Check, CheckCircle2, ChevronDown, ClipboardCheck, ClipboardList, Package, Pencil, QrCode, RefreshCw, Search, ShieldAlert, Trash2, Truck, UploadCloud } from 'lucide-react'
 import type { CatalogAttributeDefinition, CompliancePath, ComplianceRegisterRecord, MarkingType } from '@materyalph/api-client-ts'
-import { Button, ChoiceField, Field, FileSelectionField, QuantityField, MediaUploadField, RowGroup, StatusMessage, type MediaItem } from '@materyalph/web-ui'
+import { useFormControlScope, Button, ChoiceField, Field, FileSelectionField, QuantityField, MediaUploadField, RowGroup, StatusMessage, type MediaItem } from '@materyalph/web-ui'
 import {
   formatCentavos, getMaterial, readableCatalogError, catalogFieldErrors, lookupCompliance, refusedComplianceLookup, submitCompliance, uploadComplianceEvidence,
   type CatalogListing, type CatalogMaterial, type CatalogMaterialMatch, type CatalogTaxonomy, type ComplianceEvidence, type ComplianceLookup,
@@ -35,15 +35,19 @@ export function MaterialMatchOption({ match, name, selected, onChoose }: { match
   </label></li>
 }
 
-export function MaterialStep({ form, setForm, taxonomy, material, setMaterial, errors, readOnly }: { form: DetailsForm; setForm: (form: DetailsForm) => void; taxonomy: CatalogTaxonomy; material: CatalogMaterial | null; setMaterial: (material: CatalogMaterial | null) => void; errors: Record<string, string>; readOnly: boolean }) {
+export function MaterialStep({ form, setForm, taxonomy, material, setMaterial, errors, readOnly, materialLookup }: { form: DetailsForm; setForm: (form: DetailsForm) => void; taxonomy: CatalogTaxonomy; material: CatalogMaterial | null; setMaterial: (material: CatalogMaterial | null) => void; errors: Record<string, string>; readOnly: boolean; materialLookup?: { matches: CatalogMaterialMatch[]; resolve: (id: string) => Promise<CatalogMaterial> } }) {
+  const controlScope = useFormControlScope()
   const [query, setQuery] = useState(material?.name ?? form.displayName)
-  const { results, searching, error: lookupError, searchNow } = useMaterialSearch(query, !readOnly)
+  const search = useMaterialSearch(query, !readOnly && !materialLookup)
+  const { searching, error: lookupError } = search
+  const results = materialLookup ? materialLookup.matches.filter(match => match.name.toLowerCase().includes(query.trim().toLowerCase())) : search.results
+  const searchNow = () => { if (!materialLookup) search.searchNow() }
   const [searchError, setSearchError] = useState<string | null>(null)
   const other = form.materialId === null
   async function choose(match: CatalogMaterialMatch) {
     const chosen: DetailsForm = { ...form, materialId: match.id, materialMatch: match.matchType === 'FUZZY' ? 'FUZZY_CONFIRMED' : match.matchType, categoryId: match.categoryId, otherLabel: '' }
     setForm(chosen)
-    try { const detail = await getMaterial(match.id); setMaterial(detail); if (form.tagIds.length === 0) setForm({ ...chosen, tagIds: detail.suggestedTagIds.slice(0, 3) }) }
+    try { const detail = await (materialLookup ? materialLookup.resolve(match.id) : getMaterial(match.id)); setMaterial(detail); if (form.tagIds.length === 0) setForm({ ...chosen, tagIds: detail.suggestedTagIds.slice(0, 3) }) }
     catch (cause) { setSearchError(await readableCatalogError(cause)) }
   }
   const shown = results ?? (material ? [{ id: material.id, code: material.code, name: material.name, categoryId: material.categoryId, categoryName: material.categoryName, regulated: material.regulated, matchType: 'EXACT' as const, matchedText: material.name, similarity: 1 }] : [])
@@ -60,10 +64,10 @@ export function MaterialStep({ form, setForm, taxonomy, material, setMaterial, e
       <fieldset className="min-w-0 overflow-hidden mp-card" disabled={readOnly} aria-busy={searching}>
         <legend className="sr-only">Choose a material</legend>
         <ul className="divide-y divide-border-default">
-          {shown.map(match => <MaterialMatchOption key={match.id} match={match} name="material_choice" selected={form.materialId === match.id} onChoose={() => void choose(match)} />)}
+          {shown.map(match => <MaterialMatchOption key={match.id} match={match} name={`${controlScope}material_choice`} selected={form.materialId === match.id} onChoose={() => void choose(match)} />)}
           {results !== null && results.length === 0 && <li className="px-4 py-3 text-sm text-text-secondary">No canonical material matches “{query.trim()}”. Describe the product with an Other label below.</li>}
           <li><label className={`flex min-h-14 cursor-pointer items-start gap-3 px-4 py-3 ${other ? 'bg-brand-orange-50' : 'hover:bg-surface-canvas'}`}>
-            <input type="radio" name="material_choice" className="mt-0.5 h-5 w-5 shrink-0 accent-action-primary" checked={other} onChange={() => { setForm({ ...form, materialId: null, otherLabel: form.otherLabel || query.trim().slice(0, 60) }); setMaterial(null) }} />
+            <input type="radio" name={`${controlScope}material_choice`} className="mt-0.5 h-5 w-5 shrink-0 accent-action-primary" checked={other} onChange={() => { setForm({ ...form, materialId: null, otherLabel: form.otherLabel || query.trim().slice(0, 60) }); setMaterial(null) }} />
             <span className="min-w-0"><span className="font-semibold">Not listed — use an Other label</span><span className="block text-sm text-text-secondary">The label describes this listing only. It never adds a shared material or category.</span></span>
           </label></li>
         </ul>
@@ -96,6 +100,7 @@ function measurementCodes(listing: CatalogListing, form: DetailsForm, taxonomy: 
 
 export function ProductInformationStep({ listing, form, setForm, rows, setRows, taxonomy, material, errors, busy, setBusy, readOnly, onEditMaterial, onComplianceSubmitted, beforeComplianceSubmit }: { listing: CatalogListing; form: DetailsForm; setForm: (form: DetailsForm) => void; rows: VariantRow[]; setRows: (rows: VariantRow[]) => void; taxonomy: CatalogTaxonomy; material: CatalogMaterial | null; errors: Record<string, string>; busy: boolean; setBusy: (busy: boolean) => void; readOnly: boolean; onEditMaterial?: () => void; onComplianceSubmitted: (listing: CatalogListing) => void; beforeComplianceSubmit: () => Promise<number> }) {
   const definitions = taxonomy.attributeDefinitions.filter(definition => definition.materialCategoryId === form.categoryId)
+  const descriptionId = useId()
   const set = (key: keyof DetailsForm) => (event: { target: { value: string } }) => setForm({ ...form, [key]: event.target.value })
   const regulated = listing.regulated
   const nameSuggestion = (material?.name ?? form.otherLabel).trim()
@@ -124,7 +129,7 @@ export function ProductInformationStep({ listing, form, setForm, rows, setRows, 
         <Field label="Model" name="model" value={form.model} disabled={readOnly} onChange={set('model')} />
         <Field label="Vendor SKU" name="vendor_sku" value={form.vendorSku} required disabled={readOnly} error={errors.vendor_sku} onChange={set('vendorSku')} />
       </div>
-      <label className="grid gap-2 text-sm font-semibold" htmlFor="listing-description">Description <span className="sr-only">(required)</span><textarea id="listing-description" className="min-h-28 rounded-control border border-border-default bg-surface-primary px-3 py-3 text-base font-normal" value={form.description} disabled={readOnly} maxLength={4000} aria-invalid={Boolean(errors.description)} onChange={set('description')} />{errors.description && <span className="font-normal text-status-error" role="alert">{errors.description}</span>}</label>
+      <label className="grid gap-2 text-sm font-semibold" htmlFor={descriptionId}>Description <span className="sr-only">(required)</span><textarea id={descriptionId} className="min-h-28 rounded-control border border-border-default bg-surface-primary px-3 py-3 text-base font-normal" value={form.description} disabled={readOnly} maxLength={4000} aria-invalid={Boolean(errors.description)} onChange={set('description')} />{errors.description && <span className="font-normal text-status-error" role="alert">{errors.description}</span>}</label>
       {regulated && <StatusMessage>Changing the material, brand, model, manufacturer, manufacturer address or country of a regulated product withdraws its verified PS/ICC status and requires a new submission.</StatusMessage>}
     </section>
     {readyMixed && <StatusMessage>

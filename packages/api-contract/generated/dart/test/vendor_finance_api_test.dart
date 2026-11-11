@@ -28,9 +28,9 @@ void main() {
       // TODO
     });
 
-    // Owner-only all-time commission monitoring with current and next policy, estimated and earned fees, approved credits, unbilled fees, draft bills, issued outstanding and overdue debt, verified allocations and successful fee refunds. Assessments are paginated and retain their original basis and percentage. Cash and earnings are separate; no wallet balance is represented.
+    // Owner-only commission monitoring with current calendar-year and calendar-month payment totals in Asia/Manila and independently paginated closed-year payment history. Verified statement allocations count at allocated_at; confirmed fee refunds count at completed_at in their own period, including refunds of earlier-year payments. Periods roll over at midnight without deleting financial records. All-time summary balances, current and next policies and paginated original-rate assessments remain separate. Unpaid debt carries forward; no wallet balance is represented.
     //
-    //Future<VendorCommissionMonitoringEnvelope> getVendorCommissionMonitoring({ int page }) async
+    //Future<VendorCommissionMonitoringEnvelope> getVendorCommissionMonitoring({ int page, int historyPage }) async
     test('test getVendorCommissionMonitoring', () async {
       // TODO
     });

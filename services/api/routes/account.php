@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AccountAdministrationController;
 use App\Http\Controllers\Api\AccountController;
 use App\Http\Controllers\Api\BuyerAccountSecurityController;
+use App\Http\Controllers\Api\TutorialController;
 use App\Http\Controllers\Api\VendorAccountDeletionController;
 use App\Http\Middleware\VerifyAccountCsrf;
 use Illuminate\Support\Facades\Route;
@@ -15,6 +16,10 @@ foreach (['buyers' => ['BUYER', 'MOBILE'], 'vendors' => ['VENDOR', 'WEB'], 'admi
     Route::prefix($prefix.'/account')->middleware([...$middleware, 'auth:api', 'account.access:'.$portal])->group(function () use ($portal): void {
         Route::get('/profile', [AccountController::class, 'profile']);
         Route::patch('/profile', [AccountController::class, 'updateProfile']);
+        if ($portal !== 'ADMIN') {
+            Route::get('/tutorials', [TutorialController::class, 'index']);
+            Route::put('/tutorials/{tutorialKey}', [TutorialController::class, 'update']);
+        }
         Route::get('/security', [AccountController::class, 'security']);
         Route::post('/reauthentication', [AccountController::class, 'reauthenticate'])->middleware('throttle:account-security');
         Route::post('/reauthentication/email', [AccountController::class, 'reauthenticationEmail'])->middleware('throttle:account-security');

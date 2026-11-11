@@ -36,8 +36,8 @@ export async function getThresholdPayments(page: number): Promise<AssessedPaymen
   return { data: response.data, hasMore: Boolean(meta.has_more), total: Number(meta.total ?? response.data.payments.length) }
 }
 
-export async function getCommissionMonitoring(page = 1): Promise<{ monitoring: VendorCommissionMonitoring; hasMore: boolean }> {
-  const response = await financeApi().getVendorCommissionMonitoring({ page })
+export async function getCommissionMonitoring(page = 1, historyPage = 1): Promise<{ monitoring: VendorCommissionMonitoring; hasMore: boolean }> {
+  const response = await financeApi().getVendorCommissionMonitoring({ page, historyPage })
   return { monitoring: response.data, hasMore: Boolean((response.meta as { has_more?: boolean }).has_more) }
 }
 

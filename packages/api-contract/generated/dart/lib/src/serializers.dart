@@ -353,6 +353,8 @@ import 'package:materyalph_api_client/src/model/checkout_submission_envelope.dar
 import 'package:materyalph_api_client/src/model/checkout_submit_request.dart';
 import 'package:materyalph_api_client/src/model/checkout_vendor_ref.dart';
 import 'package:materyalph_api_client/src/model/commission_email_summary.dart';
+import 'package:materyalph_api_client/src/model/commission_payment_history.dart';
+import 'package:materyalph_api_client/src/model/commission_payment_period.dart';
 import 'package:materyalph_api_client/src/model/commission_policies.dart';
 import 'package:materyalph_api_client/src/model/commission_policies_envelope.dart';
 import 'package:materyalph_api_client/src/model/commission_policy.dart';
@@ -1066,6 +1068,9 @@ import 'package:materyalph_api_client/src/model/tax_package.dart';
 import 'package:materyalph_api_client/src/model/tax_package_input.dart';
 import 'package:materyalph_api_client/src/model/tax_package_review.dart';
 import 'package:materyalph_api_client/src/model/threshold_status_event.dart';
+import 'package:materyalph_api_client/src/model/tutorial_acknowledgment.dart';
+import 'package:materyalph_api_client/src/model/tutorial_progress.dart';
+import 'package:materyalph_api_client/src/model/tutorial_progress_envelope.dart';
 import 'package:materyalph_api_client/src/model/user_identity.dart';
 import 'package:materyalph_api_client/src/model/vehicle_issue_request.dart';
 import 'package:materyalph_api_client/src/model/vendor_account_deletion_blockers.dart';
@@ -1638,6 +1643,8 @@ part 'serializers.g.dart';
   CheckoutSubmitRequest,
   CheckoutVendorRef,
   CommissionEmailSummary,
+  CommissionPaymentHistory,
+  CommissionPaymentPeriod,
   CommissionPolicies,
   CommissionPoliciesEnvelope,
   CommissionPolicy,
@@ -2351,6 +2358,9 @@ part 'serializers.g.dart';
   TaxPackageInput,
   TaxPackageReview,
   ThresholdStatusEvent,
+  TutorialAcknowledgment,
+  TutorialProgress,
+  TutorialProgressEnvelope,
   UserIdentity,
   VehicleIssueRequest,
   VendorAccountDeletionBlockers,
@@ -3638,6 +3648,10 @@ Serializers serializers = (_$serializers.toBuilder()
         () => ListBuilder<ScheduledTaskHealth>(),
       )
       ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(CommissionPaymentPeriod)]),
+        () => ListBuilder<CommissionPaymentPeriod>(),
+      )
+      ..addBuilderFactory(
         const FullType(BuiltList, [FullType(AdminDashboardAreasPointsInner)]),
         () => ListBuilder<AdminDashboardAreasPointsInner>(),
       )
@@ -3716,6 +3730,10 @@ Serializers serializers = (_$serializers.toBuilder()
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(SupportTicket)]),
         () => ListBuilder<SupportTicket>(),
+      )
+      ..addBuilderFactory(
+        const FullType(BuiltList, [FullType(TutorialProgress)]),
+        () => ListBuilder<TutorialProgress>(),
       )
       ..addBuilderFactory(
         const FullType(BuiltList, [FullType(PaymentChannelOption)]),

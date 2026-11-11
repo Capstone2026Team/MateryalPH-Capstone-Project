@@ -194,11 +194,11 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **getVendorCommissionMonitoring**
-> VendorCommissionMonitoringEnvelope getVendorCommissionMonitoring(page)
+> VendorCommissionMonitoringEnvelope getVendorCommissionMonitoring(page, historyPage)
 
 
 
-Owner-only all-time commission monitoring with current and next policy, estimated and earned fees, approved credits, unbilled fees, draft bills, issued outstanding and overdue debt, verified allocations and successful fee refunds. Assessments are paginated and retain their original basis and percentage. Cash and earnings are separate; no wallet balance is represented.
+Owner-only commission monitoring with current calendar-year and calendar-month payment totals in Asia/Manila and independently paginated closed-year payment history. Verified statement allocations count at allocated_at; confirmed fee refunds count at completed_at in their own period, including refunds of earlier-year payments. Periods roll over at midnight without deleting financial records. All-time summary balances, current and next policies and paginated original-rate assessments remain separate. Unpaid debt carries forward; no wallet balance is represented.
 
 ### Example
 ```dart
@@ -214,9 +214,10 @@ import 'package:materyalph_api_client/api.dart';
 
 final api = MateryalphApiClient().getVendorFinanceApi();
 final int page = 56; // int |
+final int historyPage = 56; // int | Independent page of completed calendar years with recorded commission-payment or refund activity.
 
 try {
-    final response = api.getVendorCommissionMonitoring(page);
+    final response = api.getVendorCommissionMonitoring(page, historyPage);
     print(response);
 } on DioException catch (e) {
     print('Exception when calling VendorFinanceApi->getVendorCommissionMonitoring: $e\n');
@@ -228,6 +229,7 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **page** | **int**|  | [optional] [default to 1]
+ **historyPage** | **int**| Independent page of completed calendar years with recorded commission-payment or refund activity. | [optional] [default to 1]
 
 ### Return type
 

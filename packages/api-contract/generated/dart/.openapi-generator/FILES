@@ -375,6 +375,8 @@ doc/CheckoutSubmissionEnvelope.md
 doc/CheckoutSubmitRequest.md
 doc/CheckoutVendorRef.md
 doc/CommissionEmailSummary.md
+doc/CommissionPaymentHistory.md
+doc/CommissionPaymentPeriod.md
 doc/CommissionPolicies.md
 doc/CommissionPoliciesEnvelope.md
 doc/CommissionPolicy.md
@@ -1096,6 +1098,10 @@ doc/TaxPackage.md
 doc/TaxPackageInput.md
 doc/TaxPackageReview.md
 doc/ThresholdStatusEvent.md
+doc/TutorialAcknowledgment.md
+doc/TutorialProgress.md
+doc/TutorialProgressEnvelope.md
+doc/TutorialsApi.md
 doc/UserIdentity.md
 doc/VehicleIssueRequest.md
 doc/VendorAccountDeletionBlockers.md
@@ -1383,6 +1389,7 @@ lib/src/api/reporting_api.dart
 lib/src/api/stores_api.dart
 lib/src/api/support_api.dart
 lib/src/api/system_api.dart
+lib/src/api/tutorials_api.dart
 lib/src/api/vendor_auto_accept_api.dart
 lib/src/api/vendor_catalog_api.dart
 lib/src/api/vendor_dashboard_api.dart
@@ -1746,6 +1753,8 @@ lib/src/model/checkout_submission_envelope.dart
 lib/src/model/checkout_submit_request.dart
 lib/src/model/checkout_vendor_ref.dart
 lib/src/model/commission_email_summary.dart
+lib/src/model/commission_payment_history.dart
+lib/src/model/commission_payment_period.dart
 lib/src/model/commission_policies.dart
 lib/src/model/commission_policies_envelope.dart
 lib/src/model/commission_policy.dart
@@ -2460,6 +2469,9 @@ lib/src/model/tax_package.dart
 lib/src/model/tax_package_input.dart
 lib/src/model/tax_package_review.dart
 lib/src/model/threshold_status_event.dart
+lib/src/model/tutorial_acknowledgment.dart
+lib/src/model/tutorial_progress.dart
+lib/src/model/tutorial_progress_envelope.dart
 lib/src/model/user_identity.dart
 lib/src/model/vehicle_issue_request.dart
 lib/src/model/vendor_account_deletion_blockers.dart
@@ -3063,6 +3075,8 @@ test/checkout_submission_test.dart
 test/checkout_submit_request_test.dart
 test/checkout_vendor_ref_test.dart
 test/commission_email_summary_test.dart
+test/commission_payment_history_test.dart
+test/commission_payment_period_test.dart
 test/commission_policies_envelope_test.dart
 test/commission_policies_test.dart
 test/commission_policy_envelope_test.dart
@@ -3779,6 +3793,10 @@ test/tax_package_input_test.dart
 test/tax_package_review_test.dart
 test/tax_package_test.dart
 test/threshold_status_event_test.dart
+test/tutorial_acknowledgment_test.dart
+test/tutorial_progress_envelope_test.dart
+test/tutorial_progress_test.dart
+test/tutorials_api_test.dart
 test/user_identity_test.dart
 test/vehicle_issue_request_test.dart
 test/vendor_account_deletion_blockers_test.dart

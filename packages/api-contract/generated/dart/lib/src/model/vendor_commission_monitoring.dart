@@ -5,7 +5,9 @@
 // ignore_for_file: unused_element
 import 'package:materyalph_api_client/src/model/commission_policy.dart';
 import 'package:materyalph_api_client/src/model/vendor_commission_summary.dart';
+import 'package:materyalph_api_client/src/model/commission_payment_history.dart';
 import 'package:built_collection/built_collection.dart';
+import 'package:materyalph_api_client/src/model/commission_payment_period.dart';
 import 'package:materyalph_api_client/src/model/vendor_commission_assessment.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
@@ -19,6 +21,9 @@ part 'vendor_commission_monitoring.g.dart';
 /// * [currentPolicy]
 /// * [nextPolicy]
 /// * [summary]
+/// * [annualPayments]
+/// * [monthlyPayments]
+/// * [paymentHistory]
 /// * [assessments]
 @BuiltValue()
 abstract class VendorCommissionMonitoring implements Built<VendorCommissionMonitoring, VendorCommissionMonitoringBuilder> {
@@ -34,6 +39,15 @@ abstract class VendorCommissionMonitoring implements Built<VendorCommissionMonit
 
   @BuiltValueField(wireName: r'summary')
   VendorCommissionSummary get summary;
+
+  @BuiltValueField(wireName: r'annual_payments')
+  CommissionPaymentPeriod get annualPayments;
+
+  @BuiltValueField(wireName: r'monthly_payments')
+  CommissionPaymentPeriod get monthlyPayments;
+
+  @BuiltValueField(wireName: r'payment_history')
+  CommissionPaymentHistory get paymentHistory;
 
   @BuiltValueField(wireName: r'assessments')
   BuiltList<VendorCommissionAssessment> get assessments;
@@ -84,6 +98,21 @@ class _$VendorCommissionMonitoringSerializer implements PrimitiveSerializer<Vend
     yield serializers.serialize(
       object.summary,
       specifiedType: const FullType(VendorCommissionSummary),
+    );
+    yield r'annual_payments';
+    yield serializers.serialize(
+      object.annualPayments,
+      specifiedType: const FullType(CommissionPaymentPeriod),
+    );
+    yield r'monthly_payments';
+    yield serializers.serialize(
+      object.monthlyPayments,
+      specifiedType: const FullType(CommissionPaymentPeriod),
+    );
+    yield r'payment_history';
+    yield serializers.serialize(
+      object.paymentHistory,
+      specifiedType: const FullType(CommissionPaymentHistory),
     );
     yield r'assessments';
     yield serializers.serialize(
@@ -142,6 +171,27 @@ class _$VendorCommissionMonitoringSerializer implements PrimitiveSerializer<Vend
             specifiedType: const FullType(VendorCommissionSummary),
           ) as VendorCommissionSummary;
           result.summary.replace(valueDes);
+          break;
+        case r'annual_payments':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(CommissionPaymentPeriod),
+          ) as CommissionPaymentPeriod;
+          result.annualPayments.replace(valueDes);
+          break;
+        case r'monthly_payments':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(CommissionPaymentPeriod),
+          ) as CommissionPaymentPeriod;
+          result.monthlyPayments.replace(valueDes);
+          break;
+        case r'payment_history':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(CommissionPaymentHistory),
+          ) as CommissionPaymentHistory;
+          result.paymentHistory.replace(valueDes);
           break;
         case r'assessments':
           final valueDes = serializers.deserialize(

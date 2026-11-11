@@ -1,4 +1,5 @@
 import { dateFilterPreset } from '@materyalph/web-ui'
+import type { VendorCommissionMonitoring } from '@materyalph/api-client-ts'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, expect, test, vi } from 'vitest'
@@ -9,6 +10,11 @@ import type { FeeStatementDetail, VendorFinanceOverview } from '../lib/finance-a
 import { VendorCommissionPage, VendorEarningsPage, VendorFinancePage, VendorStatementPage, VendorTransactionHistoryPage } from './FinancePages'
 
 const defaultDates = () => ({ from: dateFilterPreset(30).from, to: dateFilterPreset(30).to })
+const paymentPeriods = (collected = 0, refunded = 0): Pick<VendorCommissionMonitoring, 'annualPayments' | 'monthlyPayments' | 'paymentHistory'> => ({
+  annualPayments: { label: '2026', startsOn: new Date('2026-01-01'), endsOn: new Date('2026-12-31'), resetsAt: new Date('2026-12-31T16:00:00Z'), collectedCentavos: collected * 2, refundedCentavos: refunded * 2, netCollectedCentavos: (collected - refunded) * 2 },
+  monthlyPayments: { label: 'November 2026', startsOn: new Date('2026-11-01'), endsOn: new Date('2026-11-30'), resetsAt: new Date('2026-11-30T16:00:00Z'), collectedCentavos: collected, refundedCentavos: refunded, netCollectedCentavos: collected - refunded },
+  paymentHistory: { items: [], page: 1, perPage: 10 as const, total: 0, hasMore: false },
+})
 
 
 vi.mock('../lib/onboarding-api', async original => ({ ...await original<typeof import('../lib/onboarding-api')>(), getVendorOnboarding: vi.fn(), getVendorPrivateFileUrl: vi.fn(), acceptVendorCommission: vi.fn() }))
@@ -64,6 +70,7 @@ beforeEach(() => {
   vi.mocked(finance.getFinanceOverview).mockResolvedValue(overview())
   vi.mocked(finance.listTransactions).mockResolvedValue({ items: [], total: 0, hasMore: false })
   vi.mocked(finance.getCommissionMonitoring).mockResolvedValue({ hasMore: false, monitoring: {
+    ...paymentPeriods(),
     currentPolicy: { id: 'policy-1', version: 1, commissionBasisPoints: 200, rateLabel: '2.00%', effectiveFrom: new Date('2026-10-19T00:00:00Z'), status: 'CURRENT' }, termsAccepted: true,
     summary: { estimatedCentavos: 0, earnedCentavos: 0, creditedCentavos: 0, netEarnedCentavos: 0, unbilledCentavos: 0, draftCentavos: 0, outstandingCentavos: 0, overdueCentavos: 0, collectedCentavos: 0, refundedCentavos: 0, netCollectedCentavos: 0 }, assessments: [],
   } })
@@ -71,6 +78,7 @@ beforeEach(() => {
 
 test('commission monitoring distinguishes estimated fees, earned fees and issued debt and shows each saved rate', async () => {
   vi.mocked(finance.getCommissionMonitoring).mockResolvedValue({ hasMore: false, monitoring: {
+    ...paymentPeriods(9000, 1000),
     currentPolicy: { id: 'policy-2', version: 2, commissionBasisPoints: 325, rateLabel: '3.25%', effectiveFrom: new Date('2026-10-19T00:00:00Z'), status: 'CURRENT' }, termsAccepted: true,
     summary: { estimatedCentavos: 3250, earnedCentavos: 20000, creditedCentavos: 4000, netEarnedCentavos: 16000, unbilledCentavos: 16000, draftCentavos: 0, outstandingCentavos: 8000, overdueCentavos: 2000, collectedCentavos: 9000, refundedCentavos: 1000, netCollectedCentavos: 8000 },
     assessments: [{ id: 'assessment-1', orderReference: 'ORD-OLD-RATE', state: 'EARNED', commissionBasisCentavos: 1000000, commissionBasisPoints: 200, estimatedCentavos: 0, earnedCentavos: 20000, creditedCentavos: 4000, netCentavos: 16000, disputeHold: false }],
@@ -79,10 +87,9 @@ test('commission monitoring distinguishes estimated fees, earned fees and issued
   expect(await screen.findByRole('table', { name: 'Commission by order' })).toBeInTheDocument()
   expect(screen.getByText('3.25%')).toBeInTheDocument()
   expect(within(screen.getByRole('table', { name: 'Commission by order' })).getByText('2.00%')).toBeInTheDocument()
-  const summary = within(screen.getByRole('region', { name: 'At a glance' }))
+  const summary = within(screen.getByRole('region', { name: 'Current commission balances' }))
   expect(summary.getByText('Estimated commission')).toBeInTheDocument()
   expect(summary.getByText('₱32.50')).toBeInTheDocument()
-  expect(summary.getByText('₱160.00')).toBeInTheDocument()
   const orders = within(screen.getByRole('table', { name: 'Commission by order' }))
   expect(orders.getAllByRole('columnheader')).toHaveLength(6)
   for (const name of ['Materials value', 'Estimated commission', 'Commission charged', 'Final commission']) expect(orders.getByRole('columnheader', { name })).toBeInTheDocument()
@@ -90,32 +97,38 @@ test('commission monitoring distinguishes estimated fees, earned fees and issued
   expect(orders.getByText('₱200.00')).toBeInTheDocument()
   expect(orders.getByText('Fee reduction -₱40.00')).toBeInTheDocument()
   expect(orders.getByText('₱160.00')).toBeInTheDocument()
-  const payments = within(screen.getByRole('table', { name: 'Commission payments' }))
+  const annual = within(screen.getByRole('region', { name: 'Annual total commission payment' }))
+  expect(annual.getByText('₱160.00')).toBeInTheDocument()
+  expect(annual.getByText('Calendar year · 2026')).toBeInTheDocument()
+  expect(annual.getByText(/Resets Jan 1, 2027/)).toBeInTheDocument()
+  const monthly = within(screen.getByRole('region', { name: 'Monthly commission payment' }))
+  expect(monthly.getByText('₱80.00')).toBeInTheDocument()
+  expect(monthly.getByText('Calendar month · November 2026')).toBeInTheDocument()
+  const payments = within(screen.getByRole('table', { name: 'Monthly commission payments' }))
   expect(payments.getByRole('row', { name: 'Payments collected ₱90.00' })).toBeInTheDocument()
-  expect(payments.getByRole('row', { name: 'Confirmed fee refunds -₱10.00' })).toBeInTheDocument()
-  expect(payments.getByRole('row', { name: 'Net collected payments ₱80.00' })).toBeInTheDocument()
+  expect(payments.getByRole('row', { name: 'Completed refunds -₱10.00' })).toBeInTheDocument()
   expect(screen.getByText('Unpaid statements')).toBeInTheDocument()
   expect(screen.getByRole('link', { name: 'View and pay commission statements' })).toHaveAttribute('href', '#commission-statements')
   expect(screen.queryByRole('button', { name: 'Edit rate' })).not.toBeInTheDocument()
 })
 
-test('one billing and payments help icon explains all six figures and restores focus', async () => {
+test('current balances help explains carried-forward debt separately from period payments and restores focus', async () => {
   at('/finance/commissions', <VendorCommissionPage />)
-  const billing = within(await screen.findByRole('region', { name: 'Billing and payments' }))
+  const billing = within(await screen.findByRole('region', { name: 'Current commission balances' }))
   const explanations: [string, RegExp][] = [
     ['Not yet billed', /completed orders that has not yet been added to a monthly bill/],
     ['Draft bills awaiting issue', /prepared but have not yet been issued/],
     ['Approved commission credits', /Approved reductions to commission already charged/],
-    ['Payments collected', /Confirmed payments from your store applied to commission statements/],
-    ['Confirmed fee refunds', /Pending or failed refunds are excluded/],
-    ['Net collected payments', /Payments collected − confirmed fee refunds = net collected payments/],
+    ['Unpaid statements', /balances carry forward when the payment totals reset/],
+    ['Overdue', /already included in Unpaid statements/],
+    ['Estimated commission', /Accepted orders awaiting completion/],
   ]
   expect(billing.getAllByRole('button', { name: /^How this is calculated:/ })).toHaveLength(1)
-  const trigger = billing.getByRole('button', { name: 'How this is calculated: Billing and payments' })
+  const trigger = billing.getByRole('button', { name: 'How this is calculated: Current commission balances' })
   trigger.focus()
   fireEvent.click(trigger)
   expect(trigger).toHaveAttribute('aria-expanded', 'true')
-  const dialog = screen.getByRole('dialog', { name: 'Billing and payments' })
+  const dialog = screen.getByRole('dialog', { name: 'Current commission balances' })
   for (const [title, expected] of explanations) {
     expect(within(dialog).getByRole('heading', { name: title })).toBeInTheDocument()
     expect(dialog).toHaveTextContent(expected)
@@ -128,6 +141,37 @@ test('one billing and payments help icon explains all six figures and restores f
   fireEvent.click(screen.getByRole('button', { name: 'Close calculation explanation' }))
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   expect(trigger).toHaveFocus()
+})
+
+test('annual payment history is distinct from paid statements, paginates independently and restores focus', async () => {
+  const base = await vi.mocked(finance.getCommissionMonitoring).getMockImplementation()!()
+  vi.mocked(finance.getCommissionMonitoring).mockImplementation(async (orderPage = 1, historyPage = 1) => ({ ...base, monitoring: { ...base.monitoring,
+    paymentHistory: { items: [{ ...base.monitoring.annualPayments, label: historyPage === 1 ? '2025' : '2015', collectedCentavos: 50000, refundedCentavos: 10000, netCollectedCentavos: 40000 }], page: historyPage, perPage: 10, total: 11, hasMore: historyPage === 1 },
+    assessments: orderPage === 1 ? [] : base.monitoring.assessments,
+  } }))
+  at('/finance/commissions', <VendorCommissionPage />)
+  const trigger = await screen.findByRole('button', { name: 'Annual history' })
+  trigger.focus()
+  fireEvent.click(trigger)
+  const dialog = await screen.findByRole('dialog', { name: 'Annual total commission payment history' })
+  expect(await within(dialog).findByText('2025')).toBeInTheDocument()
+  expect(within(dialog).getAllByText('₱400.00').length).toBeGreaterThan(0)
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Next' }))
+  expect(await within(dialog).findByText('2015')).toBeInTheDocument()
+  expect(finance.getCommissionMonitoring).toHaveBeenLastCalledWith(1, 2)
+  fireEvent(dialog, new Event('cancel', { cancelable: true }))
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  expect(trigger).toHaveFocus()
+})
+
+test('annual payment history explains its empty state and can retry a failed request', async () => {
+  const base = await vi.mocked(finance.getCommissionMonitoring).getMockImplementation()!()
+  vi.mocked(finance.getCommissionMonitoring).mockResolvedValueOnce(base).mockRejectedValueOnce(new Error('offline')).mockResolvedValue(base)
+  at('/finance/commissions', <VendorCommissionPage />)
+  fireEvent.click(await screen.findByRole('button', { name: 'Annual history' }))
+  const dialog = await screen.findByRole('dialog', { name: 'Annual total commission payment history' })
+  fireEvent.click(await within(dialog).findByRole('button', { name: 'Try again' }))
+  expect(await within(dialog).findByText(/No completed years with commission payments or refunds yet/)).toBeInTheDocument()
 })
 
 test('commission monitoring remains Owner-only', async () => {

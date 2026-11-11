@@ -1,3 +1,4 @@
+import '../features/tutorial/tutorial_scope.dart';
 import '../features/support/support_repository.dart';
 import '../features/notifications/notification_scope.dart';
 import 'package:flutter/material.dart';
@@ -40,6 +41,7 @@ class BuyerProfileScreen extends StatefulWidget {
     this.onOpenSearch,
     this.onOpenNotifications,
     this.onOpenNotificationSettings,
+    this.onTutorial,
     this.onRemoveFavorite,
     this.onOpenStore,
     this.onMessageStore,
@@ -57,6 +59,7 @@ class BuyerProfileScreen extends StatefulWidget {
   final VoidCallback? onOpenSearch;
   final VoidCallback? onOpenNotifications;
   final VoidCallback? onOpenNotificationSettings;
+  final VoidCallback? onTutorial;
   final Future<void> Function(String vendorId)? onRemoveFavorite;
   final void Function(BuildContext context, String vendorId)? onOpenStore;
   final void Function(BuildContext context, String vendorId)? onMessageStore;
@@ -279,6 +282,7 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
               ),
               const BuyerSectionLabel('My purchases'),
               BuyerMenuRow(
+                key: BuyerTutorialScope.keyOf(context, 'profile-orders'),
                 label: 'Orders',
                 badgeQuantity:
                     '${NotificationScope.of(context)?.navigation.value.orders ?? 0}',
@@ -393,6 +397,13 @@ class _BuyerProfileScreenState extends State<BuyerProfileScreen> {
                 onTap: _openNotificationSettings,
               ),
               const BuyerSectionLabel('Support'),
+              if (widget.onTutorial != null)
+                BuyerMenuRow(
+                  key: BuyerTutorialScope.keyOf(context, 'profile-tutorial'),
+                  label: 'Help / tutorial',
+                  icon: LucideIcons.bookOpen,
+                  onTap: widget.onTutorial!,
+                ),
               BuyerMenuRow(
                 label: 'Help Center',
                 icon: LucideIcons.circleHelp,

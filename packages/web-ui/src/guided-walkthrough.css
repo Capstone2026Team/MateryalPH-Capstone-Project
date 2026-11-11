@@ -1,0 +1,28 @@
+.mp-walkthrough { position: fixed; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; background: transparent; color: var(--mp-color-text-strong); overflow: hidden; }
+.mp-walkthrough::backdrop { background: transparent; }
+.mp-walkthrough-shade { position: absolute; inset: 0; width: 100%; height: 100%; fill: var(--mp-color-text-strong); fill-opacity: .56; }
+.mp-walkthrough-ring { position: absolute; border: 2px solid var(--mp-color-action-primary); border-radius: 10px; pointer-events: none; animation: mp-tour-highlight 160ms ease-out; }
+.mp-walkthrough-card { position: absolute; display: flex; flex-direction: column; width: min(370px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow: hidden; padding: 20px; border: 1px solid var(--mp-color-border-default); border-radius: 16px; background: var(--mp-color-surface-primary); box-shadow: 0 16px 48px color-mix(in srgb, var(--mp-color-text-strong) 20%, transparent); }
+.mp-walkthrough-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; font-weight: 600; color: var(--mp-color-text-secondary); }
+.mp-walkthrough-top button { display: grid; place-items: center; min-width: 44px; min-height: 44px; margin: -8px -8px -8px 0; border-radius: 8px; color: var(--mp-color-text-strong); }
+.mp-walkthrough button:focus-visible { outline: 2px solid var(--mp-color-focus-ring); outline-offset: 2px; }
+.mp-walkthrough-progress { height: 3px; margin: 16px 0 20px; background: var(--mp-color-border-default); border-radius: 3px; overflow: hidden; }
+.mp-walkthrough-progress span { display: block; height: 100%; background: var(--mp-color-action-primary); transition: width 160ms ease-out; }
+.mp-walkthrough-icon { display: inline-flex; padding: 12px; margin-bottom: 16px; border-radius: 12px; background: var(--mp-color-surface-canvas); color: var(--mp-color-action-primary); }
+.mp-walkthrough-top, .mp-walkthrough-progress, .mp-walkthrough-actions { flex-shrink: 0; }
+.mp-walkthrough-copy { min-height: 0; overflow-y: auto; overscroll-behavior: contain; animation: mp-tour-appear 160ms ease-out; }
+.mp-walkthrough-copy h2 { margin: 0 0 8px; font-size: 22px; line-height: 1.25; font-weight: 700; outline: none; }
+.mp-walkthrough-copy p { margin: 0; font-size: 14px; line-height: 1.65; color: var(--mp-color-text-secondary); }
+.mp-walkthrough-actions { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--mp-color-border-default); }
+.mp-walkthrough-actions > div { display: flex; gap: 8px; }
+.mp-walkthrough-actions button { font-size: 14px; padding-inline: 12px; }
+@keyframes mp-tour-appear { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@keyframes mp-tour-highlight { from { opacity: 0; } to { opacity: 1; } }
+@media (max-width: 480px) {
+  .mp-walkthrough-card { padding: 16px; }
+  .mp-walkthrough-progress { margin: 12px 0 16px; }
+  .mp-walkthrough-icon { padding: 10px; margin-bottom: 12px; }
+  .mp-walkthrough-copy h2 { font-size: 20px; }
+  .mp-walkthrough-actions { margin-top: 16px; padding-top: 12px; }
+}
+@media (prefers-reduced-motion: reduce) { .mp-walkthrough *, .mp-walkthrough *::before { animation: none !important; transition: none !important; } }

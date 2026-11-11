@@ -20,6 +20,13 @@ import {
     VendorCommissionAssessmentToJSON,
     VendorCommissionAssessmentToJSONTyped,
 } from './VendorCommissionAssessment';
+import type { CommissionPaymentPeriod } from './CommissionPaymentPeriod';
+import {
+    CommissionPaymentPeriodFromJSON,
+    CommissionPaymentPeriodFromJSONTyped,
+    CommissionPaymentPeriodToJSON,
+    CommissionPaymentPeriodToJSONTyped,
+} from './CommissionPaymentPeriod';
 import type { VendorCommissionSummary } from './VendorCommissionSummary';
 import {
     VendorCommissionSummaryFromJSON,
@@ -27,6 +34,13 @@ import {
     VendorCommissionSummaryToJSON,
     VendorCommissionSummaryToJSONTyped,
 } from './VendorCommissionSummary';
+import type { CommissionPaymentHistory } from './CommissionPaymentHistory';
+import {
+    CommissionPaymentHistoryFromJSON,
+    CommissionPaymentHistoryFromJSONTyped,
+    CommissionPaymentHistoryToJSON,
+    CommissionPaymentHistoryToJSONTyped,
+} from './CommissionPaymentHistory';
 import type { CommissionPolicy } from './CommissionPolicy';
 import {
     CommissionPolicyFromJSON,
@@ -60,6 +74,18 @@ export interface VendorCommissionMonitoring {
     /**
      *
      */
+    annualPayments: CommissionPaymentPeriod;
+    /**
+     *
+     */
+    monthlyPayments: CommissionPaymentPeriod;
+    /**
+     *
+     */
+    paymentHistory: CommissionPaymentHistory;
+    /**
+     *
+     */
     assessments: Array<VendorCommissionAssessment>;
 }
 
@@ -69,6 +95,9 @@ export interface VendorCommissionMonitoring {
 export function instanceOfVendorCommissionMonitoring(value: object): value is VendorCommissionMonitoring {
     if ((!('termsAccepted' in (value as Record<string, any>)) && !('terms_accepted' in (value as Record<string, any>))) || ((value as Record<string, any>)['termsAccepted'] === undefined && (value as Record<string, any>)['terms_accepted'] === undefined)) return false;
     if (!('summary' in value) || value['summary'] === undefined) return false;
+    if ((!('annualPayments' in (value as Record<string, any>)) && !('annual_payments' in (value as Record<string, any>))) || ((value as Record<string, any>)['annualPayments'] === undefined && (value as Record<string, any>)['annual_payments'] === undefined)) return false;
+    if ((!('monthlyPayments' in (value as Record<string, any>)) && !('monthly_payments' in (value as Record<string, any>))) || ((value as Record<string, any>)['monthlyPayments'] === undefined && (value as Record<string, any>)['monthly_payments'] === undefined)) return false;
+    if ((!('paymentHistory' in (value as Record<string, any>)) && !('payment_history' in (value as Record<string, any>))) || ((value as Record<string, any>)['paymentHistory'] === undefined && (value as Record<string, any>)['payment_history'] === undefined)) return false;
     if (!('assessments' in value) || value['assessments'] === undefined) return false;
     return true;
 }
@@ -87,6 +116,9 @@ export function VendorCommissionMonitoringFromJSONTyped(json: any, ignoreDiscrim
         'currentPolicy': json['current_policy'] === undefined ? undefined : json['current_policy'] === null ? null : CommissionPolicyFromJSON(json['current_policy']),
         'nextPolicy': json['next_policy'] === undefined ? undefined : json['next_policy'] === null ? null : CommissionPolicyFromJSON(json['next_policy']),
         'summary': VendorCommissionSummaryFromJSON(json['summary']),
+        'annualPayments': CommissionPaymentPeriodFromJSON(json['annual_payments']),
+        'monthlyPayments': CommissionPaymentPeriodFromJSON(json['monthly_payments']),
+        'paymentHistory': CommissionPaymentHistoryFromJSON(json['payment_history']),
         'assessments': ((json['assessments'] as Array<any>).map(VendorCommissionAssessmentFromJSON)),
     };
 }
@@ -106,6 +138,9 @@ export function VendorCommissionMonitoringToJSONTyped(value?: VendorCommissionMo
         'current_policy': CommissionPolicyToJSON(value['currentPolicy']),
         'next_policy': CommissionPolicyToJSON(value['nextPolicy']),
         'summary': VendorCommissionSummaryToJSON(value['summary']),
+        'annual_payments': CommissionPaymentPeriodToJSON(value['annualPayments']),
+        'monthly_payments': CommissionPaymentPeriodToJSON(value['monthlyPayments']),
+        'payment_history': CommissionPaymentHistoryToJSON(value['paymentHistory']),
         'assessments': ((value['assessments'] as Array<any>).map(VendorCommissionAssessmentToJSON)),
     };
 }

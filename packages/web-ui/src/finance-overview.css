@@ -149,6 +149,8 @@
 }
 .mp-commission-monitoring { container: commission-monitoring / inline-size; }
 .mp-commission-panels { display: grid; min-width: 0; gap: 16px; align-items: stretch; }
+.mp-commission-payment-total { display: grid; gap: 4px; margin-bottom: 20px; color: var(--mp-color-text-secondary); font-size: 12px; line-height: 20px; }
+.mp-commission-payment-total strong { color: var(--mp-color-action-primary); font-size: 28px; line-height: 36px; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .mp-commission-summary { container: analytics-main / inline-size; display: grid; min-width: 0; }
 .mp-commission-summary > .mp-analytics-summary { align-content: start; }
 .mp-commission-summary .mp-metric-card { background: var(--mp-color-surface-primary); border-color: var(--mp-color-border-default); color: var(--mp-color-text-strong); }
@@ -157,7 +159,7 @@
 .mp-commission-summary .mp-analytics-summary[data-density="compact"] .mp-kpi-value { margin-top: 4px; }
 .mp-commission-summary .mp-analytics-summary[data-density="compact"] .mp-kpi-label { min-height: 36px; align-items: start; }
 @container commission-monitoring (min-width: 1040px) {
-  .mp-commission-panels { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr) minmax(0, 1fr); }
+  .mp-commission-panels { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .mp-commission-summary .mp-analytics-summary[data-density="compact"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .mp-commission-panels .mp-finance-summary-columns { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 }

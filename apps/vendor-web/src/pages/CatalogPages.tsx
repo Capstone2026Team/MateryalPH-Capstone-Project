@@ -3,12 +3,12 @@ import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { AlertCircle, LayoutGrid, Package, Rows3, Trash2 } from 'lucide-react'
 import { ResponseError, type ListingStatus } from '@materyalph/api-client-ts'
-import { BackNavigation, Button, ConfirmDialog, Field, MaterialThumbnail, OnboardingFlow, Pagination, ProductListingCard, ResponsiveRecordList, RowErrorTable, Select, StatusMessage, StockLabelBadge, stockLabelText, StatCard, ActiveFilters, Toolbar, InfoNote, EmptyState, type RecordColumn } from '@materyalph/web-ui'
+import { BackNavigation, Button, ConfirmDialog, Field, MaterialThumbnail, OnboardingFlow, Pagination, ProductListingCard, ResponsiveRecordList, Select, StatusMessage, StockLabelBadge, stockLabelText, StatCard, ActiveFilters, Toolbar, InfoNote, EmptyState, type RecordColumn } from '@materyalph/web-ui'
 import {
-  applyImport, catalogFieldErrors, createListing, deactivateListing, deleteListing, formatCentavos, getCatalogTaxonomy, getImport,
-  getImportTemplate, getListing, getMaterial, listListings, publishListing, readableCatalogError, removeListingMedia,
-  updateListing, uploadImport, uploadListingMedia,
-  type CatalogImportJob, type CatalogListing, type CatalogListingListMeta, type CatalogListingSummary, type CatalogMaterial, type CatalogMaterialMatch, type CatalogTaxonomy,
+  catalogFieldErrors, createListing, deactivateListing, deleteListing, formatCentavos, getCatalogTaxonomy,
+  getListing, getMaterial, listListings, publishListing, readableCatalogError, removeListingMedia,
+  updateListing, uploadListingMedia,
+  type CatalogListing, type CatalogListingListMeta, type CatalogListingSummary, type CatalogMaterial, type CatalogMaterialMatch, type CatalogTaxonomy,
 } from '../lib/catalog-api'
 import { statusLabel } from '../lib/vendor-status'
 import { storeName, useCatalogAccess } from '../lib/catalog-access'
@@ -391,66 +391,4 @@ function CreateListingForm({ canManage, onCreated }: { canManage: boolean; onCre
       </form>
     </div>
   </div>
-}
-
-export function VendorCatalogImportPage() {
-  const access = useCatalogAccess()
-  const [columns, setColumns] = useState<string[]>([])
-  const [job, setJob] = useState<CatalogImportJob | null>(null)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [page, setPage] = useState(1)
-  const ready = access.canManage && access.active
-  useEffect(() => { if (ready) void getImportTemplate().then(template => setColumns(template.columns)).catch(async cause => setError(await readableCatalogError(cause))) }, [ready])
-  async function upload(file: File | undefined) {
-    if (!file) return
-    setBusy(true); setError(null); setJob(null); setPage(1)
-    try { setJob(await uploadImport(file)) } catch (cause) { setError(await readableCatalogError(cause)) } finally { setBusy(false) }
-  }
-  async function apply() {
-    if (!job) return
-    setBusy(true); setError(null)
-    try { setJob(await applyImport(job.id)) } catch (cause) { setError(await readableCatalogError(cause)) } finally { setBusy(false) }
-  }
-  async function changePage(next: number) {
-    if (!job) return
-    setPage(next)
-    try { setJob(await getImport(job.id, next)) } catch (cause) { setError(await readableCatalogError(cause)) }
-  }
-  const template = `data:text/csv;charset=utf-8,${encodeURIComponent(columns.join(',') + '\n')}`
-  const applied = job?.status === 'APPLIED' || job?.status === 'APPLIED_WITH_REJECTIONS'
-  const lastPage = Number(job?.rowErrorsMeta.last_page ?? 1)
-  return <CatalogGate access={access} activeHref="/products">
-    <div className="space-y-6">
-      <BackNavigation><Link to="/products">My Products</Link></BackNavigation>
-      <PageHeader eyebrow="Store Management" title="Bulk import" description="Upload and validate a CSV to create draft listings." />
-      <InfoNote>Nothing is saved until you apply validated rows. Imported listings are never published automatically.</InfoNote>
-      {!access.canManage ? <StatusMessage tone="error">Your role cannot import products.</StatusMessage> : <>
-        <section className="grid gap-3 mp-card mp-card-padded">
-          <h2 className="text-lg font-semibold">1. Prepare the spreadsheet</h2>
-          <p className="text-sm text-text-secondary">Save your spreadsheet as CSV with these columns. One row is one variant; rows sharing a Vendor SKU form one listing. Prices are pesos inclusive of VAT, for example 285.50.</p>
-          <p className="break-words rounded-control bg-surface-canvas p-3 font-mono text-xs">{columns.join(', ') || 'Loading template…'}</p>
-          {columns.length > 0 && <a className="inline-flex min-h-11 w-fit items-center gap-2 font-semibold text-action-primary underline" href={template} download="materyalph-catalog-template.csv">Download CSV template</a>}
-        </section>
-        <section className="grid gap-3 mp-card mp-card-padded">
-          <h2 className="text-lg font-semibold">2. Upload and validate</h2>
-          <label className="grid w-fit min-w-0 max-w-full gap-2 text-sm font-semibold">CSV file<span className="font-normal text-text-secondary">Up to 2 MB and 500 rows.</span><input type="file" accept=".csv,text/csv" className="min-h-11 w-full min-w-0 text-sm" disabled={busy} onChange={event => { void upload(event.target.files?.[0]); event.target.value = '' }} /></label>
-          {busy && !job && <p className="text-sm" role="status">Validating every row…</p>}
-          {error && <StatusMessage tone="error">{error}</StatusMessage>}
-        </section>
-        {job && <section className="grid gap-4 mp-card mp-card-padded" aria-labelledby="import-result">
-          <h2 id="import-result" className="text-lg font-semibold">3. {applied ? 'Import result' : 'Validation report'}</h2>
-          <dl className="grid gap-3 text-sm min-[420px]:grid-cols-2 lg:grid-cols-4"><div><dt className="text-text-secondary">Rows</dt><dd className="text-xl font-semibold">{job.totalRows}</dd></div><div><dt className="text-text-secondary">Valid</dt><dd className="text-xl font-semibold">{job.validRows}</dd></div><div><dt className="text-text-secondary">Rejected</dt><dd className="text-xl font-semibold">{job.errorRows}</dd></div><div><dt className="text-text-secondary">Imported</dt><dd className="text-xl font-semibold">{job.appliedRows}</dd></div></dl>
-          {job.status === 'VALIDATED' && <StatusMessage>All {job.validRows} rows passed validation. Nothing is saved until you apply them.</StatusMessage>}
-          {job.status === 'HAS_ERRORS' && <StatusMessage tone="error">{job.errorRows} of {job.totalRows} rows have problems. Nothing is saved yet. Fix the file and upload it again, or apply only the {job.validRows} valid rows — the rejected rows will not be imported.</StatusMessage>}
-          {job.status === 'APPLIED' && <StatusMessage tone="success">Imported {job.appliedRows} rows as draft listings. Review each draft before publishing.</StatusMessage>}
-          {job.status === 'APPLIED_WITH_REJECTIONS' && <StatusMessage tone="error">Partially imported: {job.appliedRows} rows became draft listings and {job.errorRows} rows were not imported. Correct the rejected rows below and import them again.</StatusMessage>}
-          {!applied && job.validRows > 0 && <Button className="w-fit" disabled={busy} onClick={() => void apply()}>{busy ? 'Applying…' : `Apply ${job.validRows} valid row${job.validRows === 1 ? '' : 's'}`}</Button>}
-          <RowErrorTable caption="Rejected rows" rows={job.rowErrors.map(row => ({ rowNumber: row.rowNumber, identifier: [row.vendorSku, row.variantSku].filter(Boolean).join(' / '), errors: row.errors }))} />
-          {lastPage > 1 && <Pagination page={page} lastPage={lastPage} busy={busy} onChange={next => void changePage(next)} />}
-          {applied && <Link className="inline-flex min-h-11 w-fit items-center font-semibold text-action-primary underline" to="/products?status=DRAFT">Review imported drafts</Link>}
-        </section>}
-      </>}
-    </div>
-  </CatalogGate>
 }

@@ -30,6 +30,7 @@ use App\Infrastructure\Compliance\TesseractComplianceTextExtractor;
 use App\Infrastructure\Compliance\UnavailableComplianceTextExtractor;
 use App\Infrastructure\Encryption\ImportedValueEncrypter;
 use App\Infrastructure\Files\BouncerFileMalwareScanner;
+use App\Infrastructure\Files\ClamAvDaemonFileMalwareScanner;
 use App\Infrastructure\Files\ClamAvFileMalwareScanner;
 use App\Infrastructure\Files\UnavailableFileMalwareScanner;
 use App\Infrastructure\Geography\ConfiguredGoogleMapsGeocoder;
@@ -71,7 +72,11 @@ class AppServiceProvider extends ServiceProvider
             ))->previousKeys($encrypter->getPreviousKeys()));
         }
         $this->app->bind(MailProvider::class, LaravelMailProvider::class);
+        $this->app->bind(ClamAvDaemonFileMalwareScanner::class, fn () => new ClamAvDaemonFileMalwareScanner(
+            (string) config('malware.clamd_address'), (int) config('malware.clamd_timeout_seconds'),
+        ));
         $this->app->bind(FileMalwareScanner::class, fn ($app) => $app->make(match (config('malware.driver')) {
+            'clamd' => ClamAvDaemonFileMalwareScanner::class,
             'clamscan' => ClamAvFileMalwareScanner::class,
             'bouncer' => BouncerFileMalwareScanner::class,
             default => UnavailableFileMalwareScanner::class,

@@ -21,17 +21,53 @@ x-runtime: &runtime
     DB_HOST: postgres
     DB_PORT: "5432"
     REDIS_URL: redis://redis:6379
+    SCANNER_DRIVER: clamd
+    CLAMAV_ADDRESS: tcp://scanner:3310
+    CLAMAV_TIMEOUT_SECONDS: "30"
   restart: unless-stopped
   init: true
   stop_grace_period: 30s
   security_opt: [no-new-privileges:true]
   cap_drop: [ALL]
-  networks: [data, egress]
+  networks: [data, egress, scanning]
   logging: &logs
     driver: json-file
     options: {max-size: 10m, max-file: "3"}
 
 services:
+  scanner-signatures:
+    image: ${VPS_API_IMAGE:?Select an accepted API image by sha256 digest}
+    command: [freshclam, --daemon, --foreground, --stdout, --config-file=/app/infrastructure/freshclam.conf, --pid=/var/lib/clamav/freshclam.pid]
+    environment: {TZ: UTC}
+    volumes: [scanner-signatures:/var/lib/clamav]
+    networks: [egress]
+    restart: unless-stopped
+    mem_limit: 1536m
+    cpus: 0.25
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    logging: *logs
+
+  scanner:
+    image: ${VPS_API_IMAGE:?Select an accepted API image by sha256 digest}
+    command: [clamd, --config-file=/app/infrastructure/clamd.conf]
+    environment: {TZ: UTC}
+    volumes: [scanner-signatures:/var/lib/clamav:ro]
+    networks: [scanning]
+    restart: unless-stopped
+    mem_limit: 2048m
+    cpus: 1.0
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    depends_on: {scanner-signatures: {condition: service_started}}
+    healthcheck:
+      test: [CMD, php, /app/infrastructure/clamav-health.php]
+      interval: 30s
+      timeout: 5s
+      start_period: 180s
+      retries: 10
+    logging: *logs
+
   postgres:
     image: postgis/postgis:16-3.5
     entrypoint: [/bin/sh, /opt/materyalph/postgres-entrypoint.sh]
@@ -75,12 +111,13 @@ services:
   api:
     <<: *runtime
     command: [/usr/local/bin/render-start, api]
-    networks: [data, egress, edge]
+    networks: [data, egress, edge, scanning]
     volumes: [runtime-state:/run/materyalph:ro]
     mem_limit: 2304m
     depends_on:
       postgres: {condition: service_healthy}
       redis: {condition: service_healthy}
+      scanner: {condition: service_healthy}
     healthcheck:
       test: [CMD, wget, --spider, -q, http://127.0.0.1:10000/up]
       interval: 10s
@@ -175,11 +212,13 @@ secrets:
 
 networks:
   data: {internal: true}
+  scanning: {internal: true}
   egress: {}
   edge:
     ipam: {config: [{subnet: 172.30.240.0/24}]}
 
 volumes:
+  scanner-signatures:
   postgres-data:
   redis-data:
   runtime-state:

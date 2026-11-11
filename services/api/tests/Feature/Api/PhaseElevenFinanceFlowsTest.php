@@ -1050,6 +1050,81 @@ final class PhaseElevenFinanceFlowsTest extends TestCase
         self::assertFalse(DB::table('agreement_acceptances')->where('user_id', $owner->id)->where('agreement_version_id', $policy->agreement_version_id)->exists());
     }
 
+    public function test_vendor_commission_payments_roll_over_in_manila_and_retain_closed_year_history(): void
+    {
+        [$owner, $assessmentId, $statement, $preparer, $approver] = $this->issuedCommission();
+        $at = static function (string $time): void {
+            CarbonImmutable::setTestNow(CarbonImmutable::parse($time, 'Asia/Manila'));
+            Carbon::setTestNow(CarbonImmutable::now());
+        };
+        $at('2026-11-30 23:59:59');
+        $this->signInStoreMember($owner);
+        $payment = $this->postJson('/api/v1/vendor/finance/statements/'.$statement->id.'/payments', ['channel_code' => 'GCASH', 'amount_centavos' => 5000], ['Idempotency-Key' => (string) Str::uuid7()])->assertCreated()->json('data');
+        $this->completePayment($payment['id'])->assertOk();
+        $this->getJson('/api/v1/vendor/finance/commissions')->assertOk()
+            ->assertJsonPath('data.annual_payments.net_collected_centavos', 5000)->assertJsonPath('data.monthly_payments.net_collected_centavos', 5000)
+            ->assertJsonPath('data.monthly_payments.resets_at', '2026-12-01T00:00:00+08:00');
+
+        $at('2026-12-01 00:00:00');
+        $this->getJson('/api/v1/vendor/finance/commissions')->assertOk()
+            ->assertJsonPath('data.monthly_payments.net_collected_centavos', 0)->assertJsonPath('data.annual_payments.net_collected_centavos', 5000)
+            ->assertJsonPath('data.summary.outstanding_centavos', 15000)->assertJsonCount(0, 'data.payment_history.items');
+        $at('2026-12-31 23:59:58');
+        $this->signInStoreMember($owner);
+        $pending = $this->postJson('/api/v1/vendor/finance/statements/'.$statement->id.'/payments', ['channel_code' => 'GCASH', 'amount_centavos' => 5000], ['Idempotency-Key' => (string) Str::uuid7()])->assertCreated()->json('data');
+        $this->getJson('/api/v1/vendor/finance/commissions')->assertOk()->assertJsonPath('data.monthly_payments.net_collected_centavos', 0);
+        $at('2026-12-31 23:59:59');
+        $this->completePayment($pending['id'])->assertOk();
+
+        $at('2027-01-01 00:00:00');
+        $this->signInStoreMember($owner);
+        $this->getJson('/api/v1/vendor/finance/commissions')->assertOk()->assertHeader('Cache-Control', 'no-store, private')
+            ->assertJsonPath('data.annual_payments.net_collected_centavos', 0)->assertJsonPath('data.monthly_payments.net_collected_centavos', 0)
+            ->assertJsonPath('data.payment_history.items.0.label', '2026')->assertJsonPath('data.payment_history.items.0.net_collected_centavos', 10000)
+            ->assertJsonPath('data.summary.outstanding_centavos', 10000);
+        $payment = $this->postJson('/api/v1/vendor/finance/statements/'.$statement->id.'/payments', ['channel_code' => 'GCASH', 'amount_centavos' => 10000], ['Idempotency-Key' => (string) Str::uuid7()])->assertCreated()->json('data');
+        $this->completePayment($payment['id'])->assertOk();
+        $this->approveReturn($assessmentId, 1000000, $preparer, $approver);
+        $refunds = DB::table('refunds')->where('target_type', 'PLATFORM_FEE')->get();
+        $this->signInStoreMember($owner);
+        $this->getJson('/api/v1/vendor/finance/commissions')->assertOk()->assertJsonPath('data.annual_payments.refunded_centavos', 0);
+        foreach ($refunds as $refund) {
+            $this->confirmFeeRefund($refund);
+        }
+        $this->getJson('/api/v1/vendor/finance/commissions')->assertOk()
+            ->assertJsonPath('data.annual_payments.collected_centavos', 10000)->assertJsonPath('data.annual_payments.refunded_centavos', 20000)
+            ->assertJsonPath('data.annual_payments.net_collected_centavos', -10000)->assertJsonPath('data.monthly_payments.net_collected_centavos', -10000)
+            ->assertJsonPath('data.payment_history.items.0.net_collected_centavos', 10000)->assertJsonPath('data.summary.outstanding_centavos', 0);
+        $this->getJson('/api/v1/vendor/finance/commissions?history_page=2')->assertOk()->assertJsonCount(0, 'data.payment_history.items')->assertJsonPath('data.payment_history.total', 1);
+        $this->getJson('/api/v1/vendor/finance/commissions?history_page=0')->assertUnprocessable();
+        self::assertSame(3, DB::table('fee_payment_allocations')->where('fee_statement_id', $statement->id)->count());
+        [, $otherOwner] = $this->activeStore('Other Annual Commission Store', false);
+        $this->signInStoreMember($otherOwner);
+        $this->getJson('/api/v1/vendor/finance/commissions')->assertOk()->assertJsonPath('data.annual_payments.net_collected_centavos', 0)->assertJsonCount(0, 'data.payment_history.items');
+    }
+
+    public function test_vendor_annual_commission_history_paginates_years_independently_of_orders(): void
+    {
+        [$owner, , $statement] = $this->issuedCommission();
+        for ($year = 2026; $year <= 2036; $year++) {
+            CarbonImmutable::setTestNow(CarbonImmutable::create($year, 11, 2, 10, 0, 0, 'Asia/Manila'));
+            Carbon::setTestNow(CarbonImmutable::now());
+            $this->signInStoreMember($owner);
+            $payment = $this->postJson('/api/v1/vendor/finance/statements/'.$statement->id.'/payments', ['channel_code' => 'GCASH', 'amount_centavos' => 1000], ['Idempotency-Key' => (string) Str::uuid7()])->assertCreated()->json('data');
+            $this->completePayment($payment['id'])->assertOk();
+        }
+        CarbonImmutable::setTestNow(CarbonImmutable::create(2037, 1, 1, 0, 0, 0, 'Asia/Manila'));
+        Carbon::setTestNow(CarbonImmutable::now());
+        $this->signInStoreMember($owner);
+        $this->getJson('/api/v1/vendor/finance/commissions?page=2')->assertOk()->assertJsonCount(0, 'data.assessments')
+            ->assertJsonCount(10, 'data.payment_history.items')->assertJsonPath('data.payment_history.total', 11)
+            ->assertJsonPath('data.payment_history.has_more', true)->assertJsonPath('data.payment_history.items.0.label', '2036');
+        $this->getJson('/api/v1/vendor/finance/commissions?history_page=2')->assertOk()->assertJsonCount(1, 'data.assessments')
+            ->assertJsonCount(1, 'data.payment_history.items')->assertJsonPath('data.payment_history.items.0.label', '2026')
+            ->assertJsonPath('data.payment_history.items.0.net_collected_centavos', 1000)->assertJsonPath('data.payment_history.has_more', false)
+            ->assertJsonPath('data.annual_payments.net_collected_centavos', 0)->assertJsonPath('data.summary.outstanding_centavos', 9000);
+    }
+
     private function issuedCommission(): array
     {
         CarbonImmutable::setTestNow(CarbonImmutable::create(2026, 10, 20, 10, 0, 0, 'Asia/Manila'));

@@ -1,3 +1,4 @@
+import '../tutorial/tutorial_scope.dart';
 import '../../design_system/components/buyer_cart_button.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -102,6 +103,7 @@ class _ExploreScreenState extends State<ExploreScreen>
                 children: [
                   Expanded(
                     child: PillSearchField(
+                      key: BuyerTutorialScope.keyOf(context, 'explore-search'),
                       onTap: () => widget.navigation.openSearch(context),
                     ),
                   ),

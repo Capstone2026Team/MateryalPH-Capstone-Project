@@ -331,7 +331,8 @@ test('inbox badges identify each buyer and synchronize sales and fulfillment cou
   act(() => window.dispatchEvent(new Event('materyalph:navigation-updates')))
   await waitFor(() => expect(firstButton.querySelector('.portal-count-badge')).toBeNull())
   expect(firstButton).not.toHaveAccessibleName(/unread messages/)
-  expect(chatApi.read).not.toHaveBeenCalled()
+  // Opening Messages now reads the automatically selected sales thread; changing inbox filters reads no others.
+  expect(chatApi.read).toHaveBeenCalledExactlyOnceWith('sales-1', 'm-2')
 })
 
 test('inbox only includes fulfillment aggregates allowed by the server capability', async () => {

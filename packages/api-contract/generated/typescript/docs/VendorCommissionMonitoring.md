@@ -10,6 +10,9 @@ Name | Type
 `currentPolicy` | [CommissionPolicy](CommissionPolicy.md)
 `nextPolicy` | [CommissionPolicy](CommissionPolicy.md)
 `summary` | [VendorCommissionSummary](VendorCommissionSummary.md)
+`annualPayments` | [CommissionPaymentPeriod](CommissionPaymentPeriod.md)
+`monthlyPayments` | [CommissionPaymentPeriod](CommissionPaymentPeriod.md)
+`paymentHistory` | [CommissionPaymentHistory](CommissionPaymentHistory.md)
 `assessments` | [Array&lt;VendorCommissionAssessment&gt;](VendorCommissionAssessment.md)
 
 ## Example
@@ -23,6 +26,9 @@ const example = {
   "currentPolicy": null,
   "nextPolicy": null,
   "summary": null,
+  "annualPayments": null,
+  "monthlyPayments": null,
+  "paymentHistory": null,
   "assessments": null,
 } satisfies VendorCommissionMonitoring
 

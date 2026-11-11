@@ -1,0 +1,25 @@
+.mp-practice-body { display: grid; flex: 1; min-height: 0; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); overflow: hidden; }
+.mp-practice-coach { display: grid; align-content: start; gap: 10px; min-width: 0; max-height: 34dvh; overflow: auto; padding: 16px 20px; border-bottom: 1px solid var(--mp-color-border-default); background: var(--mp-color-surface-primary); }
+.mp-practice-coach h3:focus { outline: none; }
+.mp-practice-progress { height: 3px; background: var(--mp-color-border-default); }
+.mp-practice-progress span { display: block; height: 100%; background: var(--mp-color-action-primary); transition: width 160ms ease-out; }
+.mp-practice-workspace { min-width: 0; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 20px; background: var(--mp-color-surface-canvas); }
+.mp-practice-workspace [data-practice-highlight] { outline: 2px solid var(--mp-color-action-primary); outline-offset: 4px; border-radius: 4px; scroll-margin: 16px; }
+.mp-practice-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.mp-practice-workspace > * { animation: mp-practice-reveal 160ms ease-out; }
+.mp-practice-workspace .team-tracking-workspace { min-height: 540px; }
+@media (min-width: 1024px) { .mp-practice-body { grid-template-columns: 260px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); } .mp-practice-coach { max-height: none; border-bottom: 0; border-right: 1px solid var(--mp-color-border-default); } }
+@media (max-width: 479px) {
+  dialog:has(.mp-practice-body) > div > header { padding: 12px; }
+  dialog:has(.mp-practice-body) > div > header h2 { font-size: 16px; line-height: 22px; }
+  dialog:has(.mp-practice-body) > div > header p { font-size: 12px; line-height: 18px; }
+  dialog:has(.mp-practice-body) > div > div:last-child { padding: 12px; }
+  .mp-practice-coach { max-height: 30dvh; gap: 8px; padding: 12px 16px; }
+  .mp-practice-coach h3 { font-size: 16px; line-height: 22px; }
+  .mp-practice-coach > p { font-size: 13px; line-height: 20px; }
+  .mp-practice-workspace { padding: 16px; }
+  .mp-practice-actions button { min-height: 44px; padding-inline: 8px; font-size: 13px; }
+  .mp-practice-actions svg { display: none; }
+}
+@keyframes mp-practice-reveal { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .mp-practice-workspace > * { animation: none; } .mp-practice-progress span { transition: none; } }

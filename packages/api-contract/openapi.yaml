@@ -68,6 +68,53 @@ tags:
   - name: Buyer Orders
   - name: Vendor Orders
 paths:
+  /{tutorialPortal}/account/tutorials:
+    parameters:
+      - { name: tutorialPortal, in: path, required: true, schema: { type: string, enum: [buyers, vendors] } }
+    get:
+      operationId: getTutorialProgress
+      tags: [Tutorials]
+      summary: Read the signed-in user's tutorial acknowledgments
+      description: Bounded to six Buyer keys or 23 Vendor overview/page keys for this account type. An absent key is unseen. Buyer uses native bearer transport; Vendor uses cookie transport. Does not alter account or store onboarding.
+      security:
+        - passportBearer: []
+        - accessCookie: []
+      responses:
+        '200':
+          description: Account-scoped tutorial progress
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TutorialProgressEnvelope' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+  /{tutorialPortal}/account/tutorials/{tutorialKey}:
+    parameters:
+      - { name: tutorialPortal, in: path, required: true, schema: { type: string, enum: [buyers, vendors] } }
+      - { name: tutorialKey, in: path, required: true, schema: { type: string, enum: [overview, discovery, procurement, projects, messages, orders, store, products, inventory, dashboard, fulfillment, invoices, disputes, reviews, vehicles, finance, commissions, transactions, remittance, performance, analytics, team, tracking, settings, notifications, support] } }
+    put:
+      operationId: acknowledgeTutorial
+      tags: [Tutorials]
+      summary: Save completion or dismissal for the signed-in user
+      description: Idempotent acknowledgment. COMPLETED cannot be downgraded by a replay. Keys are role-scoped; Buyer supports overview/discovery/procurement/projects/messages/orders and Vendor supports overview/store/products/inventory/messages/orders/dashboard/fulfillment/invoices/disputes/reviews/vehicles/finance/commissions/transactions/remittance/performance/analytics/team/tracking/settings/notifications/support. Page acknowledgments are per person and do not grant access to the corresponding workspace. Vendor requests require the existing CSRF header. Replay never resets persisted progress. No other user ID is accepted.
+      security:
+        - passportBearer: []
+        - accessCookie: []
+          webCsrf: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TutorialAcknowledgment' }
+      responses:
+        '200':
+          description: Saved account-scoped progress
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TutorialProgressEnvelope' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '419': { $ref: '#/components/responses/ErrorResponse' }
+        '422': { $ref: '#/components/responses/ErrorResponse' }
   /buyers/work-packages/{packageId}/arrangement-options:
     get:
       tags:
@@ -19000,10 +19047,11 @@ paths:
     get:
       operationId: getVendorCommissionMonitoring
       tags: [Vendor Finance]
-      description: Owner-only all-time commission monitoring with current and next policy, estimated and earned fees, approved credits, unbilled fees, draft bills, issued outstanding and overdue debt, verified allocations and successful fee refunds. Assessments are paginated and retain their original basis and percentage. Cash and earnings are separate; no wallet balance is represented.
+      description: Owner-only commission monitoring with current calendar-year and calendar-month payment totals in Asia/Manila and independently paginated closed-year payment history. Verified statement allocations count at allocated_at; confirmed fee refunds count at completed_at in their own period, including refunds of earlier-year payments. Periods roll over at midnight without deleting financial records. All-time summary balances, current and next policies and paginated original-rate assessments remain separate. Unpaid debt carries forward; no wallet balance is represented.
       security: [{ accessCookie: [], webCsrf: [] }]
       parameters:
         - { name: page, in: query, schema: { type: integer, minimum: 1, maximum: 1000, default: 1 } }
+        - { name: history_page, in: query, schema: { type: integer, minimum: 1, maximum: 1000, default: 1 }, description: Independent page of completed calendar years with recorded commission-payment or refund activity. }
       responses:
         '200':
           description: Store-scoped monitoring and paginated assessment records.
@@ -24496,6 +24544,26 @@ components:
         application/json:
           schema: { $ref: "#/components/schemas/BotStepUpErrorEnvelope" }
   schemas:
+    TutorialAcknowledgment:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status: { type: string, enum: [COMPLETED, SKIPPED] }
+    TutorialProgress:
+      type: object
+      required: [tutorial_key, status, updated_at]
+      properties:
+        tutorial_key: { type: string }
+        status: { type: string, enum: [COMPLETED, SKIPPED] }
+        updated_at: { type: string, format: date-time }
+    TutorialProgressEnvelope:
+      type: object
+      required: [data, meta, errors]
+      properties:
+        data: { type: array, maxItems: 23, items: { $ref: '#/components/schemas/TutorialProgress' } }
+        meta: { type: object, additionalProperties: true }
+        errors: { type: array, items: { $ref: '#/components/schemas/ApiError' } }
     ProjectArrangement:
       type: object
       required:
@@ -31349,6 +31417,27 @@ components:
         collected_centavos: { type: integer, format: int64, minimum: 0 }
         refunded_centavos: { type: integer, format: int64, minimum: 0 }
         net_collected_centavos: { type: integer, format: int64 }
+    CommissionPaymentPeriod:
+      type: object
+      description: Confirmed commission statement allocations less completed fee refunds by each event's Asia/Manila calendar period. A refund-only period may have a negative net. Does not include Buyer payments, estimates, unpaid bills or approved credits without a completed cash refund.
+      required: [label, starts_on, ends_on, resets_at, collected_centavos, refunded_centavos, net_collected_centavos]
+      properties:
+        label: { type: string, description: Calendar year or month and year. }
+        starts_on: { type: string, format: date }
+        ends_on: { type: string, format: date }
+        resets_at: { type: string, format: date-time, description: Exclusive end at midnight Asia/Manila; the next period begins here. }
+        collected_centavos: { type: integer, format: int64, minimum: 0 }
+        refunded_centavos: { type: integer, format: int64, minimum: 0 }
+        net_collected_centavos: { type: integer, format: int64 }
+    CommissionPaymentHistory:
+      type: object
+      required: [items, page, per_page, total, has_more]
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/CommissionPaymentPeriod' } }
+        page: { type: integer, minimum: 1 }
+        per_page: { type: integer, const: 10 }
+        total: { type: integer, minimum: 0 }
+        has_more: { type: boolean }
     VendorCommissionAssessment:
       type: object
       required: [id, order_reference, state, commission_basis_centavos, commission_basis_points, estimated_centavos, earned_centavos, credited_centavos, net_centavos, dispute_hold]
@@ -31366,12 +31455,15 @@ components:
         earned_at: { type: [string, 'null'], format: date-time }
     VendorCommissionMonitoring:
       type: object
-      required: [summary, assessments, terms_accepted]
+      required: [summary, assessments, terms_accepted, annual_payments, monthly_payments, payment_history]
       properties:
         terms_accepted: { type: boolean, description: Current Owner acceptance and applicable authority approval for the effective versioned terms. }
         current_policy: { oneOf: [ { $ref: '#/components/schemas/CommissionPolicy' }, { type: 'null' } ] }
         next_policy: { oneOf: [ { $ref: '#/components/schemas/CommissionPolicy' }, { type: 'null' } ] }
         summary: { $ref: '#/components/schemas/VendorCommissionSummary' }
+        annual_payments: { $ref: '#/components/schemas/CommissionPaymentPeriod' }
+        monthly_payments: { $ref: '#/components/schemas/CommissionPaymentPeriod' }
+        payment_history: { $ref: '#/components/schemas/CommissionPaymentHistory' }
         assessments: { type: array, items: { $ref: '#/components/schemas/VendorCommissionAssessment' } }
     VendorCommissionMonitoringEnvelope:
       type: object

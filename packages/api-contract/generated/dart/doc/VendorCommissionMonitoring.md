@@ -12,6 +12,9 @@ Name | Type | Description | Notes
 **currentPolicy** | [**CommissionPolicy**](CommissionPolicy.md) |  | [optional]
 **nextPolicy** | [**CommissionPolicy**](CommissionPolicy.md) |  | [optional]
 **summary** | [**VendorCommissionSummary**](VendorCommissionSummary.md) |  |
+**annualPayments** | [**CommissionPaymentPeriod**](CommissionPaymentPeriod.md) |  |
+**monthlyPayments** | [**CommissionPaymentPeriod**](CommissionPaymentPeriod.md) |  |
+**paymentHistory** | [**CommissionPaymentHistory**](CommissionPaymentHistory.md) |  |
 **assessments** | [**BuiltList&lt;VendorCommissionAssessment&gt;**](VendorCommissionAssessment.md) |  |
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

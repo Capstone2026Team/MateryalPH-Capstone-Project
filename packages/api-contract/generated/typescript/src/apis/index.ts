@@ -41,6 +41,7 @@ export * from './ReportingApi';
 export * from './StoresApi';
 export * from './SupportApi';
 export * from './SystemApi';
+export * from './TutorialsApi';
 export * from './VendorAutoAcceptApi';
 export * from './VendorCatalogApi';
 export * from './VendorDashboardApi';

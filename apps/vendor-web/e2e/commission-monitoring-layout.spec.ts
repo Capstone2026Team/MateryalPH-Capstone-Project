@@ -19,6 +19,9 @@ const statementRows = ['PAID', 'ISSUED', 'PARTIALLY_PAID'].map((state, index) =>
   sample_notice: 'SAMPLE statement — not an official invoice. TEST/DEMO billing.',
 }))
 
+const annualPayments = { label: '2026', starts_on: '2026-01-01', ends_on: '2026-12-31', resets_at: '2026-12-31T16:00:00Z', collected_centavos: 9000, refunded_centavos: 1000, net_collected_centavos: 8000 }
+const monthlyPayments = { ...annualPayments, label: 'November 2026', starts_on: '2026-11-01', ends_on: '2026-11-30', resets_at: '2026-11-30T16:00:00Z', collected_centavos: 4000, net_collected_centavos: 3000 }
+
 async function mock(page: Page, { empty = false, owner = true } = {}) {
   const requests: number[] = []
   await page.route('**/api/v1/**', async route => {
@@ -55,6 +58,8 @@ async function mock(page: Page, { empty = false, owner = true } = {}) {
         current_policy: { id: 'sample-current', version: 2, commission_basis_points: 325, rate_label: '3.25%', effective_from: '2026-10-19T00:00:00Z', status: 'CURRENT' },
         next_policy: { id: 'sample-next', version: 3, commission_basis_points: 350, rate_label: '3.50%', effective_from: '2026-12-01T00:00:00Z', status: 'SCHEDULED' },
         terms_accepted: true,
+        annual_payments: annualPayments, monthly_payments: monthlyPayments,
+        payment_history: { items: empty ? [] : [{ ...annualPayments, label: '2025' }], page: 1, per_page: 10, total: empty ? 0 : 1, has_more: false },
         summary: { estimated_centavos: 828, earned_centavos: 5100, credited_centavos: 100, net_earned_centavos: 5000, unbilled_centavos: 3022, draft_centavos: 1000, outstanding_centavos: 2000, overdue_centavos: 500, collected_centavos: 9000, refunded_centavos: 1000, net_collected_centavos: 8000 },
         assessments: empty ? [] : requestedPage === 1 ? assessments : [{ ...assessments[0], id: 'sample-second-page', order_reference: 'ORD-SECOND-PAGE' }],
       }
@@ -69,11 +74,10 @@ async function mock(page: Page, { empty = false, owner = true } = {}) {
 test('commission records keep rates, credits and statuses readable at every viewport', async ({ page }) => {
   const requests = await mock(page)
   await page.goto('/finance/commissions')
-  const billing = page.getByRole('region', { name: 'Billing and payments', exact: true })
+  const billing = page.getByRole('region', { name: 'Monthly commission payment', exact: true })
   const orders = page.getByRole('region', { name: 'Commission by order', exact: true }).first()
   await expect(billing).toBeVisible()
-  const overview = page.getByRole('region', { name: 'At a glance', exact: true })
-  const metrics = overview.locator(':scope > dl')
+  const overview = page.getByRole('region', { name: 'Annual total commission payment', exact: true })
   const overviewBox = (await overview.boundingBox())!
   const billingBox = (await billing.boundingBox())!
   const contentWidth = (await page.locator('.mp-commission-monitoring').boundingBox())!.width
@@ -81,14 +85,12 @@ test('commission records keep rates, credits and statuses readable at every view
     expect(billingBox.x).toBeGreaterThan(overviewBox.x + overviewBox.width)
     expect(Math.abs(billingBox.y - overviewBox.y)).toBeLessThan(2)
   } else expect(billingBox.y).toBeGreaterThan(overviewBox.y)
-  const firstMetric = (await metrics.nth(0).boundingBox())!
-  const secondMetric = (await metrics.nth(1).boundingBox())!
-  if (overviewBox.width >= 440) {
-    expect(secondMetric.x).toBeGreaterThan(firstMetric.x + firstMetric.width)
-    expect(Math.abs(secondMetric.y - firstMetric.y)).toBeLessThan(2)
-  }
+  await expect(overview.getByText('₱80.00', { exact: true })).toBeVisible()
+  await expect(billing.getByText('₱30.00', { exact: true })).toBeVisible()
+  await expect(overview.getByText('Calendar year · 2026', { exact: true })).toBeVisible()
+  await expect(billing.getByText('Calendar month · November 2026', { exact: true })).toBeVisible()
   await expect(page.getByText('Scheduled: 3.50%', { exact: false })).toBeVisible()
-  await expect(page.getByRole('table', { name: 'Commission payments' }).getByRole('row', { name: 'Confirmed fee refunds -₱10.00' })).toBeVisible()
+  await expect(page.getByRole('table', { name: 'Monthly commission payments' }).getByRole('row', { name: 'Completed refunds -₱10.00' })).toBeVisible()
   await expect(orders.getByText(assessments[0].order_reference, { exact: true })).toBeVisible()
   await expect(orders.getByText('2.00%', { exact: true })).toBeVisible()
   await expect(orders.getByText('Fee reduction -₱1.00', { exact: true })).toBeVisible()
@@ -107,10 +109,11 @@ test('commission records keep rates, credits and statuses readable at every view
     await expect(orders.getByRole('article')).toHaveCount(12)
     await expect(orders.getByRole('table')).toHaveCount(0)
   }
-  const groups = await billing.locator('.mp-finance-summary-columns > section').all()
+  const balances = page.getByRole('region', { name: 'Current commission balances', exact: true })
+  const groups = await balances.locator('.mp-finance-summary-columns > section').all()
   const first = (await groups[0].boundingBox())!
   const second = (await groups[1].boundingBox())!
-  if (contentWidth >= 1040 || (await billing.boundingBox())!.width >= 520) expect(second.x).toBeGreaterThan(first.x + first.width)
+  if ((await balances.boundingBox())!.width >= 520) expect(second.x).toBeGreaterThan(first.x + first.width)
   else expect(second.y).toBeGreaterThan(first.y)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   const directory = resolve('../../.tmp/commission-monitoring-review')
@@ -126,6 +129,23 @@ test('commission records keep rates, credits and statuses readable at every view
   await expect(page.getByRole('link', { name: 'View and pay commission statements' })).toHaveAttribute('href', '#commission-statements')
 })
 
+test('annual payment history retains prior years in a separate responsive dialog', async ({ page }) => {
+  await mock(page)
+  await page.goto('/finance/commissions')
+  const trigger = page.getByRole('button', { name: 'Annual history', exact: true })
+  await trigger.click()
+  const history = page.getByRole('dialog', { name: 'Annual total commission payment history', exact: true })
+  await expect(history.getByText('2025', { exact: true })).toBeVisible()
+  await expect(history.getByText('₱80.00', { exact: true })).toBeVisible()
+  expect(await history.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
+  const directory = resolve('../../.tmp/commission-monitoring-review')
+  mkdirSync(directory, { recursive: true })
+  await page.screenshot({ path: resolve(directory, `${page.viewportSize()!.width}-annual-history.png`) })
+  await page.keyboard.press('Escape')
+  await expect(history).toHaveCount(0)
+  await expect(trigger).toBeFocused()
+})
+
 test('commission monitoring recovers from a failed load and shows an empty record state', async ({ page }) => {
   await mock(page, { empty: true })
   let unavailable = true
@@ -138,7 +158,7 @@ test('commission monitoring recovers from a failed load and shows an empty recor
   unavailable = false
   await page.getByRole('button', { name: 'Try again' }).click()
   await expect(page.getByText(/No commission assessments yet/)).toBeVisible()
-  await expect(page.getByRole('region', { name: 'Billing and payments', exact: true })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Monthly commission payment', exact: true })).toBeVisible()
   await expect(page.getByRole('navigation', { name: 'Pagination' })).toHaveCount(0)
 })
 
@@ -152,20 +172,20 @@ test('commission monitoring keeps store finance restricted to the Owner', async 
 test('one billing help icon opens all six explanations without expanding the panel', async ({ page }) => {
   await mock(page, { empty: true })
   await page.goto('/finance/commissions')
-  const billing = page.getByRole('region', { name: 'Billing and payments', exact: true })
+  const billing = page.getByRole('region', { name: 'Current commission balances', exact: true })
   await expect(billing).toBeVisible()
   const height = (await billing.boundingBox())!.height
-  const titles = ['Not yet billed', 'Draft bills awaiting issue', 'Approved commission credits', 'Payments collected', 'Confirmed fee refunds', 'Net collected payments']
+  const titles = ['Not yet billed', 'Draft bills awaiting issue', 'Approved commission credits', 'Unpaid statements', 'Overdue', 'Estimated commission']
   await expect(billing.getByRole('button', { name: /^How this is calculated:/ })).toHaveCount(1)
-  const trigger = billing.getByRole('button', { name: 'How this is calculated: Billing and payments', exact: true })
+  const trigger = billing.getByRole('button', { name: 'How this is calculated: Current commission balances', exact: true })
   const target = (await trigger.boundingBox())!
   expect(target.width).toBeGreaterThanOrEqual(44)
   expect(target.height).toBeGreaterThanOrEqual(44)
   await trigger.click()
-  const dialog = page.getByRole('dialog', { name: 'Billing and payments', exact: true })
+  const dialog = page.getByRole('dialog', { name: 'Current commission balances', exact: true })
   await expect(dialog).toBeVisible()
   for (const title of titles) await expect(dialog.getByRole('heading', { name: title, exact: true })).toBeVisible()
-  await expect(dialog).toContainText('Payments collected − confirmed fee refunds = net collected payments.')
+  await expect(dialog).toContainText('These balances carry forward when the payment totals reset.')
   const bounds = (await dialog.boundingBox())!
   const viewport = page.viewportSize()!
   expect(bounds.x).toBeGreaterThanOrEqual(12)
@@ -176,7 +196,7 @@ test('one billing help icon opens all six explanations without expanding the pan
   const directory = resolve('../../.tmp/commission-monitoring-review')
   mkdirSync(directory, { recursive: true })
   await page.screenshot({ path: resolve(directory, `${viewport.width}-billing-explanation.png`) })
-  const lastExplanation = dialog.getByRole('heading', { name: 'Net collected payments', exact: true })
+  const lastExplanation = dialog.getByRole('heading', { name: 'Estimated commission', exact: true })
   await lastExplanation.scrollIntoViewIfNeeded()
   await expect(lastExplanation).toBeInViewport()
   await page.keyboard.press('Escape')
@@ -200,8 +220,8 @@ test('statements sit beside monitoring panels and old links open compact paid an
   await expect(statements.getByRole('button', { name: 'History', exact: true })).toBeVisible()
   const contentWidth = (await page.locator('.mp-commission-monitoring').boundingBox())!.width
   if (contentWidth >= 1040) {
-    const overview = (await page.getByRole('region', { name: 'At a glance', exact: true }).boundingBox())!
-    const billing = (await page.getByRole('region', { name: 'Billing and payments', exact: true }).boundingBox())!
+    const overview = (await page.getByRole('region', { name: 'Annual total commission payment', exact: true }).boundingBox())!
+    const billing = (await page.getByRole('region', { name: 'Monthly commission payment', exact: true }).boundingBox())!
     const box = (await statements.boundingBox())!
     expect(box.x).toBeGreaterThan(billing.x + billing.width)
     expect(Math.abs(box.y - overview.y)).toBeLessThan(2)

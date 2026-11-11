@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { X } from 'lucide-react'
 import { Button } from './button'
+import { TutorialWindowHelpButton } from './tutorial-window-help'
 import './side-panel.css'
 
 /** Native modal focus containment, with a persistent header and a scrolling body. */
@@ -36,7 +37,7 @@ export function SidePanel({ open, title, description, children, onClose, closeLa
     <div className="mp-side-panel__layout">
       <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border-default px-5 py-4">
         <div className="min-w-0"><h2 id={titleId} className="break-words text-lg font-semibold">{title}</h2>{description && <p className="mt-1 text-xs text-text-secondary">{description}</p>}</div>
-        <Button variant="quiet" aria-label={closeLabel} disabled={closeDisabled} onClick={close}><X size={20} aria-hidden="true" /></Button>
+        <div className="flex shrink-0 items-center gap-1"><TutorialWindowHelpButton getWindow={() => dialog.current} title={title} disabled={closeDisabled} /><Button variant="quiet" aria-label={closeLabel} disabled={closeDisabled} onClick={close}><X size={20} aria-hidden="true" /></Button></div>
       </div>
       <div className={`mp-side-panel__body${padded ? ' mp-side-panel__body--padded' : ''}`}>{children}</div>
     </div>

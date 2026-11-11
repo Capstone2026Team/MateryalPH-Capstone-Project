@@ -28,6 +28,21 @@ void main() {
       // TODO
     });
 
+    // CommissionPaymentPeriod annualPayments
+    test('to test the property `annualPayments`', () async {
+      // TODO
+    });
+
+    // CommissionPaymentPeriod monthlyPayments
+    test('to test the property `monthlyPayments`', () async {
+      // TODO
+    });
+
+    // CommissionPaymentHistory paymentHistory
+    test('to test the property `paymentHistory`', () async {
+      // TODO
+    });
+
     // BuiltList<VendorCommissionAssessment> assessments
     test('to test the property `assessments`', () async {
       // TODO

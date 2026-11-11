@@ -34,12 +34,13 @@ test('provider draft pins callback, portal origins, captcha identities and broad
   const api = rawEnvironment(readFileSync(new URL('../../infrastructure/vps/api/.env.example', import.meta.url), 'utf8'))
   for (const key of Object.keys(api)) if (!api[key] && key !== 'SESSION_DOMAIN') api[key] = 'synthetic-only'
   Object.assign(api, { APP_KEY: `base64:${Buffer.alloc(32).toString('base64')}`, DB_PASSWORD: 's'.repeat(32),
+    BOUNCER_API_KEY: '',
     AWS_ENDPOINT: 'https://storage.example.test', MAIL_DELIVERY_NOT_BEFORE: '2026-10-23T00:00:00Z', OUTBOX_DELIVERY_NOT_BEFORE: '2026-10-23T00:00:00Z' })
   const reverb = rawEnvironment(readFileSync(new URL('../../infrastructure/vps/reverb/.env.example', import.meta.url), 'utf8'))
   for (const key of ['APP_KEY', 'REVERB_APP_KEY', 'REVERB_APP_SECRET']) reverb[key] = api[key]
   validateApi(control(), api, reverb, api.DB_PASSWORD)
   for (const key of ['FRONTEND_VENDOR_URL', 'FRONTEND_ADMIN_URL', 'GOOGLE_OIDC_REDIRECT_URI', 'CORS_ALLOWED_ORIGINS',
-    'RECAPTCHA_VENDOR_WEB_ALLOWED_HOSTNAMES', 'RECAPTCHA_ADMIN_WEB_ALLOWED_HOSTNAMES', 'BROADCAST_CONNECTION', 'HASH_DRIVER']) {
+    'RECAPTCHA_VENDOR_WEB_ALLOWED_HOSTNAMES', 'RECAPTCHA_ADMIN_WEB_ALLOWED_HOSTNAMES', 'BROADCAST_CONNECTION', 'HASH_DRIVER', 'SCANNER_DRIVER', 'CLAMAV_ADDRESS', 'CLAMAV_TIMEOUT_SECONDS']) {
     assert.throws(() => validateApi(control(), { ...api, [key]: 'stale-deployment' }, reverb, api.DB_PASSWORD))
   }
 })

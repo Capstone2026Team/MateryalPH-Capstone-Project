@@ -27,6 +27,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Laravel\Passport\AccessToken;
+use Symfony\Component\Process\Process;
 use Tests\TestCase;
 
 final class PhaseTwoAccountSecurityTest extends TestCase
@@ -265,6 +266,43 @@ final class PhaseTwoAccountSecurityTest extends TestCase
         self::assertSame($version, (int) $user->lock_version);
         self::assertSame([], Storage::disk('local')->allFiles());
         Http::assertSentCount(1);
+    }
+
+    public function test_resident_scanner_binding_saves_only_clean_photos_and_preserves_existing_identity_on_failure(): void
+    {
+        Storage::fake('local');
+        config(['materyalph.files.disk' => 'local', 'malware.driver' => 'clamd']);
+        [$user] = $this->buyer();
+        Http::preventStrayRequests();
+        $savedKey = null;
+        foreach (['stream: OK', 'stream: Eicar-Signature FOUND', 'stream: engine unavailable ERROR'] as $reply) {
+            $photo = UploadedFile::fake()->image('portrait.png', 80, 120);
+            $options = ['reply' => $reply, 'size' => $photo->getSize(), 'sha256' => hash_file('sha256', $photo->getRealPath())];
+            $server = new Process([PHP_BINARY, base_path('tests/Fixtures/clamd-server.php'), json_encode($options, JSON_THROW_ON_ERROR)]);
+            $server->setTimeout(8)->start();
+            try {
+                $server->waitUntil(static fn (string $type, string $output): bool => $type === Process::OUT && str_contains($output, "\n"));
+                config(['malware.clamd_address' => 'tcp://'.trim($server->getOutput()), 'malware.clamd_timeout_seconds' => 3]);
+                $version = (int) $user->fresh()->lock_version;
+                $result = $this->post('/api/v1/buyers/account/photo', ['photo' => $photo, 'lock_version' => $version]);
+                if ($reply === 'stream: OK') {
+                    $result->assertOk();
+                    $savedKey = $user->refresh()->profile_photo_key;
+                    $bytes = Storage::disk('local')->get($savedKey);
+                    self::assertSame([256, 256], array_slice(getimagesizefromstring($bytes), 0, 2));
+                } else {
+                    $rejected = str_ends_with($reply, ' FOUND');
+                    $result->assertStatus($rejected ? 422 : 503)->assertJsonPath('errors.0.code', $rejected ? 'PHOTO_REJECTED' : 'PHOTO_SCANNER_UNAVAILABLE');
+                    self::assertSame($savedKey, $user->refresh()->profile_photo_key);
+                    self::assertSame($version, (int) $user->lock_version);
+                }
+                self::assertSame(0, $server->wait(), $server->getErrorOutput());
+            } finally {
+                $server->stop(0);
+            }
+        }
+        self::assertCount(1, Storage::disk('local')->allFiles('private/profile-photos'));
+        Http::assertNothingSent();
     }
 
     public function test_buyer_photo_requires_active_authenticated_session_and_an_unexpired_signature(): void

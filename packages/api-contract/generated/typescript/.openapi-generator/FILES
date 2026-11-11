@@ -375,6 +375,8 @@ docs/CheckoutSubmissionEnvelope.md
 docs/CheckoutSubmitRequest.md
 docs/CheckoutVendorRef.md
 docs/CommissionEmailSummary.md
+docs/CommissionPaymentHistory.md
+docs/CommissionPaymentPeriod.md
 docs/CommissionPolicies.md
 docs/CommissionPoliciesEnvelope.md
 docs/CommissionPolicy.md
@@ -1096,6 +1098,10 @@ docs/TaxPackage.md
 docs/TaxPackageInput.md
 docs/TaxPackageReview.md
 docs/ThresholdStatusEvent.md
+docs/TutorialAcknowledgment.md
+docs/TutorialProgress.md
+docs/TutorialProgressEnvelope.md
+docs/TutorialsApi.md
 docs/UserIdentity.md
 docs/VehicleIssueRequest.md
 docs/VendorAccountDeletionBlockers.md
@@ -1382,6 +1388,7 @@ src/apis/ReportingApi.ts
 src/apis/StoresApi.ts
 src/apis/SupportApi.ts
 src/apis/SystemApi.ts
+src/apis/TutorialsApi.ts
 src/apis/VendorAutoAcceptApi.ts
 src/apis/VendorCatalogApi.ts
 src/apis/VendorDashboardApi.ts
@@ -1740,6 +1747,8 @@ src/models/CheckoutSubmissionEnvelope.ts
 src/models/CheckoutSubmitRequest.ts
 src/models/CheckoutVendorRef.ts
 src/models/CommissionEmailSummary.ts
+src/models/CommissionPaymentHistory.ts
+src/models/CommissionPaymentPeriod.ts
 src/models/CommissionPolicies.ts
 src/models/CommissionPoliciesEnvelope.ts
 src/models/CommissionPolicy.ts
@@ -2453,6 +2462,9 @@ src/models/TaxPackage.ts
 src/models/TaxPackageInput.ts
 src/models/TaxPackageReview.ts
 src/models/ThresholdStatusEvent.ts
+src/models/TutorialAcknowledgment.ts
+src/models/TutorialProgress.ts
+src/models/TutorialProgressEnvelope.ts
 src/models/UserIdentity.ts
 src/models/VehicleIssueRequest.ts
 src/models/VendorAccountDeletionBlockers.ts

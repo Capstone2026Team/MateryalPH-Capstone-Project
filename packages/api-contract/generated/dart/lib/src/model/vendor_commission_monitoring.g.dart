@@ -16,6 +16,12 @@ class _$VendorCommissionMonitoring extends VendorCommissionMonitoring {
   @override
   final VendorCommissionSummary summary;
   @override
+  final CommissionPaymentPeriod annualPayments;
+  @override
+  final CommissionPaymentPeriod monthlyPayments;
+  @override
+  final CommissionPaymentHistory paymentHistory;
+  @override
   final BuiltList<VendorCommissionAssessment> assessments;
 
   factory _$VendorCommissionMonitoring(
@@ -27,6 +33,9 @@ class _$VendorCommissionMonitoring extends VendorCommissionMonitoring {
       this.currentPolicy,
       this.nextPolicy,
       required this.summary,
+      required this.annualPayments,
+      required this.monthlyPayments,
+      required this.paymentHistory,
       required this.assessments})
       : super._();
   @override
@@ -46,6 +55,9 @@ class _$VendorCommissionMonitoring extends VendorCommissionMonitoring {
         currentPolicy == other.currentPolicy &&
         nextPolicy == other.nextPolicy &&
         summary == other.summary &&
+        annualPayments == other.annualPayments &&
+        monthlyPayments == other.monthlyPayments &&
+        paymentHistory == other.paymentHistory &&
         assessments == other.assessments;
   }
 
@@ -56,6 +68,9 @@ class _$VendorCommissionMonitoring extends VendorCommissionMonitoring {
     _$hash = $jc(_$hash, currentPolicy.hashCode);
     _$hash = $jc(_$hash, nextPolicy.hashCode);
     _$hash = $jc(_$hash, summary.hashCode);
+    _$hash = $jc(_$hash, annualPayments.hashCode);
+    _$hash = $jc(_$hash, monthlyPayments.hashCode);
+    _$hash = $jc(_$hash, paymentHistory.hashCode);
     _$hash = $jc(_$hash, assessments.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
@@ -68,6 +83,9 @@ class _$VendorCommissionMonitoring extends VendorCommissionMonitoring {
           ..add('currentPolicy', currentPolicy)
           ..add('nextPolicy', nextPolicy)
           ..add('summary', summary)
+          ..add('annualPayments', annualPayments)
+          ..add('monthlyPayments', monthlyPayments)
+          ..add('paymentHistory', paymentHistory)
           ..add('assessments', assessments))
         .toString();
   }
@@ -101,6 +119,24 @@ class VendorCommissionMonitoringBuilder
   set summary(VendorCommissionSummaryBuilder? summary) =>
       _$this._summary = summary;
 
+  CommissionPaymentPeriodBuilder? _annualPayments;
+  CommissionPaymentPeriodBuilder get annualPayments =>
+      _$this._annualPayments ??= CommissionPaymentPeriodBuilder();
+  set annualPayments(CommissionPaymentPeriodBuilder? annualPayments) =>
+      _$this._annualPayments = annualPayments;
+
+  CommissionPaymentPeriodBuilder? _monthlyPayments;
+  CommissionPaymentPeriodBuilder get monthlyPayments =>
+      _$this._monthlyPayments ??= CommissionPaymentPeriodBuilder();
+  set monthlyPayments(CommissionPaymentPeriodBuilder? monthlyPayments) =>
+      _$this._monthlyPayments = monthlyPayments;
+
+  CommissionPaymentHistoryBuilder? _paymentHistory;
+  CommissionPaymentHistoryBuilder get paymentHistory =>
+      _$this._paymentHistory ??= CommissionPaymentHistoryBuilder();
+  set paymentHistory(CommissionPaymentHistoryBuilder? paymentHistory) =>
+      _$this._paymentHistory = paymentHistory;
+
   ListBuilder<VendorCommissionAssessment>? _assessments;
   ListBuilder<VendorCommissionAssessment> get assessments =>
       _$this._assessments ??= ListBuilder<VendorCommissionAssessment>();
@@ -118,6 +154,9 @@ class VendorCommissionMonitoringBuilder
       _currentPolicy = $v.currentPolicy?.toBuilder();
       _nextPolicy = $v.nextPolicy?.toBuilder();
       _summary = $v.summary.toBuilder();
+      _annualPayments = $v.annualPayments.toBuilder();
+      _monthlyPayments = $v.monthlyPayments.toBuilder();
+      _paymentHistory = $v.paymentHistory.toBuilder();
       _assessments = $v.assessments.toBuilder();
       _$v = null;
     }
@@ -147,6 +186,9 @@ class VendorCommissionMonitoringBuilder
             currentPolicy: _currentPolicy?.build(),
             nextPolicy: _nextPolicy?.build(),
             summary: summary.build(),
+            annualPayments: annualPayments.build(),
+            monthlyPayments: monthlyPayments.build(),
+            paymentHistory: paymentHistory.build(),
             assessments: assessments.build(),
           );
     } catch (_) {
@@ -158,6 +200,12 @@ class VendorCommissionMonitoringBuilder
         _nextPolicy?.build();
         _$failedField = 'summary';
         summary.build();
+        _$failedField = 'annualPayments';
+        annualPayments.build();
+        _$failedField = 'monthlyPayments';
+        monthlyPayments.build();
+        _$failedField = 'paymentHistory';
+        paymentHistory.build();
         _$failedField = 'assessments';
         assessments.build();
       } catch (e) {

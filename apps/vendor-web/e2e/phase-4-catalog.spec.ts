@@ -347,23 +347,13 @@ test('compact compliance panel precedes Core details and preserves readable cont
   await expect(panel).toHaveCount(0)
 })
 
-test('bulk import reports partial validation as a problem and links every rejected row', async ({ page }) => {
+test('the retired bulk import page returns to Products without an import action', async ({ page }) => {
   const mutations = await vendorFixture(page)
   await page.goto('/products/import')
-  await expect(page.getByRole('heading', { name: 'Bulk import', exact: true })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Download CSV template' })).toBeVisible()
-  await page.getByLabel(/CSV file/).setInputFiles({ name: 'catalog.csv', mimeType: 'text/csv', buffer: Buffer.from('vendor_sku,display_name\nIMP-1,Sand\n') })
-  await expect(page.getByText(/2 of 12 rows have problems. Nothing is saved yet./)).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Row 7' })).toHaveAttribute('href', '#import-row-7')
-  await fits(page)
-  await capture(page, 'import-validation')
-  await page.getByRole('button', { name: 'Apply 10 valid rows' }).click()
-  const result = page.getByText(/Partially imported: 10 rows became draft listings and 2 rows were not imported/)
-  await expect(result).toBeVisible()
-  await expect(page.getByText(/Imported 10 rows as draft listings/)).toHaveCount(0)
-  expect(mutations.find(item => item.path.endsWith('/apply'))?.idempotencyKey).toBeTruthy()
-  await fits(page)
-  await capture(page, 'import-applied')
+  await expect(page).toHaveURL(/\/products$/)
+  await expect(page.getByRole('heading', { name: 'My Products', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Bulk import', exact: true })).toHaveCount(0)
+  expect(mutations.some(item => item.path.includes('/imports'))).toBe(false)
 })
 
 test('Admin product compliance queue and case name the exact target and require a reason', async ({ page }) => {

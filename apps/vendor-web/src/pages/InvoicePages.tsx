@@ -65,7 +65,7 @@ function InvoicesWorkspace({ canManagePresets }: { canManagePresets: boolean }) 
   const rowKey = (row: InvoiceLogRow) => row.id ?? row.orderId ?? ''
   const selected = !error && rows ? rows.find(row => rowKey(row) === selectedId) ?? rows[0] : undefined
   const hasDates = Boolean(range.from || range.to)
-  return <div className="grid min-w-0 gap-6">
+  return <div className="grid min-w-0 gap-6" data-tutorial-invoices-empty={rows !== null && rows.length === 0 && !error}>
     <PageHeader eyebrow="Store Operations" title="E-Invoices" description="Keep invoice copies, Buyer requests and corrections in one place." compact actions={canManagePresets ? <InvoicePresetSettings onSaved={refreshList} /> : undefined} />
     {notice && <StatusMessage tone="success">{notice}</StatusMessage>}
     <InvoiceWorkspace summary={<>
