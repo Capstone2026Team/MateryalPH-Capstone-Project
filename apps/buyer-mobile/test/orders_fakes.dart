@@ -63,6 +63,7 @@ OrderDetailView orderDetail({
   NrpcView? nrpc,
   MoneyView? amounts,
   String fulfillment = 'PICKUP',
+  String? pickupAddress = '123 Aurora Boulevard, Quezon City',
   List<OrderChangeView> changes = const [],
   String? confirmedQuantity,
   DateTime? paymentExpiresAt,
@@ -129,10 +130,7 @@ OrderDetailView orderDetail({
   actions: actions,
   autoAccepted: autoAccepted,
   destination: fulfillment == 'PICKUP'
-      ? const OrderDestinationView(
-          type: 'PICKUP',
-          storeAddress: '123 Aurora Boulevard, Quezon City',
-        )
+      ? OrderDestinationView(type: 'PICKUP', storeAddress: pickupAddress)
       : const OrderDestinationView(
           type: 'DELIVERY',
           intended: OrderPointView(

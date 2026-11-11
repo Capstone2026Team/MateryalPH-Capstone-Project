@@ -56,8 +56,10 @@ final class ApiGuard {
         (body['errors'] as List).isNotEmpty) {
       final first = (body['errors'] as List).first;
       if (first is Map) {
-        code = first['code'] as String?;
-        message = first['message'] as String?;
+        code = first['code'] is String ? first['code'] as String : null;
+        message = first['message'] is String
+            ? first['message'] as String
+            : null;
         if (first['details'] is Map) {
           details = Map<String, Object?>.from(first['details'] as Map);
         }

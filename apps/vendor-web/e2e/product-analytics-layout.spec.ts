@@ -141,6 +141,47 @@ async function capture(page: Page, name: string) {
   await page.setViewportSize(viewport)
 }
 
+test('product sorting keeps the page mounted and preserves scroll when returning to most viewed', async ({ page }) => {
+  await mock(page)
+  let releaseOrders!: () => void
+  const ordersReady = new Promise<void>(resolve => { releaseOrders = resolve })
+  const calls: string[] = []
+  await page.route('**/vendor/product-analytics?*', async route => {
+    const sort = new URL(route.request().url()).searchParams.get('sort') ?? 'views'
+    calls.push(sort)
+    if (sort === 'orders') await ordersReady
+    const items = sort === 'orders' ? [...rows].reverse() : rows
+    await route.fulfill({ json: { data: { ...overview, products: { items, meta: { ...overview.products.meta, sort } } }, meta: {}, errors: [] } })
+  })
+  await page.goto('/analytics/products')
+  const panel = page.getByRole('region', { name: 'All products', exact: true })
+  await expect(panel).toBeVisible()
+  const chart = await page.getByRole('region', { name: 'Product views and orders', exact: true }).elementHandle()
+  const panelNode = await panel.elementHandle()
+  await panel.evaluate(element => element.scrollIntoView({ block: 'start', behavior: 'instant' }))
+  const before = await panel.boundingBox()
+  await panel.getByText('Most ordered', { exact: true }).click()
+  await expect(panel.getByText('Loading products…', { exact: true })).toBeVisible()
+  expect(await chart!.evaluate(element => element.isConnected)).toBe(true)
+  expect(await panelNode!.evaluate(element => element.isConnected)).toBe(true)
+  await expect(page.getByText('Loading product analytics…', { exact: true })).toHaveCount(0)
+  const during = await panel.boundingBox()
+  expect(Math.abs(during!.y - before!.y)).toBeLessThan(2)
+  expect(Math.abs(during!.height - before!.height)).toBeLessThan(2)
+  releaseOrders()
+  await expect(panel.getByText('Loading products…', { exact: true })).toHaveCount(0)
+  const products = page.viewportSize()!.width >= 1024 ? panel.getByRole('table', { name: 'Product measures' }) : panel.getByRole('list', { name: 'Product measures' })
+  await expect(products.getByRole('link').first()).toHaveText(rows.at(-1)!.name)
+  await panel.getByText('Most viewed', { exact: true }).click()
+  await expect(products.getByRole('link').first()).toHaveText(rows[0]!.name)
+  expect(await chart!.evaluate(element => element.isConnected)).toBe(true)
+  const after = await panel.boundingBox()
+  expect(Math.abs(after!.y - before!.y)).toBeLessThan(2)
+  await expect(panel.getByText('Most viewed', { exact: true })).toBeInViewport()
+  expect(calls).toEqual(['views', 'orders'])
+  await page.screenshot({ path: test.info().outputPath('product-sort-return.png') })
+})
+
 test('Product Analytics has its own navigation and preserves former analytics links', async ({ page }) => {
   await mock(page)
   await page.goto('/performance')

@@ -13,6 +13,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../design_system/components/buyer_overlays.dart';
 import '../../design_system/components/dispute_components.dart';
 import '../../design_system/components/fulfillment_components.dart';
+import '../../design_system/components/google_maps_directions_button.dart';
 import '../disputes/dispute_models.dart' show DisputeDetailView;
 import '../disputes/dispute_screens.dart';
 import '../trust/order_reviews_screen.dart';
@@ -55,6 +56,7 @@ class OrderDetailsScreen extends StatefulWidget {
     this.openConversation,
     this.onRescanSuppliers,
     this.problemPhotoPicker = pickProblemPhoto,
+    this.openDirections,
   });
 
   final String orderId;
@@ -66,6 +68,7 @@ class OrderDetailsScreen extends StatefulWidget {
   final OpenOrderConversation? openConversation;
   final RescanProjectOrder? onRescanSuppliers;
   final ProblemPhotoPicker problemPhotoPicker;
+  final Future<void> Function(Uri)? openDirections;
 
   @override
   State<OrderDetailsScreen> createState() => _OrderDetailsScreenState();
@@ -792,6 +795,16 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
         ],
         _StateBand(order: order),
         const SizedBox(height: 12),
+        if (order.fulfillmentMethod == 'PICKUP' &&
+            order.destination?.type == 'PICKUP' &&
+            (order.destination?.storeAddress?.trim().isNotEmpty ?? false)) ...[
+          GoogleMapsDirectionsButton(
+            destination: order.destination!.storeAddress!.trim(),
+            openLink: widget.openDirections,
+          ),
+          const SizedBox(height: 12),
+        ],
+        VendorOrderNotes(steps: order.fulfillment?.steps ?? const []),
         if (order.fulfillment != null &&
             _trackedStates.contains(state) &&
             order.fulfillment!.steps.isNotEmpty) ...[
@@ -802,6 +815,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
           ),
           OrderFulfillmentPanel(
             order: order,
+            showProofNotes: false,
             fulfillment: order.fulfillment!,
             repository: widget.repository,
             busy: _busy,

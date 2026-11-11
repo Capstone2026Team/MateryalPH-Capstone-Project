@@ -157,6 +157,66 @@ RefundItemView _refund(String displayState) => RefundItemView(
 );
 
 void main() {
+  testWidgets('pickup directions use the saved store address', (tester) async {
+    const address = '123 Aurora Boulevard, Quezon City';
+    final repository = FakeOrdersRepository(
+      detail: orderDetail(state: 'READY_FOR_PICKUP', pickupAddress: address),
+    );
+    Uri? opened;
+    await tester.pumpWidget(
+      _app(
+        OrderDetailsScreen(
+          orderId: 'order-1',
+          repository: repository,
+          openDirections: (uri) async => opened = uri,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final directions = find.text('Directions in Google Maps');
+    await tester.ensureVisible(directions);
+    await tester.pumpAndSettle();
+    await tester.tap(directions);
+    await tester.pumpAndSettle();
+    expect(opened?.host, 'www.google.com');
+    expect(opened?.path, '/maps/dir/');
+    expect(opened?.queryParameters, {
+      'api': '1',
+      'destination': address,
+      'travelmode': 'driving',
+    });
+    expect(find.text(address), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  for (final (method, address) in [
+    ('DELIVERY', '123 Aurora Boulevard, Quezon City'),
+    ('PICKUP', null),
+    ('PICKUP', '   '),
+  ]) {
+    testWidgets('$method with address $address has no pickup directions', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _app(
+          OrderDetailsScreen(
+            orderId: 'order-1',
+            repository: FakeOrdersRepository(
+              detail: orderDetail(
+                state: 'CONFIRMED',
+                fulfillment: method,
+                pickupAddress: address,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Directions in Google Maps'), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   testWidgets(
     'Site Delivery displays the accepted vehicle and loads its private photo',
     (tester) async {

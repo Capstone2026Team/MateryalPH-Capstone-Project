@@ -48,6 +48,10 @@ export interface FulfillmentStep {
      */
     actorRole?: string;
     /**
+     * Buyer-visible Vendor note saved with this recorded milestone.
+     */
+    note?: string | null;
+    /**
      *
      */
     proofRequired: boolean;
@@ -112,6 +116,7 @@ export function FulfillmentStepFromJSONTyped(json: any, ignoreDiscriminator: boo
         'status': json['status'],
         'at': json['at'] == null ? undefined : (parseDateTime(json['at'])),
         'actorRole': json['actor_role'] == null ? undefined : json['actor_role'],
+        'note': json['note'] === undefined ? undefined : json['note'] === null ? null : json['note'],
         'proofRequired': json['proof_required'],
         'proof': json['proof'] === undefined ? undefined : json['proof'] === null ? null : FulfillmentProofFromJSON(json['proof']),
         'proofRequirements': json['proof_requirements'],
@@ -134,6 +139,7 @@ export function FulfillmentStepToJSONTyped(value?: FulfillmentStep | null, ignor
         'status': value['status'],
         'at': value['at'] == null ? value['at'] : serializeDateTime(value['at']),
         'actor_role': value['actorRole'],
+        'note': value['note'],
         'proof_required': value['proofRequired'],
         'proof': FulfillmentProofToJSON(value['proof']),
         'proof_requirements': value['proofRequirements'],

@@ -126,6 +126,8 @@ void main() {
       act: () async {
         await tester.tap(find.byKey(const ValueKey('marker-d-1')));
         await tester.pumpAndSettle();
+        await tester.ensureVisible(find.text('Reviews'));
+        await tester.pumpAndSettle();
         await tester.tap(find.text('Reviews'));
       },
     ),
@@ -175,6 +177,8 @@ void main() {
       const Size(390, 844),
       act: () async {
         await tester.tap(find.byKey(const ValueKey('marker-d-1')));
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(find.text('About'));
         await tester.pumpAndSettle();
         await tester.tap(find.text('About'));
       },

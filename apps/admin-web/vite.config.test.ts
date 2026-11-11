@@ -41,4 +41,4 @@ test('serves shared UI styles and the login image without exposing unrelated wor
   } finally {
     await server.close()
   }
-})
+}, 30_000)

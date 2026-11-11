@@ -46365,6 +46365,10 @@ components:
         "actor_role":
           "type": "string"
           "nullable": true
+        note:
+          type: [ string, 'null' ]
+          maxLength: 500
+          description: Buyer-visible Vendor note saved with this recorded milestone.
         "proof_required":
           "type": "boolean"
         "proof":

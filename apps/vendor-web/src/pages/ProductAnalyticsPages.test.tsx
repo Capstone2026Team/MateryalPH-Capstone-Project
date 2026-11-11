@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, expect, test, vi } from 'vitest'
 import { parseDate, ResponseError } from '@materyalph/api-client-ts'
@@ -187,6 +187,85 @@ test('roles without either grant are denied before any request, and a failed loa
   render(<MemoryRouter initialEntries={['/analytics/products']}><VendorProductAnalyticsOverviewPage /></MemoryRouter>)
   fireEvent.click(await screen.findByRole('button', { name: /Try again/ }))
   expect(await screen.findByRole('region', { name: 'Product views and orders' })).toBeInTheDocument()
+})
+
+test('changing product sort keeps the analytics panels mounted and returning to most viewed restores its rows', async () => {
+  snapshot(['catalog.manage', 'finance.view'])
+  let resolveOrders!: (value: VendorProductAnalytics) => void
+  vi.mocked(api.getProductAnalytics).mockImplementation(async (_period, sort) => sort === 'orders'
+    ? new Promise(resolve => { resolveOrders = resolve }) : overview(true))
+  render(<PortalResourceProvider><MemoryRouter initialEntries={['/analytics/products']}><VendorProductAnalyticsOverviewPage /></MemoryRouter></PortalResourceProvider>)
+  const panel = await screen.findByRole('region', { name: 'All products' })
+  const chart = screen.getByRole('region', { name: 'Product views and orders' })
+  const summary = screen.getByRole('region', { name: 'At a glance' })
+  fireEvent.click(within(panel).getByRole('radio', { name: 'Most ordered' }))
+  await waitFor(() => expect(api.getProductAnalytics).toHaveBeenLastCalledWith(30, 'orders', 1))
+  expect(within(panel).getByText('Loading products…')).toBeVisible()
+  expect(within(panel).getByRole('radio', { name: 'Most ordered' })).toBeChecked()
+  expect(screen.getByRole('region', { name: 'Product views and orders' })).toBe(chart)
+  expect(screen.getByRole('region', { name: 'At a glance' })).toBe(summary)
+  expect(screen.queryByText('Loading product analytics…')).not.toBeInTheDocument()
+  const ordered = overview(true)
+  ordered.products.items.reverse()
+  ordered.products.meta.sort = 'orders'
+  await act(async () => resolveOrders(ordered))
+  expect(within(within(panel).getByRole('table', { name: 'Product measures' })).getAllByRole('row')[1]).toHaveTextContent('Deformed Bar 10mm')
+  fireEvent.click(within(panel).getByRole('radio', { name: 'Most viewed' }))
+  expect(screen.getByRole('region', { name: 'All products' })).toBe(panel)
+  expect(within(within(panel).getByRole('table', { name: 'Product measures' })).getAllByRole('row')[1]).toHaveTextContent('Portland Cement 40kg')
+  expect(api.getProductAnalytics).toHaveBeenCalledTimes(2)
+})
+
+test('a slower earlier sort cannot replace the selected product order', async () => {
+  snapshot(['catalog.manage'])
+  let resolveOrders!: (value: VendorProductAnalytics) => void
+  const conversion = overview()
+  conversion.products.items.reverse()
+  conversion.products.meta.sort = 'conversion'
+  vi.mocked(api.getProductAnalytics).mockImplementation(async (_period, sort) => {
+    if (sort === 'orders') return new Promise(resolve => { resolveOrders = resolve })
+    return sort === 'conversion' ? conversion : overview()
+  })
+  render(<PortalResourceProvider><MemoryRouter initialEntries={['/analytics/products']}><VendorProductAnalyticsOverviewPage /></MemoryRouter></PortalResourceProvider>)
+  const panel = await screen.findByRole('region', { name: 'All products' })
+  fireEvent.click(within(panel).getByRole('radio', { name: 'Most ordered' }))
+  await waitFor(() => expect(api.getProductAnalytics).toHaveBeenLastCalledWith(30, 'orders', 1))
+  fireEvent.click(within(panel).getByRole('radio', { name: 'Best conversion' }))
+  await waitFor(() => expect(within(panel).queryByText('Loading products…')).not.toBeInTheDocument())
+  await act(async () => resolveOrders(overview()))
+  expect(within(panel).getByRole('radio', { name: 'Best conversion' })).toBeChecked()
+  expect(within(within(panel).getByRole('table', { name: 'Product measures' })).getAllByRole('row')[1]).toHaveTextContent('Deformed Bar 10mm')
+})
+
+test('a failed product sort retries inside its panel while the charts stay open', async () => {
+  snapshot(['catalog.manage'])
+  vi.mocked(api.getProductAnalytics).mockResolvedValueOnce(overview())
+    .mockRejectedValueOnce(new TypeError('Failed to fetch')).mockResolvedValue(overview())
+  render(<PortalResourceProvider><MemoryRouter initialEntries={['/analytics/products']}><VendorProductAnalyticsOverviewPage /></MemoryRouter></PortalResourceProvider>)
+  const panel = await screen.findByRole('region', { name: 'All products' })
+  const chart = screen.getByRole('region', { name: 'Product views and orders' })
+  fireEvent.click(within(panel).getByRole('radio', { name: 'Most ordered' }))
+  fireEvent.click(await within(panel).findByRole('button', { name: /Try again/ }))
+  expect(await within(panel).findByRole('table', { name: 'Product measures' })).toBeVisible()
+  expect(screen.getByRole('region', { name: 'Product views and orders' })).toBe(chart)
+  expect(api.getProductAnalytics).toHaveBeenLastCalledWith(30, 'orders', 1)
+})
+
+test('product pagination stays within its panel and changing the sort returns to page one', async () => {
+  snapshot(['catalog.manage'])
+  vi.mocked(api.getProductAnalytics).mockImplementation(async (_period, sort = 'views', page = 1) => {
+    const data = overview()
+    data.products.meta = { ...data.products.meta, sort, page, total: 22, lastPage: 2 }
+    return data
+  })
+  render(<PortalResourceProvider><MemoryRouter initialEntries={['/analytics/products']}><VendorProductAnalyticsOverviewPage /></MemoryRouter></PortalResourceProvider>)
+  const panel = await screen.findByRole('region', { name: 'All products' })
+  const chart = screen.getByRole('region', { name: 'Product views and orders' })
+  fireEvent.click(within(panel).getByRole('button', { name: 'Next' }))
+  await waitFor(() => expect(api.getProductAnalytics).toHaveBeenLastCalledWith(30, 'views', 2))
+  fireEvent.click(within(panel).getByRole('radio', { name: 'Most ordered' }))
+  await waitFor(() => expect(api.getProductAnalytics).toHaveBeenLastCalledWith(30, 'orders', 1))
+  expect(screen.getByRole('region', { name: 'Product views and orders' })).toBe(chart)
 })
 
 test.each([false, true])('Vendor product summary keeps unavailable-comparison indicators (sales access %s)', async sales => {

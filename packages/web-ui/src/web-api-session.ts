@@ -125,6 +125,7 @@ function normalizedBasePath(basePath: string): string {
 }
 
 async function issueCsrfToken(basePath: string): Promise<string> {
+  const generation = sessionGeneration
   const response = await coordinatedFetch(basePath, false, `${basePath}/auth/csrf`, {
     method: 'GET',
     credentials: 'include',
@@ -133,6 +134,8 @@ async function issueCsrfToken(basePath: string): Promise<string> {
   if (!response.ok) throw new ResponseError(response)
 
   const payload: unknown = await response.json()
+  // Reject the old caller too, so its queued mutation cannot continue under a replacement account.
+  if (generation !== sessionGeneration) throw new Error('Your session changed. Please retry this action.')
   const token = csrfTokenFrom(payload)
   if (!token) throw new Error('The security token response was invalid. Refresh the page and try again.')
   csrfTokens.set(basePath, token)
@@ -148,7 +151,9 @@ export function getWebCsrfToken(basePath: string, force = false): Promise<string
   const current = csrfRequests.get(key)
   if (current) return current
 
-  const request = issueCsrfToken(key).finally(() => csrfRequests.delete(key))
+  const request = issueCsrfToken(key).finally(() => {
+    if (csrfRequests.get(key) === request) csrfRequests.delete(key)
+  })
   csrfRequests.set(key, request)
   return request
 }
@@ -244,6 +249,7 @@ async function webFetch(basePath: string, refreshSession: boolean, input: Reques
 
   if (response.status === 419 && !isSafeMethod(init?.method)) {
     const token = await getWebCsrfToken(basePath, true)
+    if (generation !== sessionGeneration) return response
     init = withCsrf(init, token)
     response = await fetchWebRequest(basePath, input, init)
   }
@@ -302,13 +308,16 @@ async function coordinateTabRefresh(basePath: string): Promise<RefreshResult> {
 }
 
 async function performRefresh(basePath: string): Promise<RefreshResult> {
+  const generation = sessionGeneration
   const token = await getWebCsrfToken(basePath)
+  if (generation !== sessionGeneration) return { kind: 'invalid' }
   const response = await coordinatedFetch(basePath, false, `${basePath}/auth/refresh`, withCsrf({
     method: 'POST',
     credentials: 'include',
     headers: { Accept: 'application/json' },
   }, token))
 
+  if (generation !== sessionGeneration) return { kind: 'invalid' }
   if (response.ok) {
     refreshVersions.set(basePath, (refreshVersions.get(basePath) ?? 0) + 1)
     return { kind: 'refreshed' }

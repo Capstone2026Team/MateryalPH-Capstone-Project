@@ -76,6 +76,37 @@ final class PhaseTwelveFulfillmentTest extends TestCase
 
     // ── Milestones, proof, receipt and completion ───────────────────────────────────────────────────
 
+    public function test_buyer_can_read_recorded_vendor_notes_and_keeps_them_after_completion(): void
+    {
+        [, $owner, $buyer, $orderId] = $this->paidPickup('Buyer Vendor Notes');
+        $preparing = "Materials are being bundled.\nPlease bring a suitable vehicle.";
+        $ready = 'Collect at the loading entrance beside the store.';
+        $handover = 'All bundles were collected.';
+
+        $this->milestone($owner, $orderId, 'PROCESSING', ['note' => $preparing])->assertOk();
+        $this->milestone($owner, $orderId, 'READY_FOR_PICKUP', ['note' => $ready])->assertOk();
+        $this->signInBuyer($buyer);
+        $this->getJson('/api/v1/buyers/orders/'.$orderId)->assertOk()
+            ->assertJsonPath('data.fulfillment.steps.0.note', null)
+            ->assertJsonPath('data.fulfillment.steps.1.note', $preparing)
+            ->assertJsonPath('data.fulfillment.steps.2.note', $ready)
+            ->assertJsonPath('data.fulfillment.steps.3.note', null);
+
+        $this->signInBuyer($this->buyer('notes-stranger@example.test'));
+        $this->getJson('/api/v1/buyers/orders/'.$orderId)->assertNotFound();
+
+        $this->milestone($owner, $orderId, 'PICKED_UP', [
+            'note' => $handover, 'handover_confirmed' => '1', 'receiver_name' => 'Buyer Receiver', 'receiver_kind' => 'BUYER',
+        ])->assertOk();
+        $this->signInBuyer($buyer);
+        $this->postJson('/api/v1/buyers/orders/'.$orderId.'/receipt/confirm', [], ['Idempotency-Key' => (string) Str::uuid7()])
+            ->assertOk()->assertJsonPath('data.states.0.state', 'COMPLETED')
+            ->assertJsonPath('data.fulfillment.steps.1.note', $preparing)
+            ->assertJsonPath('data.fulfillment.steps.2.note', $ready)
+            ->assertJsonPath('data.fulfillment.steps.3.note', $handover)
+            ->assertJsonPath('data.fulfillment.proof.note', $handover);
+    }
+
     public function test_pickup_milestones_reject_duplicate_and_reordered_events_and_completion_earns_once(): void
     {
         [$store, $owner, $buyer, $orderId] = $this->paidPickup('Pickup Milestones');

@@ -22,6 +22,66 @@ String fulfillmentRoleLabel(String? role) => switch (role) {
   _ => role.toLowerCase().replaceAll('_', ' '),
 };
 
+/// Recorded Vendor notes remain readable even after the order closes.
+class VendorOrderNotes extends StatelessWidget {
+  const VendorOrderNotes({super.key, required this.steps});
+
+  final List<FulfillmentStepView> steps;
+
+  @override
+  Widget build(BuildContext context) {
+    final notes = steps.where((step) => step.vendorNote != null).toList();
+    if (notes.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Semantics(
+            header: true,
+            child: const Padding(
+              padding: EdgeInsets.only(bottom: 8),
+              child: Text(
+                'Notes from Vendor',
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+              ),
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: BuyerTheme.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                for (var index = 0; index < notes.length; index++) ...[
+                  if (index > 0) const Divider(height: 24),
+                  Text(
+                    [
+                      notes[index].label,
+                      if (notes[index].at != null)
+                        formatManilaDateTime(notes[index].at!),
+                    ].join(' · '),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: BuyerTheme.muted,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(notes[index].vendorNote!),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// The ordered milestones from the server. [proofBuilder] renders the proof card under the step that
 /// required it, so the photo and receiver are read in context instead of in a separate list.
 class MilestoneTracker extends StatelessWidget {
@@ -181,10 +241,16 @@ class _MilestoneRow extends StatelessWidget {
 /// Delivery or pickup proof attached to its milestone. [photo] is supplied by the screen, which reads
 /// the private file through the API; nothing here holds a storage URL.
 class ProofCard extends StatelessWidget {
-  const ProofCard({super.key, required this.proof, this.photo});
+  const ProofCard({
+    super.key,
+    required this.proof,
+    this.photo,
+    this.showNote = true,
+  });
 
   final FulfillmentProofView proof;
   final Widget? photo;
+  final bool showNote;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -239,7 +305,7 @@ class ProofCard extends StatelessWidget {
                   'Recorded by ${proof.recordedBy}',
                   style: const TextStyle(fontSize: 12, color: BuyerTheme.muted),
                 ),
-              if (proof.note != null)
+              if (showNote && proof.note != null)
                 Text(proof.note!, style: const TextStyle(fontSize: 13)),
             ],
           ),

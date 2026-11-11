@@ -777,6 +777,7 @@ final class ApiOrdersRepository implements OrdersRepository {
               proofRequired: step.proofRequired,
               at: step.at,
               actorRole: step.actorRole,
+              note: step.note,
               proof: _proof(step.proof),
             ),
           )

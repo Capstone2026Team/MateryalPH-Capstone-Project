@@ -10,6 +10,7 @@ class FulfillmentStepView {
     required this.proofRequired,
     this.at,
     this.actorRole,
+    this.note,
     this.proof,
   });
 
@@ -21,7 +22,16 @@ class FulfillmentStepView {
   final bool proofRequired;
   final DateTime? at;
   final String? actorRole;
+  final String? note;
   final FulfillmentProofView? proof;
+
+  /// Older API responses carry handover notes only inside the proof.
+  String? get vendorNote {
+    final value = note?.trim();
+    if (value != null && value.isNotEmpty) return value;
+    final proofNote = proof?.note?.trim();
+    return proofNote == null || proofNote.isEmpty ? null : proofNote;
+  }
 }
 
 /// Delivery or pickup proof. File paths are order-scoped API paths fetched through the repository.

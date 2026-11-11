@@ -2,14 +2,14 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowDownRight, ArrowRight, ArrowUpRight, BarChart3, Eye, Minus, MousePointerClick, ShoppingCart, Wallet } from 'lucide-react'
 import { BackNavigation,
-  AnalyticsChartCard, AnalyticsSummary, AnalyticsDetails, AssociationRuleList, BarList, ChartDataTable, DashboardPanel, MaterialQualityCard, MethodNote, InfoNote, InsightList, InsightPanel, Pagination, PeriodSelector, RankedList, ResponsiveRecordList, SegmentedControl, SegmentScatter,
+  AnalyticsChartCard, AnalyticsSummary, AnalyticsDetails, AssociationRuleList, AsyncLoading, BarList, ChartDataTable, DashboardPanel, MaterialQualityCard, MethodNote, InfoNote, InsightList, InsightPanel, Pagination, PeriodSelector, RankedList, ResponsiveRecordList, SegmentedControl, SegmentScatter,
   ProductDetailWorkspace, ShareBar, Sparkline, StatusBadge, StatusMessage, TrendLineChart, analyticsDay, formatChartDay, formatCount, formatPesoCentavos, usePortalResource,
   type InsightItem, type RecordColumn, type TrendMarker, type VizColor,
 } from '@materyalph/web-ui'
 import type { DashboardRate, ProductAnalyticsSeriesPoint } from '@materyalph/api-client-ts'
 import {
   ANALYTICS_PERIODS, getProductAnalytics, getProductAnalyticsDetail, parsePeriod,
-  type ProductAnalyticsRow, type ProductAnalyticsSuggestion, type ProductSort, type ProductSummary,
+  type AnalyticsPeriod, type ProductAnalyticsRow, type ProductAnalyticsSuggestion, type ProductSort, type ProductSummary, type VendorProductAnalytics,
 } from '../lib/product-analytics-api'
 import { readableApiError } from '../lib/auth-api'
 import { ProductReviewsSection } from './VendorReviewPages'
@@ -77,17 +77,15 @@ function ProductMaterialQuality({ data, error, onRetry }: { data: StorePerforman
 }
 
 /**
- * Store-wide Product Analytics in its own Analytics section. One request per period and table page; peso
- * values arrive only for the Owner. Every panel states what it is for and how it is calculated.
+ * Store-wide Product Analytics loads per period; table sorting and pagination have their own loading boundary.
+ * Peso values arrive only for the Owner. Every panel states what it is for and how it is calculated.
  */
 export function ProductAnalyticsWorkspace({ canViewScores = false }: { canViewScores?: boolean }) {
   const [params, setParams] = useSearchParams()
   const period = parsePeriod(params.get('days'))
-  const sort = (SORTS.some(item => item.value === params.get('sort')) ? params.get('sort') : 'views') as ProductSort
-  const page = Math.max(1, Number(params.get('page') ?? '1') || 1)
   const update = (patch: Record<string, string | null>) => setParams(current => { const next = new URLSearchParams(current); for (const [key, value] of Object.entries(patch)) { if (value) next.set(key, value); else next.delete(key) } return next }, { replace: true })
-  const loader = useCallback(() => getProductAnalytics(period, sort, page), [period, sort, page])
-  const { data, error, pending, refresh } = usePortalResource(`vendor-product-analytics-${period}-${sort}-${page}`, loader)
+  const loader = useCallback(() => getProductAnalytics(period, 'views', 1), [period])
+  const { data, error, pending, refresh } = usePortalResource(`vendor-product-analytics-overview-${period}`, loader)
   const quality = usePortalResource('vendor-product-material-quality', getStorePerformance, canViewScores)
   const message = useErrorText(error)
   const toolbar = <div className="mp-product-analytics-toolbar">
@@ -150,11 +148,7 @@ export function ProductAnalyticsWorkspace({ canViewScores = false }: { canViewSc
 
     </div>
 
-    <InsightPanel title="All products" purpose={`${formatCount(data.products.meta.total)} published products · Compare views, orders and conversion for the selected dates.`} method={<>{definitions.conversion} {definitions.stock}</>}>
-      <SegmentedControl label="Sort products" value={sort} options={SORTS.filter(item => sales || item.value !== 'value')} onChange={value => update({ sort: value, page: null })} />
-      <ProductTable rows={data.products.items} sales={sales} />
-      {data.products.meta.lastPage > 1 && <Pagination page={data.products.meta.page} lastPage={data.products.meta.lastPage} total={data.products.meta.total} busy={pending} onChange={next => update({ page: String(next) })} />}
-    </InsightPanel>
+    <ProductAnalyticsProducts overview={data} period={period} />
     <section aria-label="Product demand patterns" className="mp-product-demand">
       <header className="mp-product-analytics-section-heading"><h2>Product demand patterns</h2><p>Explore Buyer attention, ordering patterns and product groups.</p></header>
       <div className="mp-product-patterns">
@@ -187,6 +181,37 @@ export function ProductAnalyticsWorkspace({ canViewScores = false }: { canViewSc
 function ChangeText({ value }: { value: number | null | undefined }) {
   const Icon = value === null || value === undefined || value === 0 ? Minus : value > 0 ? ArrowUpRight : ArrowDownRight
   return <span className="inline-flex items-center gap-0.5 text-xs text-text-secondary"><Icon size={12} aria-hidden="true" />{value === null || value === undefined ? 'new' : `${value > 0 ? '+' : ''}${value.toFixed(1)}%`}</span>
+}
+
+/** Keep the panel, controls and table height mounted while a different sort or page is requested. */
+function ProductAnalyticsProducts({ overview, period }: { overview: VendorProductAnalytics; period: AnalyticsPeriod }) {
+  const [params, setParams] = useSearchParams()
+  const sort = (SORTS.some(item => item.value === params.get('sort')) ? params.get('sort') : 'views') as ProductSort
+  const page = Math.max(1, Number(params.get('page') ?? '1') || 1)
+  const initial = sort === 'views' && page === 1
+  const loader = useCallback(() => getProductAnalytics(period, sort, page), [period, sort, page])
+  const resource = usePortalResource(`vendor-product-analytics-${period}-${sort}-${page}`, loader, !initial)
+  const data = initial ? overview : resource.data
+  const message = useErrorText(initial ? null : resource.error)
+  const pending = !initial && (resource.pending || (!data && !resource.error))
+  const products = data?.products ?? overview.products
+  const sales = overview.access.salesValue && (data?.access.salesValue ?? false)
+  const update = (patch: Record<string, string | null>) => setParams(current => {
+    const next = new URLSearchParams(current)
+    for (const [key, value] of Object.entries(patch)) { if (value) next.set(key, value); else next.delete(key) }
+    return next
+  }, { replace: true, preventScrollReset: true })
+  return <InsightPanel title="All products" purpose={`${formatCount(products.meta.total)} published products · Compare views, orders and conversion for the selected dates.`} method={<>{overview.definitions.conversion} {overview.definitions.stock}</>}>
+    <SegmentedControl label="Sort products" value={sort} options={SORTS.filter(item => overview.access.salesValue || item.value !== 'value')} onChange={value => update({ sort: value, page: null })} />
+    {pending && data && <AsyncLoading compact label="Updating products…" />}
+    <div className="grid min-w-0" aria-busy={pending}>
+      <div aria-hidden={!data || undefined} className={`min-w-0 [grid-area:1/1]${data ? '' : ' invisible'}`}>
+        <ProductTable rows={products.items} sales={data ? sales : overview.access.salesValue} />
+        {products.meta.lastPage > 1 && <Pagination page={data ? products.meta.page : page} lastPage={products.meta.lastPage} total={products.meta.total} busy={pending || !data} onChange={next => update({ page: String(next) })} />}
+      </div>
+      {!data && <div className="min-w-0 self-start [grid-area:1/1]">{message ? <ErrorState message={message} onRetry={() => void resource.refresh()} /> : <AsyncLoading label="Loading products…" />}</div>}
+    </div>
+  </InsightPanel>
 }
 
 function ProductTable({ rows, sales }: { rows: ProductAnalyticsRow[]; sales: boolean }) {

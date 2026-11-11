@@ -262,6 +262,7 @@ void main() {
       FakeDiscoveryRepository? repository,
       DeviceLocationService? device,
       bool reduceMotion = false,
+      Future<void> Function(Uri)? openLink,
     }) async {
       final repo = repository ?? FakeDiscoveryRepository();
       final map = RecordingMap();
@@ -282,7 +283,7 @@ void main() {
                     ),
                 mapBuilder: map.build,
                 onOpenStore: (_, _) {},
-                openLink: (_) async {},
+                openLink: openLink ?? (_) async {},
                 share: (_) {},
               ),
             ),
@@ -516,6 +517,60 @@ void main() {
       },
     );
 
+    for (final (id, destination) in [
+      ('v-1', '14.61,120.99'),
+      ('d-1', '14.62,121.0'),
+    ]) {
+      testWidgets('$id directions open the selected supplier location', (
+        tester,
+      ) async {
+        Uri? opened;
+        await pumpMapHome(tester, openLink: (uri) async => opened = uri);
+        await tester.tap(find.byKey(ValueKey('marker-$id')));
+        await tester.pumpAndSettle();
+        final directions = find.text('Directions in Google Maps');
+        await tester.ensureVisible(directions);
+        await tester.pumpAndSettle();
+        await tester.tap(directions);
+        await tester.pumpAndSettle();
+        expect(opened?.host, 'www.google.com');
+        expect(opened?.path, '/maps/dir/');
+        expect(opened?.queryParameters, {
+          'api': '1',
+          'destination': destination,
+          'travelmode': 'driving',
+        });
+        expect(tester.takeException(), isNull);
+      });
+    }
+
+    testWidgets('Directory directions remain usable when details fail', (
+      tester,
+    ) async {
+      final repository = FakeDiscoveryRepository()
+        ..detailsFailure = const DiscoveryFailure(
+          DiscoveryFailureKind.provider,
+          'Place details are temporarily unavailable.',
+        );
+      Uri? opened;
+      await pumpMapHome(
+        tester,
+        repository: repository,
+        openLink: (uri) async => opened = uri,
+      );
+      await tester.tap(find.byKey(const ValueKey('marker-d-1')));
+      await tester.pumpAndSettle();
+      final directions = find.text('Directions in Google Maps');
+      await tester.ensureVisible(directions);
+      await tester.pumpAndSettle();
+      await tester.tap(directions);
+      await tester.pumpAndSettle();
+      expect(opened?.queryParameters['destination'], '14.62,121.0');
+      expect(find.text('Retry details'), findsOneWidget);
+      expect(find.text('View Storefront'), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets(
       'Tier 1 selection shows attributed details and only informational actions',
       (tester) async {
@@ -537,12 +592,15 @@ void main() {
         // Google review excerpts are distinct from MateryalPH review submission.
         expect(find.text('Overview'), findsOneWidget);
         await tester.ensureVisible(find.text('About'));
+        await tester.pumpAndSettle();
         await tester.tap(find.text('About'));
         await tester.pumpAndSettle();
         expect(
           find.textContaining('additional business attributes'),
           findsOneWidget,
         );
+        await tester.ensureVisible(find.text('Reviews'));
+        await tester.pumpAndSettle();
         await tester.tap(find.text('Reviews'));
         await tester.pumpAndSettle();
         expect(find.text('Google reviews'), findsOneWidget);

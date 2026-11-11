@@ -499,6 +499,7 @@ class _MapHomeScreenState extends State<MapHomeScreen>
                   : widget.onUnavailable?.call('Messages'),
               onClose: _controller.clearSelection,
               onOpenLink: _openLink,
+              openDirections: widget.openLink,
               onShare: _share,
             ),
           ],

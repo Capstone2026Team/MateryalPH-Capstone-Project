@@ -283,6 +283,36 @@ test('an empty group explains itself instead of showing a false table', async ()
   vi.mocked(orders.listOrders).mockResolvedValue({ items: [], meta: { group: 'NEW', counts: { ALL: 0, NEW: 0 }, page: 1, perPage: 20, total: 0, hasMore: false, currentAsOf: new Date() } })
   render(<MemoryRouter initialEntries={['/orders?group=NEW']}><Routes><Route path="/orders" element={<VendorOrdersPage />} /></Routes></MemoryRouter>)
   expect(await screen.findByText('No orders match these filters.')).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Show all dates' })).not.toBeInTheDocument()
+})
+
+test('orders hidden by the default date range can be displayed from the empty state', async () => {
+  vi.mocked(orders.listOrders).mockImplementation(async filters => ({
+    items: filters.from || filters.to ? [] : [summary()],
+    meta: { group: 'NEW', counts: { NEW: 1, CLOSED: 27 }, page: 1, perPage: 20, total: filters.from || filters.to ? 0 : 1, hasMore: false, currentAsOf: new Date() },
+  }))
+  render(<MemoryRouter initialEntries={['/orders']}><MessageDestination /><Routes><Route path="/orders" element={<VendorOrdersPage />} /></Routes></MemoryRouter>)
+  expect(await screen.findByText('No orders were submitted in this date range. Status counts include all dates.')).toBeVisible()
+  expect(screen.getByRole('tab', { name: /New requests\s*1/ })).toHaveAttribute('aria-selected', 'true')
+  fireEvent.click(screen.getByRole('button', { name: 'Show all dates' }))
+  expect(await screen.findByRole('list', { name: 'New requests' })).toBeVisible()
+  expect(orders.listOrders).toHaveBeenLastCalledWith({ group: 'NEW', q: '', page: 1 })
+  expect(screen.getByRole('button', { name: 'All dates' })).toBeVisible()
+  expect(screen.getByText('/orders?date_label=All+dates')).toBeVisible()
+  expect(screen.queryByRole('button', { name: 'Show all dates' })).not.toBeInTheDocument()
+})
+
+test('showing all order dates preserves search and closed status while resetting pagination', async () => {
+  vi.mocked(orders.listOrders).mockImplementation(async filters => ({
+    items: filters.from || filters.to ? [] : [summary({ states: states('EXPIRED'), primaryAction: 'NONE' })],
+    meta: { group: 'CLOSED', counts: { CLOSED: 27 }, page: filters.page ?? 1, perPage: 20, total: filters.from || filters.to ? 0 : 1, hasMore: false, currentAsOf: new Date() },
+  }))
+  render(<MemoryRouter initialEntries={['/orders?group=CLOSED&closed_state=EXPIRED&q=Maria&page=2&from=2026-11-01&to=2026-11-11']}><Routes><Route path="/orders" element={<VendorOrdersPage />} /></Routes></MemoryRouter>)
+  fireEvent.click(await screen.findByRole('button', { name: 'Show all dates' }))
+  expect(await screen.findByRole('list', { name: 'Closed' })).toBeVisible()
+  expect(orders.listOrders).toHaveBeenLastCalledWith({ group: 'CLOSED', closedState: 'EXPIRED', q: 'Maria', page: 1 })
+  expect(screen.getByRole('combobox', { name: 'Closed status' })).toHaveValue('EXPIRED')
+  expect(screen.getByRole('searchbox', { name: 'Search by Order ID or Buyer' })).toHaveValue('Maria')
 })
 
 test('order links open a panel, retain the list, and use the existing confirmation workflow', async () => {

@@ -330,10 +330,11 @@ export function ChartDataTable({ caption, rowHeader, rows, columns }: { caption:
 /** Visible, wrapping choices with native radio keyboard navigation. */
 export function SegmentedControl<T extends string | number>({ label, value, options, onChange, disabled = false }: { label: string; value: T; options: { value: T; label: string }[]; onChange: (value: T) => void; disabled?: boolean }) {
   const name = useId()
+  // Position each hidden input within its label so native focus cannot scroll outside the portal.
   return <fieldset className="inline-flex min-w-0 flex-wrap items-center gap-2" disabled={disabled}>
     <legend className="sr-only">{label}</legend>
     <span aria-hidden="true" className="text-xs font-semibold text-text-secondary">{label}</span>
-    <span className="inline-flex max-w-full flex-wrap gap-0.5 rounded-control border border-border-default bg-surface-primary p-0.5">{options.map(option => <label key={option.value} className={`inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-[6px] px-3 text-sm font-semibold has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-focus-ring ${value === option.value ? 'bg-action-primary text-white' : 'text-text-strong hover:bg-surface-canvas'}`}>
+    <span className="inline-flex max-w-full flex-wrap gap-0.5 rounded-control border border-border-default bg-surface-primary p-0.5">{options.map(option => <label key={option.value} className={`relative inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-[6px] px-3 text-sm font-semibold has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-focus-ring ${value === option.value ? 'bg-action-primary text-white' : 'text-text-strong hover:bg-surface-canvas'}`}>
       <input className="sr-only" type="radio" name={name} value={option.value} checked={value === option.value} onChange={() => onChange(option.value)} />{option.label}</label>)}</span>
   </fieldset>
 }

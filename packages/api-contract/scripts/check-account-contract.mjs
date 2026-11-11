@@ -35,12 +35,15 @@ const actual = new Map(routes.flatMap(route => route.method.split('|').filter(me
 const hasMiddleware = (route, ...names) => names.some(name => route.middleware.includes(name))
 const expected = new Set()
 for (const [path, item] of Object.entries(spec.paths)) {
-  if (!path.startsWith('/{accountPortal}/account/')) continue
+  const portalName = path.startsWith('/{accountPortal}/account/') ? 'accountPortal'
+    : path.startsWith('/{tutorialPortal}/account/') ? 'tutorialPortal' : null
+  if (!portalName) continue
   for (const [method, operation] of Object.entries(item)) {
-    const portalParameter = operation.parameters.find(parameter => parameter.name === 'accountPortal')
+    if (!['get', 'post', 'put', 'patch', 'delete'].includes(method)) continue
+    const portalParameter = [...(item.parameters ?? []), ...(operation.parameters ?? [])].find(parameter => parameter.name === portalName)
     assert.ok(portalParameter?.schema.enum.length)
     for (const portal of portalParameter.schema.enum) {
-      const key = `${method.toUpperCase()} /api/v1${path.replace('{accountPortal}', portal)}`
+      const key = `${method.toUpperCase()} /api/v1${path.replace(`{${portalName}}`, portal)}`
       expected.add(key)
       const route = actual.get(key)
       assert.ok(route, `Contract route missing from Laravel: ${key}`)
@@ -52,7 +55,8 @@ for (const [path, item] of Object.entries(spec.paths)) {
       if (portal !== 'buyers') assert.ok(hasMiddleware(route, 'web.csrf', 'App\\Http\\Middleware\\VerifyAccountCsrf'), `Web CSRF guard missing: ${key}`)
     }
     for (const response of Object.values(operation.responses)) {
-      const reference = response.content?.['application/json']?.schema?.$ref
+      const resolvedResponse = response.$ref ? spec.components.responses[response.$ref.split('/').at(-1)] : response
+      const reference = resolvedResponse?.content?.['application/json']?.schema?.$ref
       assert.ok(reference, `${operation.operationId} needs a defined response envelope`)
       assert.ok(spec.components.schemas[reference.split('/').at(-1)])
     }

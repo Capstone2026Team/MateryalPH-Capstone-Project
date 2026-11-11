@@ -164,6 +164,8 @@ class _$FulfillmentStep extends FulfillmentStep {
   @override
   final String? actorRole;
   @override
+  final String? note;
+  @override
   final bool proofRequired;
   @override
   final FulfillmentProof? proof;
@@ -179,6 +181,7 @@ class _$FulfillmentStep extends FulfillmentStep {
       required this.status,
       this.at,
       this.actorRole,
+      this.note,
       required this.proofRequired,
       this.proof,
       required this.proofRequirements})
@@ -199,6 +202,7 @@ class _$FulfillmentStep extends FulfillmentStep {
         status == other.status &&
         at == other.at &&
         actorRole == other.actorRole &&
+        note == other.note &&
         proofRequired == other.proofRequired &&
         proof == other.proof &&
         proofRequirements == other.proofRequirements;
@@ -212,6 +216,7 @@ class _$FulfillmentStep extends FulfillmentStep {
     _$hash = $jc(_$hash, status.hashCode);
     _$hash = $jc(_$hash, at.hashCode);
     _$hash = $jc(_$hash, actorRole.hashCode);
+    _$hash = $jc(_$hash, note.hashCode);
     _$hash = $jc(_$hash, proofRequired.hashCode);
     _$hash = $jc(_$hash, proof.hashCode);
     _$hash = $jc(_$hash, proofRequirements.hashCode);
@@ -227,6 +232,7 @@ class _$FulfillmentStep extends FulfillmentStep {
           ..add('status', status)
           ..add('at', at)
           ..add('actorRole', actorRole)
+          ..add('note', note)
           ..add('proofRequired', proofRequired)
           ..add('proof', proof)
           ..add('proofRequirements', proofRequirements))
@@ -257,6 +263,10 @@ class FulfillmentStepBuilder
   String? _actorRole;
   String? get actorRole => _$this._actorRole;
   set actorRole(String? actorRole) => _$this._actorRole = actorRole;
+
+  String? _note;
+  String? get note => _$this._note;
+  set note(String? note) => _$this._note = note;
 
   bool? _proofRequired;
   bool? get proofRequired => _$this._proofRequired;
@@ -289,6 +299,7 @@ class FulfillmentStepBuilder
       _status = $v.status;
       _at = $v.at;
       _actorRole = $v.actorRole;
+      _note = $v.note;
       _proofRequired = $v.proofRequired;
       _proof = $v.proof?.toBuilder();
       _proofRequirements = $v.proofRequirements.toBuilder();
@@ -323,6 +334,7 @@ class FulfillmentStepBuilder
                 status, r'FulfillmentStep', 'status'),
             at: at,
             actorRole: actorRole,
+            note: note,
             proofRequired: BuiltValueNullFieldError.checkNotNull(
                 proofRequired, r'FulfillmentStep', 'proofRequired'),
             proof: _proof?.build(),

@@ -13,6 +13,7 @@ Name | Type | Description | Notes
 **status** | **String** |  |
 **at** | [**DateTime**](DateTime.md) |  | [optional]
 **actorRole** | **String** |  | [optional]
+**note** | **String** | Buyer-visible Vendor note saved with this recorded milestone. | [optional]
 **proofRequired** | **bool** |  |
 **proof** | [**FulfillmentProof**](FulfillmentProof.md) |  | [optional]
 **proofRequirements** | **BuiltList&lt;String&gt;** |  |

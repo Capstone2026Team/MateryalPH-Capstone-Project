@@ -42,6 +42,50 @@ Map<String, Object?> _envelope(void Function(Map<String, dynamic> data) edit) {
 
 void main() {
   test(
+    'milestone notes parse from the order response without requiring notes',
+    () async {
+      const note =
+          'Collect at the loading entrance.\nBring your order reference.';
+      final repository = _repositoryReturning(
+        _envelope((data) {
+          data['fulfillment'] = {
+            'method': 'PICKUP',
+            'state': 'READY_FOR_PICKUP',
+            'late': false,
+            'tracking_notice': 'No live GPS tracking.',
+            'next_action': 'NONE',
+            'steps': [
+              for (var index = 0; index < 3; index++)
+                {
+                  'key': ['PROCESSING', 'READY_FOR_PICKUP', 'PICKED_UP'][index],
+                  'label': [
+                    'Preparing',
+                    'Ready for pickup',
+                    'Picked up',
+                  ][index],
+                  'status': index < 2 ? 'COMPLETE' : 'CURRENT',
+                  'proof_required': false,
+                  'proof_requirements': <String>[],
+                  if (index < 2) 'note': index == 0 ? note : null,
+                },
+            ],
+            'trips': [],
+            'vehicle_issues': [],
+            'receipt': {'paused': false, 'window_hours': 48},
+            'thread': {'available': false, 'read_only': false},
+          };
+        }),
+      );
+      final order = await repository.order('order');
+      expect(order.fulfillment!.steps.map((step) => step.note), [
+        note,
+        null,
+        null,
+      ]);
+    },
+  );
+
+  test(
     'confirmed delivery parses the saved vehicle profile and photo',
     () async {
       final repository = _repositoryReturning(

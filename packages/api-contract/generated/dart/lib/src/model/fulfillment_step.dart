@@ -18,6 +18,7 @@ part 'fulfillment_step.g.dart';
 /// * [status]
 /// * [at]
 /// * [actorRole]
+/// * [note] - Buyer-visible Vendor note saved with this recorded milestone.
 /// * [proofRequired]
 /// * [proof]
 /// * [proofRequirements]
@@ -38,6 +39,10 @@ abstract class FulfillmentStep implements Built<FulfillmentStep, FulfillmentStep
 
   @BuiltValueField(wireName: r'actor_role')
   String? get actorRole;
+
+  /// Buyer-visible Vendor note saved with this recorded milestone.
+  @BuiltValueField(wireName: r'note')
+  String? get note;
 
   @BuiltValueField(wireName: r'proof_required')
   bool get proofRequired;
@@ -99,6 +104,13 @@ class _$FulfillmentStepSerializer implements PrimitiveSerializer<FulfillmentStep
       yield serializers.serialize(
         object.actorRole,
         specifiedType: const FullType(String),
+      );
+    }
+    if (object.note != null) {
+      yield r'note';
+      yield serializers.serialize(
+        object.note,
+        specifiedType: const FullType.nullable(String),
       );
     }
     yield r'proof_required';
@@ -177,6 +189,14 @@ class _$FulfillmentStepSerializer implements PrimitiveSerializer<FulfillmentStep
           ) as String?;
           if (valueDes == null) continue;
           result.actorRole = valueDes;
+          break;
+        case r'note':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(String),
+          ) as String?;
+          if (valueDes == null) continue;
+          result.note = valueDes;
           break;
         case r'proof_required':
           final valueDes = serializers.deserialize(

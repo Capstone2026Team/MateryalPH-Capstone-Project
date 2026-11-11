@@ -56,7 +56,9 @@ final class FulfillmentView
             // The first step is the verified-payment confirmation from the order history, not a fulfillment event.
             $event = $position === 0 ? null : $byType->get($key);
             $at = $position === 0 ? $this->confirmedAt((string) $order->id) : ($event === null ? null : self::iso($event->occurred_at));
+            $note = $event === null ? null : (json_decode((string) $event->payload, true)['note'] ?? null);
             $steps[] = ['key' => $key, 'label' => $label, 'status' => $at !== null && ($position > 0 || $accepted || $cancelled) ? 'COMPLETE' : 'UPCOMING', 'at' => $at,
+                'note' => is_string($note) && trim($note) !== '' ? $note : null,
                 'actor_role' => $event?->actor_role, 'proof_required' => $proofRequired, 'proof' => $key === $done ? $proof : null,
                 'proof_requirements' => $proofRequired ? ($delivery ? ['DELIVERY_PHOTO', 'RECEIVER_NAME', 'SIGNATURE_OPTIONAL'] : ['HANDOVER_CONFIRMATION', 'RECEIVER_NAME', 'RECEIVER_TYPE']) : []];
         }

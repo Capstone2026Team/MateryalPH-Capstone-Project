@@ -160,6 +160,7 @@ The shared FIN-02 breakdown is authoritative: full Online payment is `M + D + F`
 **Order Details**
 
 - **Design.** The page contains order summary, immutable line snapshots, Vendor and handler identity, Project/Work Package reference, quotation version, change summary, fulfillment, address, payment breakdown, NRPC amount and reason, payment/refund timeline, evidence, messages, Purchase Order, invoice request, and event history.
+- **Owner request — 2026-11-11: Vendor notes.** Show saved Vendor milestone notes in a read-only **Notes from Vendor** section with the milestone and recorded Philippine date/time. Omit blank notes and the empty section. Keep notes visible after completion or cancellation and show handover notes once. Existing order ownership, commercial approval and immutable milestone rules remain unchanged.
 - **Flow.** Available actions are calculated from server state. The Buyer may pay, approve a revision, accept NRPC, message the Vendor, request a permitted cancellation, view proof, confirm receipt, report an issue, rate, or request an invoice.
 - **Logic.** NRPC is identified as part of—not an addition to—the agreed order value. For COD or In-Store Payment, Amount Paid Online and Remaining Balance are shown separately. Records from older quotation or order versions remain read-only.
 

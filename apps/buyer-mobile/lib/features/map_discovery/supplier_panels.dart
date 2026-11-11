@@ -6,6 +6,7 @@ import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../design_system/components/discovery_controls.dart';
+import '../../design_system/components/google_maps_directions_button.dart';
 import '../../design_system/components/vendor_performance.dart';
 import '../../design_system/components/procurement_components.dart';
 import '../../design_system/components/request_notice.dart';
@@ -693,6 +694,7 @@ class SupplierPreview extends StatefulWidget {
     required this.onClose,
     required this.onOpenLink,
     required this.onShare,
+    this.openDirections,
   });
 
   final DiscoveryController controller;
@@ -701,6 +703,7 @@ class SupplierPreview extends StatefulWidget {
   final VoidCallback onClose;
   final Future<void> Function(Uri uri) onOpenLink;
   final ValueChanged<String> onShare;
+  final Future<void> Function(Uri)? openDirections;
 
   @override
   State<SupplierPreview> createState() => _SupplierPreviewState();
@@ -827,6 +830,11 @@ class _SupplierPreviewState extends State<SupplierPreview> {
         const SizedBox(height: 10),
       ],
       _RouteLine(controller: controller, item: item),
+      const SizedBox(height: 12),
+      GoogleMapsDirectionsButton(
+        destination: '${item.point.latitude},${item.point.longitude}',
+        openLink: widget.openDirections,
+      ),
       if (item.vacationMode) ...[
         const SizedBox(height: 12),
         const AuthNotice(
@@ -938,6 +946,11 @@ class _SupplierPreviewState extends State<SupplierPreview> {
       const SizedBox(height: 16),
       if (status != null) ...[status, const SizedBox(height: 10)],
       _RouteLine(controller: controller, item: item),
+      const SizedBox(height: 12),
+      GoogleMapsDirectionsButton(
+        destination: '${item.point.latitude},${item.point.longitude}',
+        openLink: widget.openDirections,
+      ),
       const SizedBox(height: 16),
       if (controller.directoryLoading)
         Semantics(

@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { completedVendorTutorials } from './fixtures/tutorial-progress'
 
 // Business dates stay in Manila even when the browser's local calendar is west of UTC.
 test.use({ timezoneId: 'America/Los_Angeles' })
@@ -13,7 +14,8 @@ async function prepare(page: Page, portal: 'vendor' | 'admin') {
     queries.push(url)
     let data: unknown = []
     let meta: unknown = { page: 1, per_page: 20, total: 0, last_page: 1, has_more: false }
-    if (url.pathname.endsWith('/profile')) data = { id: 'synthetic-design-review', full_name: 'DEMO Design Reviewer', account_type: portal.toUpperCase(), account_status: 'ACTIVE', role: portal === 'admin' ? 'ADMIN_SUPERADMIN' : 'OWNER' }
+    if (url.pathname.endsWith('/account/tutorials') && portal === 'vendor') data = completedVendorTutorials
+    else if (url.pathname.endsWith('/profile')) data = { id: 'synthetic-design-review', full_name: 'DEMO Design Reviewer', account_type: portal.toUpperCase(), account_status: 'ACTIVE', role: portal === 'admin' ? 'ADMIN_SUPERADMIN' : 'OWNER' }
     else if (url.pathname.endsWith('/onboarding')) data = { step_completion: [], requirements: [], drafts: [], sections: {}, lock_version: 1, organization: { store_name: 'DEMO Sample Supply', lock_version: 1 }, permissions: ['portal.orders', 'portal.notifications'], welcome_required: false, verification: { status: 'APPROVED' }, setup: { status: 'COMPLETED' }, activation: { status: 'ACTIVE', marketplace_discoverability_status: 'DISCOVERABLE', readiness: { ready: true, blockers: [] } } }
     else if (url.pathname.endsWith('/vendor/orders')) meta = { ...meta as object, group: url.searchParams.get('group') ?? 'NEW', counts: { ALL: 0, NEW: 0, WAITING_ON_BUYER: 0, AWAITING_PAYMENT: 0, CONFIRMED: 0, CLOSED: 0 }, current_as_of: '2026-10-09T02:00:00Z' }
     await route.fulfill({ json: { data, meta, errors: [] } })

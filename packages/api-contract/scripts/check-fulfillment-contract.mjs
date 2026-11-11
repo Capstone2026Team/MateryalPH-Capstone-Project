@@ -48,6 +48,8 @@ for (const route of routes.filter(route => phaseTwelve.test(route.uri))) {
   }
 }
 const s = spec.components.schemas
+assert.deepEqual(s.FulfillmentStep.properties.note.type, ['string', 'null'])
+assert.equal(s.FulfillmentStep.properties.note.maxLength, 500)
 assert.deepEqual(s.RefundTimelineItem.properties.state.enum, ['REFUND_PENDING', 'REFUNDED', 'REFUND_FAILED'])
 assert.deepEqual(s.RefundTimelineItem.properties.display_state.enum, ['QUEUED', 'INITIATED', 'PROCESSED', 'FAILED'], 'Initiation and success stay visibly different')
 assert.deepEqual(s.RefundTimelineItem.properties.trigger.enum, ['CANCELLATION', 'DISPUTE_CONCLUSION', 'TECHNICAL_COMPENSATION', 'FEE_CREDIT'])
@@ -82,6 +84,13 @@ assert.deepEqual(s.OrderBuyerRef.properties.avatar_path.type, ['string', 'null']
 assert.match(s.OrderBuyerRef.properties.mobile_e164.description, /Other roles and closed\/pickup orders receive null/)
 for (const field of ['email', 'user_id', 'profile_photo_key', 'profile_photo_disk']) assert.ok(!(field in s.OrderBuyerRef.properties), `Delivery contact never includes ${field}`)
 const require = createRequire(import.meta.url)
+const { FulfillmentStepFromJSON, FulfillmentStepToJSON } = require('../generated/typescript/dist/models/FulfillmentStep.js')
+for (const note of [undefined, null, 'Collect at the loading entrance.\nBring your order reference.']) {
+  const wire = { key: 'READY_FOR_PICKUP', label: 'Ready for pickup', status: 'COMPLETE', proof_required: false, proof_requirements: [], ...(note === undefined ? {} : { note }) }
+  const step = FulfillmentStepFromJSON(wire)
+  assert.equal(step.note, note)
+  assert.deepEqual(JSON.parse(JSON.stringify(FulfillmentStepToJSON(step))), wire, 'Vendor milestone notes retain newlines and optional/null compatibility')
+}
 for (const field of ['refunds_total', 'reimbursements_total']) {
   assert.ok(s.AdminOrderOperationsSummary.required.includes(field), `Admin summary requires ${field}`)
   assert.equal(s.AdminOrderOperationsSummary.properties[field].type, 'integer')

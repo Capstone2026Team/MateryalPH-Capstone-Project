@@ -27,7 +27,10 @@ test('order cards reflow and retain search, filters and review navigation', asyn
       activation: { status: 'ACTIVE', marketplace_discoverability_status: 'DISCOVERABLE', readiness: { ready: true, blockers: [] } },
     }
     if (url.pathname.endsWith('/vendor/orders')) {
-      data = url.searchParams.get('q') ? [] : [{
+      const from = url.searchParams.get('from')
+      const to = url.searchParams.get('to')
+      const outsideDates = Boolean(from && from > '2026-10-06' || to && to < '2026-10-06')
+      data = url.searchParams.get('q') || outsideDates ? [] : [{
         id: 'order-layout', reference: 'ORD-2026-LAYOUT', vendor: { id: 'vendor-layout', name: 'Sample Supply' },
         submitted_at: '2026-10-06T01:00:00Z', procurement_type: 'ITEM_BASED', confirmation_source: null,
         states: [{ family: 'ORDER', state: 'AWAITING_VENDOR_CONFIRMATION' }, { family: 'PAYMENT', state: 'NOT_REQUIRED' }, { family: 'FULFILLMENT', state: 'NOT_STARTED' }, { family: 'REFUND', state: 'NOT_REQUESTED' }, { family: 'DISPUTE', state: 'NONE' }],
@@ -37,11 +40,16 @@ test('order cards reflow and retain search, filters and review navigation', asyn
         deadline: { kind: 'VENDOR_RESPONSE', at: '2026-10-07T01:00:00Z' }, expected_fulfillment_date: null,
         buyer: { display_name: 'Sample Buyer' }, primary_action: 'CONFIRM', nrpc_indicator: false,
       }]
-      meta = { group: url.searchParams.get('group') ?? 'NEW', counts: { ALL: 13, NEW: 3, WAITING_ON_BUYER: 2, AWAITING_PAYMENT: 2, CONFIRMED: 2, CLOSED: 4 }, page: 1, per_page: 20, total: 1, has_more: false, current_as_of: '2026-10-06T02:00:00Z' }
+      meta = { group: url.searchParams.get('group') ?? 'NEW', counts: { ALL: 13, NEW: 3, WAITING_ON_BUYER: 2, AWAITING_PAYMENT: 2, CONFIRMED: 2, CLOSED: 4 }, page: 1, per_page: 20, total: Array.isArray(data) ? data.length : 0, has_more: false, current_as_of: '2026-10-06T02:00:00Z' }
     }
     await route.fulfill({ json: { data, meta, errors: [] } })
   })
-  await page.goto('/orders')
+  await page.goto('/orders?from=2026-10-07&to=2026-10-09')
+  await expect(page.getByText('No orders were submitted in this date range. Status counts include all dates.')).toBeVisible()
+  await expect(page.getByRole('tab', { name: /^New requests\s+3$/ })).toBeVisible()
+  await page.getByRole('button', { name: 'Show all dates', exact: true }).click()
+  await expect.poll(() => new URL(page.url()).searchParams.has('from') || new URL(page.url()).searchParams.has('to')).toBe(false)
+  await expect(page.getByRole('button', { name: 'All dates', exact: true })).toBeVisible()
   const card = page.getByRole('article', { name: 'ORD-2026-LAYOUT' })
   await expect(card).toBeVisible()
   await expectPortalCardDesign(page)

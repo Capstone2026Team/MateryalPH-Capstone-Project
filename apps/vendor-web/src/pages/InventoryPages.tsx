@@ -1,10 +1,10 @@
 import { AsyncLoading } from '@materyalph/web-ui'
-import { Package, CheckCircle2, Clock, AlertTriangle, XCircle, Settings2 } from 'lucide-react'
+import { Package, CheckCircle2, AlertTriangle, XCircle, Settings2 } from 'lucide-react'
 import { useEffect, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { History, Pencil, Zap } from 'lucide-react'
 import {
-  dateFilterPreset, AutoAcceptPanel, Button, QuantityField, ConfirmDialog, ConflictBanner, DateFilter, DenseLedgerTable, Field, Pagination, Select, SidePanel, StaleStockBand, StatusMessage, StockLabelBadge, StatCard, ActiveFilters, FormDialog, Toolbar, InfoNote, EmptyState,
+  dateFilterPreset, AutoAcceptPanel, Button, QuantityField, ConfirmDialog, ConflictBanner, DateFilter, DenseLedgerTable, Field, Pagination, Select, SidePanel, StaleStockBand, StatusMessage, StockLabelBadge, StockConfirmationStatus, StatCard, ActiveFilters, FormDialog, Toolbar, InfoNote, EmptyState,
   formatManilaDateTime, type AutoAcceptPanelValues, type DateFilterRange, type LedgerColumn,
 } from '@materyalph/web-ui'
 import {
@@ -26,7 +26,6 @@ const REASONS = [
   { value: 'DAMAGED', label: 'Damaged' }, { value: 'LOST', label: 'Lost or missing' }, { value: 'CORRECTION', label: 'Correction' },
 ]
 const control = 'min-h-12 w-full min-w-0 rounded-control border border-border-default bg-surface-primary px-3 text-base font-normal'
-const confirmationText: Record<string, string> = { CONFIRMED: 'Confirmed', REMINDER: 'Confirm soon', FINAL_REMINDER: 'Final reminder', OVERDUE: 'Not confirmed', NOT_CONFIRMED: 'No count yet' }
 
 function variantName(row: InventoryRow): string {
   return row.variantLabel ? `${row.listingName} — ${row.variantLabel}` : row.listingName
@@ -304,7 +303,7 @@ export function VendorInventoryPage() {
   const columns: LedgerColumn<InventoryRow>[] = [
     { key: 'product', header: 'Product / variant', cell: row => <div className="mp-inventory-product-cell"><button type="button" aria-haspopup="dialog" aria-label={`View inventory details for ${variantName(row)}`} aria-describedby={`inventory-sku-${row.listingVariantId}`} onClick={() => toggle(row, 'details')} className="mp-inventory-product"><span>{row.listingName}</span><span className="mp-inventory-product-meta">{row.variantLabel && <span>{row.variantLabel}</span>}<span id={`inventory-sku-${row.listingVariantId}`}>SKU <span className="text-text-strong">{row.sku}</span></span></span></button>{row.listingStatus !== 'ACTIVE' && <ListingBadge status={row.listingStatus} />}</div> },
     { key: 'public', header: 'Stock status', cell: row => <StockLabelBadge label={row.publicLabel} prefix="" /> },
-    { key: 'confirmed', header: 'Confirmation', cell: row => <div className="mp-inventory-confirmation" data-state={row.stockConfirmation.state}><span>{row.stockConfirmation.state === 'CONFIRMED' ? <CheckCircle2 size={14} aria-hidden="true" /> : <Clock size={14} aria-hidden="true" />}{confirmationText[row.stockConfirmation.state] ?? row.stockConfirmation.state}</span><span>{formatManilaDateTime(row.stockConfirmation.confirmedAt)}</span></div> },
+    { key: 'confirmed', header: 'Confirmation', cell: row => <StockConfirmationStatus confirmation={row.stockConfirmation} /> },
     { key: 'reorder', header: 'Reorder level', cell: row => row.inventory?.reorderLevel != null ? `${quantityDisplay(row.inventory.reorderLevel)} ${row.unitCode}` : 'Not set' },
     { key: 'auto', header: 'Auto-accept', cell: row => <div className="mp-inventory-auto"><button type="button" role="switch" aria-checked={row.autoAccept.status === 'ACTIVE'} aria-label={`Auto-accept for ${variantName(row)}`} disabled={!permissions?.canConfigureAutoAccept} onClick={() => row.autoAccept.status === 'ACTIVE' ? setPauseTarget(row) : toggle(row, 'auto')} title={row.autoAccept.status === 'ACTIVE' ? 'Pause auto-accept' : 'Configure or resume auto-accept'} className="mp-inventory-auto-switch"><span aria-hidden="true" className="mp-inventory-auto-track"><span /></span><span>{row.autoAccept.status === 'ACTIVE' ? 'On' : row.autoAccept.status === 'PAUSED' ? 'Paused' : 'Off'}</span></button>{row.autoAccept.status === 'ACTIVE' && <span className="text-xs text-text-secondary">{row.autoAccept.remainingAllotmentQuantity} left</span>}</div> },
 
@@ -361,7 +360,7 @@ export function VendorInventoryPage() {
               <Button variant={expanded?.mode === 'history' ? 'primary' : 'secondary'} aria-label={`History of ${variantName(row)}`} aria-pressed={expanded?.mode === 'history'} onClick={() => toggle(row, 'history')}><History size={16} aria-hidden="true" />History</Button>
             </div>
             <dl aria-label="Inventory overview" className="grid gap-5 border-b border-border-default pb-6 text-sm sm:grid-cols-3">
-              <div><dt className="text-xs text-text-secondary">Confirmation</dt><dd className="mt-1.5 font-semibold">{confirmationText[row.stockConfirmation.state] ?? row.stockConfirmation.state}<span className="mt-1 block text-xs font-normal text-text-secondary">{formatManilaDateTime(row.stockConfirmation.confirmedAt)}</span></dd></div>
+              <div><dt className="text-xs text-text-secondary">Confirmation</dt><dd className="mt-1.5"><StockConfirmationStatus confirmation={row.stockConfirmation} /></dd></div>
               <div className="border-t border-border-default pt-4 sm:border-l sm:border-t-0 sm:pl-5 sm:pt-0"><dt className="text-xs text-text-secondary">Reorder level</dt><dd className="mt-1.5 font-semibold tabular-nums">{row.inventory?.reorderLevel != null ? `${quantityDisplay(row.inventory.reorderLevel)} ${row.unitCode}` : 'Not set'}</dd></div>
               <div className="border-t border-border-default pt-4 sm:border-l sm:border-t-0 sm:pl-5 sm:pt-0"><dt className="text-xs text-text-secondary">Ordinary price</dt><dd className="mt-1.5 font-semibold tabular-nums">{row.price ? formatCentavos(row.price.amountCentavos) : 'No price'}{row.price && <span className="mt-1 block text-xs font-normal text-text-secondary">Price version {row.price.version}</span>}</dd></div>
             </dl>

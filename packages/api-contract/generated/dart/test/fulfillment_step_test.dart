@@ -32,6 +32,12 @@ void main() {
       // TODO
     });
 
+    // Buyer-visible Vendor note saved with this recorded milestone.
+    // String note
+    test('to test the property `note`', () async {
+      // TODO
+    });
+
     // bool proofRequired
     test('to test the property `proofRequired`', () async {
       // TODO

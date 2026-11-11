@@ -5,7 +5,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState, type MouseEve
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom'
 import { Bot, CheckCircle2, Store, MapPin, MessageSquare, PackageSearch, ShieldAlert, Truck } from 'lucide-react'
 import {
-  ActiveFilters, Button, CountBadge, DateFilter, dateFilterPreset, DeliveryArrangementFields, FormDialog, OrderHistory, OrderProgress, SidePanel, ConfirmDialog, DeadlineCountdown, Field, FilterTabs, MoneyBreakdown, NrpcPreparationEditor, Pagination, Toolbar, VendorDiscountEditor, EmptyState, OrderSummaryCard, OrderStateRows, ProfileDetails, ResponsiveRecordList, Select, StatusMessage,
+  ActiveFilters, ALL_DATES, Button, CountBadge, DateFilter, dateFilterPreset, DeliveryArrangementFields, FormDialog, OrderHistory, OrderProgress, SidePanel, ConfirmDialog, DeadlineCountdown, Field, FilterTabs, MoneyBreakdown, NrpcPreparationEditor, Pagination, Toolbar, VendorDiscountEditor, EmptyState, OrderSummaryCard, OrderStateRows, ProfileDetails, ResponsiveRecordList, Select, StatusMessage,
   DeliveryVehicleCard, readOrderEvidenceFile, deliveryPlanVehicleOptions, formatManilaDateTime, formatPesoCentavos, nrpcPreparationAssessment, orderStateLabel, type NrpcPreparedMaterial, type RecordColumn,
 } from '@materyalph/web-ui'
 import {
@@ -114,6 +114,11 @@ function OrdersWorkspace({ canMessage, canViewReviews, canRateBuyer }: { canMess
   }, [group, closedState, q, page, range.from, range.to, attempt])
 
   const chips = GROUPS.map(item => ({ value: item.value, label: item.label, count: meta?.counts[item.value] }))
+  const canShowAllDates = Boolean((range.from || range.to) && meta?.total === 0 && (meta.counts[group] ?? 0) > 0)
+  const emptyMessage = canShowAllDates && !q && !closedState
+    ? 'No orders were submitted in this date range. Status counts include all dates.'
+    : q || range.from || range.to ? 'No orders match these filters.'
+      : closedState ? `No ${orderStateLabel(closedState).toLowerCase()} orders yet.` : EMPTY[group]
 
   return <div className="grid min-w-0 gap-6">
     <PageHeader eyebrow="Store Operations" title="Orders" description="Review incoming requests and track payment and fulfillment across your orders." />
@@ -128,7 +133,10 @@ function OrdersWorkspace({ canMessage, canViewReviews, canRateBuyer }: { canMess
     ]} onClear={() => { setQuery(''); setParams({ q: '', closed_state: '', ...dateRangePatch(dateFilterPreset(30)) }) }} />
     {error ? <ErrorState message={error} onRetry={() => setAttempt(value => value + 1)} />
       : loading && rows.length === 0 ? <div className="grid gap-3" aria-busy="true" aria-label="Loading orders">{[0, 1, 2].map(index => <div key={index} className="h-20 animate-pulse rounded-surface bg-surface-canvas motion-reduce:animate-none" />)}</div>
-        : rows.length === 0 ? <EmptyState message={q || range.from || range.to ? 'No orders match these filters.' : closedState ? `No ${orderStateLabel(closedState).toLowerCase()} orders yet.` : EMPTY[group]} action={q || closedState ? <Button variant="secondary" onClick={() => { setQuery(''); setParams({ group, closed_state: '', q: '', ...dateRangePatch(dateFilterPreset(30)) }) }}>Clear filters</Button> : undefined} />
+        : rows.length === 0 ? <EmptyState message={emptyMessage} action={canShowAllDates || q || closedState ? <div className="flex flex-wrap justify-center gap-3">
+          {canShowAllDates && <Button variant="secondary" onClick={() => setParams(dateRangePatch(ALL_DATES))}>Show all dates</Button>}
+          {(q || closedState) && <Button variant="secondary" onClick={() => { setQuery(''); setParams({ group, closed_state: '', q: '', ...dateRangePatch(dateFilterPreset(30)) }) }}>Clear filters</Button>}
+        </div> : undefined} />
           : <div aria-busy={loading}>
             <ul aria-label={GROUPS.find(item => item.value === group)?.label ?? 'Orders'} className="grid min-w-0 gap-4">
               {rows.map(row => <li key={row.id} className="min-w-0"><OrderSummaryCard order={row} identity={<OrderIdentity row={row} onOpen={openOrder} />} action={<ActionLink row={row} onOpen={openOrder} />} /></li>)}

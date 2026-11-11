@@ -74,7 +74,7 @@ export { PublishedAgreementReader } from './published-agreement-reader'
 export { ChoiceField } from './choice-field'
 
 export { DeliveryVehicles, emptyDeliveryVehicle, type DeliveryVehicleDraft } from './delivery-vehicles'
-export { DenseLedgerTable, StockLabelBadge, stockLabelText, ConflictBanner, StaleStockBand, formatManilaDateTime, countdownText, useMinuteClock, type DateLike, type LedgerColumn, type StaleStockItem, type StockLabelValue } from './stock-ledger'
+export { DenseLedgerTable, StockLabelBadge, StockConfirmationStatus, stockLabelText, ConflictBanner, StaleStockBand, formatManilaDateTime, countdownText, useMinuteClock, type DateLike, type LedgerColumn, type StaleStockItem, type StockLabelValue } from './stock-ledger'
 export { AutoAcceptPanel, type AutoAcceptPanelPolicy, type AutoAcceptPanelValues } from './auto-accept-panel'
 export { XenditConnection, type XenditConnectionProps } from './xendit-connection'
 export { StoreOperationSchedule, StoreHours, emptyStoreSchedule, storeScheduleErrors, type StoreOperatingDay } from './store-operation-schedule'

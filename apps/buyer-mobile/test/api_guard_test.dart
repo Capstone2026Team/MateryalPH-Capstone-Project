@@ -72,4 +72,50 @@ void main() {
       );
     },
   );
+
+  for (final status in [401, 500]) {
+    test(
+      'malformed HTTP $status errors preserve safe session handling',
+      () async {
+        var expired = false;
+        final guard = ApiGuard(() async => expired = true);
+        final options = RequestOptions(path: '/buyers/orders');
+        await expectLater(
+          guard.call<void>(() async {
+            throw DioException(
+              requestOptions: options,
+              response: Response<Object?>(
+                requestOptions: options,
+                statusCode: status,
+                data: {
+                  'errors': [
+                    {
+                      'code': 123,
+                      'message': ['private malformed payload'],
+                    },
+                  ],
+                },
+              ),
+            );
+          }),
+          throwsA(
+            isA<DiscoveryFailure>()
+                .having(
+                  (error) => error.kind,
+                  'kind',
+                  status == 401
+                      ? DiscoveryFailureKind.sessionExpired
+                      : DiscoveryFailureKind.provider,
+                )
+                .having(
+                  (error) => error.message,
+                  'safe message',
+                  isNot(contains('private')),
+                ),
+          ),
+        );
+        expect(expired, status == 401);
+      },
+    );
+  }
 }

@@ -105,6 +105,19 @@ export function formatManilaDateTime(value: DateLike): string {
   return date ? `${manila.format(date)} (Asia/Manila)` : '—'
 }
 
+const confirmationLabels: Record<string, string> = { CONFIRMED: 'Confirmed', REMINDER: 'Confirm soon', FINAL_REMINDER: 'Final reminder', OVERDUE: 'Not confirmed', NOT_CONFIRMED: 'No count yet' }
+
+/** Displays the server's Day 15 confirmation deadline, separately from its reminder dates. */
+export function StockConfirmationStatus({ confirmation }: { confirmation: { state: string; confirmedAt: DateLike; hideAt: DateLike } }) {
+  const confirmedAt = toDate(confirmation.confirmedAt)
+  const dueAt = toDate(confirmation.hideAt)
+  return <div className="mp-inventory-confirmation" data-state={confirmation.state}>
+    <span>{confirmation.state === 'CONFIRMED' ? <CheckCircle2 size={14} aria-hidden="true" /> : <Clock size={14} aria-hidden="true" />}{confirmationLabels[confirmation.state] ?? confirmation.state}</span>
+    {confirmedAt && <span>Last confirmed: <time dateTime={confirmedAt.toISOString()}>{formatManilaDateTime(confirmedAt)}</time></span>}
+    <span>{dueAt ? <>{confirmation.state === 'OVERDUE' ? 'Confirmation overdue since:' : 'Next confirmation due:'} <time dateTime={dueAt.toISOString()}>{formatManilaDateTime(dueAt)}</time></> : 'Confirm stock to set a due date.'}</span>
+  </div>
+}
+
 export function countdownText(target: DateLike, now: number): string {
   const date = toDate(target)
   if (!date) return ''

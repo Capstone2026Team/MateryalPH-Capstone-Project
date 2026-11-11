@@ -64,6 +64,7 @@ class OrderFulfillmentPanel extends StatelessWidget {
     required this.onReload,
     this.onOpenThread,
     this.now,
+    this.showProofNotes = true,
   });
 
   final OrderDetailView order;
@@ -74,6 +75,7 @@ class OrderFulfillmentPanel extends StatelessWidget {
   final VoidCallback onReload;
   final ValueChanged<String>? onOpenThread;
   final DateTime Function()? now;
+  final bool showProofNotes;
 
   @override
   Widget build(BuildContext context) {
@@ -133,6 +135,7 @@ class OrderFulfillmentPanel extends StatelessWidget {
           steps: fulfillment.steps,
           proofBuilder: (proof) => ProofCard(
             proof: proof,
+            showNote: showProofNotes,
             photo: buyerEvidenceFileId(proof.photoPath) == null
                 ? null
                 : EvidencePhoto(

@@ -11,6 +11,7 @@ Name | Type
 `status` | string
 `at` | Date
 `actorRole` | string
+`note` | string
 `proofRequired` | boolean
 `proof` | [FulfillmentProof](FulfillmentProof.md)
 `proofRequirements` | Array&lt;string&gt;
@@ -27,6 +28,7 @@ const example = {
   "status": null,
   "at": null,
   "actorRole": null,
+  "note": null,
   "proofRequired": null,
   "proof": null,
   "proofRequirements": null,
