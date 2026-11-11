@@ -140,6 +140,9 @@ const historyGroup = queries.match(/BUYER_HISTORY_GROUP = '([A-Z_]+)'/)[1]
 assert.deepEqual(groups, ['ALL', ...buyerGroups, historyGroup], 'Buyer status chips and Profile history match the server groups')
 assert.deepEqual(groups, ['ALL', 'CONFIRMATION', 'PROCESSING', 'TO_SHIP', 'TO_RECEIVE', 'COMPLETED', 'CANCELLED', 'DISPUTED', 'CANCELLED_REFUNDED'])
 assert.deepEqual(listParameters.find(parameter => parameter.name === 'procurement_type').schema.enum, ['ITEM_BASED', 'PROJECT_BASED'], 'Item and Project tabs')
+assert.deepEqual(schemas.OrderListMeta.properties.active_counts.additionalProperties, { type: 'integer', minimum: 0 }, 'Active tab counts are nonnegative integers')
+assert.match(schemas.OrderListMeta.properties.active_counts.description, /regardless of procurement_type/, 'Both tab counts are independent of the selected tab')
+assert.match(spec.paths['/buyers/orders'].get.description, /TO_SHIP \(out for delivery\), TO_RECEIVE \(ready for pickup/, 'Ready pickup orders belong to To receive')
 assert.deepEqual(schemas.OrderSummary.properties.card_actions.items.enum, ['CONFIRM_RECEIPT', 'REPORT_PROBLEM', 'FILE_DISPUTE', 'VIEW_DISPUTE', 'BUY_AGAIN', 'VIEW_CANCELLATION'])
 assert.deepEqual(schemas.OrderConversationRef.required, ['id', 'read_only', 'unread_count'], 'Cards open the Fulfillment Messages thread directly')
 for (const schema of ['BuyAgainAddedLine', 'BuyAgainSkippedLine', 'BuyAgainResult']) {

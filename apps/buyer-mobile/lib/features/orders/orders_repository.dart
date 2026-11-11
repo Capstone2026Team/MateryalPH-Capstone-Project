@@ -256,6 +256,7 @@ final class ApiOrdersRepository implements OrdersRepository {
     return OrderListPage(
       items: envelope.data.map(_summary).toList(),
       counts: envelope.meta.counts.toMap(),
+      activeCounts: envelope.meta.activeCounts?.toMap() ?? const {},
       page: envelope.meta.page,
       hasMore: envelope.meta.hasMore,
       total: envelope.meta.total,

@@ -46,8 +46,8 @@ final class OrderQueries
     public const BUYER_GROUPS = [
         'CONFIRMATION' => [OrderStates::AWAITING_VENDOR_CONFIRMATION, OrderStates::AWAITING_BUYER_APPROVAL, OrderStates::AWAITING_NRPC_ACCEPTANCE, OrderStates::AWAITING_PAYMENT],
         'PROCESSING' => [OrderStates::CONFIRMED, OrderStates::PROCESSING, OrderStates::CANCELLATION_REQUESTED],
-        'TO_SHIP' => OrderStates::HANDOVER_STAGE,
-        'TO_RECEIVE' => OrderStates::AWAITING_RECEIPT,
+        'TO_SHIP' => [OrderStates::OUT_FOR_DELIVERY],
+        'TO_RECEIVE' => [OrderStates::READY_FOR_PICKUP, ...OrderStates::AWAITING_RECEIPT],
         'COMPLETED' => [OrderStates::COMPLETED],
         'CANCELLED' => OrderStates::CLOSED_BEFORE_FULFILLMENT,
         'DISPUTED' => ['DISPUTED'],
@@ -106,7 +106,22 @@ final class OrderQueries
         return $this->page($query, (int) ($filters['page'] ?? 1), fn (object $order): array => $this->summary($order) + ['next_action' => $this->buyerNextAction($order),
             'payment_retryable' => $order->order_state === OrderStates::AWAITING_PAYMENT && in_array(DB::table('payments')->where('order_id', $order->id)->orderByDesc('created_at')->orderByDesc('id')->value('state'), ['FAILED', 'EXPIRED'], true)]
             + $this->buyerCard($order, $userId), ['group' => $group, 'procurement_type' => $type,
-                'counts' => $this->counts($scoped(DB::table('orders')->where('buyer_profile_id', $buyerId), 'procurement_type'), self::BUYER_GROUPS)]);
+                'counts' => $this->counts($scoped(DB::table('orders')->where('buyer_profile_id', $buyerId), 'procurement_type'), self::BUYER_GROUPS),
+                'active_counts' => $this->buyerActiveCounts($buyerId)]);
+    }
+
+    /**
+     * Active Item and Project totals cover every page and status chip, scoped to the authenticated Buyer.
+     *
+     * @return array<string, int>
+     */
+    private function buyerActiveCounts(string $buyerId): array
+    {
+        $rows = DB::table('orders')->where('buyer_profile_id', $buyerId)
+            ->whereNotIn('order_state', [...OrderStates::CLOSED_BEFORE_FULFILLMENT, OrderStates::COMPLETED])
+            ->groupBy('procurement_type')->selectRaw('procurement_type, count(*) as total')->pluck('total', 'procurement_type');
+
+        return array_map(static fn (string $type): int => (int) ($rows[$type] ?? 0), array_combine(self::PROCUREMENT_TYPES, self::PROCUREMENT_TYPES));
     }
 
     /**

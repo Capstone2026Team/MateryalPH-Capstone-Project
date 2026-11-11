@@ -20,6 +20,9 @@ void main() {
         'payment_principal_centavos': 28550,
         'buyer_processing_fees_centavos': 755,
         'collections_centavos': 29305,
+        'assessed_payment_centavos': 42825,
+        'delivery_centavos': 14275,
+        'material_vat_centavos': 3059,
         'gross_basis_centavos': 25491,
         'rate_basis_points': 50,
         'withheld_centavos': 127,
@@ -32,6 +35,9 @@ void main() {
   if (data.otherStoreTotals != null ||
       payment.grossBasisCentavos != 25491 ||
       payment.rateBasisPoints != 50 ||
+      payment.assessedPaymentCentavos != 42825 ||
+      payment.deliveryCentavos != 14275 ||
+      payment.materialVatCentavos != 3059 ||
       payment.withheldCentavos != data.totals.withheldCentavos ||
       payment.paymentPrincipalCentavos + payment.buyerProcessingFeesCentavos !=
           data.totals.collectionsCentavos) {
@@ -51,13 +57,15 @@ void main() {
     throw StateError('Annual source totals must survive JSON serialization.');
   }
   final withholdingWire = <String, Object?>{
-    'payments': ['A', 'B', 'C', 'D'].map((id) => {
-      'id': id,
-      'order_reference': 'ORD-$id',
-      'gross_basis_centavos': 25491,
-      'rate_basis_points': 50,
-      'withheld_centavos': 127,
-    }).toList(),
+    'payments': ['A', 'B', 'C', 'D']
+        .map((id) => {
+              'id': id,
+              'order_reference': 'ORD-$id',
+              'gross_basis_centavos': 25491,
+              'rate_basis_points': 50,
+              'withheld_centavos': 127,
+            })
+        .toList(),
     'remaining_payments': 0,
     'remaining_basis_centavos': 0,
     'remaining_withheld_centavos': 0,
@@ -67,14 +75,18 @@ void main() {
   if (withholding.payments.first.rateBasisPoints != 50 ||
       withholding.payments.first.grossBasisCentavos != 25491 ||
       withholding.payments.fold<int>(withholding.remainingWithheldCentavos,
-          (sum, payment) => sum + payment.withheldCentavos) != 508) {
+              (sum, payment) => sum + payment.withheldCentavos) !=
+          508) {
     throw StateError('Recorded per-payment tax rounding must be preserved.');
   }
   final withholdingRestored = standardSerializers.serializeWith(
-      WithholdingCalculationBreakdown.serializer, withholding) as Map<String, Object?>;
+          WithholdingCalculationBreakdown.serializer, withholding)
+      as Map<String, Object?>;
   if ((withholdingRestored['payments'] as List).length != 4 ||
       withholdingRestored['remaining_withheld_centavos'] != 0) {
-    throw StateError('Withholding calculations must survive JSON serialization.');
+    throw StateError(
+        'Withholding calculations must survive JSON serialization.');
   }
-  print('Dart annual payment-source and withholding calculation contract checks passed.');
+  print(
+      'Dart annual payment-source and withholding calculation contract checks passed.');
 }

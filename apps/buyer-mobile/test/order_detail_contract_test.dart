@@ -41,6 +41,35 @@ Map<String, Object?> _envelope(void Function(Map<String, dynamic> data) edit) {
 }
 
 void main() {
+  for (final includeCounts in [true, false]) {
+    test('order lists parse active totals (present: $includeCounts)', () async {
+      final repository = _repositoryReturning({
+        'data': <Object?>[],
+        'meta': {
+          'group': 'CONFIRMATION',
+          'counts': {'ALL': 31, 'CONFIRMATION': 8},
+          if (includeCounts)
+            'active_counts': {'ITEM_BASED': 23, 'PROJECT_BASED': 5},
+          'page': 1,
+          'per_page': 20,
+          'total': 8,
+          'has_more': false,
+          'current_as_of': '2026-11-11T06:00:00Z',
+        },
+        'errors': <Object?>[],
+      });
+      final page = await repository.orders(
+        group: 'CONFIRMATION',
+        procurementType: 'ITEM_BASED',
+      );
+      expect(
+        page.activeCounts,
+        includeCounts ? {'ITEM_BASED': 23, 'PROJECT_BASED': 5} : isEmpty,
+      );
+      expect(page.counts, {'ALL': 31, 'CONFIRMATION': 8});
+    });
+  }
+
   test(
     'milestone notes parse from the order response without requiring notes',
     () async {

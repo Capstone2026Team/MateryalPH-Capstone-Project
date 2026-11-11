@@ -1,5 +1,7 @@
 **Buyer Flow**
 
+**Owner update — 2026-11-11: My Orders pickup grouping and active totals.** Ready for Pickup belongs to **To receive**, alongside Delivered and Picked Up awaiting receipt confirmation. **To ship** contains Out for Delivery only; earlier confirmation/processing stages keep their existing chips. Item and Project each show their active order count across all chips and pages, including Disputed and excluding Completed, Cancelled, Declined and Expired. Hide zero badges, announce counts accessibly, and refresh through the existing authorized REST/realtime flow. This supersedes the earlier Ready for Pickup chip placement only; receipt confirmation remains unavailable until handover is recorded.
+
 ---
 
 ### Mobile Application (Flutter/Dart)

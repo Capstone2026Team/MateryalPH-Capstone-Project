@@ -261,6 +261,7 @@ class OrderListPage {
   const OrderListPage({
     required this.items,
     required this.counts,
+    this.activeCounts = const {},
     required this.page,
     required this.hasMore,
     required this.total,
@@ -268,6 +269,7 @@ class OrderListPage {
 
   final List<OrderSummaryView> items;
   final Map<String, int> counts;
+  final Map<String, int> activeCounts;
   final int page;
   final bool hasMore;
   final int total;

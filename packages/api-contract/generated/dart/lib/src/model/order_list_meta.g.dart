@@ -12,6 +12,8 @@ class _$OrderListMeta extends OrderListMeta {
   @override
   final BuiltMap<String, int> counts;
   @override
+  final BuiltMap<String, int>? activeCounts;
+  @override
   final int page;
   @override
   final int perPage;
@@ -28,6 +30,7 @@ class _$OrderListMeta extends OrderListMeta {
   _$OrderListMeta._(
       {required this.group,
       required this.counts,
+      this.activeCounts,
       required this.page,
       required this.perPage,
       required this.total,
@@ -47,6 +50,7 @@ class _$OrderListMeta extends OrderListMeta {
     return other is OrderListMeta &&
         group == other.group &&
         counts == other.counts &&
+        activeCounts == other.activeCounts &&
         page == other.page &&
         perPage == other.perPage &&
         total == other.total &&
@@ -59,6 +63,7 @@ class _$OrderListMeta extends OrderListMeta {
     var _$hash = 0;
     _$hash = $jc(_$hash, group.hashCode);
     _$hash = $jc(_$hash, counts.hashCode);
+    _$hash = $jc(_$hash, activeCounts.hashCode);
     _$hash = $jc(_$hash, page.hashCode);
     _$hash = $jc(_$hash, perPage.hashCode);
     _$hash = $jc(_$hash, total.hashCode);
@@ -73,6 +78,7 @@ class _$OrderListMeta extends OrderListMeta {
     return (newBuiltValueToStringHelper(r'OrderListMeta')
           ..add('group', group)
           ..add('counts', counts)
+          ..add('activeCounts', activeCounts)
           ..add('page', page)
           ..add('perPage', perPage)
           ..add('total', total)
@@ -94,6 +100,12 @@ class OrderListMetaBuilder
   MapBuilder<String, int> get counts =>
       _$this._counts ??= MapBuilder<String, int>();
   set counts(MapBuilder<String, int>? counts) => _$this._counts = counts;
+
+  MapBuilder<String, int>? _activeCounts;
+  MapBuilder<String, int> get activeCounts =>
+      _$this._activeCounts ??= MapBuilder<String, int>();
+  set activeCounts(MapBuilder<String, int>? activeCounts) =>
+      _$this._activeCounts = activeCounts;
 
   int? _page;
   int? get page => _$this._page;
@@ -124,6 +136,7 @@ class OrderListMetaBuilder
     if ($v != null) {
       _group = $v.group;
       _counts = $v.counts.toBuilder();
+      _activeCounts = $v.activeCounts?.toBuilder();
       _page = $v.page;
       _perPage = $v.perPage;
       _total = $v.total;
@@ -155,6 +168,7 @@ class OrderListMetaBuilder
             group: BuiltValueNullFieldError.checkNotNull(
                 group, r'OrderListMeta', 'group'),
             counts: counts.build(),
+            activeCounts: _activeCounts?.build(),
             page: BuiltValueNullFieldError.checkNotNull(
                 page, r'OrderListMeta', 'page'),
             perPage: BuiltValueNullFieldError.checkNotNull(
@@ -171,6 +185,8 @@ class OrderListMetaBuilder
       try {
         _$failedField = 'counts';
         counts.build();
+        _$failedField = 'activeCounts';
+        _activeCounts?.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
             r'OrderListMeta', _$failedField, e.toString());

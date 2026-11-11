@@ -9093,11 +9093,14 @@ paths:
         The Buyer's own orders, newest first. Status chips: CONFIRMATION
         (awaiting the Vendor, the Buyer's approval or NRPC acceptance, or
         payment), PROCESSING (confirmed, preparing, cancellation requested),
-        TO_SHIP (ready for pickup, out for delivery), TO_RECEIVE (delivered or
-        picked up, awaiting receipt confirmation), COMPLETED, CANCELLED
+        TO_SHIP (out for delivery), TO_RECEIVE (ready for pickup, or delivered
+        or picked up awaiting receipt confirmation), COMPLETED, CANCELLED
         (cancelled, declined, expired) and DISPUTED. procurement_type filters
         the Item and Project tabs; meta.counts follow the same procurement
-        filter. Order, payment, fulfillment, refund and dispute states are
+        filter. meta.active_counts gives this Buyer's active order totals for
+        both procurement types, independent of group, procurement_type and
+        pagination, excluding completed, cancelled, declined and expired orders.
+        Order, payment, fulfillment, refund and dispute states are
         separate rows. Due windows are resolved before listing.
         CANCELLED_REFUNDED is the Profile history of actual CANCELLED orders or
         orders with PARTIALLY_REFUNDED or REFUNDED refund state, filtered before
@@ -33935,6 +33938,14 @@ components:
       properties:
         group: { type: string }
         counts: { type: object, additionalProperties: { type: integer } }
+        active_counts:
+          type: object
+          description: >-
+            Buyer lists include ITEM_BASED and PROJECT_BASED active order totals
+            across all pages and status chips, regardless of procurement_type.
+            Excludes COMPLETED, CANCELLED, DECLINED and EXPIRED; includes DISPUTED.
+            Omitted on Vendor and Admin lists.
+          additionalProperties: { type: integer, minimum: 0 }
         page: { type: integer }
         per_page: { type: integer }
         total: { type: integer }

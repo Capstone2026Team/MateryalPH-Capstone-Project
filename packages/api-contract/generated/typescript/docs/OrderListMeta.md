@@ -8,6 +8,7 @@ Name | Type
 ------------ | -------------
 `group` | string
 `counts` | { [key: string]: number; }
+`activeCounts` | { [key: string]: number; }
 `page` | number
 `perPage` | number
 `total` | number
@@ -23,6 +24,7 @@ import type { OrderListMeta } from '@materyalph/api-client-ts'
 const example = {
   "group": null,
   "counts": null,
+  "activeCounts": null,
   "page": null,
   "perPage": null,
   "total": null,

@@ -14,6 +14,7 @@ part 'order_list_meta.g.dart';
 /// Properties:
 /// * [group]
 /// * [counts]
+/// * [activeCounts] - Buyer lists include ITEM_BASED and PROJECT_BASED active order totals across all pages and status chips, regardless of procurement_type. Excludes COMPLETED, CANCELLED, DECLINED and EXPIRED; includes DISPUTED. Omitted on Vendor and Admin lists.
 /// * [page]
 /// * [perPage]
 /// * [total]
@@ -26,6 +27,10 @@ abstract class OrderListMeta implements Built<OrderListMeta, OrderListMetaBuilde
 
   @BuiltValueField(wireName: r'counts')
   BuiltMap<String, int> get counts;
+
+  /// Buyer lists include ITEM_BASED and PROJECT_BASED active order totals across all pages and status chips, regardless of procurement_type. Excludes COMPLETED, CANCELLED, DECLINED and EXPIRED; includes DISPUTED. Omitted on Vendor and Admin lists.
+  @BuiltValueField(wireName: r'active_counts')
+  BuiltMap<String, int>? get activeCounts;
 
   @BuiltValueField(wireName: r'page')
   int get page;
@@ -75,6 +80,13 @@ class _$OrderListMetaSerializer implements PrimitiveSerializer<OrderListMeta> {
       object.counts,
       specifiedType: const FullType(BuiltMap, [FullType(String), FullType(int)]),
     );
+    if (object.activeCounts != null) {
+      yield r'active_counts';
+      yield serializers.serialize(
+        object.activeCounts,
+        specifiedType: const FullType(BuiltMap, [FullType(String), FullType(int)]),
+      );
+    }
     yield r'page';
     yield serializers.serialize(
       object.page,
@@ -136,6 +148,14 @@ class _$OrderListMetaSerializer implements PrimitiveSerializer<OrderListMeta> {
             specifiedType: const FullType(BuiltMap, [FullType(String), FullType(int)]),
           ) as BuiltMap<String, int>;
           result.counts.replace(valueDes);
+          break;
+        case r'active_counts':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType.nullable(BuiltMap, [FullType(String), FullType(int)]),
+          ) as BuiltMap<String, int>?;
+          if (valueDes == null) continue;
+          result.activeCounts.replace(valueDes);
           break;
         case r'page':
           final valueDes = serializers.deserialize(

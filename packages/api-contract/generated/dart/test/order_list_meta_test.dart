@@ -17,6 +17,12 @@ void main() {
       // TODO
     });
 
+    // Buyer lists include ITEM_BASED and PROJECT_BASED active order totals across all pages and status chips, regardless of procurement_type. Excludes COMPLETED, CANCELLED, DECLINED and EXPIRED; includes DISPUTED. Omitted on Vendor and Admin lists.
+    // BuiltMap<String, int> activeCounts
+    test('to test the property `activeCounts`', () async {
+      // TODO
+    });
+
     // int page
     test('to test the property `page`', () async {
       // TODO

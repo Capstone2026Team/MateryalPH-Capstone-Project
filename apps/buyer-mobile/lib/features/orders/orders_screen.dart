@@ -94,6 +94,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
 
   /// Order counts per chip for the selected tab, from the latest list response.
   Map<String, int> _counts = const {};
+  Map<String, int> _activeCounts = const {};
 
   bool get _hub => widget.view == BuyerOrdersView.orders;
 
@@ -146,6 +147,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
       _sequence++;
       _items.clear();
       _counts = const {};
+      _activeCounts = const {};
       _retryKeys.clear();
       _loadedScope = null;
       _busyOrderId = null;
@@ -206,6 +208,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
         };
         _items.addAll(refreshed.values);
         _counts = result.counts;
+        _activeCounts = result.activeCounts;
         _loadedScope = _scope;
         _hasMore = result.hasMore;
         _page = result.page;
@@ -220,6 +223,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
           if (denied) {
             _items.clear();
             _counts = const {};
+            _activeCounts = const {};
           }
         });
       }
@@ -512,6 +516,10 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
                 child: SegmentedTabs(
                   labels: [for (final (_, label) in _types) label],
+                  counts: [
+                    for (final (type, _) in _types) _activeCounts[type] ?? 0,
+                  ],
+                  countNoun: 'active orders',
                   selected: _types.indexWhere((type) => type.$1 == _type),
                   onChanged: (index) => _select(type: _types[index].$1),
                 ),

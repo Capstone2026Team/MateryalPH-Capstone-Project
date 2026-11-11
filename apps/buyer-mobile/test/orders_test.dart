@@ -514,6 +514,7 @@ void main() {
             'PROCESSING': 3,
             'COMPLETED': 5,
           },
+          activeCounts: const {'ITEM_BASED': 4, 'PROJECT_BASED': 2},
           page: 1,
           hasMore: false,
           total: 1,
@@ -544,6 +545,14 @@ void main() {
       );
       expect(find.bySemanticsLabel('Processing, 3 orders'), findsOneWidget);
       expect(find.bySemanticsLabel('Completed'), findsOneWidget);
+      expect(
+        find.bySemanticsLabel('Item tab, 4 active orders'),
+        findsOneWidget,
+      );
+      expect(
+        find.bySemanticsLabel('Project tab, 2 active orders'),
+        findsOneWidget,
+      );
       expect(find.text('ORD-2026-ABCD1234'), findsOneWidget);
       expect(find.text('Needs your approval'), findsOneWidget);
       expect(find.text('Oct 5, 2026'), findsOneWidget);
@@ -564,6 +573,7 @@ void main() {
       repository.list = const OrderListPage(
         items: [],
         counts: {'ALL': 0},
+        activeCounts: {'ITEM_BASED': 4, 'PROJECT_BASED': 2},
         page: 1,
         hasMore: false,
         total: 0,
@@ -572,6 +582,14 @@ void main() {
       await tester.pumpAndSettle();
       expect(repository.calls.last, 'orders:PROJECT_BASED:CONFIRMATION:1');
       expect(
+        find.bySemanticsLabel('Item tab, 4 active orders'),
+        findsOneWidget,
+      );
+      expect(
+        find.bySemanticsLabel('Project tab, 2 active orders'),
+        findsOneWidget,
+      );
+      expect(
         badges,
         findsNothing,
         reason: 'Project counts replace Item counts',
@@ -579,10 +597,23 @@ void main() {
       // The chips scroll sideways; Completed starts off-screen at 390 px.
       await tester.ensureVisible(find.text('Completed'));
       await tester.pumpAndSettle();
+      repository.list = const OrderListPage(
+        items: [],
+        counts: {'ALL': 0},
+        activeCounts: {'ITEM_BASED': 3, 'PROJECT_BASED': 0},
+        page: 1,
+        hasMore: false,
+        total: 0,
+      );
       await tester.tap(find.text('Completed'));
       await tester.pumpAndSettle();
       expect(repository.calls.last, 'orders:PROJECT_BASED:COMPLETED:1');
       expect(find.text('No completed orders'), findsOneWidget);
+      expect(
+        find.bySemanticsLabel('Item tab, 3 active orders'),
+        findsOneWidget,
+      );
+      expect(find.bySemanticsLabel('Project tab'), findsOneWidget);
     },
   );
 

@@ -10,6 +10,7 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **group** | **String** |  |
 **counts** | **BuiltMap&lt;String, int&gt;** |  |
+**activeCounts** | **BuiltMap&lt;String, int&gt;** | Buyer lists include ITEM_BASED and PROJECT_BASED active order totals across all pages and status chips, regardless of procurement_type. Excludes COMPLETED, CANCELLED, DECLINED and EXPIRED; includes DISPUTED. Omitted on Vendor and Admin lists. | [optional]
 **page** | **int** |  |
 **perPage** | **int** |  |
 **total** | **int** |  |

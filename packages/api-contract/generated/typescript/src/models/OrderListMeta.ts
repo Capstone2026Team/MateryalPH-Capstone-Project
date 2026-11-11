@@ -29,6 +29,10 @@ export interface OrderListMeta {
      */
     counts: { [key: string]: number; };
     /**
+     * Buyer lists include ITEM_BASED and PROJECT_BASED active order totals across all pages and status chips, regardless of procurement_type. Excludes COMPLETED, CANCELLED, DECLINED and EXPIRED; includes DISPUTED. Omitted on Vendor and Admin lists.
+     */
+    activeCounts?: { [key: string]: number; };
+    /**
      *
      */
     page: number;
@@ -77,6 +81,7 @@ export function OrderListMetaFromJSONTyped(json: any, ignoreDiscriminator: boole
             ...json,
         'group': json['group'],
         'counts': json['counts'],
+        'activeCounts': json['active_counts'] == null ? undefined : json['active_counts'],
         'page': json['page'],
         'perPage': json['per_page'],
         'total': json['total'],
@@ -99,6 +104,7 @@ export function OrderListMetaToJSONTyped(value?: OrderListMeta | null, ignoreDis
             ...value,
         'group': value['group'],
         'counts': value['counts'],
+        'active_counts': value['activeCounts'],
         'page': value['page'],
         'per_page': value['perPage'],
         'total': value['total'],

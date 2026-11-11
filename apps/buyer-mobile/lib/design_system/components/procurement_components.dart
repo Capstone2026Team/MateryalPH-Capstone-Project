@@ -1178,11 +1178,19 @@ class SegmentedTabs extends StatelessWidget {
     required this.labels,
     required this.selected,
     required this.onChanged,
+    this.counts = const [],
+    this.countNoun = 'items',
   });
 
   final List<String> labels;
   final int selected;
   final ValueChanged<int> onChanged;
+
+  /// Positive counts use the shared compact badge; omitted and zero counts stay hidden.
+  final List<int> counts;
+  final String countNoun;
+
+  int _count(int index) => index < counts.length ? counts[index] : 0;
 
   static const _gap = 3.0;
 
@@ -1226,15 +1234,33 @@ class SegmentedTabs extends StatelessWidget {
     final scaler = MediaQuery.textScalerOf(context);
     final base = DefaultTextStyle.of(context).style;
     var widest = 0.0;
-    for (final label in labels) {
-      for (final word in label.split(' ')) {
+    for (var index = 0; index < labels.length; index++) {
+      var badgeWidth = 0.0;
+      if (_count(index) > 0) {
+        final painter = TextPainter(
+          text: TextSpan(
+            text: compactBadgeQuantity('${_count(index)}'),
+            style: base.merge(
+              const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
+            ),
+          ),
+          textScaler: scaler,
+          textDirection: Directionality.of(context),
+          maxLines: 1,
+        )..layout();
+        badgeWidth = 6 + (painter.width + 10).clamp(20, double.infinity);
+        painter.dispose();
+      }
+      for (final word in labels[index].split(' ')) {
         final painter = TextPainter(
           text: TextSpan(text: word, style: base.merge(_style(true))),
           textScaler: scaler,
           textDirection: Directionality.of(context),
           maxLines: 1,
         )..layout();
-        if (painter.width > widest) widest = painter.width;
+        if (painter.width + badgeWidth > widest) {
+          widest = painter.width + badgeWidth;
+        }
         painter.dispose();
       }
     }
@@ -1255,7 +1281,9 @@ class SegmentedTabs extends StatelessWidget {
   Widget _tab(int index) => Semantics(
     button: true,
     selected: index == selected,
-    label: '${labels[index]} tab',
+    label: _count(index) > 0
+        ? '${labels[index]} tab, ${_count(index)} $countNoun'
+        : '${labels[index]} tab',
     excludeSemantics: true,
     child: Material(
       color: index == selected ? BuyerTheme.action : Colors.transparent,
@@ -1264,14 +1292,25 @@ class SegmentedTabs extends StatelessWidget {
       child: InkWell(
         onTap: () => onChanged(index),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 40),
+          constraints: BoxConstraints(minHeight: counts.isEmpty ? 40 : 44),
           child: Center(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-              child: Text(
-                labels[index],
-                textAlign: TextAlign.center,
-                style: _style(index == selected),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(
+                    child: Text(
+                      labels[index],
+                      textAlign: TextAlign.center,
+                      style: _style(index == selected),
+                    ),
+                  ),
+                  if (_count(index) > 0) ...[
+                    const SizedBox(width: 6),
+                    CountBadge(quantity: '${_count(index)}'),
+                  ],
+                ],
               ),
             ),
           ),

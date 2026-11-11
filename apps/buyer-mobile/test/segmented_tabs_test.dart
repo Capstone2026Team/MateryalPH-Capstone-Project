@@ -2,9 +2,42 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:materyalph/design_system/components/procurement_components.dart';
+import 'package:materyalph/design_system/components/count_badge.dart';
 import 'package:materyalph/design_system/theme.dart';
 
 void main() {
+  for (final scale in [1.0, 2.0]) {
+    testWidgets('tab badges fit at 320px and ${scale}x text', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 600));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: BuyerTheme.light,
+          home: MediaQuery(
+            data: MediaQueryData(textScaler: TextScaler.linear(scale)),
+            child: Scaffold(
+              body: SegmentedTabs(
+                labels: const ['Item', 'Project'],
+                counts: const [123, 0],
+                countNoun: 'active orders',
+                selected: 0,
+                onChanged: (_) {},
+              ),
+            ),
+          ),
+        ),
+      );
+      expect(find.text('99+'), findsOneWidget);
+      expect(find.byType(CountBadge), findsOneWidget);
+      expect(
+        find.bySemanticsLabel('Item tab, 123 active orders'),
+        findsOneWidget,
+      );
+      expect(find.bySemanticsLabel('Project tab'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
   const labels = ['7 days', '30 days', '90 days', 'Custom'];
 
   Future<int?> pump(WidgetTester tester, double width, double scale) async {

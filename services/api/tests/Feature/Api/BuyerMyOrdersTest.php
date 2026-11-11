@@ -121,24 +121,28 @@ final class BuyerMyOrdersTest extends TestCase
     {
         [$store, , $listing] = $this->pickupStore('Order chips', [['price' => 1800, 'qty' => '100']]);
         [$buyer, $awaiting] = $this->pickupOrder($store, $listing);
-        $ids = ['PROCESSING' => 'PROCESSING', 'TO_SHIP' => 'READY_FOR_PICKUP', 'TO_RECEIVE' => 'PICKED_UP', 'COMPLETED' => 'COMPLETED', 'DISPUTED' => 'DISPUTED', 'CANCELLED' => 'EXPIRED'];
+        $ids = ['PROCESSING' => 'PROCESSING', 'TO_SHIP' => 'OUT_FOR_DELIVERY', 'TO_RECEIVE' => 'PICKED_UP', 'COMPLETED' => 'COMPLETED', 'DISPUTED' => 'DISPUTED', 'CANCELLED' => 'EXPIRED'];
         $orders = ['CONFIRMATION' => $awaiting];
         foreach ($ids as $group => $state) {
             [, $orders[$group]] = $this->pickupOrder($store, $listing, [['variant' => 0, 'quantity' => '1']], $buyer);
             DB::table('orders')->where('id', $orders[$group])->update(['order_state' => $state, 'closed_at' => in_array($state, ['COMPLETED', 'EXPIRED'], true) ? now() : null,
                 'terminal_reason_code' => $state === 'EXPIRED' ? 'PAYMENT_WINDOW_EXPIRED' : null]);
         }
+        DB::table('orders')->where('id', $orders['TO_SHIP'])->update(['fulfillment_method' => 'DELIVERY', 'payment_method' => 'ONLINE']);
         DB::table('orders')->where('id', $orders['DISPUTED'])->update(['procurement_type' => 'PROJECT_BASED']);
 
         $this->signInBuyer($buyer);
         $all = $this->getJson('/api/v1/buyers/orders')->assertOk();
         self::assertSame(['ALL' => 7, 'CONFIRMATION' => 1, 'PROCESSING' => 1, 'TO_SHIP' => 1, 'TO_RECEIVE' => 1, 'COMPLETED' => 1, 'CANCELLED' => 1, 'DISPUTED' => 1], $all->json('meta.counts'));
+        self::assertSame(['ITEM_BASED' => 4, 'PROJECT_BASED' => 1], $all->json('meta.active_counts'));
         foreach ($orders as $group => $orderId) {
-            $this->getJson('/api/v1/buyers/orders?group='.$group)->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $orderId);
+            $this->getJson('/api/v1/buyers/orders?group='.$group)->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $orderId)
+                ->assertJsonPath('meta.active_counts', ['ITEM_BASED' => 4, 'PROJECT_BASED' => 1]);
         }
         $items = $this->getJson('/api/v1/buyers/orders?procurement_type=ITEM_BASED')->assertOk()->assertJsonPath('meta.counts.ALL', 6)->assertJsonPath('meta.counts.DISPUTED', 0);
         self::assertNotContains($orders['DISPUTED'], array_column($items->json('data'), 'id'));
-        $this->getJson('/api/v1/buyers/orders?procurement_type=PROJECT_BASED')->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $orders['DISPUTED']);
+        $this->getJson('/api/v1/buyers/orders?procurement_type=PROJECT_BASED')->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $orders['DISPUTED'])
+            ->assertJsonPath('meta.active_counts', ['ITEM_BASED' => 4, 'PROJECT_BASED' => 1]);
         $this->getJson('/api/v1/buyers/orders?group=AWAITING_ACTION')->assertUnprocessable();
         $this->getJson('/api/v1/buyers/orders?procurement_type=SERVICE')->assertUnprocessable();
 
@@ -152,6 +156,28 @@ final class BuyerMyOrdersTest extends TestCase
         self::assertSame([], $rows[$orders['DISPUTED']]['card_actions'], 'Project-Based orders have no Buy Again.');
         self::assertSame('Payment was not completed in time', $rows[$orders['CANCELLED']]['closure_reason']['label']);
         self::assertNull($rows[$orders['CONFIRMATION']]['payment_channel_name']);
+    }
+
+    public function test_ready_pickup_orders_are_to_receive_for_both_tabs_without_enabling_receipt_confirmation(): void
+    {
+        [$store, , $listing] = $this->pickupStore('Pickup grouping');
+        [$buyer, $item] = $this->pickupOrder($store, $listing);
+        [, $project] = $this->pickupOrder($store, $listing, buyer: $buyer);
+        DB::table('orders')->whereIn('id', [$item, $project])->update(['order_state' => 'READY_FOR_PICKUP', 'fulfillment_state' => 'READY_FOR_PICKUP']);
+        DB::table('orders')->where('id', $project)->update(['procurement_type' => 'PROJECT_BASED']);
+        // Another Buyer's open order must never contribute to either badge or result list.
+        $this->pickupOrder($store, $listing);
+        $this->signInBuyer($buyer);
+
+        foreach (['ITEM_BASED' => $item, 'PROJECT_BASED' => $project] as $type => $orderId) {
+            $this->getJson('/api/v1/buyers/orders?group=TO_SHIP&procurement_type='.$type)->assertOk()->assertJsonCount(0, 'data')
+                ->assertJsonPath('meta.counts.TO_SHIP', 0)->assertJsonPath('meta.counts.TO_RECEIVE', 1);
+            $this->getJson('/api/v1/buyers/orders?group=TO_RECEIVE&procurement_type='.$type)->assertOk()->assertJsonCount(1, 'data')
+                ->assertJsonPath('data.0.id', $orderId)->assertJsonPath('data.0.card_actions', [])
+                ->assertJsonPath('meta.active_counts', ['ITEM_BASED' => 1, 'PROJECT_BASED' => 1]);
+            $detail = $this->getJson('/api/v1/buyers/orders/'.$orderId)->assertOk();
+            self::assertNotContains('CONFIRM_RECEIPT', $detail->json('data.available_actions'));
+        }
     }
 
     public function test_profile_cancellation_refund_history_excludes_unrelated_states_and_foreign_orders(): void
@@ -179,7 +205,8 @@ final class BuyerMyOrdersTest extends TestCase
 
         $this->signInBuyer($buyer);
         $history = $this->getJson('/api/v1/buyers/orders?group=CANCELLED_REFUNDED')->assertOk()
-            ->assertJsonPath('meta.group', 'CANCELLED_REFUNDED')->assertJsonPath('meta.total', 3);
+            ->assertJsonPath('meta.group', 'CANCELLED_REFUNDED')->assertJsonPath('meta.total', 3)
+            ->assertJsonPath('meta.active_counts', ['ITEM_BASED' => 1, 'PROJECT_BASED' => 0]);
         self::assertEqualsCanonicalizing($included, array_column($history->json('data'), 'id'));
         self::assertNotContains($foreign, array_column($history->json('data'), 'id'));
         $this->getJson('/api/v1/buyers/orders?group=CANCELLED_REFUNDED&procurement_type=PROJECT_BASED')->assertOk()
@@ -200,10 +227,15 @@ final class BuyerMyOrdersTest extends TestCase
         $first = $this->getJson('/api/v1/buyers/orders?group=CANCELLED_REFUNDED')->assertOk()->assertJsonCount(20, 'data')
             ->assertJsonPath('meta.total', 21)->assertJsonPath('meta.has_more', true);
         $second = $this->getJson('/api/v1/buyers/orders?group=CANCELLED_REFUNDED&page=2')->assertOk()->assertJsonCount(1, 'data')
-            ->assertJsonPath('meta.total', 21)->assertJsonPath('meta.has_more', false);
+            ->assertJsonPath('meta.total', 21)->assertJsonPath('meta.has_more', false)
+            ->assertJsonPath('meta.active_counts', ['ITEM_BASED' => 1, 'PROJECT_BASED' => 0]);
         $ids = array_merge(array_column($first->json('data'), 'id'), array_column($second->json('data'), 'id'));
         self::assertEqualsCanonicalizing($included, $ids);
         self::assertNotContains($unrelated, $ids);
+
+        DB::table('orders')->whereIn('id', $included)->update(['order_state' => 'PROCESSING', 'closed_at' => null]);
+        $this->getJson('/api/v1/buyers/orders?group=PROCESSING&procurement_type=ITEM_BASED&page=2')->assertOk()->assertJsonCount(1, 'data')
+            ->assertJsonPath('meta.active_counts', ['ITEM_BASED' => 22, 'PROJECT_BASED' => 0]);
     }
 
     public function test_paid_channel_name_shows_on_the_card(): void

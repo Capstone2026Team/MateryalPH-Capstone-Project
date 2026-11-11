@@ -39,7 +39,10 @@ void main() {
       CommissionPolicyPublishRequest.serializer, request) as Map;
   check(wire['commission_basis_points'] == 325 && wire['expected_version'] == 1,
       'Publishing preserves integer basis points and concurrency version.');
-  check(wire['vendor_message'] == 'Review the updated terms' && wire['notice_override'] == true && wire['supersedes_policy_id'] == 'policy-1',
+  check(
+      wire['vendor_message'] == 'Review the updated terms' &&
+          wire['notice_override'] == true &&
+          wire['supersedes_policy_id'] == 'policy-1',
       'Notice override, public message and scheduled revision fields survive Dart serialization.');
   final summary = {
     for (final key in [
@@ -57,12 +60,37 @@ void main() {
     ])
       '${key}_centavos': 0
   };
+  final annualPayments = {
+    'label': '2026',
+    'starts_on': '2026-01-01',
+    'ends_on': '2026-12-31',
+    'resets_at': '2027-01-01T00:00:00+08:00',
+    'collected_centavos': 0,
+    'refunded_centavos': 0,
+    'net_collected_centavos': 0,
+  };
+  final monthlyPayments = {
+    ...annualPayments,
+    'label': 'November 2026',
+    'starts_on': '2026-11-01',
+    'ends_on': '2026-11-30',
+    'resets_at': '2026-12-01T00:00:00+08:00',
+  };
   final monitor = standardSerializers
       .deserializeWith(VendorCommissionMonitoring.serializer, {
     'current_policy': policy,
     'next_policy': null,
     'terms_accepted': false,
     'summary': summary,
+    'annual_payments': annualPayments,
+    'monthly_payments': monthlyPayments,
+    'payment_history': {
+      'items': <Object>[],
+      'page': 1,
+      'per_page': 10,
+      'total': 0,
+      'has_more': false,
+    },
     'assessments': [
       {
         'id': 'assessment',
@@ -85,5 +113,20 @@ void main() {
       'Monitoring preserves each original order rate separately from the current policy.');
   check(!monitor.termsAccepted && monitor.summary.outstandingCentavos == 0,
       'Monitoring retains acceptance and recorded debt.');
+  check(
+      monitor.annualPayments.label == '2026' &&
+          monitor.annualPayments.resetsAt == DateTime.utc(2026, 12, 31, 16) &&
+          monitor.monthlyPayments.label == 'November 2026' &&
+          monitor.monthlyPayments.resetsAt == DateTime.utc(2026, 11, 30, 16) &&
+          monitor.monthlyPayments.netCollectedCentavos == 0,
+      'Monitoring preserves calendar periods, Manila reset instants and integer payment totals.');
+  check(
+      monitor.paymentHistory.items.isEmpty &&
+          monitor.paymentHistory.page == 1 &&
+          monitor.paymentHistory.perPage ==
+              CommissionPaymentHistoryPerPageEnum.number10 &&
+          monitor.paymentHistory.total == 0 &&
+          !monitor.paymentHistory.hasMore,
+      'An empty payment history retains its pagination.');
   print('Commission policy Dart contract checks passed.');
 }
