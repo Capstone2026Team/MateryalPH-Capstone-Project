@@ -65,16 +65,27 @@ case "$command" in
     relative="/recovery/$(basename -- "$bundle")"
     was_fenced=false
     fenced && was_fenced=true
-    running="$("${compose[@]}" --profile active ps --status running --services)"
+    declare -A running_containers=()
+    for service in api reverb worker scheduler; do
+      running_containers[$service]="$("${compose[@]}" --profile active ps --status running --quiet "$service")"
+    done
+    resume_existing() {
+      local container_id
+      while IFS= read -r container_id; do
+        if [[ -n "$container_id" ]]; then docker start "$container_id" || return 1; fi
+      done <<< "${running_containers[$1]:-}"
+    }
     cleanup() {
       result=$?
       trap - EXIT
+      # Backup can run with a new Compose model and old containers. Resume the
+      # captured IDs without traversing or applying the new dependency graph.
       for service in api reverb; do
-        if [[ $'\n'"$running"$'\n' = *$'\n'"$service"$'\n'* ]]; then "${compose[@]}" start "$service" || result=1; fi
+        resume_existing "$service" || result=1
       done
       if [[ "$was_fenced" = false ]]; then
         for service in worker scheduler; do
-          if [[ $'\n'"$running"$'\n' = *$'\n'"$service"$'\n'* ]]; then "${compose[@]}" --profile active start "$service" || result=1; fi
+          resume_existing "$service" || result=1
         done
         operator rm -f /run/materyalph/fenced || result=1
       fi

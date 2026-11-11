@@ -109,8 +109,24 @@ def main():
                 'foreach (["daily", "main", "bytecode"] as $name) {'
                 ' rename("/var/lib/clamav/$name.cvd", "/var/lib/clamav/$name.cld"); }')
             assert ready(), 'Incrementally updated databases must also be ready'
+
+            # A release must also reconcile an updater created before health
+            # checks existed. `start` cannot apply this change; `up` must do so.
+            legacy = json.loads(fixture.read_text())
+            legacy['services']['scanner-signatures'].pop('healthcheck')
+            legacy_fixture = directory / 'legacy-compose.json'
+            legacy_fixture.write_text(json.dumps(legacy))
+            run('compose', '-p', project, '-f', str(legacy_fixture), 'up', '-d', 'scanner-signatures')
+            updater = run(*compose, 'ps', '-q', 'scanner-signatures').stdout.strip()
+            assert run('inspect', '--format', '{{json .Config.Healthcheck}}', updater).stdout.strip() == 'null'
+            run(*compose, 'up', '-d', '--force-recreate', 'scanner')
+            updater = run(*compose, 'ps', '-q', 'scanner-signatures').stdout.strip()
+            installed = json.loads(run('inspect', '--format', '{{json .Config.Healthcheck}}', updater).stdout)
+            assert installed['Test'] == readiness, 'Deployment must install the new updater healthcheck'
+            assert ready(), 'Existing definitions must survive the updater upgrade'
             print('PASS: empty/partial/empty-file downloads block startup; completed CVD/CLD files '
-                  'release the scanner with zero restarts; no providers or real definitions used.')
+                  'release the scanner with zero restarts; legacy healthchecks upgrade; '
+                  'no providers or real definitions used.')
         finally:
             if launcher is not None and launcher.poll() is None:
                 launcher.terminate()

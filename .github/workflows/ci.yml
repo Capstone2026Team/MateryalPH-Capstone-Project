@@ -544,6 +544,8 @@ jobs:
         shell: pwsh
         run: ./scripts/deployment/test-release-hostinger.ps1
       - run: python scripts/deployment/test-vps-host.py
+      - name: Test backup recovery across Compose configuration upgrades
+        run: bash scripts/deployment/test-vps-backup.sh
       - run: bash -n scripts/deployment/vpsctl.sh && sh -n infrastructure/vps/init-database.sh
       - run: bash -n scripts/deployment/bootstrap-vps.sh && sh -n infrastructure/vps/postgres-entrypoint.sh
       - run: python -m py_compile scripts/deployment/vps-host.py scripts/deployment/package-vps.py scripts/deployment/export-vps-source.py
