@@ -25,18 +25,22 @@ RUNTIME_FILES = [
 
 
 class ReleasePackagingTest(unittest.TestCase):
-    def test_windows_git_archive_preserves_security_patch_lf(self):
+    def test_windows_git_archive_preserves_linux_runtime_lf(self):
         root = Path(__file__).resolve().parents[2]
-        relative = Path('infrastructure/docker/patches/go-jose-v3-rsa-bounds.patch')
-        expected = (root / relative).read_bytes()
-        self.assertNotIn(b'\r', expected)
+        paths = [
+            Path('infrastructure/docker/patches/go-jose-v3-rsa-bounds.patch'),
+            Path('infrastructure/docker/render-freshclam.conf'),
+            Path('infrastructure/docker/vps-clamd.conf'),
+        ]
+        expected = {relative: (root / relative).read_bytes().replace(b'\r\n', b'\n') for relative in paths}
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory) / 'source'
             source.mkdir()
             shutil.copyfile(root / '.gitattributes', source / '.gitattributes')
-            target = source / relative
-            target.parent.mkdir(parents=True)
-            target.write_bytes(expected)
+            for relative, data in expected.items():
+                target = source / relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(data)
 
             def git(*arguments):
                 return subprocess.run(['git', '-C', str(source), *arguments], check=True, capture_output=True)
@@ -48,8 +52,10 @@ class ReleasePackagingTest(unittest.TestCase):
             archive = Path(directory) / 'source.tar'
             git('-c', 'core.autocrlf=true', 'archive', '--format=tar', '--output', str(archive), 'HEAD')
             with tarfile.open(archive) as stream:
-                self.assertEqual(stream.extractfile(relative.as_posix()).read(), expected,
-                                 'Windows release export must preserve the LF patch context')
+                for relative, data in expected.items():
+                    with self.subTest(path=relative.as_posix()):
+                        self.assertEqual(stream.extractfile(relative.as_posix()).read(), data,
+                                         'Windows release export must preserve LF for Linux runtime files')
 
     def exercise(self, directory, reject_role=None):
         destination = Path(directory) / 'release'

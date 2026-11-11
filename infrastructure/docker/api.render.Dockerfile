@@ -65,6 +65,10 @@ RUN apk upgrade --no-cache \
 
 USER app
 
+# Parse both scanner configurations before accepting an image; this uses no network or signatures.
+RUN clamd --config-file=/app/infrastructure/clamd.conf --version \
+    && freshclam --config-file=/app/infrastructure/freshclam.conf --version
+
 ENV PORT=10000
 ENV RUN_FRESHCLAM=false
 
