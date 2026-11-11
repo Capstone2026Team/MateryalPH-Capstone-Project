@@ -153,6 +153,7 @@ void main() {
               ),
             ],
             counts: const {'ALL': 2},
+            activeCounts: const {'ITEM_BASED': 2, 'PROJECT_BASED': 1},
             page: 1,
             hasMore: false,
             total: 2,
