@@ -1,11 +1,12 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, expect, test, vi } from 'vitest'
-import { parseDate, ResponseError } from '@materyalph/api-client-ts'
+import { InventoryRowFromJSON, parseDate, ResponseError } from '@materyalph/api-client-ts'
 import { PortalResourceProvider } from '@materyalph/web-ui'
 import * as api from '../lib/product-analytics-api'
 import * as trust from '../lib/trust-api'
 import * as catalog from '../lib/catalog-api'
+import * as inventory from '../lib/inventory-api'
 import type { ProductAnalyticsRow, VendorProductAnalytics, VendorProductAnalyticsDetail } from '../lib/product-analytics-api'
 import { useOnboardingSnapshot } from '../lib/vendor-status'
 import { VendorProductAnalyticsOverviewPage, VendorProductAnalyticsPage, VendorStorePerformancePage } from './TrustPages'
@@ -14,6 +15,7 @@ import { ProductInsightStrip } from './ProductAnalyticsPages'
 vi.mock('../lib/product-analytics-api', async original => ({ ...await original<typeof import('../lib/product-analytics-api')>(), getProductAnalytics: vi.fn(), getProductAnalyticsDetail: vi.fn(), getProductSummaries: vi.fn() }))
 vi.mock('../lib/trust-api', async original => ({ ...await original<typeof import('../lib/trust-api')>(), getStorePerformance: vi.fn(), listReviews: vi.fn() }))
 vi.mock('../lib/catalog-api', async original => ({ ...await original<typeof import('../lib/catalog-api')>(), getListing: vi.fn(), getCatalogFileUrl: vi.fn() }))
+vi.mock('../lib/inventory-api', async original => ({ ...await original<typeof import('../lib/inventory-api')>(), listInventory: vi.fn(), confirmStock: vi.fn(), listMovements: vi.fn(), listPriceHistory: vi.fn() }))
 vi.mock('../lib/vendor-status', async original => ({ ...await original<typeof import('../lib/vendor-status')>(), useOnboardingSnapshot: vi.fn() }))
 vi.mock('../lib/catalog-access', async original => ({ ...await original<typeof import('../lib/catalog-access')>(), storeName: () => 'Test Supply' }))
 vi.mock('./PhaseThreeVendorPages', async original => ({ ...await original<typeof import('./PhaseThreeVendorPages')>(), VendorShell: ({ children }: { children: React.ReactNode }) => <main>{children}</main> }))
@@ -395,4 +397,88 @@ test('the former Store Performance product tab redirects to the standalone page 
   expect(await screen.findByRole('heading', { name: 'Product Analytics', level: 1 })).toBeInTheDocument()
   expect(api.getProductAnalytics).toHaveBeenCalledWith(90, 'orders', 2)
   expect(trust.getStorePerformance).not.toHaveBeenCalled()
+})
+
+function stockRow(overrides: Partial<inventory.InventoryRow> = {}): inventory.InventoryRow {
+  return { ...InventoryRowFromJSON({
+    listing_variant_id: 'v1', listing_id: 'l1', listing_name: 'Portland Cement 40kg', listing_status: 'TEMPORARILY_HIDDEN_STOCK_NOT_CONFIRMED',
+    listing_visibility_blockers: ['Confirm the stock count of every active variant to restore this listing.'],
+    sku: 'CEM-40-V1', variant_label: '40 kg', unit_code: 'BAG', lock_version: 4,
+    inventory: { quantity_on_hand: '120.0000', hard_reserved_quantity: '20.0000', soft_held_quantity: '30.0000', available_to_sell: '100.0000', reorder_level: '10.0000', confirmed_at: '2026-10-01T00:00:00Z' },
+    public_label: 'IN_STOCK', stock_confirmation: { state: 'OVERDUE', confirmed_at: '2026-10-01T00:00:00Z', hide_at: '2026-10-16T00:00:00Z' },
+    listing_confirmation: { state: 'OVERDUE', confirmed_at: '2026-10-01T00:00:00Z', hide_at: '2026-10-16T00:00:00Z' },
+    price: { price_version_id: 'p1', version: 1, amount_centavos: 28550, tax_category: 'NON_VAT' },
+    comparability: { status: 'NOT_YET_COMPARABLE', group_version_id: null, rule_version: 'test' }, auto_accept: { status: 'DISABLED' },
+  }), ...overrides }
+}
+function stockMeta(canAdjust = true): inventory.InventoryLedgerMeta {
+  return { currentPage: 1, lastPage: 1, total: 1, pageSize: 25, timezone: 'Asia/Manila', labelRuleVersion: 'test',
+    summary: { variants: 1, outOfStock: 0, limitedStock: 0, confirmationDue: 0, stale: 1 }, staleListings: { count: 0, items: [] },
+    permissions: { canAdjust, canChangePrice: false, canConfigureAutoAccept: false, canUpdateAllotment: false, canViewAutoAccept: false, canEditSettings: false } }
+}
+function openStockProduct() {
+  return render(<MemoryRouter initialEntries={['/analytics/products/l1']}><Routes><Route path="/analytics/products/:listingId" element={<VendorProductAnalyticsPage />} /></Routes></MemoryRouter>)
+}
+
+test('product analytics reuses private stock details and confirms the reviewed variant, then refreshes listing visibility', async () => {
+  snapshot(['catalog.manage', 'inventory.view', 'inventory.manage'])
+  const saved = stockRow({ listingStatus: 'ACTIVE', listingVisibilityBlockers: [], lockVersion: 5,
+    stockConfirmation: { ...stockRow().stockConfirmation, state: 'CONFIRMED', confirmedAt: new Date('2026-11-11T08:00:00Z'), hideAt: new Date('2026-11-26T08:00:00Z') } })
+  vi.mocked(inventory.listInventory).mockResolvedValueOnce({ items: [stockRow()], meta: stockMeta() }).mockResolvedValue({ items: [saved], meta: stockMeta() })
+  vi.mocked(inventory.confirmStock).mockResolvedValue([saved])
+  openStockProduct()
+  const stock = within(await screen.findByRole('region', { name: 'Product inventory' }))
+  expect(await stock.findByText('On hand')).toBeVisible()
+  expect(stock.getByText('On hand').parentElement).toHaveTextContent('120 BAG')
+  expect(stock.getByText('Hard reserved').parentElement).toHaveTextContent('20 BAG')
+  expect(stock.getByText('Soft-held').parentElement).toHaveTextContent('30 BAG')
+  expect(stock.getByText('Available to sell').parentElement).toHaveTextContent('100 BAG')
+  expect(stock.getByText('Temporarily hidden')).toBeVisible()
+  expect(stock.getByText(/Confirm the stock count of every active variant/)).toBeVisible()
+  expect(inventory.listInventory).toHaveBeenCalledWith({ listingId: 'l1', page: 1 })
+  fireEvent.click(stock.getByRole('button', { name: 'Confirm stock' }))
+  const confirmation = within(screen.getByRole('dialog', { name: 'Confirm this stock count?' }))
+  expect(confirmation.getByText('120 BAG')).toBeVisible()
+  fireEvent.click(confirmation.getByRole('button', { name: 'Confirm count' }))
+  await waitFor(() => expect(inventory.confirmStock).toHaveBeenCalledWith([{ listingVariantId: 'v1', lockVersion: 4 }]))
+  expect(await stock.findByText('Stock count confirmed. Listing visibility is shown below.')).toBeVisible()
+  expect(stock.queryByText('Temporarily hidden')).not.toBeInTheDocument()
+  expect(stock.getByText(/^Next confirmation due:/)).toHaveTextContent('Nov 26, 2026, 4:00 PM (Asia/Manila)')
+  await waitFor(() => expect(catalog.getListing).toHaveBeenCalledTimes(2))
+  fireEvent.click(screen.getByRole('radio', { name: '7 days' }))
+  await waitFor(() => expect(api.getProductAnalyticsDetail).toHaveBeenLastCalledWith('l1', 7))
+  expect(stock.getByText('Stock count confirmed. Listing visibility is shown below.')).toBeVisible()
+  expect(inventory.listInventory).toHaveBeenCalledTimes(2)
+})
+
+test('product stock confirmation refreshes conflicts for review and retries using the latest row version', async () => {
+  snapshot(['catalog.manage', 'inventory.view'])
+  const fresh = stockRow({ lockVersion: 5, inventory: { ...stockRow().inventory!, quantityOnHand: '125.0000' } })
+  vi.mocked(inventory.listInventory).mockResolvedValueOnce({ items: [stockRow()], meta: stockMeta() }).mockResolvedValue({ items: [fresh], meta: stockMeta() })
+  vi.mocked(inventory.confirmStock).mockRejectedValueOnce(new ResponseError(new Response(JSON.stringify({ errors: [{ code: 'STALE_VERSION', details: {} }] }), { status: 409 }))).mockResolvedValue([fresh])
+  openStockProduct()
+  const stock = within(await screen.findByRole('region', { name: 'Product inventory' }))
+  fireEvent.click(await stock.findByRole('button', { name: 'Confirm stock' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm count' }))
+  expect(await stock.findByText(/This stock count changed/)).toBeVisible()
+  await waitFor(() => expect(stock.getByText('On hand').parentElement).toHaveTextContent('125 BAG'))
+  fireEvent.click(stock.getByRole('button', { name: 'Confirm stock' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm count' }))
+  await waitFor(() => expect(inventory.confirmStock).toHaveBeenLastCalledWith([{ listingVariantId: 'v1', lockVersion: 5 }]))
+})
+
+test.each([false, true])('private inventory access controls confirmation independently (read access %s)', async canView => {
+  snapshot(['catalog.manage', ...(canView ? ['inventory.view'] : [])])
+  vi.mocked(inventory.listInventory).mockResolvedValue({ items: [stockRow()], meta: stockMeta(false) })
+  openStockProduct()
+  await screen.findByRole('region', { name: 'Product views and orders' })
+  if (canView) {
+    const stock = within(await screen.findByRole('region', { name: 'Product inventory' }))
+    expect(await stock.findByText('On hand')).toBeVisible()
+    expect(stock.queryByRole('button', { name: 'Confirm stock' })).not.toBeInTheDocument()
+    expect(stock.queryByRole('button', { name: /^Edit / })).not.toBeInTheDocument()
+  } else {
+    expect(screen.queryByRole('region', { name: 'Product inventory' })).not.toBeInTheDocument()
+    expect(inventory.listInventory).not.toHaveBeenCalled()
+  }
 })

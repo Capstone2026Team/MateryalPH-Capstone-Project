@@ -380,10 +380,62 @@ final class PhaseFiveInventoryDeliveryTest extends TestCase
         $this->postJson('/api/v1/vendor/inventory/confirmations', ['items' => [['listing_variant_id' => $first, 'lock_version' => $this->rowVersion($first)], ['listing_variant_id' => $second, 'lock_version' => 99]]])->assertStatus(409)
             ->assertJsonPath('errors.0.code', 'STALE_VERSION');
         $this->assertDatabaseHas('vendor_listings', ['id' => $listing, 'status' => 'TEMPORARILY_HIDDEN_STOCK_NOT_CONFIRMED']);
-        $this->postJson('/api/v1/vendor/inventory/confirmations', ['items' => [['listing_variant_id' => $first, 'lock_version' => $this->rowVersion($first)], ['listing_variant_id' => $second, 'lock_version' => $this->rowVersion($second)]]])->assertOk();
+        $this->postJson('/api/v1/vendor/inventory/confirmations', ['items' => [['listing_variant_id' => $first, 'lock_version' => $this->rowVersion($first)]]])->assertOk()
+            ->assertJsonPath('data.0.stock_confirmation.state', 'CONFIRMED')
+            ->assertJsonPath('data.0.listing_confirmation.state', 'OVERDUE')
+            ->assertJsonPath('data.0.listing_visibility_blockers.0', 'Confirm the stock count of every active variant to restore this listing.');
+        $this->postJson('/api/v1/vendor/inventory/confirmations', ['items' => [['listing_variant_id' => $second, 'lock_version' => $this->rowVersion($second)]]])->assertOk()
+            ->assertJsonPath('data.0.listing_status', 'ACTIVE')->assertJsonPath('data.0.listing_visibility_blockers', []);
         $this->assertDatabaseHas('vendor_listings', ['id' => $listing, 'status' => 'ACTIVE']);
         $this->assertDatabaseHas('listing_status_history', ['vendor_listing_id' => $listing, 'to_status' => 'ACTIVE', 'reason_code' => 'STOCK_CONFIRMED']);
         $this->assertDatabaseHas('vendor_organizations', ['id' => $organization->id, 'marketplace_discoverability_status' => 'DISCOVERABLE']);
+        $this->travelBack();
+    }
+
+    public function test_catalog_stock_counts_restore_a_hidden_listing_with_the_same_confirmation_gates(): void
+    {
+        [, $owner] = $this->activeStore();
+        $this->signInVendor($owner);
+        $listing = $this->publishableListing('CATALOG-RESTORE', variants: 2);
+        $this->publish($listing)->assertOk();
+        $this->travel(16)->days();
+        $this->artisan('materyalph:stock-confirmation-sweep')->assertSuccessful();
+        $this->signInVendor($owner);
+        $detail = $this->getJson('/api/v1/vendor/catalog/listings/'.$listing)->assertOk()->json('data');
+        self::assertSame('TEMPORARILY_HIDDEN_STOCK_NOT_CONFIRMED', $detail['status']);
+        $rows = array_map(static fn (array $variant): array => [
+            'id' => $variant['id'], 'sku' => $variant['sku'], 'label' => $variant['label'], 'unit_id' => $variant['unit_id'],
+            'pack_quantity' => $variant['pack_quantity'], 'price_centavos' => $variant['price']['amount_centavos'],
+            'tax_category' => $variant['price']['tax_category'], 'weight_kg' => $variant['weight_kg'],
+            'length_cm' => $variant['length_cm'], 'width_cm' => $variant['width_cm'], 'height_cm' => $variant['height_cm'],
+            'quantity_on_hand' => '100',
+        ], $detail['variants']);
+        $this->putJson('/api/v1/vendor/catalog/listings/'.$listing.'/variants', ['lock_version' => $detail['lock_version'], 'variants' => $rows])->assertOk()
+            ->assertJsonPath('data.status', 'ACTIVE');
+        $this->assertDatabaseHas('listing_status_history', ['vendor_listing_id' => $listing, 'to_status' => 'ACTIVE', 'reason_code' => 'STOCK_CONFIRMED', 'actor_user_id' => $owner->id]);
+        $this->travelBack();
+    }
+
+    public function test_confirmed_stock_explains_remaining_listing_requirements_and_restores_after_correction(): void
+    {
+        [, $owner] = $this->activeStore();
+        $this->signInVendor($owner);
+        $listing = $this->publishableListing('RESTORE-BLOCKED');
+        $this->publish($listing)->assertOk();
+        $this->travel(16)->days();
+        $this->artisan('materyalph:stock-confirmation-sweep')->assertSuccessful();
+        $this->signInVendor($owner);
+        DB::table('vendor_listings')->where('id', $listing)->update(['description' => '']);
+        $variant = $this->variantIds($listing)[0];
+        $this->postJson('/api/v1/vendor/inventory/confirmations', ['items' => [['listing_variant_id' => $variant, 'lock_version' => $this->rowVersion($variant)]]])->assertOk()
+            ->assertJsonPath('data.0.stock_confirmation.state', 'CONFIRMED')
+            ->assertJsonPath('data.0.listing_status', 'TEMPORARILY_HIDDEN_STOCK_NOT_CONFIRMED')
+            ->assertJsonPath('data.0.listing_visibility_blockers', ['Enter a product description.']);
+        $version = (int) DB::table('vendor_listings')->where('id', $listing)->value('lock_version');
+        $this->patchJson('/api/v1/vendor/catalog/listings/'.$listing, ['lock_version' => $version, 'description' => 'Corrected product description'])->assertOk()
+            ->assertJsonPath('data.status', 'ACTIVE');
+        $this->getJson('/api/v1/vendor/inventory/items?listing_id='.$listing)->assertOk()
+            ->assertJsonPath('data.0.listing_visibility_blockers', []);
         $this->travelBack();
     }
 

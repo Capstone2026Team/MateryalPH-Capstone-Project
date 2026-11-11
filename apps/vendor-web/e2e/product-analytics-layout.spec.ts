@@ -100,7 +100,19 @@ const reviews = ['Alex Reyes', 'Morgan Brown'].map((name, index) => ({
 // Clearly labelled sample product imagery for deterministic browser layout evidence.
 const productPhoto = (side: boolean) => `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="750" viewBox="0 0 600 750"><rect width="600" height="750" fill="#f5f6f7"/><path d="M${side ? '210 110h180l30 530H180' : '140 100h320l20 550H120'}z" fill="#e5dfd2" stroke="#b9b1a1" stroke-width="4"/><path d="M145 120h310M130 625h340" stroke="#b9b1a1" stroke-width="8"/><rect x="${side ? 215 : 145}" y="245" width="${side ? 170 : 310}" height="260" rx="3" fill="#315b53"/><text x="300" y="300" fill="white" font-size="22" font-family="Arial" text-anchor="middle">SAMPLE</text><text x="300" y="355" fill="white" font-size="${side ? 24 : 40}" font-weight="bold" font-family="Arial" text-anchor="middle">CEMENT</text><text x="300" y="400" fill="white" font-size="20" font-family="Arial" text-anchor="middle">PORTLAND TYPE I</text><text x="300" y="465" fill="white" font-size="30" font-family="Arial" text-anchor="middle">40 kg</text></svg>`
 
-async function mock(page: Page) {
+function inventoryRow(confirmed: boolean) {
+  const confirmation = { state: confirmed ? 'CONFIRMED' : 'OVERDUE', confirmed_at: confirmed ? '2026-11-11T08:00:00Z' : '2026-09-20T00:00:00Z', first_reminder_at: null, final_reminder_at: null, hide_at: confirmed ? '2026-11-26T08:00:00Z' : '2026-10-05T00:00:00Z', days_since_confirmation: confirmed ? 0 : 52 }
+  return { listing_variant_id: 'sample-variant', listing_id: rows[0]!.listing_id, listing_name: rows[0]!.name, listing_status: confirmed ? 'ACTIVE' : 'TEMPORARILY_HIDDEN_STOCK_NOT_CONFIRMED',
+    variant_label: '40 kg bag', sku: 'CEM-40-BAG', unit_code: 'BAG', lock_version: confirmed ? 5 : 4,
+    inventory: { quantity_on_hand: '120.0000', hard_reserved_quantity: '20.0000', soft_held_quantity: '30.0000', available_to_sell: '100.0000', reorder_level: '10.0000', confirmed_at: confirmation.confirmed_at },
+    public_label: 'IN_STOCK', stock_confirmation: confirmation, listing_confirmation: confirmation,
+    listing_visibility_blockers: confirmed ? [] : ['Confirm the stock count of every active variant to restore this listing.'],
+    price: { price_version_id: 'sample-price', version: 1, amount_centavos: 28550, tax_category: 'NON_VAT' },
+    comparability: { status: 'NOT_YET_COMPARABLE', group_version_id: null, rule_version: 'test' }, auto_accept: { status: 'DISABLED' } }
+}
+
+async function mock(page: Page, hiddenStock = false) {
+  let stockConfirmed = !hiddenStock
   await page.route('**/api/v1/**', async route => {
     const url = new URL(route.request().url())
     const path = url.pathname
@@ -112,6 +124,8 @@ async function mock(page: Page) {
       permissions: ['portal.performance', 'portal.products', 'scores.view_store', 'catalog.manage', 'finance.view', 'inventory.view', 'reviews.view', 'reviews.report'], verification: { status: 'APPROVED' }, setup: { status: 'COMPLETED' },
       activation: { status: 'ACTIVE', marketplace_discoverability_status: 'DISCOVERABLE', readiness: { ready: true, blockers: [] } } }
     else if (path.endsWith('/auth/csrf')) data = { csrf_token: 'review-csrf-token' }
+    else if (path.endsWith('/vendor/inventory/items')) { data = [inventoryRow(stockConfirmed)]; meta = { current_page: 1, last_page: 1, total: 1, page_size: 25, label_rule_version: 'test', timezone: 'Asia/Manila', summary: { variants: 1, out_of_stock: 0, limited_stock: 0, confirmation_due: 0, stale: 0 }, stale_listings: { count: 0, items: [] }, permissions: { can_adjust: true, can_change_price: true, can_configure_auto_accept: false, can_update_allotment: false, can_view_auto_accept: false, can_edit_settings: false } } }
+    else if (path.endsWith('/vendor/inventory/confirmations')) { stockConfirmed = true; data = [inventoryRow(true)] }
     else if (path.endsWith('/vendor/performance')) data = performance
     else if (path.endsWith('/vendor/product-analytics')) data = overview
     else if (path.includes('/vendor/product-analytics/listings/')) data = { ...detail, period: { ...detail.period, days: Number(url.searchParams.get('days') ?? 30) } }
@@ -370,4 +384,27 @@ test('product cards open analytics from their full surface and Return restores c
   await expect(card.getByRole('link', { name: `Edit ${rows[0]!.name}` })).toHaveAttribute('href', `/products/${rows[0]!.listing_id}`)
   await card.getByRole('link', { name: `Edit ${rows[0]!.name}` }).click()
   await expect(page).toHaveURL(`/products/${rows[0]!.listing_id}`)
+})
+
+
+test('product stock details confirm the reviewed count and retain the analytics workspace', async ({ page }) => {
+  await mock(page, true)
+  await page.goto(`/analytics/products/${rows[0]!.listing_id}`)
+  const stock = page.getByRole('region', { name: 'Product inventory', exact: true })
+  await expect(stock.getByText('Temporarily hidden', { exact: true })).toBeVisible()
+  await expect(stock.getByText('Available to sell', { exact: true }).locator('..')).toContainText('100 BAG')
+  await expect(stock.getByText('On hand', { exact: true }).locator('..')).toContainText('120 BAG')
+  await stock.getByRole('button', { name: 'Confirm stock', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Confirm this stock count?', exact: true })
+  await expect(dialog.getByText('120 BAG', { exact: true })).toBeVisible()
+  const button = dialog.getByRole('button', { name: 'Confirm count', exact: true })
+  expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(44)
+  await button.click()
+  await expect(stock.getByText('Stock count confirmed. Listing visibility is shown below.', { exact: true })).toBeVisible()
+  await expect(stock.getByText('Temporarily hidden', { exact: true })).toHaveCount(0)
+  await expect(stock.getByText('Active', { exact: true })).toBeVisible()
+  await expect(stock.getByText(/Next confirmation due:/)).toContainText('Nov 26, 2026, 4:00 PM (Asia/Manila)')
+  await page.getByText('7 days', { exact: true }).click()
+  await expect(stock.getByText('Stock count confirmed. Listing visibility is shown below.', { exact: true })).toBeVisible()
+  await capture(page, 'stock-confirmed')
 })

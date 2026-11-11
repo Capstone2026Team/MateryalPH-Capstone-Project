@@ -129,6 +129,10 @@ export interface InventoryRow {
      */
     listingConfirmation: StockConfirmationSchedule;
     /**
+     * Vendor-only reasons a temporarily hidden listing cannot return to Buyers, including other variants awaiting confirmation and current store, compliance or listing-readiness requirements. Empty for other statuses. Confirmation does not bypass these gates.
+     */
+    listingVisibilityBlockers: Array<string>;
+    /**
      *
      */
     price: InventoryPrice | null;
@@ -159,6 +163,7 @@ export function instanceOfInventoryRow(value: object): value is InventoryRow {
     if ((!('publicLabel' in (value as Record<string, any>)) && !('public_label' in (value as Record<string, any>))) || ((value as Record<string, any>)['publicLabel'] === undefined && (value as Record<string, any>)['public_label'] === undefined)) return false;
     if ((!('stockConfirmation' in (value as Record<string, any>)) && !('stock_confirmation' in (value as Record<string, any>))) || ((value as Record<string, any>)['stockConfirmation'] === undefined && (value as Record<string, any>)['stock_confirmation'] === undefined)) return false;
     if ((!('listingConfirmation' in (value as Record<string, any>)) && !('listing_confirmation' in (value as Record<string, any>))) || ((value as Record<string, any>)['listingConfirmation'] === undefined && (value as Record<string, any>)['listing_confirmation'] === undefined)) return false;
+    if ((!('listingVisibilityBlockers' in (value as Record<string, any>)) && !('listing_visibility_blockers' in (value as Record<string, any>))) || ((value as Record<string, any>)['listingVisibilityBlockers'] === undefined && (value as Record<string, any>)['listing_visibility_blockers'] === undefined)) return false;
     if (!('price' in value) || value['price'] === undefined) return false;
     if (!('comparability' in value) || value['comparability'] === undefined) return false;
     if ((!('autoAccept' in (value as Record<string, any>)) && !('auto_accept' in (value as Record<string, any>))) || ((value as Record<string, any>)['autoAccept'] === undefined && (value as Record<string, any>)['auto_accept'] === undefined)) return false;
@@ -188,6 +193,7 @@ export function InventoryRowFromJSONTyped(json: any, ignoreDiscriminator: boolea
         'publicLabel': StockLabelFromJSON(json['public_label']),
         'stockConfirmation': StockConfirmationScheduleFromJSON(json['stock_confirmation']),
         'listingConfirmation': StockConfirmationScheduleFromJSON(json['listing_confirmation']),
+        'listingVisibilityBlockers': json['listing_visibility_blockers'],
         'price': InventoryPriceFromJSON(json['price']),
         'comparability': InventoryComparabilityFromJSON(json['comparability']),
         'autoAccept': AutoAcceptPolicyFromJSON(json['auto_accept']),
@@ -217,6 +223,7 @@ export function InventoryRowToJSONTyped(value?: Omit<InventoryRow, 'quantityPoli
         'public_label': StockLabelToJSON(value['publicLabel']),
         'stock_confirmation': StockConfirmationScheduleToJSON(value['stockConfirmation']),
         'listing_confirmation': StockConfirmationScheduleToJSON(value['listingConfirmation']),
+        'listing_visibility_blockers': value['listingVisibilityBlockers'],
         'price': InventoryPriceToJSON(value['price']),
         'comparability': InventoryComparabilityToJSON(value['comparability']),
         'auto_accept': AutoAcceptPolicyToJSON(value['autoAccept']),

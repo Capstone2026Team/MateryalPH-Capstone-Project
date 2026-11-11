@@ -21,6 +21,7 @@ Name | Type | Description | Notes
 **publicLabel** | [**StockLabel**](StockLabel.md) |  |
 **stockConfirmation** | [**StockConfirmationSchedule**](StockConfirmationSchedule.md) |  |
 **listingConfirmation** | [**StockConfirmationSchedule**](StockConfirmationSchedule.md) |  |
+**listingVisibilityBlockers** | **BuiltList&lt;String&gt;** | Vendor-only reasons a temporarily hidden listing cannot return to Buyers, including other variants awaiting confirmation and current store, compliance or listing-readiness requirements. Empty for other statuses. Confirmation does not bypass these gates. |
 **price** | [**InventoryPrice**](InventoryPrice.md) |  |
 **comparability** | [**InventoryComparability**](InventoryComparability.md) |  |
 **autoAccept** | [**AutoAcceptPolicy**](AutoAcceptPolicy.md) |  |

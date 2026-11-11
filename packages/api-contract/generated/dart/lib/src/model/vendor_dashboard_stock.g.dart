@@ -10,6 +10,10 @@ class _$VendorDashboardStock extends VendorDashboardStock {
   @override
   final int variants;
   @override
+  final int active;
+  @override
+  final int inactive;
+  @override
   final int inStock;
   @override
   final int limitedStock;
@@ -24,6 +28,8 @@ class _$VendorDashboardStock extends VendorDashboardStock {
 
   _$VendorDashboardStock._(
       {required this.variants,
+      required this.active,
+      required this.inactive,
       required this.inStock,
       required this.limitedStock,
       required this.outOfStock,
@@ -43,6 +49,8 @@ class _$VendorDashboardStock extends VendorDashboardStock {
     if (identical(other, this)) return true;
     return other is VendorDashboardStock &&
         variants == other.variants &&
+        active == other.active &&
+        inactive == other.inactive &&
         inStock == other.inStock &&
         limitedStock == other.limitedStock &&
         outOfStock == other.outOfStock &&
@@ -53,6 +61,8 @@ class _$VendorDashboardStock extends VendorDashboardStock {
   int get hashCode {
     var _$hash = 0;
     _$hash = $jc(_$hash, variants.hashCode);
+    _$hash = $jc(_$hash, active.hashCode);
+    _$hash = $jc(_$hash, inactive.hashCode);
     _$hash = $jc(_$hash, inStock.hashCode);
     _$hash = $jc(_$hash, limitedStock.hashCode);
     _$hash = $jc(_$hash, outOfStock.hashCode);
@@ -65,6 +75,8 @@ class _$VendorDashboardStock extends VendorDashboardStock {
   String toString() {
     return (newBuiltValueToStringHelper(r'VendorDashboardStock')
           ..add('variants', variants)
+          ..add('active', active)
+          ..add('inactive', inactive)
           ..add('inStock', inStock)
           ..add('limitedStock', limitedStock)
           ..add('outOfStock', outOfStock)
@@ -80,6 +92,14 @@ class VendorDashboardStockBuilder
   int? _variants;
   int? get variants => _$this._variants;
   set variants(int? variants) => _$this._variants = variants;
+
+  int? _active;
+  int? get active => _$this._active;
+  set active(int? active) => _$this._active = active;
+
+  int? _inactive;
+  int? get inactive => _$this._inactive;
+  set inactive(int? inactive) => _$this._inactive = inactive;
 
   int? _inStock;
   int? get inStock => _$this._inStock;
@@ -107,6 +127,8 @@ class VendorDashboardStockBuilder
     final $v = _$v;
     if ($v != null) {
       _variants = $v.variants;
+      _active = $v.active;
+      _inactive = $v.inactive;
       _inStock = $v.inStock;
       _limitedStock = $v.limitedStock;
       _outOfStock = $v.outOfStock;
@@ -136,6 +158,10 @@ class VendorDashboardStockBuilder
           _$VendorDashboardStock._(
             variants: BuiltValueNullFieldError.checkNotNull(
                 variants, r'VendorDashboardStock', 'variants'),
+            active: BuiltValueNullFieldError.checkNotNull(
+                active, r'VendorDashboardStock', 'active'),
+            inactive: BuiltValueNullFieldError.checkNotNull(
+                inactive, r'VendorDashboardStock', 'inactive'),
             inStock: BuiltValueNullFieldError.checkNotNull(
                 inStock, r'VendorDashboardStock', 'inStock'),
             limitedStock: BuiltValueNullFieldError.checkNotNull(

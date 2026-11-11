@@ -9,6 +9,7 @@ use App\Domain\Identity\AuditRecorder;
 use App\Domain\Identity\AuthenticationException;
 use App\Domain\Inventory\InventoryLedgerWriter;
 use App\Domain\Inventory\StockAvailability;
+use App\Domain\Inventory\StockConfirmationService;
 use App\Domain\Settings\PlatformSettings;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -42,6 +43,7 @@ final class VendorCatalogService
         private readonly AuditRecorder $audit,
         private readonly PriceVersionService $prices,
         private readonly InventoryLedgerWriter $ledger,
+        private readonly StockConfirmationService $confirmations,
     ) {}
 
     /** @return array<string, mixed> */
@@ -284,6 +286,7 @@ final class VendorCatalogService
             $this->guardActiveListing($listingId);
             $listing = $this->ownedListing($listingId, $organizationId, true);
             $this->transitions->republish($listing, $request->user()->getKey(), 'LISTING_DETAILS_CHANGED');
+            $this->confirmations->restoreIfConfirmed($listing, (int) $request->user()->getKey(), 'VENDOR');
             $this->audit->account($request, 'CATALOG_LISTING_UPDATED', 'VENDOR_LISTING', $listingId, after: array_intersect_key($input, array_flip(['display_name', 'vendor_sku', 'material_id', 'material_category_id', 'other_label', 'brand', 'manufacturer'])));
             $this->discoverability->evaluate($organizationId, $request->user()->getKey(), 'VENDOR');
         });
@@ -344,6 +347,7 @@ final class VendorCatalogService
             DB::table('vendor_listings')->where('id', $listingId)->update(['lock_version' => DB::raw('lock_version + 1'), 'updated_by_user_id' => $request->user()->getKey(), 'updated_at' => now()]);
             $this->guardActiveListing($listingId);
             $this->transitions->republish($this->ownedListing($listingId, $organizationId, true), $request->user()->getKey(), $priceChanged ? 'PRICE_VERSION_CHANGED' : 'VARIANTS_CHANGED');
+            $this->confirmations->restoreIfConfirmed($this->ownedListing($listingId, $organizationId, true), (int) $request->user()->getKey(), 'VENDOR');
             $this->audit->account($request, 'CATALOG_VARIANTS_SAVED', 'VENDOR_LISTING', $listingId, after: ['variant_count' => count($rows), 'price_changed' => $priceChanged]);
             $this->discoverability->evaluate($organizationId, $request->user()->getKey(), 'VENDOR');
         });
@@ -382,6 +386,9 @@ final class VendorCatalogService
                 DB::table('listing_media')->insert(['id' => $mediaId, 'vendor_listing_id' => $listingId, 'file_id' => $fileId, 'alt_text' => $altText === null ? null : Str::limit(trim($altText), 160, ''), 'sort_order' => $order, 'status' => 'READY', 'media_version' => $version, 'replaces_media_id' => $replacesMediaId, 'uploaded_by_user_id' => $request->user()->getKey(), 'created_at' => now(), 'updated_at' => now()]);
                 DB::table('vendor_listings')->where('id', $listingId)->update(['lock_version' => DB::raw('lock_version + 1'), 'updated_at' => now()]);
                 $this->transitions->republish($this->ownedListing($listingId, $organizationId, true), $request->user()->getKey(), 'MEDIA_CHANGED');
+                if ($this->confirmations->restoreIfConfirmed($this->ownedListing($listingId, $organizationId, true), (int) $request->user()->getKey(), 'VENDOR')) {
+                    $this->discoverability->evaluate($organizationId, $request->user()->getKey(), 'VENDOR');
+                }
                 $this->audit->account($request, 'CATALOG_LISTING_MEDIA_UPLOADED', 'LISTING_MEDIA', $mediaId, after: ['version' => $version]);
 
                 return $mediaId;

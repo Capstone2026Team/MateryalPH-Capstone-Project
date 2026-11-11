@@ -54,7 +54,7 @@ export function vendorInsightsFixture(overrides: Partial<VendorDashboardInsights
       classification: { _class: 'WATCH', label: 'Watch', path: ['Outside the no-penalty band: LSR.'], bands: { NFR: 'NONE', LSR: 'LOW', RR: 'NONE', ODR: 'NONE' } },
       badges: [],
     },
-    stock: { variants: 10, inStock: 7, limitedStock: 2, outOfStock: 1, attention: [{ name: 'Rebar 10mm', variant: '6 m', available: '0', reorderLevel: '20', status: 'OUT_OF_STOCK' }] },
+    stock: { variants: 10, active: 7, inactive: 3, inStock: 7, limitedStock: 2, outOfStock: 1, attention: [{ name: 'Rebar 10mm', variant: '6 m', available: '0', reorderLevel: '20', status: 'OUT_OF_STOCK' }] },
     disputes: { open: 1, awaitingResponse: 1, nextResponseDueAt: new Date('2026-10-10T04:00:00Z'), filedInPeriod: 1, series: dates.map(date => ({ date, cases: 0 })), issueTypes: [{ key: 'DEFECTIVE', count: 1 }],
       statuses: [{ key: 'OPEN_AWAITING_RESPONSE', count: 1 }], fulfillmentIssues: 0, validatedReturns: 0 },
     actions: [

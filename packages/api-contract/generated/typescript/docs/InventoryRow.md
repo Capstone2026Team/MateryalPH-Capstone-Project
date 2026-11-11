@@ -19,6 +19,7 @@ Name | Type
 `publicLabel` | [StockLabel](StockLabel.md)
 `stockConfirmation` | [StockConfirmationSchedule](StockConfirmationSchedule.md)
 `listingConfirmation` | [StockConfirmationSchedule](StockConfirmationSchedule.md)
+`listingVisibilityBlockers` | Array&lt;string&gt;
 `price` | [InventoryPrice](InventoryPrice.md)
 `comparability` | [InventoryComparability](InventoryComparability.md)
 `autoAccept` | [AutoAcceptPolicy](AutoAcceptPolicy.md)
@@ -43,6 +44,7 @@ const example = {
   "publicLabel": null,
   "stockConfirmation": null,
   "listingConfirmation": null,
+  "listingVisibilityBlockers": null,
   "price": null,
   "comparability": null,
   "autoAccept": null,

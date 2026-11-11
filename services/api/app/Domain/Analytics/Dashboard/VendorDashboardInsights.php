@@ -482,7 +482,8 @@ final class VendorDashboardInsights
         $base = fn () => DB::table('listing_variants as v')->join('vendor_listings as l', 'l.id', '=', 'v.vendor_listing_id')->leftJoin('inventory_items as i', 'i.listing_variant_id', '=', 'v.id')
             ->where('l.vendor_organization_id', $organizationId)->whereNull('l.removed_at')->where('v.active', true);
         $available = 'i.quantity_on_hand - i.hard_reserved_quantity';
-        $summary = $base()->selectRaw("COUNT(*) AS variants, COUNT(*) FILTER (WHERE i.id IS NULL OR $available <= 0) AS out_of_stock,
+        $summary = $base()->selectRaw("COUNT(*) AS variants, COUNT(*) FILTER (WHERE l.status = 'ACTIVE') AS active,
+            COUNT(*) FILTER (WHERE l.status <> 'ACTIVE') AS inactive, COUNT(*) FILTER (WHERE i.id IS NULL OR $available <= 0) AS out_of_stock,
             COUNT(*) FILTER (WHERE $available > 0 AND i.reorder_level IS NOT NULL AND $available <= i.reorder_level) AS limited_stock")->first();
         $attention = $base()->whereRaw("(i.id IS NULL OR $available <= 0 OR (i.reorder_level IS NOT NULL AND $available <= i.reorder_level))")
             ->orderByRaw("COALESCE($available, 0)")->orderBy('l.display_name')->limit(5)
@@ -491,7 +492,8 @@ final class VendorDashboardInsights
         $out = (int) $summary->out_of_stock;
         $limited = (int) $summary->limited_stock;
 
-        return ['variants' => $variants, 'in_stock' => max(0, $variants - $out - $limited), 'limited_stock' => $limited, 'out_of_stock' => $out,
+        return ['variants' => $variants, 'active' => (int) $summary->active, 'inactive' => (int) $summary->inactive,
+            'in_stock' => max(0, $variants - $out - $limited), 'limited_stock' => $limited, 'out_of_stock' => $out,
             'attention' => $attention->map(static fn (object $row): array => ['name' => (string) $row->display_name, 'variant' => $row->label === null ? null : (string) $row->label,
                 'available' => $row->untracked ? '0' : (string) ((float) $row->quantity_on_hand - (float) $row->hard_reserved_quantity), 'reorder_level' => $row->reorder_level === null ? null : (string) $row->reorder_level,
                 'status' => $row->untracked || ((float) $row->quantity_on_hand - (float) $row->hard_reserved_quantity) <= 0 ? 'OUT_OF_STOCK' : 'LIMITED_STOCK'])->all()];

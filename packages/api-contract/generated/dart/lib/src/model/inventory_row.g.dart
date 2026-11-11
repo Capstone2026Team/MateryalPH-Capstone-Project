@@ -34,6 +34,8 @@ class _$InventoryRow extends InventoryRow {
   @override
   final StockConfirmationSchedule listingConfirmation;
   @override
+  final BuiltList<String> listingVisibilityBlockers;
+  @override
   final InventoryPrice? price;
   @override
   final InventoryComparability comparability;
@@ -57,6 +59,7 @@ class _$InventoryRow extends InventoryRow {
       required this.publicLabel,
       required this.stockConfirmation,
       required this.listingConfirmation,
+      required this.listingVisibilityBlockers,
       this.price,
       required this.comparability,
       required this.autoAccept})
@@ -85,6 +88,7 @@ class _$InventoryRow extends InventoryRow {
         publicLabel == other.publicLabel &&
         stockConfirmation == other.stockConfirmation &&
         listingConfirmation == other.listingConfirmation &&
+        listingVisibilityBlockers == other.listingVisibilityBlockers &&
         price == other.price &&
         comparability == other.comparability &&
         autoAccept == other.autoAccept;
@@ -106,6 +110,7 @@ class _$InventoryRow extends InventoryRow {
     _$hash = $jc(_$hash, publicLabel.hashCode);
     _$hash = $jc(_$hash, stockConfirmation.hashCode);
     _$hash = $jc(_$hash, listingConfirmation.hashCode);
+    _$hash = $jc(_$hash, listingVisibilityBlockers.hashCode);
     _$hash = $jc(_$hash, price.hashCode);
     _$hash = $jc(_$hash, comparability.hashCode);
     _$hash = $jc(_$hash, autoAccept.hashCode);
@@ -129,6 +134,7 @@ class _$InventoryRow extends InventoryRow {
           ..add('publicLabel', publicLabel)
           ..add('stockConfirmation', stockConfirmation)
           ..add('listingConfirmation', listingConfirmation)
+          ..add('listingVisibilityBlockers', listingVisibilityBlockers)
           ..add('price', price)
           ..add('comparability', comparability)
           ..add('autoAccept', autoAccept))
@@ -203,6 +209,13 @@ class InventoryRowBuilder
           StockConfirmationScheduleBuilder? listingConfirmation) =>
       _$this._listingConfirmation = listingConfirmation;
 
+  ListBuilder<String>? _listingVisibilityBlockers;
+  ListBuilder<String> get listingVisibilityBlockers =>
+      _$this._listingVisibilityBlockers ??= ListBuilder<String>();
+  set listingVisibilityBlockers(
+          ListBuilder<String>? listingVisibilityBlockers) =>
+      _$this._listingVisibilityBlockers = listingVisibilityBlockers;
+
   InventoryPriceBuilder? _price;
   InventoryPriceBuilder get price => _$this._price ??= InventoryPriceBuilder();
   set price(InventoryPriceBuilder? price) => _$this._price = price;
@@ -239,6 +252,7 @@ class InventoryRowBuilder
       _publicLabel = $v.publicLabel;
       _stockConfirmation = $v.stockConfirmation.toBuilder();
       _listingConfirmation = $v.listingConfirmation.toBuilder();
+      _listingVisibilityBlockers = $v.listingVisibilityBlockers.toBuilder();
       _price = $v.price?.toBuilder();
       _comparability = $v.comparability.toBuilder();
       _autoAccept = $v.autoAccept.toBuilder();
@@ -286,6 +300,7 @@ class InventoryRowBuilder
                 publicLabel, r'InventoryRow', 'publicLabel'),
             stockConfirmation: stockConfirmation.build(),
             listingConfirmation: listingConfirmation.build(),
+            listingVisibilityBlockers: listingVisibilityBlockers.build(),
             price: _price?.build(),
             comparability: comparability.build(),
             autoAccept: autoAccept.build(),
@@ -303,6 +318,8 @@ class InventoryRowBuilder
         stockConfirmation.build();
         _$failedField = 'listingConfirmation';
         listingConfirmation.build();
+        _$failedField = 'listingVisibilityBlockers';
+        listingVisibilityBlockers.build();
         _$failedField = 'price';
         _price?.build();
         _$failedField = 'comparability';

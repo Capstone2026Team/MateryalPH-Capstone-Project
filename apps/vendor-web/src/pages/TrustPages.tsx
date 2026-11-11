@@ -57,7 +57,7 @@ export function VendorProductAnalyticsOverviewPage() {
 
 export function VendorProductAnalyticsPage() {
   return <TrustShell activeHref="/analytics/products" permission="catalog.manage" deniedText="Product analytics is available to roles that manage products.">
-    {permissions => <ProductAnalyticsDetail canViewReviews={permissions.includes('reviews.view')} />}
+    {permissions => <ProductAnalyticsDetail canViewReviews={permissions.includes('reviews.view')} canViewInventory={permissions.includes('inventory.view')} />}
   </TrustShell>
 }
 

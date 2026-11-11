@@ -73,6 +73,12 @@ void main() {
       // TODO
     });
 
+    // Vendor-only reasons a temporarily hidden listing cannot return to Buyers, including other variants awaiting confirmation and current store, compliance or listing-readiness requirements. Empty for other statuses. Confirmation does not bypass these gates.
+    // BuiltList<String> listingVisibilityBlockers
+    test('to test the property `listingVisibilityBlockers`', () async {
+      // TODO
+    });
+
     // InventoryPrice price
     test('to test the property `price`', () async {
       // TODO

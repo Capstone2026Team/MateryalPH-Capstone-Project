@@ -123,3 +123,7 @@ export function quantityDisplay(value: string | null | undefined): string {
   if (value === null || value === undefined || value === '') return 'â€”'
   return value.includes('.') ? value.replace(/\.?0+$/, '') : value
 }
+
+export function inventoryVariantName(row: InventoryRow): string {
+  return row.variantLabel ? `${row.listingName} — ${row.variantLabel}` : row.listingName
+}

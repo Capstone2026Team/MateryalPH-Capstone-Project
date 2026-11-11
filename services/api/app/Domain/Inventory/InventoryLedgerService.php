@@ -305,6 +305,8 @@ final class InventoryLedgerService
         $policies = DB::table('auto_accept_policies')->whereIn('listing_variant_id', $variantIds)->get()->keyBy('listing_variant_id');
         $comparable = DB::table('listing_comparable_assignments')->whereIn('listing_variant_id', $variantIds)->whereNull('effective_until')->where('mapping_state', 'APPROVED')->pluck('material_comparable_group_version_id', 'listing_variant_id');
         $anchors = [];
+        $visibilityBlockers = [];
+        $listings = DB::table('vendor_listings')->whereIn('id', $rows->pluck('listing_id')->unique())->get()->keyBy('id');
         $result = [];
         foreach ($variantIds as $variantId) {
             $row = $rows[$variantId] ?? null;
@@ -312,6 +314,7 @@ final class InventoryLedgerService
                 continue;
             }
             $anchors[$row->listing_id] ??= StockConfirmationPolicy::listingAnchor((string) $row->listing_id);
+            $visibilityBlockers[$row->listing_id] ??= $this->confirmations->restorationBlockers($listings[$row->listing_id]);
             $available = $row->item_id === null ? null : StockAvailability::availableToSell((string) $row->quantity_on_hand, (string) $row->hard_reserved_quantity);
             $reorder = $row->reorder_level === null ? null : StockAvailability::quantity($row->reorder_level);
             $result[] = [
@@ -325,6 +328,7 @@ final class InventoryLedgerService
                 'public_label' => StockAvailability::label($available, $reorder),
                 'stock_confirmation' => StockConfirmationPolicy::schedule($row->confirmed_at),
                 'listing_confirmation' => StockConfirmationPolicy::schedule($anchors[$row->listing_id]),
+                'listing_visibility_blockers' => $visibilityBlockers[$row->listing_id],
                 'price' => $row->price_id === null ? null : ['price_version_id' => $row->price_id, 'version' => (int) $row->price_version, 'amount_centavos' => (int) $row->amount_centavos, 'tax_category' => $row->tax_category, 'effective_at' => $row->effective_at],
                 'comparability' => isset($comparable[$variantId]) ? ['status' => 'COMPARABLE', 'group_version_id' => $comparable[$variantId], 'rule_version' => ComparableMappingService::MAPPING_RULE] : ['status' => 'NOT_YET_COMPARABLE', 'group_version_id' => null, 'rule_version' => ComparableMappingService::MAPPING_RULE],
                 'auto_accept' => AutoAcceptPolicyService::present($policies[$variantId] ?? null),

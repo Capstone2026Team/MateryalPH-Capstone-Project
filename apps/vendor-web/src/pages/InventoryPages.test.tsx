@@ -24,7 +24,7 @@ const policy = (overrides: Partial<InventoryRow['autoAccept']> = {}): InventoryR
 
 function row(overrides: Partial<InventoryRow> = {}): InventoryRow {
   return {
-    listingVariantId: 'variant-1', listingId: 'listing-1', listingName: 'Portland cement', listingStatus: 'ACTIVE', variantLabel: '40 kg', sku: 'CEM-40-1', unitCode: 'BAG', lockVersion: 4,
+    listingVariantId: 'variant-1', listingId: 'listing-1', listingName: 'Portland cement', listingStatus: 'ACTIVE', listingVisibilityBlockers: [], variantLabel: '40 kg', sku: 'CEM-40-1', unitCode: 'BAG', lockVersion: 4,
     inventory: { quantityOnHand: '120.0000', hardReservedQuantity: '20.0000', softHeldQuantity: '30.0000', availableToSell: '100.0000', reorderLevel: '100.0000', confirmedAt: new Date('2026-10-01T00:00:00Z') },
     publicLabel: 'LIMITED_STOCK', stockConfirmation: schedule('REMINDER', '2026-10-01T00:00:00Z', '2026-10-16T00:00:00Z'), listingConfirmation: schedule('REMINDER', '2026-10-01T00:00:00Z', '2026-10-16T00:00:00Z'),
     price: { priceVersionId: 'price-2', version: 2, amountCentavos: 28550, taxCategory: 'NON_VAT', effectiveAt: null },

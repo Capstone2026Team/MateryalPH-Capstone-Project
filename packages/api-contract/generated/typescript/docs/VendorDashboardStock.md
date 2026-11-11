@@ -8,6 +8,8 @@ inventory.view. The store’s own stock only.
 Name | Type
 ------------ | -------------
 `variants` | number
+`active` | number
+`inactive` | number
 `inStock` | number
 `limitedStock` | number
 `outOfStock` | number
@@ -21,6 +23,8 @@ import type { VendorDashboardStock } from '@materyalph/api-client-ts'
 // TODO: Update the object below with actual values
 const example = {
   "variants": null,
+  "active": null,
+  "inactive": null,
   "inStock": null,
   "limitedStock": null,
   "outOfStock": null,

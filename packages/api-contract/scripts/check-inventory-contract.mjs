@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { resolve } from 'node:path'
+import { createRequire } from 'node:module'
 import { parse } from 'yaml'
 
 // Phase 5 contract: every inventory, auto-accept and fleet route matches OpenAPI in both directions,
@@ -56,6 +57,12 @@ for (const [path, method] of [['/vendor/inventory/items/{variantId}', 'patch'], 
 }
 
 const schemas = spec.components.schemas
+assert.ok(schemas.InventoryRow.required.includes('listing_visibility_blockers'))
+assert.equal(schemas.InventoryRow.properties.listing_visibility_blockers.items.type, 'string')
+const { InventoryRowFromJSON, InventoryRowToJSON } = createRequire(import.meta.url)('../generated/typescript/dist/index.js')
+const blockers = ['Confirm every active variant.', 'Upload a product photo.']
+assert.deepEqual(InventoryRowFromJSON({ listing_visibility_blockers: blockers }).listingVisibilityBlockers, blockers)
+assert.deepEqual(InventoryRowToJSON(InventoryRowFromJSON({ listing_visibility_blockers: blockers })).listing_visibility_blockers, blockers)
 assert.deepEqual(schemas.StockLabel.enum, ['IN_STOCK', 'LIMITED_STOCK', 'OUT_OF_STOCK'], 'Buyers receive only three stock labels')
 assert.deepEqual(schemas.CatalogListingSummary.properties.public_availability.enum, schemas.StockLabel.enum)
 assert.deepEqual(schemas.CatalogVariant.properties.public_availability.enum, schemas.StockLabel.enum)

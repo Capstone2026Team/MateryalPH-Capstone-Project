@@ -6,6 +6,7 @@
 import 'package:materyalph_api_client/src/model/inventory_balance.dart';
 import 'package:materyalph_api_client/src/model/stock_confirmation_schedule.dart';
 import 'package:materyalph_api_client/src/model/inventory_price.dart';
+import 'package:built_collection/built_collection.dart';
 import 'package:materyalph_api_client/src/model/listing_status.dart';
 import 'package:materyalph_api_client/src/model/quantity_policy.dart';
 import 'package:materyalph_api_client/src/model/auto_accept_policy.dart';
@@ -32,6 +33,7 @@ part 'inventory_row.g.dart';
 /// * [publicLabel]
 /// * [stockConfirmation]
 /// * [listingConfirmation]
+/// * [listingVisibilityBlockers] - Vendor-only reasons a temporarily hidden listing cannot return to Buyers, including other variants awaiting confirmation and current store, compliance or listing-readiness requirements. Empty for other statuses. Confirmation does not bypass these gates.
 /// * [price]
 /// * [comparability]
 /// * [autoAccept]
@@ -78,6 +80,10 @@ abstract class InventoryRow implements Built<InventoryRow, InventoryRowBuilder> 
 
   @BuiltValueField(wireName: r'listing_confirmation')
   StockConfirmationSchedule get listingConfirmation;
+
+  /// Vendor-only reasons a temporarily hidden listing cannot return to Buyers, including other variants awaiting confirmation and current store, compliance or listing-readiness requirements. Empty for other statuses. Confirmation does not bypass these gates.
+  @BuiltValueField(wireName: r'listing_visibility_blockers')
+  BuiltList<String> get listingVisibilityBlockers;
 
   @BuiltValueField(wireName: r'price')
   InventoryPrice? get price;
@@ -179,6 +185,11 @@ class _$InventoryRowSerializer implements PrimitiveSerializer<InventoryRow> {
     yield serializers.serialize(
       object.listingConfirmation,
       specifiedType: const FullType(StockConfirmationSchedule),
+    );
+    yield r'listing_visibility_blockers';
+    yield serializers.serialize(
+      object.listingVisibilityBlockers,
+      specifiedType: const FullType(BuiltList, [FullType(String)]),
     );
     yield r'price';
     yield object.price == null ? null : serializers.serialize(
@@ -311,6 +322,13 @@ class _$InventoryRowSerializer implements PrimitiveSerializer<InventoryRow> {
             specifiedType: const FullType(StockConfirmationSchedule),
           ) as StockConfirmationSchedule;
           result.listingConfirmation.replace(valueDes);
+          break;
+        case r'listing_visibility_blockers':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(BuiltList, [FullType(String)]),
+          ) as BuiltList<String>;
+          result.listingVisibilityBlockers.replace(valueDes);
           break;
         case r'price':
           final valueDes = serializers.deserialize(

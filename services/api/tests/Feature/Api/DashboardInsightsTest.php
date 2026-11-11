@@ -142,8 +142,34 @@ final class DashboardInsightsTest extends TestCase
         self::assertSame('BUILDING_TRACK_RECORD', $data['performance']['classification']['class']);
         self::assertSame('New Vendor — Building Track Record', $data['performance']['classification']['label']);
         self::assertSame(1, $data['stock']['variants']);
+        self::assertSame(1, $data['stock']['active']);
+        self::assertSame(0, $data['stock']['inactive']);
         self::assertFalse($data['traffic']['store_visits']['tracked'], 'The platform records no storefront visits, so none are shown.');
         self::assertStringNotContainsString('email', (string) $response->getContent());
+    }
+
+    public function test_stock_listing_status_counts_are_separate_from_available_stock_and_exclude_removed_variants(): void
+    {
+        [$store, $owner, $listing] = $this->pickupStore('Stock status store', [['price' => 100000, 'qty' => '100'], ['price' => 200000, 'qty' => '0']], 1000);
+        [$other] = $this->pickupStore('Other stock store', [['price' => 100000, 'qty' => '100']], 1000);
+        self::assertNotSame($store->id, $other->id);
+        $this->signInStoreMember($owner);
+        foreach (['ACTIVE', 'INACTIVE', 'DRAFT', 'TEMPORARILY_HIDDEN_STOCK_NOT_CONFIRMED', 'PENDING_COMPLIANCE', 'PENDING_ADMIN_REVIEW', 'REJECTED'] as $status) {
+            DB::table('vendor_listings')->where('id', $listing)->update(['status' => $status]);
+            $response = $this->getJson('/api/v1/vendor/dashboard/insights?days=7')->assertOk();
+            $response->assertJsonPath('data.stock.variants', 2)
+                ->assertJsonPath('data.stock.active', $status === 'ACTIVE' ? 2 : 0)
+                ->assertJsonPath('data.stock.inactive', $status === 'ACTIVE' ? 0 : 2)
+                ->assertJsonPath('data.stock.in_stock', 1)->assertJsonPath('data.stock.out_of_stock', 1);
+        }
+        DB::table('listing_variants')->where('vendor_listing_id', $listing)->orderBy('id')->limit(1)->update(['active' => false]);
+        $this->getJson('/api/v1/vendor/dashboard/insights')->assertOk()->assertJsonPath('data.stock.variants', 1)->assertJsonPath('data.stock.inactive', 1);
+        $draft = $this->postJson('/api/v1/vendor/catalog/listings', ['display_name' => 'Removed draft', 'vendor_sku' => 'REMOVED-DRAFT'], ['Idempotency-Key' => (string) Str::uuid7()])->assertCreated()->json('data.id');
+        $variant = (array) DB::table('listing_variants')->where('vendor_listing_id', $listing)->where('active', true)->first();
+        DB::table('listing_variants')->insert(array_replace($variant, ['id' => (string) Str::uuid7(), 'vendor_listing_id' => $draft, 'sku' => 'REMOVED-DRAFT-V1']));
+        $this->getJson('/api/v1/vendor/dashboard/insights')->assertOk()->assertJsonPath('data.stock.variants', 2)->assertJsonPath('data.stock.inactive', 2);
+        DB::table('vendor_listings')->where('id', $draft)->update(['removed_at' => now(), 'removed_by_user_id' => $owner->id]);
+        $this->getJson('/api/v1/vendor/dashboard/insights')->assertOk()->assertJsonPath('data.stock.variants', 1)->assertJsonPath('data.stock.inactive', 1);
     }
 
     public function test_gross_sales_stays_before_refunds_and_cancellations_while_net_sales_removes_them(): void

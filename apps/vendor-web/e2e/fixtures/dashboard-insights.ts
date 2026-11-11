@@ -71,7 +71,7 @@ export function vendorInsights(owner = true) {
       classification: { class: 'WATCH', label: 'Watch', path: ['Outside the no-penalty band: LSR.'], bands: { NFR: 'NONE', LSR: 'LOW', RR: 'NONE', ODR: 'NONE' } },
       badges: [],
     },
-    stock: { variants: 64, in_stock: 51, limited_stock: 9, out_of_stock: 4, attention: [
+    stock: { variants: 64, active: 52, inactive: 12, in_stock: 51, limited_stock: 9, out_of_stock: 4, attention: [
       { name: 'Deformed Bar 12 mm × 6 m', variant: 'Grade 40', available: '0', reorder_level: '50', status: 'OUT_OF_STOCK' },
       { name: 'Portland Cement Type 1 (40 kg)', variant: null, available: '35', reorder_level: '80', status: 'LIMITED_STOCK' } ] },
     disputes: { open: 2, awaiting_response: 1, next_response_due_at: '2026-10-10T04:00:00Z', filed_in_period: 3, series: series.map((point, index) => ({ date: point.date, cases: [6, 19, 24].includes(index) ? 1 : 0 })),

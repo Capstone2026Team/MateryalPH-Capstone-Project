@@ -38,6 +38,13 @@ for (const route of routes.filter(r => /^api\/v1\/(vendor|admin)\/dashboard\/ins
   assert.ok(spec.paths[`/${route.uri.replace(/^api\/v1\//, '')}`], `Undocumented dashboard route ${route.uri}`)
 }
 const schemas = spec.components.schemas
+for (const field of ['active', 'inactive']) {
+  assert.ok(schemas.VendorDashboardStock.required.includes(field))
+  assert.equal(schemas.VendorDashboardStock.properties[field].minimum, 0)
+}
+const { VendorDashboardStockFromJSON, VendorDashboardStockToJSON } = createRequire(import.meta.url)('../generated/typescript/dist/index.js')
+const stock = { variants: 10, active: 7, inactive: 3, in_stock: 8, limited_stock: 1, out_of_stock: 1, attention: [] }
+assert.deepEqual(VendorDashboardStockToJSON(VendorDashboardStockFromJSON(stock)), stock)
 const nullableRef = (schema, name) => Array.isArray(schema.oneOf) && schema.oneOf.some(s => s.$ref === `#/components/schemas/${name}`) && schema.oneOf.some(s => s.type === 'null')
 const vendor = schemas.VendorDashboardInsights.properties
 for (const [section, name] of [['orders', 'VendorDashboardOrders'], ['performance', 'VendorDashboardPerformance'], ['stock', 'VendorDashboardStock'], ['disputes', 'VendorDashboardDisputes']]) {

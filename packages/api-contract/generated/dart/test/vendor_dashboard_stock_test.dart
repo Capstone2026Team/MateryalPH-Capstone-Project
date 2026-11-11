@@ -12,6 +12,18 @@ void main() {
       // TODO
     });
 
+    // Active variants belonging to ACTIVE listings, across all dates. Active plus inactive equals variants.
+    // int active
+    test('to test the property `active`', () async {
+      // TODO
+    });
+
+    // Active variants on all other nonremoved listings, including drafts, inactive, hidden, rejected and pending listings. This is separate from stock availability.
+    // int inactive
+    test('to test the property `inactive`', () async {
+      // TODO
+    });
+
     // int inStock
     test('to test the property `inStock`', () async {
       // TODO

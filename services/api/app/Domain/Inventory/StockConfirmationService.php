@@ -58,16 +58,35 @@ final class StockConfirmationService
         if ($listing->status !== 'TEMPORARILY_HIDDEN_STOCK_NOT_CONFIRMED') {
             return false;
         }
-        if (StockConfirmationPolicy::isStale(StockConfirmationPolicy::listingAnchor((string) $listing->id))) {
-            return false;
-        }
-        $store = DB::table('vendor_organizations')->where('id', $listing->vendor_organization_id)->value('store_activation_status');
-        if ($store !== 'ACTIVE' || ($listing->regulated && $listing->compliance_status !== 'VERIFIED') || $this->readiness->evaluate((string) $listing->id)['blockers'] !== []) {
+        if ($this->restorationBlockers($listing) !== []) {
             return false;
         }
         $this->transitions->transition($listing, 'ACTIVE', $source, $actorId, 'STOCK_CONFIRMED', 'Stock confirmation restored the listing.');
 
         return true;
+    }
+
+    /** @return list<string> Safe Vendor-only reasons why confirmed stock has not restored a listing. */
+    public function restorationBlockers(object $listing): array
+    {
+        if ($listing->status !== 'TEMPORARILY_HIDDEN_STOCK_NOT_CONFIRMED') {
+            return [];
+        }
+        if (StockConfirmationPolicy::isStale(StockConfirmationPolicy::listingAnchor((string) $listing->id))) {
+            return ['Confirm the stock count of every active variant to restore this listing.'];
+        }
+        $blockers = [];
+        if (DB::table('vendor_organizations')->where('id', $listing->vendor_organization_id)->value('store_activation_status') !== 'ACTIVE') {
+            $blockers[] = 'Your store must be active before this listing can return to Buyers.';
+        }
+        if ($listing->regulated && $listing->compliance_status !== 'VERIFIED') {
+            $blockers[] = 'Complete the required PS/ICC verification before this listing can return to Buyers.';
+        }
+        foreach ($this->readiness->evaluate((string) $listing->id)['blockers'] as $blocker) {
+            $blockers[] = $blocker['reason'];
+        }
+
+        return array_values(array_unique($blockers));
     }
 
     /** @return array{reminders: int, hidden: int} */

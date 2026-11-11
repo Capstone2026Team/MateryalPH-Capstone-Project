@@ -32,6 +32,14 @@ export interface VendorDashboardStock {
      */
     variants: number;
     /**
+     * Active variants belonging to ACTIVE listings, across all dates. Active plus inactive equals variants.
+     */
+    active: number;
+    /**
+     * Active variants on all other nonremoved listings, including drafts, inactive, hidden, rejected and pending listings. This is separate from stock availability.
+     */
+    inactive: number;
+    /**
      *
      */
     inStock: number;
@@ -54,6 +62,8 @@ export interface VendorDashboardStock {
  */
 export function instanceOfVendorDashboardStock(value: object): value is VendorDashboardStock {
     if (!('variants' in value) || value['variants'] === undefined) return false;
+    if (!('active' in value) || value['active'] === undefined) return false;
+    if (!('inactive' in value) || value['inactive'] === undefined) return false;
     if ((!('inStock' in (value as Record<string, any>)) && !('in_stock' in (value as Record<string, any>))) || ((value as Record<string, any>)['inStock'] === undefined && (value as Record<string, any>)['in_stock'] === undefined)) return false;
     if ((!('limitedStock' in (value as Record<string, any>)) && !('limited_stock' in (value as Record<string, any>))) || ((value as Record<string, any>)['limitedStock'] === undefined && (value as Record<string, any>)['limited_stock'] === undefined)) return false;
     if ((!('outOfStock' in (value as Record<string, any>)) && !('out_of_stock' in (value as Record<string, any>))) || ((value as Record<string, any>)['outOfStock'] === undefined && (value as Record<string, any>)['out_of_stock'] === undefined)) return false;
@@ -72,6 +82,8 @@ export function VendorDashboardStockFromJSONTyped(json: any, ignoreDiscriminator
     return {
 
         'variants': json['variants'],
+        'active': json['active'],
+        'inactive': json['inactive'],
         'inStock': json['in_stock'],
         'limitedStock': json['limited_stock'],
         'outOfStock': json['out_of_stock'],
@@ -91,6 +103,8 @@ export function VendorDashboardStockToJSONTyped(value?: VendorDashboardStock | n
     return {
 
         'variants': value['variants'],
+        'active': value['active'],
+        'inactive': value['inactive'],
         'in_stock': value['inStock'],
         'limited_stock': value['limitedStock'],
         'out_of_stock': value['outOfStock'],

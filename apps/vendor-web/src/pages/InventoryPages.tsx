@@ -1,195 +1,23 @@
-import { AsyncLoading } from '@materyalph/web-ui'
 import { Package, CheckCircle2, AlertTriangle, XCircle, Settings2 } from 'lucide-react'
 import { useEffect, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { History, Pencil, Zap } from 'lucide-react'
 import {
-  dateFilterPreset, AutoAcceptPanel, Button, QuantityField, ConfirmDialog, ConflictBanner, DateFilter, DenseLedgerTable, Field, Pagination, Select, SidePanel, StaleStockBand, StatusMessage, StockLabelBadge, StockConfirmationStatus, StatCard, ActiveFilters, FormDialog, Toolbar, InfoNote, EmptyState,
-  formatManilaDateTime, type AutoAcceptPanelValues, type DateFilterRange, type LedgerColumn,
+  Button, ConfirmDialog, DenseLedgerTable, Field, Pagination, Select, SidePanel, StaleStockBand, StatusMessage, StockLabelBadge, StockConfirmationStatus, StockVisibilityNotice, StatCard, ActiveFilters, FormDialog, Toolbar, InfoNote, EmptyState,
+  type LedgerColumn,
 } from '@materyalph/web-ui'
 import {
-  apiFailure, configureAutoAccept, confirmStock, conflictRow, getAutoAccept, getInventorySettings, inventoryFieldErrors, listInventory, listMovements, listPriceHistory,
-  pauseAutoAccept, quantityDisplay, readableInventoryError, resumeAutoAccept, saveInventorySettings, updateAllotment, updateInventoryRow,
-  type AutoAcceptPolicyDetail, type InventoryLedgerMeta, type InventoryMovement, type InventoryRow, type InventorySettings, type PriceHistoryEntry, type StockLabel,
+  apiFailure, confirmStock, getInventorySettings, listInventory, inventoryVariantName as variantName,
+  pauseAutoAccept, quantityDisplay, readableInventoryError, saveInventorySettings,
+  type InventoryLedgerMeta, type InventoryRow, type InventorySettings, type StockLabel,
 } from '../lib/inventory-api'
-import { getCatalogTaxonomy, type CatalogTaxonomy, centavosToPeso, formatCentavos, pesoToCentavos } from '../lib/catalog-api'
+import { getCatalogTaxonomy, type CatalogTaxonomy } from '../lib/catalog-api'
 import { statusLabel } from '../lib/vendor-status'
 import { CatalogGate } from './CatalogPages'
 import { useCatalogAccess } from '../lib/catalog-access'
 import { ListingBadge, ProductsTabs, ProductActions } from './CatalogShared'
 import { CatalogProductPhoto } from '../components/CatalogProductPhoto'
 import { ErrorState, PageHeader } from './PhaseThreeVendorPages'
-
-type Mode = 'edit' | 'auto' | 'history' | 'details'
-const REASONS = [
-  { value: 'COUNT', label: 'Physical count' }, { value: 'RECEIVED', label: 'Received stock' }, { value: 'RETURNED', label: 'Customer return' },
-  { value: 'DAMAGED', label: 'Damaged' }, { value: 'LOST', label: 'Lost or missing' }, { value: 'CORRECTION', label: 'Correction' },
-]
-const control = 'min-h-12 w-full min-w-0 rounded-control border border-border-default bg-surface-primary px-3 text-base font-normal'
-
-function variantName(row: InventoryRow): string {
-  return row.variantLabel ? `${row.listingName} — ${row.variantLabel}` : row.listingName
-}
-
-/** Inline row editor. A stale version keeps the typed values and shows the saved values beside them. */
-function RowEditor({ row, canAdjust, canPrice, onSaved, onCancel }: { row: InventoryRow; canAdjust: boolean; canPrice: boolean; onSaved: (row: InventoryRow, message: string) => void; onCancel: () => void }) {
-  const [base, setBase] = useState(row)
-  const [quantity, setQuantity] = useState(row.inventory?.quantityOnHand ? quantityDisplay(row.inventory.quantityOnHand) : '')
-  const [reason, setReason] = useState('COUNT')
-  const [note, setNote] = useState('')
-  const [reorder, setReorder] = useState(row.inventory?.reorderLevel ? quantityDisplay(row.inventory.reorderLevel) : '')
-  const [price, setPrice] = useState(row.price ? centavosToPeso(row.price.amountCentavos) : '')
-  const [errors, setErrors] = useState<Record<string, string>>({})
-  const [message, setMessage] = useState<string | null>(null)
-  const [conflict, setConflict] = useState<InventoryRow | null>(null)
-  const [busy, setBusy] = useState(false)
-  const originalQuantity = base.inventory ? quantityDisplay(base.inventory.quantityOnHand) : ''
-  const originalReorder = base.inventory?.reorderLevel ? quantityDisplay(base.inventory.reorderLevel) : ''
-  const originalPrice = base.price ? centavosToPeso(base.price.amountCentavos) : ''
-
-  async function submit(event: FormEvent) {
-    event.preventDefault()
-    const local: Record<string, string> = {}
-    const update: Parameters<typeof updateInventoryRow>[1] = { lockVersion: base.lockVersion }
-    if (canAdjust && quantity.trim() !== originalQuantity) {
-      if (!/^\d{1,14}(\.\d{1,4})?$/.test(quantity.trim())) local.quantity_on_hand = 'Enter a counted quantity of zero or more, with up to four decimals.'
-      update.quantityOnHand = quantity.trim(); update.reasonCode = reason as NonNullable<typeof update.reasonCode>; update.note = note.trim() || null
-    }
-    if (canAdjust && reorder.trim() !== originalReorder) {
-      if (reorder.trim() !== '' && !/^\d{1,14}(\.\d{1,4})?$/.test(reorder.trim())) local.reorder_level = 'Enter a reorder level of zero or more, or leave it empty.'
-      update.reorderLevel = reorder.trim() === '' ? null : reorder.trim()
-    }
-    if (canPrice && base.price && price.trim() !== originalPrice) {
-      const centavos = pesoToCentavos(price)
-      if (centavos === null) local['price.amount_centavos'] = 'Enter a price above ₱0.00 with up to two decimals.'
-      else update.price = { expectedPriceVersionId: base.price.priceVersionId, amountCentavos: centavos }
-    }
-    setErrors(local); setMessage(null)
-    if (Object.keys(local).length) return
-    if (Object.keys(update).length === 1) { setMessage('Change the count, reorder level or price before saving.'); return }
-    setBusy(true)
-    try {
-      const saved = await updateInventoryRow(row.listingVariantId, update)
-      onSaved(saved, `${variantName(saved)} saved.${update.price ? ' A new price version was published.' : ''}`)
-    } catch (cause) {
-      const failure = await apiFailure(cause)
-      const current = conflictRow(failure)
-      if (failure?.status === 409 && current) setConflict(current)
-      else { setErrors(await inventoryFieldErrors(cause)); setMessage(await readableInventoryError(cause)) }
-    } finally { setBusy(false) }
-  }
-
-  function useCurrent() {
-    if (!conflict) return
-    setBase(conflict); setConflict(null)
-    setQuantity(conflict.inventory ? quantityDisplay(conflict.inventory.quantityOnHand) : '')
-    setReorder(conflict.inventory?.reorderLevel ? quantityDisplay(conflict.inventory.reorderLevel) : '')
-    setPrice(conflict.price ? centavosToPeso(conflict.price.amountCentavos) : '')
-  }
-
-  return <form className="grid min-w-0 gap-4" onSubmit={event => void submit(event)} aria-label={`Edit ${variantName(row)}`}>
-    <h3 className="text-base font-semibold">Edit stock and price</h3>
-    {conflict && <ConflictBanner onUseCurrent={useCurrent}>
-      <p>Someone saved this row after you opened it. Nothing was overwritten; your typed values are still in the form.</p>
-      <dl className="mt-2 grid grid-cols-1 gap-x-6 gap-y-1 sm:grid-cols-3">
-        <div><dt className="text-xs">Saved on hand</dt><dd className="font-semibold">{quantityDisplay(conflict.inventory?.quantityOnHand)} {conflict.unitCode}</dd></div>
-        <div><dt className="text-xs">Saved reorder level</dt><dd className="font-semibold">{quantityDisplay(conflict.inventory?.reorderLevel)}</dd></div>
-        <div><dt className="text-xs">Saved price</dt><dd className="font-semibold">{formatCentavos(conflict.price?.amountCentavos)}</dd></div>
-      </dl>
-    </ConflictBanner>}
-    {message && <StatusMessage tone="error">{message}</StatusMessage>}
-    <div className="grid min-w-0 grid-cols-1 items-start gap-x-6 gap-y-5 md:grid-cols-2">
-      <QuantityField unitCode={row.unitCode} policy={row.quantityPolicy} label={`Quantity on hand (${row.unitCode})`} name="quantity_on_hand" inputMode="decimal" value={quantity} disabled={!canAdjust || busy} error={errors.quantity_on_hand} onChange={event => setQuantity(event.target.value)} hint={`Cannot be lower than the ${quantityDisplay(base.inventory?.hardReservedQuantity ?? '0')} ${row.unitCode} already reserved. Saving a count also confirms stock.`} />
-      <label className="grid min-w-0 gap-2 text-sm font-semibold">Reason for the change<select className={control} value={reason} disabled={!canAdjust || busy} onChange={event => setReason(event.target.value)}>{REASONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
-      <QuantityField unitCode={row.unitCode} policy={row.quantityPolicy} label={`Reorder level (${row.unitCode})`} name="reorder_level" inputMode="decimal" value={reorder} disabled={!canAdjust || busy} error={errors.reorder_level} onChange={event => setReorder(event.target.value)} hint="Buyers see Limited Stock at or below this level. Empty means no Limited Stock label." />
-      <Field label="Ordinary price (₱)" name="price.amount_centavos" inputMode="decimal" value={price} disabled={!canPrice || !base.price || busy} error={errors['price.amount_centavos']} onChange={event => setPrice(event.target.value)} hint={base.price ? `VAT-inclusive. Saving creates price version ${base.price.version + 1}; earlier versions stay in history.` : 'Set the first price in the product editor.'} />
-      <div className="md:col-span-2"><Field label="Note (optional)" name="note" value={note} maxLength={500} disabled={!canAdjust || busy} onChange={event => setNote(event.target.value)} hint="Recorded with the movement for your team." /></div>
-    </div>
-    <div className="flex flex-wrap gap-3 border-t border-border-default pt-4"><Button type="submit" disabled={busy}>{busy ? 'Saving…' : 'Save row'}</Button><Button variant="secondary" disabled={busy} onClick={onCancel}>Cancel</Button></div>
-  </form>
-}
-
-function AutoAcceptEditor({ row, onChanged }: { row: InventoryRow; onChanged: (policy: InventoryRow['autoAccept']) => void }) {
-  const [detail, setDetail] = useState<AutoAcceptPolicyDetail | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [notice, setNotice] = useState<{ tone: 'success' | 'error'; text: string } | null>(null)
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
-  const [busy, setBusy] = useState(false)
-  const [attempt, setAttempt] = useState(0)
-  useEffect(() => {
-    let active = true
-    setError(null)
-    getAutoAccept(row.listingVariantId).then(loaded => { if (active) setDetail(loaded) }).catch(async cause => { const text = await readableInventoryError(cause); if (active) setError(text) })
-    return () => { active = false }
-  }, [row.listingVariantId, attempt])
-  async function run(action: () => Promise<AutoAcceptPolicyDetail>, success: string) {
-    setBusy(true); setNotice(null); setFieldErrors({})
-    try { const next = await action(); setDetail(next); setNotice({ tone: 'success', text: success }); onChanged(next.policy) }
-    catch (cause) {
-      const failure = await apiFailure(cause)
-      if (failure?.status === 409) { setNotice({ tone: 'error', text: failure.code === 'AUTO_ACCEPT_ALLOTMENT_CHANGED' ? 'The allotment changed after you opened this. Review the current value and confirm again.' : 'This policy changed in another session. The current version is shown below.' }); setAttempt(value => value + 1) }
-      else { setFieldErrors(await inventoryFieldErrors(cause)); setNotice({ tone: 'error', text: await readableInventoryError(cause) }) }
-    } finally { setBusy(false) }
-  }
-  if (error) return <ErrorState message={error} onRetry={() => setAttempt(value => value + 1)} />
-  if (!detail) return <AsyncLoading compact label="Loading auto-accept…" />
-  const policy = detail.policy
-  const save = (values: AutoAcceptPanelValues) => {
-    const amount = values.maxOrderAmountPesos.trim() === '' ? null : pesoToCentavos(values.maxOrderAmountPesos)
-    if (values.maxOrderAmountPesos.trim() !== '' && amount === null) { setFieldErrors({ max_order_amount_centavos: 'Enter an amount above ₱0.00 with up to two decimals, or leave it empty.' }); return }
-    void run(() => configureAutoAccept(row.listingVariantId, { lockVersion: policy.lockVersion, enabled: values.enabled, allotmentQuantity: values.allotment.trim() || '0', maxUnitCount: values.maxUnitCount.trim() || null, maxOrderAmountCentavos: amount }), values.enabled ? 'Auto-accept saved.' : 'Auto-accept turned off. Orders wait for manual confirmation.')
-  }
-  return <div className="grid min-w-0 gap-3">
-    {detail.stock && <div className="border-b border-border-default pb-5">
-      <h3 className="text-base font-semibold">Stock available for auto-accept</h3>
-      <dl className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">{[['On hand', detail.stock.quantityOnHand], ['Reserved', detail.stock.hardReservedQuantity], ['Soft-held', detail.stock.softHeldQuantity], ['Available', detail.stock.availableToSell]].map(([label, value]) => <div key={label} className="border-l border-border-default pl-3"><dt className="text-xs text-text-secondary">{label}</dt><dd className="mt-1 font-semibold tabular-nums">{quantityDisplay(value)} {detail.unitCode}</dd></div>)}</dl>
-      <p className="mt-3 text-xs text-text-secondary">Only you and your team see these numbers.</p>
-    </div>}
-    {notice && <StatusMessage tone={notice.tone}>{notice.text}</StatusMessage>}
-    <AutoAcceptPanel unit={detail.unitCode} busy={busy} fieldErrors={fieldErrors} canConfigure={detail.permissions.canConfigure} canUpdateAllotment={detail.permissions.canUpdateAllotment}
-      policy={{ status: policy.status, pauseReason: policy.pauseReason ?? null, remainingAllotment: policy.remainingAllotmentQuantity, maxUnitCount: policy.maxUnitCount ? quantityDisplay(policy.maxUnitCount) : null, maxOrderAmountPesos: policy.maxOrderAmountCentavos ? centavosToPeso(policy.maxOrderAmountCentavos) : null, lastEditor: policy.lastEditor ?? null }}
-      onSave={save}
-      onSaveAllotment={allotment => void run(() => updateAllotment(row.listingVariantId, policy.lockVersion, allotment.trim() || '0'), 'Allotment saved. A paused policy stays paused until the Owner or Store Manager resumes it.')}
-      onPause={() => void run(() => pauseAutoAccept(row.listingVariantId, policy.lockVersion), 'Auto-accept paused.')}
-      onResume={allotment => void run(() => resumeAutoAccept(row.listingVariantId, policy.lockVersion, allotment), `Auto-accept resumed with ${allotment} ${detail.unitCode}.`)} />
-    {detail.versions.length > 0 && <details className="border-t border-border-default pt-3 text-sm"><summary className="min-h-11 cursor-pointer py-2 font-semibold">Policy history ({detail.versions.length})</summary>
-      <ol className="grid gap-1">{detail.versions.map(version => <li key={version.version}>v{version.version} · {statusLabel(version.changeKind)} · allotment {version.remainingAllotmentQuantity} · {version.actor} · {version.createdAt ? formatManilaDateTime(version.createdAt) : ''}</li>)}</ol>
-    </details>}
-  </div>
-}
-
-function RowHistory({ row }: { row: InventoryRow }) {
-  const [range, setRange] = useState(() => dateFilterPreset(30))
-  const [page, setPage] = useState(1)
-  const [movementMeta, setMovementMeta] = useState<Awaited<ReturnType<typeof listMovements>>['meta'] | null>(null)
-  const [movements, setMovements] = useState<InventoryMovement[] | null>(null)
-  const [prices, setPrices] = useState<PriceHistoryEntry[]>([])
-  const [error, setError] = useState<string | null>(null)
-  const [attempt, setAttempt] = useState(0)
-  useEffect(() => {
-    let active = true
-    setMovements(null); setError(null)
-    const dates = { ...(range.from ? { from: range.from } : {}), ...(range.to ? { to: range.to } : {}) }
-    Promise.all([listMovements(row.listingVariantId, page, dates), listPriceHistory(row.listingVariantId, dates)])
-      .then(([loaded, history]) => { if (active) { setMovements(loaded.items); setMovementMeta(loaded.meta); setPrices(history) } })
-      .catch(async cause => { const text = await readableInventoryError(cause); if (active) setError(text) })
-    return () => { active = false }
-  }, [row.listingVariantId, page, range.from, range.to, attempt])
-  const changeDates = (next: DateFilterRange) => { setPage(1); setRange(next) }
-  return <div className="grid min-w-0 gap-5">
-    <Toolbar filters={<DateFilter title="Inventory history dates" value={range} onChange={changeDates} />} />
-    {error ? <ErrorState message={error} onRetry={() => setAttempt(value => value + 1)} /> : !movements ? <AsyncLoading compact label="Loading history…" /> : <div className="grid min-w-0 gap-6 md:grid-cols-2 md:gap-0 md:divide-x md:divide-border-default">
-    <section className="min-w-0 md:pr-6"><h3 className="font-semibold">Stock movements</h3>
-      {movements.length === 0 ? <p className="mt-2 text-sm text-text-secondary">{range.from || range.to ? 'No movements in this date range.' : 'No movements yet.'}</p>
-        : <ol className="mt-2 grid gap-2 text-sm">{movements.map(movement => <li key={movement.id} className="border-t border-border-default pt-2"><span className="font-semibold">{statusLabel(movement.movementType)}</span> {Number(movement.quantityDelta) > 0 ? '+' : ''}{quantityDisplay(movement.quantityDelta)} → {quantityDisplay(movement.quantityOnHandAfter)} {row.unitCode}<br /><span className="text-text-secondary">{movement.actor} · {formatManilaDateTime(movement.recordedAt)}{movement.note ? ` · ${movement.note}` : ''}</span></li>)}</ol>}
-      {movementMeta && movementMeta.lastPage > 1 && <div className="mt-4"><Pagination page={page} lastPage={movementMeta.lastPage} total={movementMeta.total} onChange={setPage} /></div>}
-    </section>
-    <section className="min-w-0 border-t border-border-default pt-6 md:border-t-0 md:pl-6 md:pt-0"><h3 className="font-semibold">Price versions</h3>
-      {prices.length === 0 ? <p className="mt-2 text-sm text-text-secondary">{range.from || range.to ? 'No price versions in this date range.' : 'No price versions yet.'}</p> : <ol className="mt-2 grid gap-2 text-sm">{prices.map(price => <li key={price.priceVersionId} className="border-t border-border-default pt-2"><span className="font-semibold">v{price.version} {formatCentavos(price.amountCentavos)}</span> {price.priceKind === 'VOLUME_TIER' ? `from ${quantityDisplay(price.minimumQuantity)} ${row.unitCode}` : ''} · {price.current ? 'Current' : 'Retired'}<br /><span className="text-text-secondary">{price.createdBy ?? 'Vendor user'} · {formatManilaDateTime(price.effectiveAt)}</span></li>)}</ol>}
-    </section>
-    </div>}
-  </div>
-}
+import { InventoryDetails, type InventoryDetailMode } from './InventoryDetails'
 
 function ReminderSettings() {
   const [settings, setSettings] = useState<InventorySettings | null>(null)
@@ -246,7 +74,7 @@ export function VendorInventoryPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [attempt, setAttempt] = useState(0)
-  const [expanded, setExpanded] = useState<{ key: string; mode: Mode } | null>(null)
+  const [expanded, setExpanded] = useState<{ key: string; mode: InventoryDetailMode } | null>(null)
   const [notice, setNotice] = useState<{ tone: 'success' | 'error'; text: string } | null>(null)
   const [confirming, setConfirming] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
@@ -281,7 +109,7 @@ export function VendorInventoryPage() {
     catch (cause) { const failure = await apiFailure(cause); setNotice({ tone: 'error', text: failure?.status === 409 ? 'Some rows changed since this page loaded, so nothing was confirmed. The ledger has been refreshed; review it and confirm again.' : await readableInventoryError(cause) }); if (failure?.status === 409) setAttempt(value => value + 1) }
     finally { setConfirming(false); setConfirmOpen(false) }
   }
-  function toggle(row: InventoryRow, mode: Mode) {
+  function toggle(row: InventoryRow, mode: InventoryDetailMode) {
     setExpanded({ key: row.listingVariantId, mode })
   }
 
@@ -301,7 +129,7 @@ export function VendorInventoryPage() {
     ...(listingId ? [{ key: 'listing', label: 'Selected listing', onRemove: () => setParams({ listing: '' }) }] : []),
   ]
   const columns: LedgerColumn<InventoryRow>[] = [
-    { key: 'product', header: 'Product / variant', cell: row => <div className="mp-inventory-product-cell"><button type="button" aria-haspopup="dialog" aria-label={`View inventory details for ${variantName(row)}`} aria-describedby={`inventory-sku-${row.listingVariantId}`} onClick={() => toggle(row, 'details')} className="mp-inventory-product"><span>{row.listingName}</span><span className="mp-inventory-product-meta">{row.variantLabel && <span>{row.variantLabel}</span>}<span id={`inventory-sku-${row.listingVariantId}`}>SKU <span className="text-text-strong">{row.sku}</span></span></span></button>{row.listingStatus !== 'ACTIVE' && <ListingBadge status={row.listingStatus} />}</div> },
+    { key: 'product', header: 'Product / variant', cell: row => <div className="mp-inventory-product-cell"><button type="button" aria-haspopup="dialog" aria-label={`View inventory details for ${variantName(row)}`} aria-describedby={`inventory-sku-${row.listingVariantId}`} onClick={() => toggle(row, 'details')} className="mp-inventory-product"><span>{row.listingName}</span><span className="mp-inventory-product-meta">{row.variantLabel && <span>{row.variantLabel}</span>}<span id={`inventory-sku-${row.listingVariantId}`}>SKU <span className="text-text-strong">{row.sku}</span></span></span></button>{row.listingStatus !== 'ACTIVE' && <><ListingBadge status={row.listingStatus} /><StockVisibilityNotice blockers={row.listingVisibilityBlockers} compact /></>}</div> },
     { key: 'public', header: 'Stock status', cell: row => <StockLabelBadge label={row.publicLabel} prefix="" /> },
     { key: 'confirmed', header: 'Confirmation', cell: row => <StockConfirmationStatus confirmation={row.stockConfirmation} /> },
     { key: 'reorder', header: 'Reorder level', cell: row => row.inventory?.reorderLevel != null ? `${quantityDisplay(row.inventory.reorderLevel)} ${row.unitCode}` : 'Not set' },
@@ -344,35 +172,14 @@ export function VendorInventoryPage() {
                 {lastPage > 1 && <Pagination page={page} lastPage={lastPage} total={meta?.total ?? 0} busy={loading} onChange={next => setParams({ page: String(next) })} />}
               </>}
       </>}
-      {ready && !loading && !error && selectedRow && expanded && <FormDialog open title={variantName(selectedRow)} description={`SKU: ${selectedRow.sku}`} onClose={() => setExpanded(null)} footer={null}
+      {ready && !error && selectedRow && expanded && <FormDialog open title={variantName(selectedRow)} description={`SKU: ${selectedRow.sku}`} onClose={() => setExpanded(null)} footer={null}
         headerMedia={<CatalogProductPhoto key={selectedRow.listingId} listingId={selectedRow.listingId} />}
         headerDetails={<dl aria-label="Product status" className="flex flex-wrap gap-x-5 gap-y-3 text-sm">
           <div><dt className="mb-1 text-xs text-text-secondary">Stock status</dt><dd><StockLabelBadge label={selectedRow.publicLabel} prefix="" /></dd></div>
           <div><dt className="mb-1 text-xs text-text-secondary">Listing status</dt><dd><ListingBadge status={selectedRow.listingStatus} /></dd></div>
         </dl>}>
-        {(() => {
-          const row = selectedRow
-          return <div className="grid gap-6">
-            <div role="group" className="flex flex-wrap gap-2 border-b border-border-default pb-5" aria-label="Inventory actions">
-              <Button variant={expanded?.mode === 'details' ? 'primary' : 'secondary'} aria-pressed={expanded?.mode === 'details'} onClick={() => toggle(row, 'details')}>Stock details</Button>
-              {(permissions?.canAdjust || permissions?.canChangePrice) && <Button variant={expanded?.mode === 'edit' ? 'primary' : 'secondary'} aria-label={`Edit ${variantName(row)}`} aria-pressed={expanded?.mode === 'edit'} onClick={() => toggle(row, 'edit')}><Pencil size={16} aria-hidden="true" />Edit</Button>}
-              {permissions?.canViewAutoAccept && <Button variant={expanded?.mode === 'auto' ? 'primary' : 'secondary'} aria-label={`Auto-accept settings for ${variantName(row)}`} aria-pressed={expanded?.mode === 'auto'} onClick={() => toggle(row, 'auto')}><Zap size={16} aria-hidden="true" />Auto-accept settings</Button>}
-              <Button variant={expanded?.mode === 'history' ? 'primary' : 'secondary'} aria-label={`History of ${variantName(row)}`} aria-pressed={expanded?.mode === 'history'} onClick={() => toggle(row, 'history')}><History size={16} aria-hidden="true" />History</Button>
-            </div>
-            <dl aria-label="Inventory overview" className="grid gap-5 border-b border-border-default pb-6 text-sm sm:grid-cols-3">
-              <div><dt className="text-xs text-text-secondary">Confirmation</dt><dd className="mt-1.5"><StockConfirmationStatus confirmation={row.stockConfirmation} /></dd></div>
-              <div className="border-t border-border-default pt-4 sm:border-l sm:border-t-0 sm:pl-5 sm:pt-0"><dt className="text-xs text-text-secondary">Reorder level</dt><dd className="mt-1.5 font-semibold tabular-nums">{row.inventory?.reorderLevel != null ? `${quantityDisplay(row.inventory.reorderLevel)} ${row.unitCode}` : 'Not set'}</dd></div>
-              <div className="border-t border-border-default pt-4 sm:border-l sm:border-t-0 sm:pl-5 sm:pt-0"><dt className="text-xs text-text-secondary">Ordinary price</dt><dd className="mt-1.5 font-semibold tabular-nums">{row.price ? formatCentavos(row.price.amountCentavos) : 'No price'}{row.price && <span className="mt-1 block text-xs font-normal text-text-secondary">Price version {row.price.version}</span>}</dd></div>
-            </dl>
-            {expanded?.mode === 'edit'
-                    ? <RowEditor key={row.lockVersion} row={row} canAdjust={Boolean(permissions?.canAdjust)} canPrice={Boolean(permissions?.canChangePrice)} onCancel={() => toggle(row, 'details')} onSaved={(saved, text) => { setRows(current => current.map(item => item.listingVariantId === saved.listingVariantId ? saved : item)); setExpanded(null); setNotice({ tone: 'success', text }) }} />
-                    : expanded?.mode === 'auto' ? <AutoAcceptEditor row={row} onChanged={next => setRows(current => current.map(item => item.listingVariantId === row.listingVariantId ? { ...item, autoAccept: next } : item))} /> : expanded?.mode === 'details' ? <section aria-label="Stock quantities">
-                      <h3 className="text-base font-semibold">Stock quantities</h3>
-                      <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-5 lg:grid-cols-4">{[['On hand', row.inventory?.quantityOnHand], ['Hard reserved', row.inventory?.hardReservedQuantity], ['Soft-held', row.inventory?.softHeldQuantity], ['Available to sell', row.inventory?.availableToSell]].map(([label, value]) => <div key={label} className={`min-w-0 border-l-2 pl-4 ${label === 'Available to sell' ? 'border-action-primary' : 'border-border-default'}`}><dt className="text-xs text-text-secondary">{label}</dt><dd className={`mt-2 break-words text-xl font-semibold tabular-nums ${label === 'Available to sell' ? 'text-action-primary' : ''}`}>{value == null ? 'No count' : <>{quantityDisplay(value)} <span className="text-sm font-normal text-text-secondary">{row.unitCode}</span></>}</dd></div>)}</dl>
-                      <p className="mt-5 text-xs text-text-secondary">Exact stock quantities are private to your team.</p>
-                    </section> : <RowHistory row={row} />}
-          </div>
-        })()}
+        {permissions && <InventoryDetails row={selectedRow} permissions={permissions} mode={expanded.mode} onModeChange={mode => toggle(selectedRow, mode)} pending={loading}
+          onSaved={saved => { setRows(current => current.map(row => saved.find(next => next.listingVariantId === row.listingVariantId) ?? row)); setAttempt(value => value + 1) }} onReload={() => setAttempt(value => value + 1)} />}
       </FormDialog>}
       <ConfirmDialog open={pauseTarget !== null} title="Pause auto-accept?" confirmLabel="Pause auto-accept" busy={pausing} onCancel={() => setPauseTarget(null)} onConfirm={() => void (async () => {
         if (!pauseTarget) return

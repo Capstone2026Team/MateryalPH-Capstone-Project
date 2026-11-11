@@ -14,6 +14,8 @@ part 'vendor_dashboard_stock.g.dart';
 ///
 /// Properties:
 /// * [variants]
+/// * [active] - Active variants belonging to ACTIVE listings, across all dates. Active plus inactive equals variants.
+/// * [inactive] - Active variants on all other nonremoved listings, including drafts, inactive, hidden, rejected and pending listings. This is separate from stock availability.
 /// * [inStock]
 /// * [limitedStock]
 /// * [outOfStock]
@@ -22,6 +24,14 @@ part 'vendor_dashboard_stock.g.dart';
 abstract class VendorDashboardStock implements Built<VendorDashboardStock, VendorDashboardStockBuilder> {
   @BuiltValueField(wireName: r'variants')
   int get variants;
+
+  /// Active variants belonging to ACTIVE listings, across all dates. Active plus inactive equals variants.
+  @BuiltValueField(wireName: r'active')
+  int get active;
+
+  /// Active variants on all other nonremoved listings, including drafts, inactive, hidden, rejected and pending listings. This is separate from stock availability.
+  @BuiltValueField(wireName: r'inactive')
+  int get inactive;
 
   @BuiltValueField(wireName: r'in_stock')
   int get inStock;
@@ -61,6 +71,16 @@ class _$VendorDashboardStockSerializer implements PrimitiveSerializer<VendorDash
     yield r'variants';
     yield serializers.serialize(
       object.variants,
+      specifiedType: const FullType(int),
+    );
+    yield r'active';
+    yield serializers.serialize(
+      object.active,
+      specifiedType: const FullType(int),
+    );
+    yield r'inactive';
+    yield serializers.serialize(
+      object.inactive,
       specifiedType: const FullType(int),
     );
     yield r'in_stock';
@@ -112,6 +132,20 @@ class _$VendorDashboardStockSerializer implements PrimitiveSerializer<VendorDash
             specifiedType: const FullType(int),
           ) as int;
           result.variants = valueDes;
+          break;
+        case r'active':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.active = valueDes;
+          break;
+        case r'inactive':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(int),
+          ) as int;
+          result.inactive = valueDes;
           break;
         case r'in_stock':
           final valueDes = serializers.deserialize(

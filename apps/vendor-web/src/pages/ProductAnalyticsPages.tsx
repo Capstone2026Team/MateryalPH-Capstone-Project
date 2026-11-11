@@ -15,6 +15,7 @@ import { readableApiError } from '../lib/auth-api'
 import { ProductReviewsSection } from './VendorReviewPages'
 import { ErrorState, LoadingState } from './PhaseThreeVendorPages'
 import { ProductAnalyticsProduct } from './ProductAnalyticsProduct'
+import { ProductInventorySection } from './ProductInventorySection'
 import { useProductAnalyticsListing } from '../lib/product-analytics-context'
 import { getStorePerformance, type StorePerformance } from '../lib/trust-api'
 
@@ -229,7 +230,7 @@ function ProductTable({ rows, sales }: { rows: ProductAnalyticsRow[]; sales: boo
 }
 
 /** One product's analytics (route /analytics/products/:listingId); the shell checks catalog.manage and the API checks it again. */
-export function ProductAnalyticsDetail({ canViewReviews = false }: { canViewReviews?: boolean }) {
+export function ProductAnalyticsDetail({ canViewReviews = false, canViewInventory = false }: { canViewReviews?: boolean; canViewInventory?: boolean }) {
   const location = useLocation()
   const navigate = useNavigate()
   const { listingId = '' } = useParams()
@@ -247,7 +248,12 @@ export function ProductAnalyticsDetail({ canViewReviews = false }: { canViewRevi
     else navigate(`/analytics/products?days=${period}`)
   }}>Return</button></BackNavigation>
   const information = <ProductAnalyticsProduct product={data?.product ?? { listingId, name: context.data?.listing.displayName ?? 'Product', sku: context.data?.listing.vendorSku ?? null, category: context.data?.listing.material?.name ?? 'Product' }} context={context.data} error={contextMessage} refreshing={context.pending} onRetry={() => void context.refresh()} />
-  if (!data) return <div className="space-y-3">{back}<ProductDetailWorkspace information={information}>{message ? <ErrorState message={message} onRetry={() => void refresh()} /> : <LoadingState label="Loading product analytics…" />}</ProductDetailWorkspace></div>
+  const heading = <div className="flex min-w-0 flex-wrap items-start justify-between gap-4">
+    <div><h2 className="text-lg font-semibold">Analytics &amp; reviews</h2><p className="mt-1 text-xs text-text-secondary">Views and orders across all variants.</p></div>
+    <PeriodSelector label="Period" value={period} options={ANALYTICS_PERIODS} disabled={pending} onChange={value => setParams(current => { const next = new URLSearchParams(current); next.set('days', String(value)); return next }, { replace: true })} />
+  </div>
+  const inventory = canViewInventory && <ProductInventorySection key={listingId} listingId={listingId} onChanged={() => { void context.refresh(); void refresh() }} />
+  if (!data) return <div className="space-y-3">{back}<ProductDetailWorkspace information={information}>{heading}{inventory}{message ? <ErrorState message={message} onRetry={() => void refresh()} /> : <LoadingState label="Loading product analytics…" />}</ProductDetailWorkspace></div>
   const product = data.product
   const kpis = data.kpis
   const sales = data.access.salesValue
@@ -258,10 +264,8 @@ export function ProductAnalyticsDetail({ canViewReviews = false }: { canViewRevi
   return <div className="space-y-3">
     {back}
     <ProductDetailWorkspace information={information}>
-    <div className="flex min-w-0 flex-wrap items-start justify-between gap-4">
-      <div><h2 className="text-lg font-semibold">Analytics &amp; reviews</h2><p className="mt-1 text-xs text-text-secondary">Views and orders across all variants.</p></div>
-      <PeriodSelector label="Period" value={period} options={ANALYTICS_PERIODS} disabled={pending} onChange={value => setParams(current => { const next = new URLSearchParams(current); next.set('days', String(value)); return next }, { replace: true })} />
-    </div>
+    {heading}
+    {inventory}
     {message && <StatusMessage tone="error">{message} Showing the last successful update.</StatusMessage>}
     <TrackingNote since={data.tracking.viewsSince} from={data.period.from} />
     <ul aria-label="Product standing" className="flex flex-wrap gap-2 text-sm">

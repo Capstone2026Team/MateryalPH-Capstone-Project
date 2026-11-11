@@ -32849,6 +32849,7 @@ components:
           public_label,
           stock_confirmation,
           listing_confirmation,
+          listing_visibility_blockers,
           price,
           comparability,
           auto_accept
@@ -32876,6 +32877,10 @@ components:
         public_label: { $ref: "#/components/schemas/StockLabel" }
         stock_confirmation: { $ref: "#/components/schemas/StockConfirmationSchedule" }
         listing_confirmation: { $ref: "#/components/schemas/StockConfirmationSchedule" }
+        listing_visibility_blockers:
+          type: array
+          items: { type: string }
+          description: Vendor-only reasons a temporarily hidden listing cannot return to Buyers, including other variants awaiting confirmation and current store, compliance or listing-readiness requirements. Empty for other statuses. Confirmation does not bypass these gates.
         price: { oneOf: [ { $ref: "#/components/schemas/InventoryPrice" }, { type: 'null' } ] }
         comparability: { $ref: "#/components/schemas/InventoryComparability" }
         auto_accept: { $ref: "#/components/schemas/AutoAcceptPolicy" }
@@ -36523,6 +36528,8 @@ components:
       "type": "object"
       "required":
         - "variants"
+        - "active"
+        - "inactive"
         - "in_stock"
         - "limited_stock"
         - "out_of_stock"
@@ -36530,6 +36537,14 @@ components:
       "properties":
         "variants":
           "type": "integer"
+        "active":
+          type: integer
+          minimum: 0
+          description: Active variants belonging to ACTIVE listings, across all dates. Active plus inactive equals variants.
+        "inactive":
+          type: integer
+          minimum: 0
+          description: Active variants on all other nonremoved listings, including drafts, inactive, hidden, rejected and pending listings. This is separate from stock availability.
         "in_stock":
           "type": "integer"
         "limited_stock":

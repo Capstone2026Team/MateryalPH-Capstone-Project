@@ -24,7 +24,7 @@ export function ProductsTabs({ active, showInventory }: { active: 'listings' | '
 /** Compact status pill for cards and summaries. */
 export function ListingBadge({ status, prefix }: { status: string; prefix?: string }) {
   const Icon = statusIcons[status] ?? FileText
-  return <StatusBadge tone={badgeTones[status] ?? 'neutral'} icon={<Icon size={14} aria-hidden="true" />} label={`${prefix ? `${prefix}: ` : ''}${statusLabel(status)}`} />
+  return <StatusBadge tone={badgeTones[status] ?? 'neutral'} icon={<Icon size={14} aria-hidden="true" />} label={`${prefix ? `${prefix}: ` : ''}${status === 'TEMPORARILY_HIDDEN_STOCK_NOT_CONFIRMED' ? 'Temporarily hidden' : statusLabel(status)}`} />
 }
 
 const manualReasons = {
