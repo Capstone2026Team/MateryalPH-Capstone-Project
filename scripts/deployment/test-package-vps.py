@@ -57,7 +57,7 @@ class ReleasePackagingTest(unittest.TestCase):
                         self.assertEqual(stream.extractfile(relative.as_posix()).read(), data,
                                          'Windows release export must preserve LF for Linux runtime files')
 
-    def exercise(self, directory, reject_role=None):
+    def exercise(self, directory, reject_role=None, reject_scanner_startup=False):
         destination = Path(directory) / 'release'
         commands = []
         commit = 'a' * 40
@@ -74,6 +74,8 @@ class ReleasePackagingTest(unittest.TestCase):
             elif arguments[:3] == ['docker', 'image', 'inspect']:
                 role = 'b' if 'api' in arguments[3] else 'c'
                 return subprocess.CompletedProcess(arguments, 0, stdout='sha256:' + role * 64)
+            elif len(arguments) > 1 and Path(arguments[1]).name == 'test-vps-scanner-startup.py' and reject_scanner_startup:
+                raise subprocess.CalledProcessError(1, arguments)
             elif arguments[0] == 'trivy' and reject_role and arguments[-1] == 'sha256:' + ('b' if reject_role == 'api' else 'c') * 64:
                 raise subprocess.CalledProcessError(1, arguments)
             elif arguments[:2] == ['docker', 'save']:
@@ -89,7 +91,7 @@ class ReleasePackagingTest(unittest.TestCase):
         with patch.object(sys, 'argv', ['package-vps.py', 'example/repository', commit, str(destination)]), \
                 patch.dict(os.environ, environment), patch.object(package, 'fetch_runs', return_value=[accepted]), \
                 patch.object(package, 'run', side_effect=run):
-            if reject_role:
+            if reject_role or reject_scanner_startup:
                 with self.assertRaises(subprocess.CalledProcessError):
                     package.main()
             else:
@@ -104,6 +106,10 @@ class ReleasePackagingTest(unittest.TestCase):
             self.assertEqual(builds[0][builds[0].index('--no-cache-filter') + 1], 'api-runtime')
             self.assertEqual(builds[1][builds[1].index('--no-cache-filter') + 1], 'edge-runtime')
             record = json.loads((destination / 'release.json').read_text())
+            scanner_checks = [command for command in commands if len(command) > 1 and
+                              Path(command[1]).name == 'test-vps-scanner-startup.py']
+            self.assertEqual(len(scanner_checks), 1)
+            self.assertEqual(scanner_checks[0][-2:], ['--image', record['images']['api']])
             scans = [command for command in commands if command[0] == 'trivy']
             self.assertEqual([command[-1] for command in scans], list(record['images'].values()))
             for command in scans:
@@ -119,6 +125,13 @@ class ReleasePackagingTest(unittest.TestCase):
                 self.assertFalse((destination / 'release.json').exists())
                 self.assertFalse((destination / f'{role}.tar').exists())
                 self.assertEqual(len([command for command in commands if command[0] == 'trivy']), expected_scans)
+
+    def test_scanner_startup_failure_cannot_produce_an_accepted_release(self):
+        with tempfile.TemporaryDirectory() as directory:
+            destination, commands = self.exercise(directory, reject_scanner_startup=True)
+            self.assertFalse((destination / 'release.json').exists())
+            self.assertFalse((destination / 'api.tar').exists())
+            self.assertFalse(any(command[0] == 'trivy' for command in commands))
 
 
 if __name__ == '__main__':

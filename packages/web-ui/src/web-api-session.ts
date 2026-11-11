@@ -1,4 +1,5 @@
 import { AuthenticationApi, Configuration, FetchError, ResponseError } from '@materyalph/api-client-ts'
+import { requiresRecentAuthentication } from './recent-authentication'
 
 type WebApiOptions = {
   refreshSession?: boolean
@@ -222,9 +223,11 @@ async function coordinatedFetch(basePath: string, refreshSession: boolean, input
   const mutation = !isSafeMethod(method) && !readOnlyPost
   if (mutation && mutations.has(key)) throw new Error('This action is already processing. Please wait for it to finish.')
   if (mutation) mutations.add(key)
-  const request = webFetch(basePath, refreshSession, input, init).then(response => {
+  const request = webFetch(basePath, refreshSession, input, init).then(async response => {
+    // Let the protected action open verification without clearing unrelated page resources.
+    const accessDenied = response.status === 401 || (response.status === 403 && !behavior.localForbidden && !await requiresRecentAuthentication(response))
     if (typeof window !== 'undefined' && generation === sessionGeneration) {
-      if (response.status === 401 || (response.status === 403 && !behavior.localForbidden)) window.dispatchEvent(new CustomEvent('materyalph:access-denied', { detail: response.clone() }))
+      if (accessDenied) window.dispatchEvent(new CustomEvent('materyalph:access-denied', { detail: response.clone() }))
       if (mutation && response.ok && !isAuthenticationLifecycleRequest(input, basePath) && !/\/(auth|typing)$/.test(url)) {
         const audience = url.slice(basePath.length).split('/')[1]
         if (audience === 'vendor' || audience === 'admin') window.dispatchEvent(new CustomEvent('materyalph:navigation-updates', { detail: { basePath, audience } }))

@@ -81,6 +81,7 @@ def main():
         # Base tags can move after CI. Verify these exact rebuilt images before delivery.
         for mode in [[], ['--vps']]:
             run([sys.executable, str(source / 'scripts/deployment/test-render-runtime.py'), '--image', images['api'], *mode])
+        run([sys.executable, str(source / 'scripts/deployment/test-vps-scanner-startup.py'), '--image', images['api']])
         run(['docker', 'run', '--rm', '--network', 'none', '-e', 'API_HOST=api.example.test', '-e', 'VENDOR_HOST=vendor.example.test', '-e', 'ADMIN_HOST=admin.example.test', '-e', 'REVERB_HOST=ws.example.test', images['edge'], 'caddy', 'adapt', '--config', '/etc/caddy/Caddyfile', '--validate'], capture_output=True)
         for role, image in images.items():
             run(['trivy', 'image', '--exit-code', '1', '--severity', 'HIGH,CRITICAL', '--no-progress', image])

@@ -567,6 +567,8 @@ jobs:
         run: python scripts/deployment/test-render-runtime.py --image materyalph-api:${{ github.sha }}
       - name: Exercise VPS concurrency and maintenance fencing
         run: python scripts/deployment/test-render-runtime.py --image materyalph-api:${{ github.sha }} --vps
+      - name: Exercise scanner cold-start ordering without providers
+        run: python scripts/deployment/test-vps-scanner-startup.py --image materyalph-api:${{ github.sha }}
       - name: Check the non-root runtime and server configuration
         run: |
           test "$(docker image inspect materyalph-api:${{ github.sha }} --format '{{.Config.User}}')" = app

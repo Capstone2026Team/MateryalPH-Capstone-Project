@@ -19,6 +19,8 @@ def main():
     assert services['scanner-signatures']['networks'] == ['egress']
     assert services['scanner']['volumes'] == ['scanner-signatures:/var/lib/clamav:ro']
     assert services['scanner-signatures']['volumes'] == ['scanner-signatures:/var/lib/clamav']
+    assert services['scanner']['depends_on']['scanner-signatures']['condition'] == 'service_healthy'
+    assert services['scanner-signatures']['healthcheck']['test'][0] == 'CMD-SHELL'
     for role in ['scanner', 'scanner-signatures']:
         assert 'env_file' not in services[role]
         assert services[role]['environment'] == {'TZ': 'UTC'}

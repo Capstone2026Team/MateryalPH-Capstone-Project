@@ -46,6 +46,14 @@ services:
     cpus: 0.25
     security_opt: [no-new-privileges:true]
     cap_drop: [ALL]
+    healthcheck:
+      # FreshClam installs each verified database atomically. Wait for the full
+      # first download before starting clamd on an otherwise empty volume.
+      test: [CMD-SHELL, "(test -s /var/lib/clamav/daily.cvd || test -s /var/lib/clamav/daily.cld) && (test -s /var/lib/clamav/main.cvd || test -s /var/lib/clamav/main.cld) && (test -s /var/lib/clamav/bytecode.cvd || test -s /var/lib/clamav/bytecode.cld)"]
+      interval: 10s
+      timeout: 3s
+      start_period: 180s
+      retries: 30
     logging: *logs
 
   scanner:
@@ -59,7 +67,7 @@ services:
     cpus: 1.0
     security_opt: [no-new-privileges:true]
     cap_drop: [ALL]
-    depends_on: {scanner-signatures: {condition: service_started}}
+    depends_on: {scanner-signatures: {condition: service_healthy}}
     healthcheck:
       test: [CMD, php, /app/infrastructure/clamav-health.php]
       interval: 30s

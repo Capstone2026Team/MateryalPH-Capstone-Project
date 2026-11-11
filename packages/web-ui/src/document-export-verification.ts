@@ -1,3 +1,5 @@
+import { requiresRecentAuthentication } from './recent-authentication'
+
 /** Retry a protected export once after verification, while its original context is still current. */
 export async function requestExportWithVerification<T>(request: () => Promise<T>, verify: () => Promise<boolean>, isCurrent: () => boolean): Promise<T | null> {
   if (!isCurrent()) return null
@@ -14,12 +16,6 @@ export async function requestExportWithVerification<T>(request: () => Promise<T>
 }
 
 async function requiresVerification(cause: unknown): Promise<boolean> {
-  if (!cause || typeof cause !== 'object' || !('response' in cause) || !(cause.response instanceof Response) || cause.response.status !== 403) return false
-  try {
-    const body: unknown = await cause.response.clone().json()
-    if (!body || typeof body !== 'object' || !('errors' in body) || !Array.isArray(body.errors)) return false
-    const first: unknown = body.errors[0]
-    return Boolean(first && typeof first === 'object' && 'code' in first
-      && (first.code === 'RECENT_AUTHENTICATION_REQUIRED' || first.code === 'REAUTHENTICATION_REQUIRED'))
-  } catch { return false }
+  return Boolean(cause && typeof cause === 'object' && 'response' in cause && cause.response instanceof Response
+    && await requiresRecentAuthentication(cause.response))
 }

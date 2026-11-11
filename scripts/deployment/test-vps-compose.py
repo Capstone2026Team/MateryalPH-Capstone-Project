@@ -29,6 +29,8 @@ with tempfile.TemporaryDirectory(prefix='vps-compose-', dir=root / '.tmp') as te
     assert parsed['services']['api']['environment']['SCANNER_DRIVER'] == 'clamd'
     assert parsed['services']['api']['environment']['CLAMAV_ADDRESS'] == 'tcp://scanner:3310'
     assert parsed['services']['api']['depends_on']['scanner']['condition'] == 'service_healthy'
+    assert parsed['services']['scanner']['depends_on']['scanner-signatures']['condition'] == 'service_healthy'
+    assert parsed['services']['scanner-signatures']['healthcheck']['test'][0] == 'CMD-SHELL'
     assert parsed['networks']['scanning']['internal'] is True
     assert set(parsed['services']['scanner']['networks']) == {'scanning'}
     assert not parsed['services']['scanner'].get('ports')
